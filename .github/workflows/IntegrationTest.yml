@@ -1,0 +1,63 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python application
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+    
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest
+        if [ -f requirements/runtime.txt ]; then pip install -r requirements/runtime.txt; fi
+        pip install -e .
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Integration Test(local plaintext)
+      run: |
+        python -m dingo.run.cli --input_path test/data/test_local_plaintext.txt --dataset local -e default --data_format plaintext
+    - name: Integration Test(local json)
+      run: |
+        python -m dingo.run.cli --input_path test/data/test_local_json.json --dataset local -e default --data_format json --column_content prediction
+    - name: Integration Test(local jsonl)
+      run: |
+        python -m dingo.run.cli --input_path test/data/test_local_jsonl.jsonl --dataset local -e default --data_format jsonl --column_content content
+    - name: Integration Test(local listjson)
+      run: |
+        python -m dingo.run.cli --input_path test/data/test_local_listjson.json --dataset local -e default --data_format listjson --column_content output
+    - name: Integration Test(huggingface plaintext)
+      run: |
+        python -m dingo.run.cli --input_path chupei/format-text -e default --data_format plaintext --column_content text
+    - name: Integration Test(huggingface json)
+      run: |
+        python -m dingo.run.cli --input_path chupei/format-json -e default --data_format json --column_content prediction --column_prompt origin_prompt
+    - name: Integration Test(huggingface jsonl)
+      run: |
+        python -m dingo.run.cli --input_path chupei/format-jsonl -e default --data_format jsonl --column_content content
+    - name: Integration Test(huggingface listjson)
+      run: |
+        python -m dingo.run.cli --input_path chupei/format-listjson -e default --data_format listjson --column_content output --column_prompt instruction
+    - name: Integration Test(custom config)
+      run: |
+        python -m dingo.run.cli --input_path test/data/test_local_json.json --dataset local -e test --data_format json --column_content prediction --custom_config test/config/config_rule.json --log_level=DEBUG

@@ -45,6 +45,35 @@ class BaseConverter(ConverterProto):
         res = reduce(lambda x, y: x[y], levels.split('.'), data)
         return res if isinstance(res, List) else [res]
 
+@BaseConverter.register("chatml-jsonl")
+class ChatMLConvertor(BaseConverter):
+    @classmethod
+    def convertor(cls, input_args: InputArgs) -> Callable:  # codespell:ignore
+        def _convert(raw: Union[str, Dict]):
+            j = raw
+            if isinstance(raw, str):
+                j = json.loads(raw)
+                
+            dialogs: list = j["dialogs"]
+            prompt = ""
+            content = ""
+
+            for i in dialogs[:-1]:
+                prompt += f"{i['role']:}\n\n"
+                prompt += f"{i['content']}\n\n"
+
+            if len(dialogs) > 1:
+                prompt += dialogs[-1]["role"]
+                content += dialogs[-1]["content"]
+
+            return MetaData(**{
+                'data_id': j["_id"],
+                'prompt': prompt,
+                'content': content,
+            })
+
+        return _convert
+
 
 @BaseConverter.register('json')
 class JsonConverter(BaseConverter):

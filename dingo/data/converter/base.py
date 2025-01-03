@@ -53,7 +53,7 @@ class ChatMLConvertor(BaseConverter):
             j = raw
             if isinstance(raw, str):
                 j = json.loads(raw)
-                
+
             dialogs: list = j["dialogs"]
             prompt = ""
             content = ""

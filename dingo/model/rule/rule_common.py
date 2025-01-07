@@ -1046,18 +1046,25 @@ class RuleUnsafeWords(BaseRule):
 
     @classmethod
     def eval(cls, input_data: MetaData) -> ModelRes:
+        import ahocorasick
         from dingo.model.rule.utils.util import get_unsafe_words
 
         res = ModelRes()
         content = input_data.content
-        if cls.dynamic_config.key_list is None:
-            cls.dynamic_config.key_list = get_unsafe_words(cls.dynamic_config.refer_path)
-        matches = list(filter(lambda x:x in content, cls.dynamic_config.key_list))
+        key_list = cls.dynamic_config.key_list
+        if key_list is None:
+            key_list = get_unsafe_words(cls.dynamic_config.refer_path)
+
+        A = ahocorasick.Automaton()
+        for index, key in enumerate(key_list):
+            A.add_word(key, (index, key))
+        A.make_automaton()
+        matches = [(end_index - len(value[1]) + 1, value[1]) for end_index, value in A.iter(content)]
         if matches:
             res.error_status = True
             res.type = cls.metric_type
             res.name = cls.__name__
-            res.reason = matches
+            res.reason = [value for index, value in matches]
         return res
 
 

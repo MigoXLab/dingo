@@ -15,6 +15,7 @@ packaging
 pandas
 Pillow==9.4.0
 prettytable
+pyahocorasick
 nltk
 numpy==1.26.4
 pydantic

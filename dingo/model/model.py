@@ -1,4 +1,5 @@
 import importlib
+import inspect
 import os
 from functools import wraps
 from typing import Callable, Dict, List, Optional
@@ -198,14 +199,13 @@ class Model:
         Args:
             llm_id (str): Name of llm model class.
         """
-        def decorator(root_method):
-            cls.llm_name_map[llm_id] = root_method
+        def decorator(root_class):
+            cls.llm_name_map[llm_id] = root_class
 
-            @wraps(root_method)
-            def wrapped_function(*args, **kwargs):
-                return root_method(*args, **kwargs)
-
-            return wrapped_function
+            if inspect.isclass(root_class):
+                return root_class
+            else:
+                raise ValueError("root_class must be a class")
 
         return decorator
 

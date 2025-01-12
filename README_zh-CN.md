@@ -82,7 +82,7 @@ $ cat test/data/config_gpt.json
   "llm_config": {
     "openai": {
       "model": "gpt-4o",
-      "key": "xxxx", 
+      "key": "xxxx",
       "api_url": "https://api.openai.com/v1/chat/completions"
     }
   }
@@ -152,17 +152,17 @@ Dingo 支持输出7个Quality Metrics概况报告和异常数据追溯详情报�
 
 ## 2.注册规则/prompt/模型
 
-如果项目内部的启发式规则不满足用户的质检需求，用户还可以自定义规则或者模型。  
+如果项目内部的启发式规则不满足用户的质检需求，用户还可以自定义规则或者模型。
 
 ### 2.1 注册规则
 
-如果用户想要创建一个新规则 `CommonPatternDemo`，那么首先要为规则添加装饰器，将规则注入项目中。  
-其次还需要为规则设置 `metric_type` 类型，比如 `QUALITY_BAD_RELEVANCE`， `group` 可以不用设置。  
-然后用户需要定义 `DynamicRuleConfig` 对象，这样可以动态的配置规则的属性。  
-除此之外，规则的方法名称必须是 `eval` 且需要是类方法。  
-最后一步的返回值应该是 `ModelRes` 对象。  
+如果用户想要创建一个新规则 `CommonPatternDemo`，那么首先要为规则添加装饰器，将规则注入项目中。
+其次还需要为规则设置 `metric_type` 类型，比如 `QUALITY_BAD_RELEVANCE`， `group` 可以不用设置。
+然后用户需要定义 `DynamicRuleConfig` 对象，这样可以动态的配置规则的属性。
+除此之外，规则的方法名称必须是 `eval` 且需要是类方法。
+最后一步的返回值应该是 `ModelRes` 对象。
 
-例如：[注册规则](examples/register/sdk_register_rule.py) 
+例如：[注册规则](examples/register/sdk_register_rule.py)
 
 ### 2.2 注册prompt
 
@@ -172,8 +172,8 @@ Dingo 支持输出7个Quality Metrics概况报告和异常数据追溯详情报�
 
 ### 2.3 注册模型
 
-注册模型的方式略有不同，用户需要实现一个call_api方法，接受MetaData类型参数，返回ModelRes类型结果。  
-项目中有已经实现好的基础模型类[BaseOpenAI](dingo/model/llm/base_openai.py)，用户可以直接继承。  
+注册模型的方式略有不同，用户需要实现一个call_api方法，接受MetaData类型参数，返回ModelRes类型结果。
+项目中有已经实现好的基础模型类[BaseOpenAI](dingo/model/llm/base_openai.py)，用户可以直接继承。
 如果用户有特殊的功能要实现，那么就可以重写对应的方法。
 
 例如：[注册模型](examples/register/sdk_register_llm.py)
@@ -184,7 +184,7 @@ Dingo 支持输出7个Quality Metrics概况报告和异常数据追溯详情报�
 
 ## 4.执行引擎
 
-`Dingo` 可以在本地运行，也可以在spark集群上运行。  
+`Dingo` 可以在本地运行，也可以在spark集群上运行。
 无论选择何种引擎，executor都支持一些公共方法：
 
 | function name      | description              |
@@ -202,9 +202,9 @@ Dingo 支持输出7个Quality Metrics概况报告和异常数据追溯详情报�
 
 ### 4.2 Spark Mode
 
-选择spark引擎时，用户只能选择规则进行质检，模型无法使用。  
-而且`InputArgs`中仅有`eval_group`,`save_data`,`save_correct`,`custom_config`依旧有效。  
-因此，用户需要输入`spark_session`用来初始化spark，输入`spark_rdd`（由`MetaData`结构组成）作为数据用来质检。  
+选择spark引擎时，用户只能选择规则进行质检，模型无法使用。
+而且`InputArgs`中仅有`eval_group`,`save_data`,`save_correct`,`custom_config`依旧有效。
+因此，用户需要输入`spark_session`用来初始化spark，输入`spark_rdd`（由`MetaData`结构组成）作为数据用来质检。
 需要注意，`save_data`如果为`False`，那么质检完成后会立刻清除内存中的数据，`spark_session`也立即停止。
 
 [spark示例](examples/spark/sdk_spark.py)

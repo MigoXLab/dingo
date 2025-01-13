@@ -16,7 +16,8 @@ def find_all_files(path: str, file_list: List[str]):
         f = os.path.join(path, _f)
         if os.path.isfile(f):
             file_list.append(f)
-        if os.path.isdir(f):
+        # Skip hidden files
+        if os.path.isdir(f) and not _f.startswith('.'):
             find_all_files(f, file_list)
 
 
@@ -40,7 +41,7 @@ def load_local_file(path: str, by_line: bool = True) -> Generator[str, None, Non
     for f in f_list:
         with open(f, 'r', encoding='utf-8') as _f:
             if by_line:
-                for line in _f.readlines():
+                for line in _f:
                     yield line
             else:
                 yield _f.read()
@@ -62,6 +63,15 @@ class LocalDataSource(DataSource):
         """
         self.path = input_args.input_path
         self.config_name = config_name
+        if os.path.isfile(self.path):
+            self._all_files = [self.path]
+        elif os.path.isdir(self.path):
+            self._all_files = []
+            find_all_files(self.path, self._all_files)
+        else:
+            raise RuntimeError(f'"{self.path}" is not a valid path')
+        self._size = sum([os.path.getsize(f) for f in self._all_files])
+
         super().__init__(input_args=input_args)
 
     @staticmethod
@@ -87,3 +97,10 @@ class LocalDataSource(DataSource):
             "path": self.path,
             "config_name": self.config_name,
         }
+
+    @property
+    def size(self) -> int:
+        return self._size
+
+    def get_raw_size(self, raw_item) -> int:
+        return len(raw_item.encode())

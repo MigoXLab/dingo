@@ -1,11 +1,13 @@
 import concurrent.futures
 import copy
 import itertools
+from more_itertools import batched
 import json
 import os
 import time
 import uuid
-from typing import Generator, List, Optional
+from tqdm import tqdm
+from typing import Generator, Iterable, List, Optional, cast, Set
 
 from dingo.config import GlobalConfig
 from dingo.data import Dataset, DataSource, dataset_map, datasource_map
@@ -32,6 +34,7 @@ class LocalExecutor(ExecProto):
 
         self.bad_info_index = 0
         self.good_info_index = 0
+        self._dataset: Dataset | None = None
 
     def load_data(self) -> Generator[MetaData, None, None]:
         """
@@ -47,6 +50,7 @@ class LocalExecutor(ExecProto):
 
         datasource: DataSource = datasource_cls(input_args=self.input_args)
         dataset: Dataset = dataset_cls(source=datasource)
+        self._dataset = dataset
         return dataset.get_data()
 
     def execute(self) -> List[SummaryModel]:
@@ -96,29 +100,33 @@ class LocalExecutor(ExecProto):
         """
         with concurrent.futures.ProcessPoolExecutor(max_workers=self.input_args.max_workers) as executor:
             data_iter = self.load_data()
-            data_iter = itertools.islice(data_iter, self.input_args.start_index, None)
+            self._dataset = cast(Dataset, self._dataset)
+            batched_iter = batched(itertools.islice(data_iter, self.input_args.start_index, None), self.input_args.batch_size)
 
-            def process_batch(batch: List):
-                futures = [executor.submit(self.evaluate_single_data, self.input_args.eval_group, data) for data in batch]
-                for future in concurrent.futures.as_completed(futures):
-                    result_info = future.result()
-                    # calculate summary ratio
-                    if result_info.error_status:
-                        self.bad_info_list.append(result_info)
-                        self.summary.num_bad += 1
-                        for t in result_info.type_list:
-                            if t not in self.summary.type_ratio:
-                                self.summary.type_ratio[t] = 1
-                            else:
-                                self.summary.type_ratio[t] += 1
-                        for n in result_info.name_list:
-                            if n not in self.summary.name_ratio:
-                                self.summary.name_ratio[n] = 1
-                            else:
-                                self.summary.name_ratio[n] += 1
-                    else:
-                        if self.input_args.save_correct:
-                            self.good_info_list.append(result_info)
+            unfinished: Set[concurrent.futures.Future[List[ResultInfo]]] = set()
+            stop = False
+            bar = tqdm(unit="bytes", total=self._dataset.size, smoothing=0.05)
+
+            while not stop or unfinished:
+                while not stop and len(unfinished) < self.input_args.max_workers:
+                    try:
+                        batch = next(batched_iter)
+                        unfinished.add(executor.submit(self._process_batch, batch, self.input_args.eval_group, self.llm, self.input_args.save_raw))
+                    except StopIteration:
+                        stop = True
+
+                finished: Set[concurrent.futures.Future[List[ResultInfo]]]
+
+                finished, unfinished = concurrent.futures.wait(unfinished, return_when=concurrent.futures.FIRST_COMPLETED)
+
+                for future in finished:
+                    results_info = future.result()
+                    for result_info in results_info:
+                        bar.update(result_info.size)
+                        # calculate summary ratio
+                        if result_info.error_status:
+                            self.bad_info_list.append(result_info)
+                            self.summary.num_bad += 1
                             for t in result_info.type_list:
                                 if t not in self.summary.type_ratio:
                                     self.summary.type_ratio[t] = 1
@@ -129,37 +137,31 @@ class LocalExecutor(ExecProto):
                                     self.summary.name_ratio[n] = 1
                                 else:
                                     self.summary.name_ratio[n] += 1
-                    self.summary.total += 1
-
-                    # save data in file
-                    if self.input_args.save_data:
-                        if self.summary.total > 0 and self.summary.total % self.input_args.interval_size == 0:
-                            tmp_summary = self.summarize(self.summary)
-                            tmp_summary.finish_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-                            tmp_output_path = self.summary.output_path
-                            tmp_bad_info_list = []
-                            if self.bad_info_index < len(self.bad_info_list):
-                                tmp_bad_info_list = self.bad_info_list[self.bad_info_index:len(self.bad_info_list)]
-                                self.bad_info_index = len(self.bad_info_list)
-                            tmp_good_info_list = []
-                            if self.good_info_index < len(self.good_info_list):
-                                tmp_good_info_list = self.good_info_list[self.good_info_index:len(self.good_info_list)]
-                                self.good_info_index = len(self.good_info_list)
-                            self.save_data(tmp_output_path, self.input_args, tmp_bad_info_list, tmp_good_info_list, tmp_summary)
-
-            with tqdm(total=None, unit='items') as pbar:
-                while True:
-                    batch = list(itertools.islice(data_iter, self.input_args.batch_size))
-                    if not batch:
-                        break
-                    process_batch(batch)
-                    pbar.update(len(batch))
-
+                        else:
+                            for result_info in results_info:
+                                if self.input_args.save_correct:
+                                    self.good_info_list.append(result_info)
+                                    for t in result_info.type_list:
+                                        if t not in self.summary.type_ratio:
+                                            self.summary.type_ratio[t] = 1
+                                        else:
+                                            self.summary.type_ratio[t] += 1
+                                    for n in result_info.name_list:
+                                        if n not in self.summary.name_ratio:
+                                            self.summary.name_ratio[n] = 1
+                                        else:
+                                            self.summary.name_ratio[n] += 1
+                        self.summary.total += 1
         log.debug('[Summary]: ' + str(self.summary))
 
-    def evaluate_single_data(self, group_name, data: MetaData)-> ResultInfo:
+    @staticmethod
+    def _process_batch(batch: Iterable[MetaData], eval_group: str, llm: BaseLLM | None, save_raw: bool) -> List[ResultInfo]:
+        return [LocalExecutor.evaluate_single_data(eval_group, data, llm, save_raw) for data in batch]
+
+    @staticmethod
+    def evaluate_single_data(group_name, data: MetaData, llm: BaseLLM | None, save_raw: bool) -> ResultInfo:
         result_info = ResultInfo(data_id=data.data_id, prompt=data.prompt, content=data.content)
-        if self.input_args.save_raw:
+        if save_raw:
             result_info.raw_data = data.raw_data
         bad_type_list = []
         good_type_list = []
@@ -169,9 +171,9 @@ class LocalExecutor(ExecProto):
         good_reason_list = []
         for group_type, group in Model.get_group(group_name).items():
             if group_type == 'rule':
-                r_i = self.evaluate_rule(group, data)
+                r_i = LocalExecutor.evaluate_rule(group, data)
             elif group_type == 'prompt':
-                r_i = self.evaluate_prompt(group, data)
+                r_i = LocalExecutor.evaluate_prompt(group, data, llm)
             else:
                 raise RuntimeError(f'Unsupported group type: {group_type}')
             if r_i.error_status:
@@ -199,9 +201,11 @@ class LocalExecutor(ExecProto):
             for reason in good_reason_list:
                 if reason and reason not in result_info.reason_list:
                     result_info.reason_list.append(reason)
+        result_info.size = data.size
         return result_info
 
-    def evaluate_rule(self, group: List[BaseRule], d: MetaData) -> ResultInfo:
+    @staticmethod
+    def evaluate_rule(group: List[BaseRule], d: MetaData) -> ResultInfo:
         result_info = ResultInfo(data_id=d.data_id, prompt=d.prompt, content=d.content)
         log.debug("[RuleGroup]: " + str(group))
         bad_type_list = []
@@ -233,7 +237,8 @@ class LocalExecutor(ExecProto):
             result_info.reason_list = good_reason_list
         return result_info
 
-    def evaluate_prompt(self, group: List[BasePrompt], d: MetaData) -> ResultInfo:
+    @staticmethod
+    def evaluate_prompt(group: List[BasePrompt], d: MetaData, llm: BaseLLM) -> ResultInfo:
         result_info = ResultInfo(data_id=d.data_id, prompt=d.prompt, content=d.content)
         log.debug("[PromptGroup]: " + str(group))
         bad_type_list = []
@@ -243,9 +248,9 @@ class LocalExecutor(ExecProto):
         bad_reason_list = []
         good_reason_list = []
         for p in group:
-            self.llm.set_prompt(p)
+            llm.set_prompt(p)
             # execute prompt
-            tmp: ModelRes = self.llm.call_api(d)
+            tmp: ModelRes = llm.call_api(d)
             # analyze result
             if tmp.error_status:
                 result_info.error_status = True

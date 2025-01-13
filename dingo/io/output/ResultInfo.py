@@ -12,6 +12,7 @@ class ResultInfo(BaseModel):
     name_list: List[str] = []
     reason_list: List[str] = []
     raw_data: Dict = {}
+    size: int = 0
 
     def to_dict(self):
         return {

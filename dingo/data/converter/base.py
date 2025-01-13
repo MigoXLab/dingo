@@ -63,22 +63,26 @@ class ChatMLConvertor(BaseConverter):
 
             dialogs: list = j["dialogs"]
             prompt = ""
-            content = ""
 
-            for i in dialogs[:-1]:
-                prompt += f"{i['role']:}\n\n"
-                prompt += f"{i['content']}\n\n"
+            for end in range(min(1, len(dialogs)) - 1, len(dialogs)):
+                _dialogs = dialogs[:end + 1]
 
-            if len(dialogs) > 1:
-                prompt += dialogs[-1]["role"]
-                content += dialogs[-1]["content"]
+                if _dialogs[-1]["role"] in ["system", "user"]:
+                    continue
 
-            return MetaData(**{
-                'data_id': j["_id"],
-                'prompt': prompt,
-                'content': content,
-                'raw_data': j
-            })
+                for i in _dialogs[:-1]:
+                    prompt += f"{i['role']:}\n\n"
+                    prompt += f"{i['content']}\n\n"
+
+                prompt += f"{_dialogs[-1]['role']}\n\n"
+                content = _dialogs[-1]["content"]
+
+                yield MetaData(**{
+                    'data_id': j["_id"],
+                    'prompt': prompt,
+                    'content': content,
+                    'raw_data': j
+                })
 
         return _convert
 

@@ -64,12 +64,15 @@ class LocalDataset(Dataset):
         Convert data here.
         """
         for data_raw in self._ds:
-            data: Union[Generator[MetaData], MetaData] = self.converter(data_raw)
-            if isinstance(data, Generator):
-                for d in data:
-                    yield d
+            _data: Union[Generator[MetaData], MetaData] = self.converter(data_raw)
+            if isinstance(_data, Generator):
+                data = list(_data)
             else:
-                yield data
+                data = [_data]
+
+            for d in data:
+                d.size = self.source.get_raw_size(data_raw) // len(data)
+                yield d
 
     @property
     def ds(self):
@@ -86,3 +89,4 @@ class LocalDataset(Dataset):
             A :py:class:`mlflow.data.huggingface_dataset_source.HuggingFaceSource`
         """
         return self._source
+

@@ -74,3 +74,7 @@ class S3DataSource(DataSource):
             "path": self.path,
             "config_name": self.config_name,
         }
+
+    @property
+    def size(self) -> int:
+        return self.client.head_object(Bucket=self.input_args.s3_bucket, Key=self.path)['ContentLength']

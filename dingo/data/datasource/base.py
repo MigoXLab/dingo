@@ -21,9 +21,10 @@ from functools import wraps
 from typing import Any, Dict, Iterable
 
 from dingo.io import InputArgs
+from abc import ABC
 
 
-class DataSource:
+class DataSource(ABC):
     """
     Represents the source of a dataset used in Dingo Tracking, providing information such as
     cloud storage location, delta table name / version, etc.
@@ -93,3 +94,15 @@ class DataSource:
             return wrapped_function
 
         return decorator
+
+    @property
+    @abstractmethod
+    def size(self) -> int:
+        """Get the size of the dataset in bytes or length. This will be used to statisticst
+        the progress of the source.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_raw_size(self, raw_item: Any) -> int:
+        raise NotImplementedError()

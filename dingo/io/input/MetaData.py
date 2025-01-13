@@ -12,3 +12,4 @@ class MetaData(BaseModel):
     content: str = None
     image: Optional[List] = None
     raw_data: Dict = {}
+    size: int = 0

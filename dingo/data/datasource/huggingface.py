@@ -1,4 +1,7 @@
 from typing import Any, Dict, Mapping, Optional, Sequence, Union
+import datasets
+import pickle
+import sys
 
 import datasets
 from dingo.data.datasource.base import DataSource
@@ -43,6 +46,8 @@ class HuggingFaceSource(DataSource):
             self.split = input_args.huggingface_split
         else:
             self.split = 'train'
+        self._datasets = None
+        self._size = None
         super().__init__(input_args=input_args)
 
     @staticmethod
@@ -57,26 +62,7 @@ class HuggingFaceSource(DataSource):
         Returns:
             An instance of `datasets.Dataset`.
         """
-        import datasets
-        from packaging.version import Version
-        load_kwargs = {
-            "path": self.path,
-            "name": self.config_name,
-            "data_dir": self.data_dir,
-            "data_files": self.data_files,
-            "split": self.split,
-            "revision": self.revision,
-        }
-        # this argument only exists in >= 2.16.0
-        if Version(datasets.__version__) >= Version("2.16.0"):
-            load_kwargs["trust_remote_code"] = self.trust_remote_code
-        intersecting_keys = set(load_kwargs.keys()) & set(kwargs.keys())
-        if intersecting_keys:
-            raise KeyError(
-                f"Found duplicated arguments in `HuggingFaceSource` and "
-                f"`kwargs`: {intersecting_keys}. Please remove them from `kwargs`."
-            )
-        return datasets.load_dataset(**load_kwargs)
+        return self.datasets()
 
     def to_dict(self) -> Dict[Any, Any]:
         return {
@@ -87,3 +73,46 @@ class HuggingFaceSource(DataSource):
             "split": str(self.split),
             "revision": self.revision,
         }
+
+    @property
+    def size(self):
+        if self._size is None:
+            if isinstance(self.datasets.info.dataset_size, int):
+                self._size = self.datasets.info.dataset_size
+            else:
+                self._size = sys.getsizeof(pickle.dumps(self._datasets))
+        return self._size
+
+    @property
+    def datasets(self) -> datasets.Dataset:
+        """Get the Hugging Face dataset instance.
+        Returns:
+            The Hugging Face dataset instance.
+        """
+        import datasets
+        from packaging.version import Version
+
+        if self._datasets is None:
+            load_kwargs = {
+                "path": self.path,
+                "name": self.config_name,
+                "data_dir": self.data_dir,
+                "data_files": self.data_files,
+                "split": self.split,
+                "revision": self.revision,
+            }
+            # this argument only exists in >= 2.16.0
+            if Version(datasets.__version__) >= Version("2.16.0"):
+                load_kwargs["trust_remote_code"] = self.trust_remote_code
+            intersecting_keys = set(load_kwargs.keys()) & set(kwargs.keys())
+            if intersecting_keys:
+                raise KeyError(
+                    f"Found duplicated arguments in `HuggingFaceSource` and "
+                    f"`kwargs`: {intersecting_keys}. Please remove them from `kwargs`."
+                )
+            self._datasets = datasets.load_dataset(**load_kwargs)
+        return self._datasets
+
+    def get_raw_size(self, raw_item):
+        """Each item will consume 1 unit of size"""
+        return self.size // len(self.datasets)

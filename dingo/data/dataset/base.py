@@ -169,3 +169,12 @@ class Dataset:
             return wrapped_function
 
         return decorator
+
+    @property
+    def size(self) -> int:
+        """Size of the dataset.
+        Returns:
+            Size of the dataset.
+        """
+        return self._source.size
+

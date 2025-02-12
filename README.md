@@ -99,7 +99,10 @@ If the user wants to manually start a frontend page, you need to enter the follo
 python -m dingo.run.vsl --input xxx
 ```
 
-The input followed is the directory of the quality inspection results. Users need to ensure that there is a summary.json file when the directory is opened.
+The input followed is the directory of the quality inspection results. Users need to ensure that there is a summary.json file when the directory is opened. Frontend page of output looks like:![GUI output](docs/assets/dingo_gui.png)
+
+## Online Demo
+Try dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
 # Feature List
 
@@ -275,6 +278,7 @@ If you find this project useful, please consider citing our tool:
 ```
 @misc{dingo,
   title={Dingo: A Comprehensive Data Quality Evaluation Tool for Large Models},
+  author={Dingo Contributors},
   howpublished={\url{https://github.com/DataEval/dingo}},
   year={2024}
 }

@@ -98,7 +98,12 @@ $ cat test/data/config_gpt.json
 python -m dingo.run.vsl --input xxx
 ```
 
-input之后跟随的是质检结果的目录，用户需要确保目录打开后其中有summary.json文件
+input之后跟随的是质检结果的目录，用户需要确保目录打开后其中有summary.json文件。
+前端页面输出效果如下：![GUI output](docs/assets/dingo_gui.png)
+
+## 5.在线demo
+
+尝试使用我们的在线demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
 # 三、功能列表
 
@@ -274,6 +279,7 @@ If you find this project useful, please consider citing our tool:
 ```
 @misc{dingo,
   title={Dingo: A Comprehensive Data Quality Evaluation Tool for Large Models},
+  author={Dingo Contributors},
   howpublished={\url{https://github.com/DataEval/dingo}},
   year={2024}
 }

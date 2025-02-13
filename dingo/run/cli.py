@@ -32,6 +32,8 @@ def parse_args():
                         default=None, help="The number of data end to check.")
     parser.add_argument("--interval_size", type=int,
                         default=None, help="The number of size to save while checking.")
+    parser.add_argument("--chunk_size", type=int,
+                        default=None, help="The size of chunk to split the dataset.")
     parser.add_argument("--max_workers", type=int,
                         default=None, help="The number of max workers to concurrent check. ")
     parser.add_argument("--batch_size", type=int,
@@ -114,6 +116,8 @@ if __name__ == '__main__':
             input_data['end_index'] = args.end_index
         if args.interval_size:
             input_data['interval_size'] = args.interval_size
+        if args.chunk_size:
+            input_data['chunk_size'] = args.chunk_size
         if args.max_workers:
             input_data['max_workers'] = args.max_workers
         if args.batch_size:

@@ -18,6 +18,7 @@
 | --start_index             | int  |                0                 |    No    | the number of data start to check.                                                           |
 | --end_index               | int  |                -1                |    No    | the number of data end to check. if it's negative, include the data from start_index to end. |
 | --interval_size           | int  |               1000               |    No    | the number of size to save while checking.                                                   |
+| --chunk_size              | int  |               4000               |    No    | the size of chunk to split the dataset.                                                      |
 | --max_workers             | int  |                1                 |    No    | the number of max workers to concurrent check.                                               |
 | --batch_size              | int  |                1                 |    No    | the number of max data for concurrent check.                                                 |
 | --dataset                 | str  |          "hugging_face"          |   Yes    | dataset type, in ['hugging_face', 'local']                                                   |
@@ -47,6 +48,7 @@
 | start_index             | int                   |                0                 |    No    | the number of data start to check.                                                           |
 | end_index               | int                   |                -1                |    No    | the number of data end to check. if it's negative, include the data from start_index to end. |
 | interval_size           | int                   |               1000               |    No    | the number of size to save while checking.                                                   |
+| chunk_size              | int                   |               4000               |    No    | the size of chunk to split the dataset.                                                      |
 | max_workers             | int                   |                1                 |    No    | the number of max workers to concurrent check.                                               |
 | batch_size              | int                   |                1                 |    No    | the number of max data for concurrent check.                                                 |
 | dataset                 | str                   |          "hugging_face"          |   Yes    | dataset type, in ['hugging_face', 'local']                                                   |

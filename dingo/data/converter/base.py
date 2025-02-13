@@ -45,6 +45,21 @@ class BaseConverter(ConverterProto):
         res = reduce(lambda x, y: x[y], levels.split('.'), data)
         return res if isinstance(res, List) else [res]
 
+    def split_text(text, chunk_size=4000):
+        chunks = []
+        start = 0
+        while start < len(text.encode("utf-8")):
+            end = start + chunk_size
+            newline_pos = text.rfind('\n\n', start, end)
+            if newline_pos == -1 or newline_pos == start:
+                chunk = text[start:end]
+                start = end
+            else:
+                chunk = text[start:newline_pos + 2]
+                start = newline_pos + 2
+            chunks.append(chunk)
+        return chunks
+
 @BaseConverter.register("chatml-jsonl")
 class ChatMLConvertor(BaseConverter):
     """
@@ -99,12 +114,21 @@ class JsonConverter(BaseConverter):
             if isinstance(raw, str):
                 j = json.loads(raw)
             for k, v in j.items():
-                yield MetaData(**{
+                data = MetaData(**{
                     'data_id': cls.find_levels_data(v, input_args.column_id) if input_args.column_id != '' else str(k),
                     'prompt': cls.find_levels_data(v, input_args.column_prompt) if input_args.column_prompt != '' else '',
                     'content': cls.find_levels_data(v, input_args.column_content) if input_args.column_content != '' else '',
                     'raw_data': v
                 })
+                # yield data
+                data_chunks = cls.split_text(data.content)
+                for chunk_id in range(len(data_chunks)):
+                    yield MetaData(**{
+                        'data_id': data.data_id + '_' + str(chunk_id),
+                        'prompt': data.prompt,
+                        'content': data_chunks[chunk_id],
+                        'raw_data': data.raw_data
+                    })
 
         return _convert
 
@@ -131,7 +155,15 @@ class PlainConverter(BaseConverter):
                 'raw_data': {'content': raw}
             })
             cls.data_id += 1
-            return data
+            # return data
+            content_chunks = cls.split_text(data.content, input_args.chunk_size)
+            for chunk_id in range(len(content_chunks)):
+                yield MetaData(**{
+                    'data_id': data.data_id + '_' + str(chunk_id),
+                    'prompt': data.prompt,
+                    'content': content_chunks[chunk_id],
+                    'raw_data': data.raw_data
+                })
 
         return _convert
 
@@ -153,12 +185,21 @@ class JsonLineConverter(BaseConverter):
             if isinstance(raw, str):
                 j = json.loads(raw)
             cls.data_id += 1
-            return MetaData(**{
+            data = MetaData(**{
                 'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
                 'prompt': cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else '',
                 'content': cls.find_levels_data(j, input_args.column_content) if input_args.column_content != '' else '',
                 'raw_data': j
             })
+            # return data
+            content_chunks = cls.split_text(data.content, input_args.chunk_size)
+            for chunk_id in range(len(content_chunks)):
+                yield MetaData(**{
+                    'data_id': data.data_id + '_' + str(chunk_id),
+                    'prompt': data.prompt,
+                    'content': content_chunks[chunk_id],
+                    'raw_data': data.raw_data
+                })
 
         return _convert
 
@@ -181,13 +222,22 @@ class ListJsonConverter(BaseConverter):
             if isinstance(raw, str):
                 l_j = json.loads(raw)
             for j in l_j:
-                yield MetaData(**{
+                data = MetaData(**{
                     'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
                     'prompt': cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else '',
                     'content': cls.find_levels_data(j, input_args.column_content) if input_args.column_content != '' else '',
                     'raw_data': j
                 })
                 cls.data_id += 1
+                # yield data
+                content_chunks = cls.split_text(data.content, input_args.chunk_size)
+                for chunk_id in range(len(content_chunks)):
+                    yield MetaData(**{
+                        'data_id': data.data_id + '_' + str(chunk_id),
+                        'prompt': data.prompt,
+                        'content': content_chunks[chunk_id],
+                        'raw_data': data.raw_data
+                    })
 
         return _convert
 

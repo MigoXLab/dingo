@@ -25,6 +25,7 @@ class InputArgs(BaseModel):
     start_index: int = 0
     end_index: int = -1
     interval_size: int = 1000
+    chunk_size: int = 4000
 
     # Concurrent settings
     max_workers: int = 1
@@ -86,12 +87,17 @@ class InputArgs(BaseModel):
         if self.start_index < 0:
             raise ValueError("start_index must be non negative.")
 
+        # check end index
         if self.end_index >= 0 and self.end_index < self.start_index:
             raise ValueError("if end_index is non negative, end_index must be greater than start_index")
 
         # check interval size
         if self.interval_size <= 0:
             raise ValueError("interval_size must be positive.")
+
+        # check chunk size
+        if self.chunk_size <= 0:
+            raise ValueError("chunk_size must be positive.")
 
         # check max workers
         if self.max_workers <= 0:

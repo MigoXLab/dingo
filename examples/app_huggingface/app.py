@@ -5,15 +5,15 @@ from dingo.exec import Executor
 from dingo.io import InputArgs
 
 
-def dingo_demo(input_path, data_format, column_content, input_rules, input_prompts, key, api_url):
+def dingo_demo(input_path, data_format, column_content, rule_list, prompt_list, key, api_url):
     if not input_path:
         return 'ValueError: input_path can not be empty, please input.'
     if not data_format:
         return 'ValueError: data_format can not be empty, please input.'
     if not column_content:
         return 'ValueError: column_content can not be empty, please input.'
-    if not input_rules and not input_prompts:
-        return 'ValueError: input_rules and input_prompts can not be empty at the same time.'
+    if not rule_list and not prompt_list:
+        return 'ValueError: rule_list and prompt_list can not be empty at the same time.'
 
     input_data = {
         "input_path": input_path,
@@ -21,8 +21,8 @@ def dingo_demo(input_path, data_format, column_content, input_rules, input_promp
         "column_content": column_content,
         "custom_config":
             {
-                "rule_list": input_rules,
-                "prompt_list": input_prompts,
+                "rule_list": rule_list,
+                "prompt_list": prompt_list,
                 "llm_config":
                     {
                         "detect_text_quality_detail":
@@ -44,19 +44,30 @@ if __name__ == '__main__':
     rule_options = ['RuleAbnormalChar', 'RuleAbnormalHtml', 'RuleContentNull', 'RuleContentShort', 'RuleEnterAndSpace', 'RuleOnlyUrl']
     prompt_options = ['PromptRepeat', 'PromptContentChaos']
 
-    #接口创建函数
-    #fn设置处理函数，inputs设置输入接口组件，outputs设置输出接口组件
-    #fn,inputs,outputs都是必填函数
-    demo = gr.Interface(
-        fn=dingo_demo,
-        inputs=[
-            gr.Textbox(value='chupei/format-jsonl', placeholder="please input huggingface dataset path"),
-            gr.Dropdown(["jsonl", "json", "plaintext", "listjson"], label="data_format"),
-            gr.Textbox(value="content", placeholder="please input column name of content in dataset"),
-            gr.CheckboxGroup(choices=rule_options, label="rule_list"),
-            gr.CheckboxGroup(choices=prompt_options, label="prompt_list"),
-            'text',
-            'text',
-        ],
-        outputs="text")
+    with open("header.html", "r") as file:
+        header = file.read()
+    with gr.Blocks() as demo:
+        gr.HTML(header)
+        with gr.Row():
+            with gr.Column():
+                input_path = gr.Textbox(value='chupei/format-jsonl', placeholder="please input huggingface dataset path", label="input_path")
+                data_format = gr.Dropdown(["jsonl", "json", "plaintext", "listjson"], label="data_format")
+                column_content = gr.Textbox(value="content", placeholder="please input column name of content in dataset", label="column_content")
+                rule_list = gr.CheckboxGroup(choices=rule_options, label="rule_list")
+                prompt_list = gr.CheckboxGroup(choices=prompt_options, label="prompt_list")
+                key = gr.Textbox(placeholder="If want to use llm, please input the key of it.", label="key")
+                api_url = gr.Textbox(placeholder="If want to use llm, please input the api_url of it.", label="api_url")
+                with gr.Row():
+                    submit_single = gr.Button(value="Submit", interactive=True, variant="primary")
+            with gr.Column():
+                # 输出组件
+                output = gr.Textbox(label="output")
+
+        submit_single.click(
+            fn=dingo_demo,
+            inputs=[input_path, data_format, column_content, rule_list, prompt_list, key, api_url],
+            outputs=output
+        )
+
+    # 启动界面
     demo.launch()

@@ -95,20 +95,6 @@ Ensure the format and content of the `options` field are correct. Guidelines:
 ### 3.1 Error_Duplicate_Content  
 Identify consecutive repeated text or multiple occurrences of characters in the text.  
 
-# Workflow
-1. **Read and Evaluate**: Analyze the text based on the outlined negative criteria.
-2. **Assign Type**:
-   - If no negative criteria are met, assign 'Good'.
-   - Otherwise, assign one of ['Completeness', 'Effectiveness', 'Similarity'].
-3. **Assign Name**:
-   - 'Good' text gets 'None'.
-   - 'Completeness' text gets one of ["Error_Formula","Error_Table"].
-   - 'Effectiveness' text gets one of ["Error_Split_Paragraph","Error_Ans_Format","Error_List_Number","Error_Content_Position","Error_Options_Format_Content"].
-   - 'Similarity' text gets 'Error_Duplicate_Content'.
-4. **Assign Score**: 'Good' = 1, others = 0.
-5. **Provide Reason**: Clearly state the basis for evaluation.
-6. **Return in JSON**: {"score": 0/1, "type": "", "name": "", "reason": ""}.
-
 
 # Workflow  
 1. **Evaluate the text**: Carefully read and understand the provided text. Assess its quality based on the negative criteria.  

@@ -3,12 +3,12 @@
 ## Dataset Introduction
 This dataset aims to evaluate the accuracy of the built-in kaoti prompt words in dingo, therefore, the test question data was selected to construct the test set.
 
-| Field Name   | Description                                                                 |
-|--------------|-----------------------------------------------------------------------------|
-| id           | DATA ID, without special meaning, users can modify it according to their own needs |
-| grade_class  | The classification of students based on their academic grade levels         |
-| major        | Main area of knowledge and skills                                          |
-| content      | Data to be tested                                                          |                                                  |
+| Field Name   | Description                                                                        |
+|--------------|------------------------------------------------------------------------------------|
+| id           | DATA id, without special meaning, users can modify it according to their own needs |
+| grade_class  | The classification of students based on their academic grade levels                |
+| major        | Main area of knowledge and skills                                                  |
+| content      | Data to be tested                                                                  |                                                  |
 
 
 

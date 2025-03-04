@@ -49,7 +49,7 @@ from dingo.io import InputArgs
 from dingo.exec import Executor
 
 input_data = {
-    "eval_group": "v2",
+    "eval_group": "kaoti",
     "input_path": "/your/dataset/path",# s3 path :qa-huawei
     "save_data": True,
     "save_correct": True,

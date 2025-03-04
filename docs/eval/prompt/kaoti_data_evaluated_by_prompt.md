@@ -50,7 +50,7 @@ from dingo.exec import Executor
 
 input_data = {
     "eval_group": "v2",
-    "input_path": "lulindong/prompt_v4_kaoti",# s3 path :qa-huawei
+    "input_path": "/your/dataset/path",# s3 path :qa-huawei
     "save_data": True,
     "save_correct": True,
     "save_raw": True,

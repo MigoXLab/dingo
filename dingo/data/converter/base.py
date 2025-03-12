@@ -120,7 +120,7 @@ class MultiTurnDialogConverter(BaseConverter):
                 if i > 0:
                     prompt += '\n\n'
                 prompt += f"user: {turn.get('user', '')}"
-                
+
                 # yield current state with bot's response as content
                 yield MetaData(**{
                     'data_id': f"{cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id)}_{i}",
@@ -128,7 +128,7 @@ class MultiTurnDialogConverter(BaseConverter):
                     'content': turn.get('bot', ''),
                     'raw_data': j
                 })
-                
+
                 # add bot response to prompt for next turn
                 prompt += f"\n\nassistant: {turn.get('bot', '')}"
 

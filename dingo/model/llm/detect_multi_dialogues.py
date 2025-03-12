@@ -15,7 +15,7 @@ class DetectMultiTurnDialogues(BaseOpenAI):
         # Get conversation history and response to evaluate
         history = input_data.prompt
         response = input_data.content
-        
+
         # Format the prompt with history and response
         prompt_content = cls.prompt.content % (history, response)
 

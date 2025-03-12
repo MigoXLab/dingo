@@ -39,6 +39,6 @@ class PromptMultiTurnDialogues(BasePrompt):
     Assistant's Response to Evaluate:
     %s
 
-    Please provide a detailed evaluation for each criterion, return the results in JSON format: 
+    Please provide a detailed evaluation for each criterion, return the results in JSON format:
     {"score": 1-10, "reason": "your detailed evaluation"}. Do not output any additional content.
     """

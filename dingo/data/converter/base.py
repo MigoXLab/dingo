@@ -83,6 +83,58 @@ class ChatMLConvertor(BaseConverter):
         return _convert
 
 
+@BaseConverter.register('mt_bench101')
+class MultiTurnDialogConverter(BaseConverter):
+    """
+    Multi-turn dialog converter for datasets like MT-Bench101.
+    """
+
+    data_id = 0
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def convertor(cls, input_args: InputArgs) -> Callable:
+        def _convert(raw: Union[str, Dict]):
+            j = raw
+            if isinstance(raw, str):
+                j = json.loads(raw)
+            cls.data_id += 1
+
+            # get history
+            history: list = j.get(input_args.column_content, []) if input_args.column_content != '' else j.get('history', [])
+            if not history:
+                yield MetaData(**{
+                    'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
+                    'prompt': '',
+                    'content': '',
+                    'raw_data': j
+                })
+                return
+
+            # process each turn of dialogue
+            prompt = ''
+            for i, turn in enumerate(history):
+                # add user question to prompt
+                if i > 0:
+                    prompt += '\n\n'
+                prompt += f"user: {turn.get('user', '')}"
+                
+                # yield current state with bot's response as content
+                yield MetaData(**{
+                    'data_id': f"{cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id)}_{i}",
+                    'prompt': prompt,
+                    'content': turn.get('bot', ''),
+                    'raw_data': j
+                })
+                
+                # add bot response to prompt for next turn
+                prompt += f"\n\nassistant: {turn.get('bot', '')}"
+
+        return _convert
+
+
 @BaseConverter.register('json')
 class JsonConverter(BaseConverter):
     """

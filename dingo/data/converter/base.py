@@ -83,10 +83,11 @@ class ChatMLConvertor(BaseConverter):
         return _convert
 
 
-@BaseConverter.register('mt_bench101')
+@BaseConverter.register('multi_turn_dialog')
 class MultiTurnDialogConverter(BaseConverter):
     """
-    Multi-turn dialog converter for datasets like MT-Bench101.
+    Unified multi-turn dialog converter for datasets like MT-Bench101 and MT-Bench.
+    Supports different modes: 'default', 'answer_only', 'all'.
     """
 
     data_id = 0
@@ -102,35 +103,66 @@ class MultiTurnDialogConverter(BaseConverter):
                 j = json.loads(raw)
             cls.data_id += 1
 
-            # get history
-            history: list = j.get(input_args.column_content, []) if input_args.column_content != '' else j.get('history', [])
+            raw_history: list = j.get(input_args.column_content, []) if input_args.column_content != '' else j.get('history', [])
+            # Determine the format of the input data
+            if 'user' in j and 'bot' in j:
+                # MT-Bench101 format
+                history = raw_history
+            elif 'content' in j and 'role' in j:
+                history = []
+                # MT-Bench format
+                for turn in raw_history:
+                    if turn.get('role') == 'assistant':
+                        history.append({'bot': turn.get('content')})
+                    else:
+                        history.append({'user': turn.get('content')})
+            else:
+                raise ValueError(
+                    "The provided data does not conform to the multi-turn dialogue format. Please check the corresponding field.")
+
+            # # get multi-turn dialogues
+            # history: list = j.get(input_args.column_content, []) if input_args.column_content != '' else j.get('history', [])
             if not history:
+                # if not multi-turn dialogues, raise error
+                raise ValueError("The provided data does not conform to the multi-turn dialogue format. Please check the corresponding field.")
+
+            # process each turn of dialogue based on mode
+            if input_args.custom_config and input_args.custom_config.get('mode') == 'answer_only':
+                for i, turn in enumerate(history):
+                    yield MetaData(**{
+                        'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
+                        'round_id': f"{cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id)}_{i+1}",
+                        'prompt': '',
+                        'content': turn.get('bot', ''),
+                        'raw_data': j
+                    })
+            elif input_args.custom_config and input_args.custom_config.get('mode') == 'all':
+                content = ''
+                for i, turn in enumerate(history):
+                    if i > 0:
+                        content += '\n\n'
+                    content += f"user: {turn.get('user', '')}"
+                    content += f"\n\nassistant: {turn.get('bot', '')}"
                 yield MetaData(**{
                     'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
                     'prompt': '',
-                    'content': '',
+                    'content': content,
                     'raw_data': j
                 })
-                return
-
-            # process each turn of dialogue
-            prompt = ''
-            for i, turn in enumerate(history):
-                # add user question to prompt
-                if i > 0:
-                    prompt += '\n\n'
-                prompt += f"user: {turn.get('user', '')}"
-
-                # yield current state with bot's response as content
-                yield MetaData(**{
-                    'data_id': f"{cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id)}_{i}",
-                    'prompt': prompt,
-                    'content': turn.get('bot', ''),
-                    'raw_data': j
-                })
-
-                # add bot response to prompt for next turn
-                prompt += f"\n\nassistant: {turn.get('bot', '')}"
+            else:  # default mode: 'default'
+                prompt = ''
+                for i, turn in enumerate(history):
+                    if i > 0:
+                        prompt += '\n\n'
+                    prompt += f"user: {turn.get('user', '')}"
+                    yield MetaData(**{
+                        'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
+                        'round_id': f"{cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id)}_{i+1}",
+                        'prompt': prompt,
+                        'content': turn.get('bot', ''),
+                        'raw_data': j
+                    })
+                    prompt += f"\n\nassistant: {turn.get('bot', '')}"
 
         return _convert
 

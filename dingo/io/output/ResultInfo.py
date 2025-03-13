@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class ResultInfo(BaseModel):
     data_id: str = ''
+    round_id: str = ''
     prompt: str = ''
     content: str = ''
     error_status: bool = False
@@ -16,6 +17,7 @@ class ResultInfo(BaseModel):
     def to_dict(self):
         return {
             'data_id': self.data_id,
+            'round_id': self.round_id,
             'prompt': self.prompt,
             'content': self.content,
             'error_status': self.error_status,

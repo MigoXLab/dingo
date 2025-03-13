@@ -161,6 +161,8 @@ class LocalExecutor(ExecProto):
 
     def evaluate_single_data(self, group_type, group, data: MetaData):
         result_info = ResultInfo(data_id=data.data_id, prompt=data.prompt, content=data.content)
+        if data.round_id:
+            result_info.round_id = data.round_id
         if self.input_args.save_raw:
             result_info.raw_data = data.raw_data
         bad_type_list = []

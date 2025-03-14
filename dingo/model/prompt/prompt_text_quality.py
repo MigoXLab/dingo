@@ -91,10 +91,10 @@ Your core task is to evaluate the fitness of this dataset for training a large l
 1. **Completeness**
     - **Error_Formula**: A formula enclosed in a pair of one $character is an intra line formula, while a formula enclosed in a pair of double $characters is an inter line formula. The text formula contains the following errors:
         - **Grammar Error**: There is a syntax error in the formula within the $ character.
-        - **Interline Error**: Double $$ is used excessively for formulas that should be inline (e.g., $\mathbf{x}$, $\mathbf{y}$), resulting in a large number of unnecessary line breaks, severely disrupting the structure of the text, and affecting its readability and continuity. 
+        - **Interline Error**: Double $$ is used excessively for formulas that should be inline (e.g., $\mathbf{x}$, $\mathbf{y}$), resulting in a large number of unnecessary line breaks, severely disrupting the structure of the text, and affecting its readability and continuity.
     - **ERROR_Table**: Tables exist in Markdown files in either Markdown format or HTML format.
         - **Simple_Table_Errors**: Simple tables exist in the document in markdown format, specifically referring to tables without row/column spans or nested tables; error reasons include format and content issues.
-        - **Complex_Table_Errors**: Complex tables exist in the document in HTML format, specifically referring to tables with row/column spans or nested tables; error reasons include format and content issues.   
+        - **Complex_Table_Errors**: Complex tables exist in the document in HTML format, specifically referring to tables with row/column spans or nested tables; error reasons include format and content issues.
     - **Error_Code**: A Code enclosed in a pair of one `characters is an intra line code, while a code enclosed in a pair of three `characters is an inter line code. There are ordered numbers before code or the code contains syntax Error, format Error.
 
 2. **Effectiveness**

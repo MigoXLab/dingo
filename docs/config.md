@@ -72,7 +72,7 @@
 | prompt_list     | list | choose these prompts as a group to check data quality.   |
 | rule_config     | dict | parameters related to rules and key is rule name.        |
 | llm_config      | dict | parameters related to llm and key is llm name.           |
-| multi_turn_mode | str  | choose parse mode for multi-turn dialogue.               |                                             
+| multi_turn_mode | str  | choose parse mode for multi-turn dialogue.               |
 
 `rule_list` 和 `prompt_list` 参数与上述提到的 `eval_group` 配合使用。
 如果 `eval_group` 已经内置，那 `rule_list` 和 `prompt_list` 则报错提示。

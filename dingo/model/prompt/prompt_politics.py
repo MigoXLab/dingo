@@ -14,7 +14,7 @@ class PromptPolitics(BasePrompt):
 
 回答：
 {{
-    "terrorism_and_extremism": "neg"|"pos"|"none",  
+    "terrorism_and_extremism": "neg"|"pos"|"none",
 }}
 
 需要审查的语料：

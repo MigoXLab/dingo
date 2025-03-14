@@ -1,6 +1,7 @@
 from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
+
 @Model.prompt_register("Html_Abstract", [])
 class PromptHtmlAbstract(BasePrompt):
     content = """
@@ -36,8 +37,8 @@ class PromptHtmlAbstract(BasePrompt):
 ```json
 {{
   "score": 1,
-  "name": "code",  
-  "reason": "代码块缩进丢失"  
+  "name": "code",
+  "reason": "代码块缩进丢失"
 }}
 ```
 

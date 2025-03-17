@@ -7,7 +7,7 @@ class PromptProhibitions(BasePrompt):
     content = """
 You are a content safety reviewer. I will provide a text and you need to judge whether its content contains harmful information.
 
-1. porn: This type of content clearly and directly describes sexual behavior or sexual organs. 
+1. porn: This type of content clearly and directly describes sexual behavior or sexual organs.
 
 Please answer in JSON format and output only the JSON content. The specific format is as follows:
 

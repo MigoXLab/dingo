@@ -13,7 +13,7 @@ input_data = {
             "prompt_list": ["PromptPolitics"],
             "llm_config":
                 {
-                    "detect_politics":
+                    "detect_security":
                         {
                             "key": "",
                             "api_url": "",

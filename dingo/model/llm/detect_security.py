@@ -8,8 +8,8 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('detect_politics')
-class DetectPolitics(BaseOpenAI):
+@Model.llm_register('detect_security')
+class DetectSecurity(BaseOpenAI):
     @classmethod
     def process_response(cls, response: str) -> ModelRes:
         log.info(response)
@@ -30,7 +30,7 @@ class DetectPolitics(BaseOpenAI):
             if v == 'pos':
                 result.error_status = True
                 result.type = 'Security'
-                result.name = 'Political'
+                result.name = cls.prompt.__name__
                 result.reason.append(k)
 
         return result

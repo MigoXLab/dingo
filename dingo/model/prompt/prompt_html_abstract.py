@@ -30,7 +30,7 @@ class PromptHtmlAbstract(BasePrompt):
 3. **问题反馈**：严格按上述 8 类模块定位问题，若无问题则返回空列表。
 
 4. **返回结果**：以 JSON 格式返回，包含3个字段：score、name、reason。
-   - `score`：抽取效果更好工具的序号，取值只有1和2，分别代表工具1和工具2。
+   - `score`：如果工具1抽取效果更好，score取值为1。如果工具2抽取效果更好，score取值为2。如果工具1和工具2抽取效果基本相同，score取值为0。
    - `name`：必须从 8 类模块中选择，且选择抽取效果较差工具的最严重、最具代表性的问题模块。
    - `reason`：判断依据，即问题模块为什么差，以及差在哪里。
 例如：
@@ -38,7 +38,7 @@ class PromptHtmlAbstract(BasePrompt):
 {{
   "score": 1,
   "name": "code",
-  "reason": "代码块缩进丢失"
+  "reason": "工具2代码块缩进丢失"
 }}
 ```
 

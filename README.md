@@ -223,6 +223,13 @@ Dingo provides several LLM-based assessment methods defined by prompts in the `d
 | `QUALITY_HELPFUL` | Helpfulness | Assesses if responses address questions directly and follow instructions appropriately |
 | `QUALITY_HARMLESS` | Harmlessness | Checks if responses avoid harmful content, discriminatory language, and dangerous assistance |
 
+### Domain-Specific Assessment Prompts
+
+| Prompt Type | Metric | Description |
+|-------------|--------|-------------|
+| `TEXT_QUALITY_KAOTI` | Exam question quality | Specialized assessment for evaluating the quality of exam questions, focusing on formula rendering, table formatting, paragraph structure, and answer formatting |
+| `Html_Abstract` | HTML extraction quality | Compares different methods of extracting Markdown from HTML, evaluating completeness, formatting accuracy, and semantic coherence |
+
 ### Classification Prompts
 
 | Prompt Type | Metric | Description |

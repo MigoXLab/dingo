@@ -212,6 +212,13 @@ Dingo在`dingo/model/prompt`目录下提供了多种基于LLM的评估方法。�
 | `QUALITY_HELPFUL` | 有帮助性 | 评估回答是否直接解决问题并适当遵循指令 |
 | `QUALITY_HARMLESS` | 无害性 | 检查回答是否避免有害内容、歧视性语言和危险指导 |
 
+### 领域专用评估Prompt
+
+| Prompt类型 | 指标 | 描述 |
+|-------------|--------|-------------|
+| `TEXT_QUALITY_KAOTI` | 考题质量 | 专门评估考试题目的质量，关注公式渲染、表格格式、段落结构和答案格式 |
+| `Html_Abstract` | HTML提取质量 | 比较从HTML提取Markdown的不同方法，评估完整性、格式准确性和语义连贯性 |
+
 ### 分类Prompt
 
 | Prompt类型 | 指标 | 描述 |

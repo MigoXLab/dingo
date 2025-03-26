@@ -202,34 +202,49 @@ Dingo classifies data quality issues into 7 dimensions of Quality Metrics. Each 
 
 ## LLM Quality Assessment
 
-Dingo provides several LLM-based models to evaluate text quality across different dimensions. These models are registered using the `llm_register` decorator and can be used in your evaluation workflows:
+Dingo provides several LLM-based assessment methods defined by prompts in the `dingo/model/prompt` directory. These prompts are registered using the `prompt_register` decorator and can be combined with LLM models for quality evaluation:
 
-### Text Quality Assessment Models
+### Text Quality Assessment Prompts
 
-| Model Name | Description | Use Case |
-|------------|-------------|----------|
-| `detect_text_quality` | Basic text quality analysis based on OpenAI models | General quality assessment |
-| `detect_text_quality_detail` | Detailed quality analysis with specific error types | Provides granular quality feedback with specific error types and reasons |
-| `detect_text_quality_3h` | Quality assessment for question-answer pairs based on 3H standards | Evaluates if responses are honest, helpful, and harmless |
+| Prompt Type | Metric | Description |
+|-------------|--------|-------------|
+| `TEXT_QUALITY_V2`, `TEXT_QUALITY_V3` | Various quality dimensions | Comprehensive text quality evaluation covering effectiveness, relevance, completeness, understandability, similarity, fluency, and security |
+| `QUALITY_BAD_EFFECTIVENESS` | Effectiveness | Detects garbled text and anti-crawling content |
+| `QUALITY_BAD_SIMILARITY` | Similarity | Identifies text repetition issues |
+| `WORD_STICK` | Fluency | Checks for words stuck together without proper spacing |
+| `CODE_LIST_ISSUE` | Completeness | Evaluates code blocks and list formatting issues |
+| `UNREAD_ISSUE` | Effectiveness | Detects unreadable characters due to encoding issues |
 
-### Specialized Assessment Models
+### 3H Assessment Prompts (Honest, Helpful, Harmless)
 
-| Model Name | Description | Use Case |
-|------------|-------------|----------|
-| `classify_topic` | Topic classification for text content | Categorizes text into predefined topics |
-| `classify_QR` | QR code and image content analysis | Evaluates image-based content |
-| `detect_image_relevant` | Image-text relevance evaluation | Checks if images match their text descriptions |
-| `detect_perspective` | Content safety and toxicity detection | Uses Google's Perspective API to identify toxic, harmful, or unsafe content |
+| Prompt Type | Metric | Description |
+|-------------|--------|-------------|
+| `QUALITY_HONEST` | Honesty | Evaluates if responses provide accurate information without fabrication or deception |
+| `QUALITY_HELPFUL` | Helpfulness | Assesses if responses address questions directly and follow instructions appropriately |
+| `QUALITY_HARMLESS` | Harmlessness | Checks if responses avoid harmful content, discriminatory language, and dangerous assistance |
 
-### Using LLM Models in Evaluation
+### Classification Prompts
 
-To use these LLM models in your evaluations, specify them in your configuration:
+| Prompt Type | Metric | Description |
+|-------------|--------|-------------|
+| `CLASSIFY_TOPIC` | Topic Categorization | Classifies text into categories like language processing, writing, code, mathematics, role-play, or knowledge Q&A |
+| `CLASSIFY_QR` | Image Classification | Identifies images as CAPTCHA, QR code, or normal images |
+
+### Image Assessment Prompts
+
+| Prompt Type | Metric | Description |
+|-------------|--------|-------------|
+| `IMAGE_RELEVANCE` | Image Relevance | Evaluates if an image matches reference image in terms of face count, feature details, and visual elements |
+
+### Using LLM Assessment in Evaluation
+
+To use these assessment prompts in your evaluations, specify them in your configuration:
 
 ```python
 input_data = {
     # Other parameters...
     "custom_config": {
-        "prompt_list": ["PromptRepeat"],  # Specific prompt to use
+        "prompt_list": ["QUALITY_BAD_SIMILARITY"],  # Specific prompt to use
         "llm_config": {
             "detect_text_quality": {  # LLM model to use
                 "model": "gpt-4o",
@@ -241,9 +256,7 @@ input_data = {
 }
 ```
 
-You can customize these LLM prompts and models to focus on specific quality dimensions or to adapt to particular domain requirements.
-
-Each rule is designed to check specific aspects of text quality and is mapped to one of these metrics. When you run an evaluation, Dingo will provide scores for each dimension and identify which rules were triggered.
+You can customize these prompts to focus on specific quality dimensions or to adapt to particular domain requirements. When combined with appropriate LLM models, these prompts enable comprehensive evaluation of data quality across multiple dimensions.
 
 # Rule Groups
 

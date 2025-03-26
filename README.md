@@ -41,34 +41,29 @@ Dingo is a data quality evaluation tool that helps you automatically detect data
 
 ![Architecture of dingo](./docs/assets/architeture.png)
 
-## Scenario Diagram
-
-![Scene of dingo](docs/assets/scene.png)
-
 # Quick Start
 
-Users can use Dingo in two ways as shown below.
-
 ## Installation
-
-Install `dingo`
 
 ```shell
 pip install dingo-python
 ```
-## SDK
 
-Try to run the `SDK` call method below:
+## Example Use Cases
+
+### 1. Evaluate Local Text File (Plaintext)
 
 ```python
 from dingo.io import InputArgs
 from dingo.exec import Executor
 
+# Evaluate a plaintext file
 input_data = {
-    "eval_group": "sft", # rule list for sft data, other ['default', 'pretrain' ...]
-    "input_path": "tatsu-lab/alpaca", # dataset from huggingface
-    "data_format": "plaintext", # data format, other ['json', 'jsonl', 'plaintext']
-    "save_data": True, # save data to local
+    "eval_group": "sft",          # Rule set for SFT data
+    "input_path": "data.txt",      # Path to local text file
+    "dataset": "local",
+    "data_format": "plaintext",    # Format: plaintext
+    "save_data": True              # Save evaluation results
 }
 
 input_args = InputArgs(**input_data)
@@ -77,165 +72,312 @@ result = executor.execute()
 print(result)
 ```
 
-For more usage examples, please refer to [examples](examples), for more evaluation results, please refer to [evaluation](docs/eval), and for more configurations, please refer to [config](docs/config.md).
+### 2. Evaluate Hugging Face Dataset
 
-## CLI
+```python
+from dingo.io import InputArgs
+from dingo.exec import Executor
 
-Try to run the `CLI` call rule set evaluation below:
+# Evaluate a dataset from Hugging Face
+input_data = {
+    "eval_group": "sft",           # Rule set for SFT data
+    "input_path": "tatsu-lab/alpaca", # Dataset from Hugging Face
+    "data_format": "plaintext",    # Format: plaintext
+    "save_data": True              # Save evaluation results
+}
 
-``` shell
-python -m dingo.run.cli --input_path tatsu-lab/alpaca -e sft --data_format plaintext --save_data True
+input_args = InputArgs(**input_data)
+executor = Executor.exec_map["local"](input_args)
+result = executor.execute()
+print(result)
 ```
 
-Or try to run the `CLI` call gpt-4o model evaluation below:
+### 3. Evaluate JSON/JSONL Format
 
-```shell
-python -m dingo.run.cli --input_path test/data/test_local_json.json --dataset local -e openai --data_format json --column_content prediction --custom_config test/config/config_gpt.json --save_data True
+```python
+from dingo.io import InputArgs
+from dingo.exec import Executor
+
+# Evaluate a JSON file
+input_data = {
+    "eval_group": "default",       # Default rule set
+    "input_path": "data.json",     # Path to local JSON file
+    "dataset": "local",
+    "data_format": "json",         # Format: json
+    "column_content": "text",      # Column containing the text to evaluate
+    "save_data": True              # Save evaluation results
+}
+
+input_args = InputArgs(**input_data)
+executor = Executor.exec_map["local"](input_args)
+result = executor.execute()
+print(result)
 ```
 
-Note that calling the model evaluation requires adding the corresponding configuration, such as the configuration used in the above example:
+### 4. Using LLM for Evaluation
+
+```python
+from dingo.io import InputArgs
+from dingo.exec import Executor
+
+# Evaluate using GPT model
+input_data = {
+    "input_path": "data.jsonl",    # Path to local JSONL file
+    "dataset": "local",
+    "data_format": "jsonl",
+    "column_content": "content",
+    "custom_config": {
+        "prompt_list": ["PromptRepeat"],  # Prompt to use
+        "llm_config": {
+            "detect_text_quality": {
+                "model": "gpt-4o",
+                "key": "YOUR_API_KEY",
+                "api_url": "https://api.openai.com/v1/chat/completions"
+            }
+        }
+    }
+}
+
+input_args = InputArgs(**input_data)
+executor = Executor.exec_map["local"](input_args)
+result = executor.execute()
+print(result)
+```
+
+## Command Line Interface
+
+### Evaluate with Rule Sets
 
 ```shell
-$ cat test/data/config_gpt.json
+python -m dingo.run.cli --input_path data.txt --dataset local -e sft --data_format plaintext --save_data True
+```
+
+### Evaluate with LLM (e.g., GPT-4o)
+
+```shell
+python -m dingo.run.cli --input_path data.json --dataset local -e openai --data_format json --column_content text --custom_config config_gpt.json --save_data True
+```
+
+Example `config_gpt.json`:
+```json
 {
   "llm_config": {
     "openai": {
       "model": "gpt-4o",
-      "key": "xxxx",
+      "key": "YOUR_API_KEY",
       "api_url": "https://api.openai.com/v1/chat/completions"
     }
   }
 }
 ```
 
-## GUI
+## GUI Visualization
 
-After the project runs on the `cli` side, if the user sets the save_data parameter to True, a frontend page will be automatically generated based on the quality inspection results.
-If the user wants to manually start a frontend page, you need to enter the following command:
+After evaluation (with `save_data=True`), a frontend page will be automatically generated. To manually start the frontend:
 
 ```shell
-python -m dingo.run.vsl --input xxx
+python -m dingo.run.vsl --input output_directory
 ```
 
-The input followed is the directory of the quality inspection results. Users need to ensure that there is a summary.json file when the directory is opened. Frontend page of output looks like:![GUI output](docs/assets/dingo_gui.png)
+Where `output_directory` contains the evaluation results with a `summary.json` file.
+
+![GUI output](docs/assets/dingo_gui.png)
 
 ## Online Demo
-Try dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
+Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
-# Feature List
+# Data Quality Metrics
 
-## Supports multiple input data sources, data types, and data modalities
+Dingo classifies data quality issues into 7 dimensions of Quality Metrics. Each dimension can be evaluated using both rule-based methods and LLM-based prompts:
 
-Dingo supports local files, huggingface datasets, S3 storage files as data sources; supports pre-training, fine-tuning, and evaluation datasets as data types; supports text and image data modalities.
+| Quality Metric    | Description | Rule Examples | LLM Prompt Examples |
+|-------------------|-------------|---------------|---------------------|
+| **COMPLETENESS** | Checks if data is incomplete or missing | `RuleColonEnd`, `RuleContentNull` | Evaluates if text abruptly ends with a colon or ellipsis, has mismatched parentheses, or missing critical components |
+| **EFFECTIVENESS** | Checks if data is meaningful and properly formatted | `RuleAbnormalChar`, `RuleHtmlEntity`, `RuleSpecialCharacter` | Detects garbled text, words stuck together without spaces, and text lacking proper punctuation |
+| **FLUENCY** | Checks if text is grammatically correct and reads naturally | `RuleAbnormalNumber`, `RuleNoPunc`, `RuleWordStuck` | Identifies excessively long words, text fragments without punctuation, or content with chaotic reading order |
+| **RELEVANCE** | Detects irrelevant content within the data | `RuleHeadWord` variants for different languages | Examines for irrelevant information like citation details, headers/footers, entity markers, HTML tags |
+| **SECURITY** | Identifies sensitive information or value conflicts | `RuleIDCard`, `RuleUnsafeWords` | Checks for personal information, and content related to gambling, pornography, political issues |
+| **SIMILARITY** | Detects repetitive or highly similar content | `RuleDocRepeat` | Evaluates text for consecutive repeated content or multiple occurrences of special characters |
+| **UNDERSTANDABILITY** | Assesses how easily data can be interpreted | `RuleCapitalWords` | Ensures LaTeX formulas and Markdown are correctly formatted, with proper segmentation and line breaks |
 
-## Supports custom rules, model evaluation
+## LLM Quality Assessment
 
-Dingo has built-in 20+ general heuristic rule evaluations, common LLMs (such as OpenAI, kimi, etc.) evaluations, and launching local specified model (llama3, etc.) evaluations.
-Built-in heuristic rules have built-in multiple rule set combinations such as pretrain, sft according to the dataset type.
-Both rules and model evaluations support customization or modification.
-Supports data security evaluation, such as perspective API.
+Dingo provides several LLM-based models to evaluate text quality across different dimensions. These models are registered using the `llm_register` decorator and can be used in your evaluation workflows:
 
-## Supports multiple interface usage methods, good extensibility, and easy to integrate
+### Text Quality Assessment Models
 
-Dingo supports multiple interface usage methods, including local CLI and SDK, making it easy to integrate into various evaluation platforms, such as OpenCompass.
+| Model Name | Description | Use Case |
+|------------|-------------|----------|
+| `detect_text_quality` | Basic text quality analysis based on OpenAI models | General quality assessment |
+| `detect_text_quality_detail` | Detailed quality analysis with specific error types | Provides granular quality feedback with specific error types and reasons |
+| `detect_text_quality_3h` | Quality assessment for question-answer pairs based on 3H standards | Evaluates if responses are honest, helpful, and harmless |
 
-## Supports multiple execution engines
+### Specialized Assessment Models
 
-Dingo supports local and SPARK two execution engines, which is convenient for executing data evaluation tasks of various sizes.
+| Model Name | Description | Use Case |
+|------------|-------------|----------|
+| `classify_topic` | Topic classification for text content | Categorizes text into predefined topics |
+| `classify_QR` | QR code and image content analysis | Evaluates image-based content |
+| `detect_image_relevant` | Image-text relevance evaluation | Checks if images match their text descriptions |
+| `detect_perspective` | Content safety and toxicity detection | Uses Google's Perspective API to identify toxic, harmful, or unsafe content |
 
-## Supports multi-dimensional metric reports, traceable
+### Using LLM Models in Evaluation
 
-Dingo supports outputting 7 Quality Metrics summary reports and abnormal data trace details reports.
+To use these LLM models in your evaluations, specify them in your configuration:
 
-# Concept Introduction
+```python
+input_data = {
+    # Other parameters...
+    "custom_config": {
+        "prompt_list": ["PromptRepeat"],  # Specific prompt to use
+        "llm_config": {
+            "detect_text_quality": {  # LLM model to use
+                "model": "gpt-4o",
+                "key": "YOUR_API_KEY",
+                "api_url": "https://api.openai.com/v1/chat/completions"
+            }
+        }
+    }
+}
+```
 
-## Metric Introduction
+You can customize these LLM prompts and models to focus on specific quality dimensions or to adapt to particular domain requirements.
 
-[Metric Document](docs/metrics.md)
+Each rule is designed to check specific aspects of text quality and is mapped to one of these metrics. When you run an evaluation, Dingo will provide scores for each dimension and identify which rules were triggered.
 
-## Rule Introduction
+# Rule Groups
 
-[Rule Document](docs/rules.md)
+Dingo provides pre-configured rule groups for different types of datasets:
 
-## eval_group Introduction
+| Group | Use Case | Example Rules |
+|-------|----------|---------------|
+| `default` | General text quality | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`, etc. |
+| `sft` | Fine-tuning datasets | Rules from `default` plus `RuleLineStartWithBulletpoint` |
+| `pretrain` | Pre-training datasets | Comprehensive set of 20+ rules including `RuleAlphaWords`, `RuleCapitalWords`, etc. |
 
-[eval_group Document](docs/groups.md)
+To use a specific rule group:
 
-## Response Introduction
+```python
+input_data = {
+    "eval_group": "sft",  # Use "default", "sft", or "pretrain"
+    # other parameters...
+}
+```
 
-[Response Document](docs/response.md)
+# Feature Highlights
+
+## Multi-source & Multi-modal Support
+
+- **Data Sources**: Local files, Hugging Face datasets, S3 storage
+- **Data Types**: Pre-training, fine-tuning, and evaluation datasets
+- **Data Modalities**: Text and image
+
+## Rule-based & Model-based Evaluation
+
+- **Built-in Rules**: 20+ general heuristic evaluation rules
+- **LLM Integration**: OpenAI, Kimi, and local models (e.g., Llama3)
+- **Custom Rules**: Easily extend with your own rules and models
+- **Security Evaluation**: Perspective API integration
+
+## Flexible Usage
+
+- **Interfaces**: CLI and SDK options
+- **Integration**: Easy integration with other platforms
+- **Execution Engines**: Local and Spark
+
+## Comprehensive Reporting
+
+- **Quality Metrics**: 7-dimensional quality assessment
+- **Traceability**: Detailed reports for anomaly tracking
 
 # User Guide
 
-## Installation
+## Custom Rules, Prompts, and Models
 
-The installation mentioned in the quick start module above only installs the necessary packages required for running, and some special function packages are not installed. If users need to install corresponding packages during the practice use process,
-then you can refer to: [Install Dependencies](requirements)
+If the built-in rules don't meet your requirements, you can create custom ones:
 
-## Register Rules/Prompts/Models
+### Custom Rule Example
 
-If the heuristic rules inside the project do not meet the user's quality inspection requirements, users can also customize rules or models.
+```python
+from dingo.model import Model
+from dingo.model.rule.base import BaseRule
+from dingo.config.config import DynamicRuleConfig
+from dingo.io import MetaData
+from dingo.model.modelres import ModelRes
 
-### Register Rules
+@Model.rule_register('QUALITY_BAD_RELEVANCE', ['default'])
+class MyCustomRule(BaseRule):
+    """Check for custom pattern in text"""
+    
+    dynamic_config = DynamicRuleConfig(pattern=r'your_pattern_here')
+    
+    @classmethod
+    def eval(cls, input_data: MetaData) -> ModelRes:
+        res = ModelRes()
+        # Your rule implementation here
+        return res
+```
 
-If the user wants to create a new rule `CommonPatternDemo`, then the first step is to add a decorator to the rule to inject the rule into the project.
-Secondly, the `metric_type` type, such as `QUALITY_BAD_RELEVANCE`, needs to be set for the rule, and `group` does not need to be set.
-Then the user needs to define the `DynamicRuleConfig` object, so that the properties of the rule can be configured dynamically.
-In addition, the method name of the rule must be `eval` and it needs to be a class method.
-The return value of the last step should be a `ModelRes` object.
+### Custom LLM Integration
 
-For example: [Register Rules](examples/register/sdk_register_rule.py)
+```python
+from dingo.model import Model
+from dingo.model.llm.base_openai import BaseOpenAI
 
-### Register Prompts
+@Model.llm_register('my_custom_model')
+class MyCustomModel(BaseOpenAI):
+    # Custom implementation here
+    pass
+```
 
-Users can also register prompts, the method is similar to when registering rules.
+See more examples in:
+- [Register Rules](examples/register/sdk_register_rule.py)
+- [Register Prompts](examples/register/sdk_register_prompt.py)
+- [Register Models](examples/register/sdk_register_llm.py)
 
-For example: [Register Prompts](examples/register/sdk_register_prompt.py)
+## Execution Engines
 
-### Register Models
+### Local Execution
 
-The way to register models is slightly different, users need to implement a call_api method, accept MetaData type parameters, and return ModelRes type results.
-There are already implemented basic model classes [BaseOpenAI](dingo/model/llm/base_openai.py) in the project, users can directly inherit.
-If the user has special functions to implement, then you can rewrite the corresponding methods.
+```python
+from dingo.io import InputArgs
+from dingo.exec import Executor
 
-For example: [Register Models](examples/register/sdk_register_llm.py)
+input_args = InputArgs(**input_data)
+executor = Executor.exec_map["local"](input_args)
+result = executor.execute()
 
-## Configuration
+# Get results
+summary = executor.get_summary()        # Overall evaluation summary
+bad_data = executor.get_bad_info_list() # List of problematic data
+good_data = executor.get_good_info_list() # List of high-quality data
+```
 
-[Configuration Document](docs/config.md)
+### Spark Execution
 
-## Execution Engine
+```python
+from dingo.io import InputArgs
+from dingo.exec import Executor
+from pyspark.sql import SparkSession
 
-`Dingo` can run locally or on a spark cluster.
-Regardless of the choice of engine, the executor supports some common methods:
+# Initialize Spark
+spark = SparkSession.builder.appName("Dingo").getOrCreate()
+spark_rdd = spark.sparkContext.parallelize([...])  # Your data as MetaData objects
 
-| function name      | description              |
-|--------------------|--------------------------|
-| get_summary        | get the summary of test. |
-| get_bad_info_list  | get the bad data.        |
-| get_good_info_list | get the good data.       |
+input_args = InputArgs(eval_group="default", save_data=True)
+executor = Executor.exec_map["spark"](input_args, spark_session=spark, spark_rdd=spark_rdd)
+result = executor.execute()
+```
 
+## Evaluation Reports
 
-### Local Mode
+After evaluation, Dingo generates:
 
-When choosing the spark engine, users can freely choose rules, models for quality inspection.
+1. **Summary Report** (`summary.json`): Overall metrics and scores
+2. **Detailed Reports**: Specific issues for each rule violation
 
-[Local Example](examples/dataset/sdk_local.py)
-
-### Spark Mode
-
-When choosing the spark engine, users can only choose rules for quality inspection, and models cannot be used.
-And only `eval_group`,`save_data`,`save_correct`,`custom_config` in `InputArgs` are still valid.
-Therefore, the user needs to input `spark_session` to initialize spark, and input `spark_rdd` (composed of `MetaData` structure) as data for quality inspection.
-It should be noted that if `save_data` is `False`, then the data in memory will be cleared immediately after the quality inspection is completed, and `spark_session` will also stop immediately.
-
-[Spark Example](examples/spark/sdk_spark.py)
-
-## Evaluation Report
-After completing an evaluation, Dingo will generate a summary report (summary) and a detailed report (detail). The summary includes the overall score Score and the scores of the 7 Quality Metrics dimensions of this evaluation. The detailed report will include the specific data content of each Quality Metrics evaluation with exceptions, which is convenient for tracing the cause.
-The `summary.json` profile file example is as follows:
-
-```shell
+Example summary:
+```json
 {
     "task_id": "d6c922ec-981c-11ef-b723-7c10c9512fac",
     "task_name": "dingo",
@@ -258,23 +400,16 @@ The `summary.json` profile file example is as follows:
 }
 ```
 
-The detailed report such as the `RuleColonEnd.json` file example is as follows:
+# Future Plans
 
-```shell
-{"data_id": "1", "prompt": "", "content": "�I am 8 years old. ^I love apple because:", "type_list": ["QUALITY_BAD_COMPLETENESS", "QUALITY_BAD_RELEVANCE"], "name_list": ["QUALITY_BAD_COMPLETENESS-RuleColonEnd", "QUALITY_BAD_RELEVANCE-RuleSpecialCharacter"], "reason_list": ["�I am 8 years old. ^I love apple because:", ["�"]]}
-
-```
-
-## TODO
-
-- [ ] Richer graphic and text evaluation indicators;
-- [ ] New audio and video data modality evaluation;
-- [ ] New small model evaluation, such as fasttext, Qurating;
-- [ ] New data diversity evaluation;
+- [ ] Richer graphic and text evaluation indicators
+- [ ] Audio and video data modality evaluation
+- [ ] Small model evaluation (fasttext, Qurating)
+- [ ] Data diversity evaluation
 
 # Limitations
 
-- The current evaluation tool's built-in detection rules and model methods mostly come from papers, open source projects, etc., mainly focusing on common data quality problems. If there is a need to evaluate special data problems, it is recommended to customize the corresponding detection rules for evaluation;
+The current built-in detection rules and model methods focus on common data quality problems. For specialized evaluation needs, we recommend customizing detection rules.
 
 # Acknowledgments
 

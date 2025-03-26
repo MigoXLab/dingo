@@ -319,9 +319,9 @@ from dingo.model.modelres import ModelRes
 @Model.rule_register('QUALITY_BAD_RELEVANCE', ['default'])
 class MyCustomRule(BaseRule):
     """检查文本中的自定义模式"""
-    
+
     dynamic_config = DynamicRuleConfig(pattern=r'your_pattern_here')
-    
+
     @classmethod
     def eval(cls, input_data: MetaData) -> ModelRes:
         res = ModelRes()

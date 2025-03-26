@@ -328,9 +328,9 @@ from dingo.model.modelres import ModelRes
 @Model.rule_register('QUALITY_BAD_RELEVANCE', ['default'])
 class MyCustomRule(BaseRule):
     """Check for custom pattern in text"""
-    
+
     dynamic_config = DynamicRuleConfig(pattern=r'your_pattern_here')
-    
+
     @classmethod
     def eval(cls, input_data: MetaData) -> ModelRes:
         res = ModelRes()

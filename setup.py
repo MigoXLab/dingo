@@ -11,7 +11,7 @@ with open("./requirements/web.txt", "r", encoding='utf-8') as f:
 
 setup(
     name="dingo-python",
-    version="1.4.0",
+    version="1.5.0",
     author="Dingo",
     description="A Comprehensive Data Quality Evaluation Tool for Large Models",
     long_description=long_description,

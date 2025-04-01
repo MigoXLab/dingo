@@ -106,8 +106,8 @@ Your core task is to evaluate the fitness of this dataset for training a large l
    - **Error_Duplicate**: Consecutive repetitions or excessive character occurrences.
 
 4. **Security**
-   - **Error_Political**: Harmful political statements affecting socialist systems, China's interests, unity, stability, promoting terrorism/extremism, or ethnic hatred/discrimination.
-   - **Error_Prohibited**: Content involving violence, pornography, gambling, or drugs.
+   - **Error_Politics**: Harmful political statements affecting socialist systems, China's interests, unity, stability, promoting terrorism/extremism, or ethnic hatred/discrimination.
+   - **Error_Prohibition**: Content involving violence, pornography, gambling, or drugs.
 
 # Workflow
 1. **Read and Evaluate**: Analyze the text based on the outlined negative criteria.
@@ -119,7 +119,7 @@ Your core task is to evaluate the fitness of this dataset for training a large l
    - 'Completeness' text gets one of ['Error_Formula', 'ERROR_Table', 'Error_Code'].
    - 'Effectiveness' text gets one of ['Error_Garbled_Characters', 'Error_Words_Stuck', 'Error_Lack_Punctuation'].
    - 'Similarity' text gets 'Error_Duplicate'.
-   - 'Security' text gets one of ['Error_Political', 'Error_Prohibited'].
+   - 'Security' text gets one of ['Error_Politics', 'Error_Prohibition'].
 4. **Assign Score**: 'Good' = 1, others = 0.
 5. **Provide Reason**: Clearly state the basis for evaluation.
 6. **Return in JSON**: {"score": 0/1, "type": "", "name": "", "reason": ""}.

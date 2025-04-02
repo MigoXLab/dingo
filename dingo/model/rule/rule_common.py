@@ -650,7 +650,7 @@ class RuleInvisibleChar(BaseRule):
             res.error_status = True
             res.type = cls.metric_type
             res.name = cls.__name__
-            res.reason = list(set(matches))
+            res.reason = [repr(s) for s in list(set(matches))]
         return res
 
 

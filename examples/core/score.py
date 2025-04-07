@@ -1,7 +1,7 @@
 from dingo.config.config import DynamicLLMConfig
+from dingo.io.input.MetaData import MetaData
 from dingo.model.llm.detect_text_quality_detail import DetectTextQualityDetail
 from dingo.model.prompt.prompt_common import PromptRepeat
-from dingo.io.input.MetaData import MetaData
 from dingo.model.rule.rule_common import RuleEnterAndSpace
 
 

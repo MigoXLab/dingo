@@ -1,8 +1,12 @@
 import json
 
+from dingo.config.config import DynamicLLMConfig
+from dingo.io.input.MetaData import MetaData
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.modelres import ModelRes
+from dingo.model.prompt.base import BasePrompt
+from dingo.model.prompt.prompt_common import PromptRepeat
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
@@ -38,3 +42,13 @@ class DetectTextQualityDetail(BaseOpenAI):
             result.reason = [response_model.reason]
 
         return result
+
+if __name__ == "__main__":
+    DetectTextQualityDetail.prompt = PromptRepeat()
+    DetectTextQualityDetail.dynamic_config = DynamicLLMConfig(
+        key='',
+        api_url='',
+        # model='',
+    )
+    res = DetectTextQualityDetail.call_api(MetaData(data_id='123', content="hello, introduce the world"))
+    print(res)

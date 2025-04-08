@@ -67,11 +67,19 @@ def llm():
         api_url='',
         # model='',
     )
-    res = DetectTextQualityDetail.call_api(MetaData(data_id='123', content="hello, introduce the world"))
+    res = DetectTextQualityDetail.call_api(MetaData(
+        data_id='123',
+        prompt="hello, introduce the world",
+        content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."
+    ))
     print(res)
 
 def rule():
-    data = MetaData(data_id = '', content = "hello, introduce the world")
+    data = MetaData(
+        data_id='123',
+        prompt="hello, introduce the world",
+        content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."
+    )
     res = RuleEnterAndSpace().eval(data)
     print(res)
 ```

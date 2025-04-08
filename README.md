@@ -51,7 +51,32 @@ pip install dingo-python
 
 ## Example Use Cases
 
-### 1. Evaluate Local Text File (Plaintext)
+### 1. Using Evaluate Core
+
+```python
+from dingo.config.config import DynamicLLMConfig
+from dingo.io.input.MetaData import MetaData
+from dingo.model.llm.detect_text_quality_detail import DetectTextQualityDetail
+from dingo.model.prompt.prompt_common import PromptRepeat
+from dingo.model.rule.rule_common import RuleEnterAndSpace
+
+def llm():
+    DetectTextQualityDetail.prompt = PromptRepeat()
+    DetectTextQualityDetail.dynamic_config = DynamicLLMConfig(
+        key='',
+        api_url='',
+        # model='',
+    )
+    res = DetectTextQualityDetail.call_api(MetaData(data_id='123', content="hello, introduce the world"))
+    print(res)
+
+def rule():
+    data = MetaData(data_id = '', content = "hello, introduce the world")
+    res = RuleEnterAndSpace().eval(data)
+    print(res)
+```
+
+### 2. Evaluate Local Text File (Plaintext)
 
 ```python
 from dingo.io import InputArgs
@@ -72,7 +97,7 @@ result = executor.execute()
 print(result)
 ```
 
-### 2. Evaluate Hugging Face Dataset
+### 3. Evaluate Hugging Face Dataset
 
 ```python
 from dingo.io import InputArgs
@@ -92,7 +117,7 @@ result = executor.execute()
 print(result)
 ```
 
-### 3. Evaluate JSON/JSONL Format
+### 4. Evaluate JSON/JSONL Format
 
 ```python
 from dingo.io import InputArgs
@@ -114,7 +139,7 @@ result = executor.execute()
 print(result)
 ```
 
-### 4. Using LLM for Evaluation
+### 5. Using LLM for Evaluation
 
 ```python
 from dingo.io import InputArgs

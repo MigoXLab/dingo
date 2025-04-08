@@ -16,11 +16,7 @@ def llm():
     print(res)
 
 def rule():
-    data = MetaData(
-        data_id = '',
-        prompt = '',
-        content = "hello, introduce the world"
-    )
+    data = MetaData(data_id = '', content = "hello, introduce the world")
     res = RuleEnterAndSpace().eval(data)
     print(res)
 

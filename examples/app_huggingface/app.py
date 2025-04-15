@@ -93,18 +93,18 @@ if __name__ == '__main__':
                 with gr.Column():
                     dataset_source = gr.Dropdown(
                         choices=["hugging_face", "local"],
-                        value="local",
+                        value="hugging_face",
                         label="dataset [source]"
                     )
                     input_path = gr.Textbox(
                         value='chupei/format-jsonl',
                         placeholder="please input hugging_face dataset path",
                         label="input_path",
-                        visible=False
+                        visible=True
                     )
                     uploaded_file = gr.File(
                         label="upload file",
-                        visible=True
+                        visible=False
                     )
 
                     data_format = gr.Dropdown(
@@ -119,6 +119,7 @@ if __name__ == '__main__':
 
                     rule_list = gr.CheckboxGroup(
                         choices=rule_options,
+                        value=['RuleAbnormalChar', 'RuleAbnormalHtml'],
                         label="rule_list"
                     )
                     prompt_list = gr.CheckboxGroup(

@@ -17,13 +17,19 @@
 
 </div>
 
-[English](README.md) | [简体中文](README_zh-CN.md)
+
+<div align="center">
+
+[English](README.md) · [简体中文](README_zh-CN.md)
+
+</div>
+
 
 <div align="center">
   <a href="https://discord.gg/Jhgb2eKWh8" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="8%" alt="Discord" /></a>
+    <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="Discord" /></a>
   <a href="https://huggingface.co/spaces/DataEval/dingo" style="text-decoration:none;">
-    <img src="https://huggingface.co/datasets/huggingface/brand-assets/resolve/main/hf-logo.png" width="8%" alt="Hugging Face" /></a>
+    <img src="https://huggingface.co/datasets/huggingface/brand-assets/resolve/main/hf-logo.png" width="3%" alt="Hugging Face" /></a>
 </div>
 
 

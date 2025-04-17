@@ -234,7 +234,7 @@ class SparkExecutor(ExecProto):
 
         for prompt in group:
             llm.set_prompt(prompt)
-            res: ModelRes = llm.call_api(data)
+            res: ModelRes = llm.eval(data)
 
             if res.error_status:
                 result_info.error_status = True

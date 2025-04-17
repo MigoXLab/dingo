@@ -11,5 +11,5 @@ class BaseLLM(Protocol):
         ...
 
     @classmethod
-    def call_api(cls, input_data: MetaData) -> ModelRes:
+    def eval(cls, input_data: MetaData) -> ModelRes:
         ...

@@ -71,7 +71,7 @@ def llm():
         api_url='',
         # model='',
     )
-    res = DetectTextQualityDetail.call_api(MetaData(
+    res = DetectTextQualityDetail.eval(MetaData(
         data_id='123',
         prompt="hello, introduce the world",
         content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."

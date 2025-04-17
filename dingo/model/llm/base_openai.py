@@ -133,7 +133,7 @@ class BaseOpenAI(BaseLLM):
         return result
 
     @classmethod
-    def call_api(cls, input_data: MetaData) -> ModelRes:
+    def eval(cls, input_data: MetaData) -> ModelRes:
         if cls.client is None:
             cls.create_client()
 

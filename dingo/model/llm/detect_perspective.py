@@ -40,7 +40,7 @@ class Perspective(BaseLLM):
                 )
 
     @classmethod
-    def call_api(cls, input_data: MetaData) -> ModelRes:
+    def eval(cls, input_data: MetaData) -> ModelRes:
         cls.create_client()
         analyze_request = {
             'comment': {'text': input_data.content},

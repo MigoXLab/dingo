@@ -247,7 +247,7 @@ class LocalExecutor(ExecProto):
         for p in group:
             self.llm.set_prompt(p)
             # execute prompt
-            tmp: ModelRes = self.llm.call_api(d)
+            tmp: ModelRes = self.llm.eval(d)
             # analyze result
             if tmp.error_status:
                 result_info.error_status = True

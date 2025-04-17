@@ -50,5 +50,5 @@ if __name__ == "__main__":
         api_url='',
         # model='',
     )
-    res = DetectTextQualityDetail.call_api(MetaData(data_id='123', content="hello, introduce the world"))
+    res = DetectTextQualityDetail.eval(MetaData(data_id='123', content="hello, introduce the world"))
     print(res)

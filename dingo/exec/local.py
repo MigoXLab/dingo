@@ -44,7 +44,7 @@ class LocalExecutor(ExecProto):
         dataset: Dataset = dataset_cls(source=datasource)
         return dataset.get_data()
 
-    def execute(self) -> List[SummaryModel]:
+    def execute(self) -> SummaryModel:
         log.setLevel(self.input_args.log_level)
         create_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
         Model.apply_config(self.input_args.custom_config, self.input_args.eval_group)
@@ -72,7 +72,7 @@ class LocalExecutor(ExecProto):
             self.summary = self.summarize(self.summary)
             self.write_summary(self.summary.output_path, self.input_args, self.summary)
 
-        return [self.summary]
+        return self.summary
 
     def evaluate(self):
         """
@@ -231,7 +231,6 @@ class LocalExecutor(ExecProto):
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:
         new_summary = copy.deepcopy(summary)
-        new_summary.finish_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
         if new_summary.total == 0:
             return new_summary
         new_summary.score = round(new_summary.num_good / new_summary.total * 100, 2)
@@ -241,6 +240,8 @@ class LocalExecutor(ExecProto):
             new_summary.name_ratio[n] = round(new_summary.name_ratio[n] / new_summary.total, 6)
         new_summary.type_ratio = dict(sorted(new_summary.type_ratio.items()))
         new_summary.name_ratio = dict(sorted(new_summary.name_ratio.items()))
+
+        new_summary.finish_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
         return new_summary
 
     def write_single_data(self, path: str, input_args: InputArgs, result_info: ResultInfo):

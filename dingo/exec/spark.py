@@ -1,3 +1,4 @@
+import copy
 import os
 import time
 import uuid
@@ -53,7 +54,7 @@ class SparkExecutor(ExecProto):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def _initialize_spark(self):
+    def initialize_spark(self):
         """Initialize Spark session if not already provided."""
         if self.spark_session is not None:
             return self.spark_session, self.spark_session.sparkContext
@@ -63,11 +64,18 @@ class SparkExecutor(ExecProto):
         else:
             raise ValueError('Both spark_session and spark_conf are None. Please provide one.')
 
+    def cleanup(self, spark):
+        """Clean up Spark resources."""
+        if spark:
+            spark.stop()
+            if spark.sparkContext:
+                spark.sparkContext.stop()
+
     def load_data(self) -> RDD:
         """Load and return the RDD data."""
         return self.spark_rdd
 
-    def execute(self) -> List[SummaryModel]:
+    def execute(self) -> SummaryModel:
         """Main execution method for Spark evaluation."""
         create_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
 
@@ -80,7 +88,7 @@ class SparkExecutor(ExecProto):
                 self.llm = Model.get_llm(llm_name)
 
         print("============= Init PySpark =============")
-        spark, sc = self._initialize_spark()
+        spark, sc = self.initialize_spark()
         self._sc = sc
         print("============== Init Done ===============")
 
@@ -98,7 +106,7 @@ class SparkExecutor(ExecProto):
 
             # Evaluate data
             data_info_list = data_rdd.map(
-                lambda x: self._evaluate_item(x, broadcast_group, broadcast_llm)
+                lambda x: self.evaluate_item(x, broadcast_group, broadcast_llm)
             ).persist()  # Cache the evaluated data for multiple uses
 
             # Filter and count bad/good items
@@ -119,26 +127,24 @@ class SparkExecutor(ExecProto):
                 score=round((total - num_bad) / total * 100, 2) if total > 0 else 0,
                 num_good=total - num_bad,
                 num_bad=num_bad,
-                total=total,
-                type_ratio={},
-                name_ratio={}
+                total=total
             )
             # Generate detailed summary
-            self._summarize_results()
-
-            self.summary.finish_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-
-            return [self.summary]
+            self.summary = self.summarize(self.summary)
+            return self.summary
 
         except Exception as e:
             raise e
         finally:
             if not self.input_args.save_data:
-                self._cleanup(spark)
+                self.cleanup(spark)
             else:
                 self.spark_session = spark
 
-    def _evaluate_item(self, data_rdd_item, broadcast_group, broadcast_llm) -> Dict[str, Any]:
+    def evaluate(self):
+        pass
+
+    def evaluate_item(self, data_rdd_item, broadcast_group, broadcast_llm) -> Dict[str, Any]:
         """Evaluate a single data item using broadcast variables."""
         data: MetaData = data_rdd_item
         result_info = ResultInfo(data_id=data.data_id, prompt=data.prompt, content=data.content)
@@ -158,9 +164,9 @@ class SparkExecutor(ExecProto):
 
         for group_type, group_items in group.items():
             if group_type == 'rule':
-                r_i = self._evaluate_rule(group_items, data)
+                r_i = self.evaluate_rule(group_items, data)
             elif group_type == 'prompt':
-                r_i = self._evaluate_prompt(group_items, data, llm)
+                r_i = self.evaluate_prompt(group_items, data, llm)
             else:
                 raise RuntimeError(f'Unsupported group type: {group_type}')
 
@@ -186,7 +192,7 @@ class SparkExecutor(ExecProto):
 
         return result_info.to_dict()
 
-    def _evaluate_rule(self, group: List[BaseRule], data: MetaData) -> ResultInfo:
+    def evaluate_rule(self, group: List[BaseRule], data: MetaData) -> ResultInfo:
         """Evaluate data against a group of rules."""
         result_info = ResultInfo(data_id=data.data_id, prompt=data.prompt, content=data.content)
 
@@ -218,7 +224,7 @@ class SparkExecutor(ExecProto):
 
         return result_info
 
-    def _evaluate_prompt(self, group: List[BasePrompt], data: MetaData, llm: BaseLLM) -> ResultInfo:
+    def evaluate_prompt(self, group: List[BasePrompt], data: MetaData, llm: BaseLLM) -> ResultInfo:
         """Evaluate data against a group of prompts using LLM."""
         if llm is None:
             raise ValueError("LLM is required for prompt evaluation")
@@ -254,37 +260,42 @@ class SparkExecutor(ExecProto):
 
         return result_info
 
-    def _summarize_results(self):
+    def summarize(self, summary: SummaryModel) -> SummaryModel:
         """Generate summary statistics from bad info list."""
-        if not self.bad_info_list:
-            return
+        def collect_ratio(data_info_list, key_name: str, total_count: int):
+            data_info_counts = (
+                data_info_list
+                .flatMap(lambda x: [(t, 1) for t in x[key_name]])
+                .reduceByKey(lambda a, b: a + b)
+                .collectAsMap()
+            )
+            return {
+                k: round(v / total_count, 6)
+                for k, v in data_info_counts.items()
+            }
 
-        # Calculate type ratios
-        type_counts = (
-            self.bad_info_list
-            .flatMap(lambda x: [(t, 1) for t in x['type_list']])
-            .reduceByKey(lambda a, b: a + b)
-            .collectAsMap()
-        )
-        self.summary.type_ratio = {
-            k: round(v / self.summary.total, 6)
-            for k, v in type_counts.items()
-        }
 
-        # Calculate name ratios
-        name_counts = (
-            self.bad_info_list
-            .flatMap(lambda x: [(n, 1) for n in x['name_list']])
-            .reduceByKey(lambda a, b: a + b)
-            .collectAsMap()
-        )
-        self.summary.name_ratio = {
-            k: round(v / self.summary.total, 6)
-            for k, v in name_counts.items()
-        }
+        new_summary = copy.deepcopy(self.summary)
+        if not self.bad_info_list and not self.good_info_list:
+            return new_summary
+        if not self.bad_info_list and self.good_info_list:
+            if not self.input_args.save_correct:
+                return new_summary
 
-        self.summary.type_ratio = dict(sorted(self.summary.type_ratio.items()))
-        self.summary.name_ratio = dict(sorted(self.summary.name_ratio.items()))
+        new_summary.type_ratio = collect_ratio(self.bad_info_list, 'type_list', new_summary.total)
+        new_summary.name_ratio = collect_ratio(self.bad_info_list, 'name_list', new_summary.total)
+
+        if self.input_args.save_correct:
+            type_ratio_correct = collect_ratio(self.good_info_list, 'type_list', new_summary.total)
+            name_ratio_correct = collect_ratio(self.good_info_list, 'name_list', new_summary.total)
+            new_summary.type_ratio.update(type_ratio_correct)
+            new_summary.name_ratio.update(name_ratio_correct)
+
+        new_summary.type_ratio = dict(sorted(new_summary.type_ratio.items()))
+        new_summary.name_ratio = dict(sorted(new_summary.name_ratio.items()))
+
+        new_summary.finish_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+        return new_summary
 
     def get_summary(self):
         return self.summary
@@ -314,16 +325,3 @@ class SparkExecutor(ExecProto):
                 }
             })
         return self.good_info_list
-
-    def save_data(self, start_time):
-        """Save output data to specified path."""
-        output_path = os.path.join(self.input_args.output_path, start_time)
-        model_path = os.path.join(output_path, self.input_args.eval_group)
-        os.makedirs(model_path, exist_ok=True)
-
-    def _cleanup(self, spark):
-        """Clean up Spark resources."""
-        if spark:
-            spark.stop()
-            if spark.sparkContext:
-                spark.sparkContext.stop()

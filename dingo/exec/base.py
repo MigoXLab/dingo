@@ -7,16 +7,16 @@ from dingo.io import MetaData, SummaryModel
 
 
 class ExecProto(Protocol):
-    def load_data(self, path: str, data_type: str) -> List[MetaData]:
+    def load_data(self) -> Any:
         ...
 
-    def execute(self) -> List[SummaryModel]:
+    def execute(self) -> SummaryModel:
         ...
 
-    def evaluate(self) -> SummaryModel:
+    def evaluate(self):
         ...
 
-    def summarize(self, inputs: MetaData) -> SummaryModel:
+    def summarize(self, summary: SummaryModel) -> SummaryModel:
         ...
 
 

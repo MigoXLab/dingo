@@ -70,7 +70,7 @@ class LocalExecutor(ExecProto):
             )
             self.evaluate()
             self.summary = self.summarize(self.summary)
-            self.write_summary(self.summary.output_path, self.summary)
+            self.write_summary(self.summary.output_path, self.input_args, self.summary)
 
         return [self.summary]
 
@@ -111,7 +111,7 @@ class LocalExecutor(ExecProto):
 
                     self.write_single_data(self.summary.output_path, self.input_args, result_info)
                     pbar.update()
-                self.write_summary(self.summary.output_path, self.summarize(self.summary))
+                self.write_summary(self.summary.output_path, self.input_args, self.summarize(self.summary))
             while True:
                 batch = list(itertools.islice(data_iter, self.input_args.batch_size))
                 if not batch:
@@ -264,7 +264,9 @@ class LocalExecutor(ExecProto):
                     str_json = json.dumps(result_info.to_dict(), ensure_ascii=False)
                 f.write(str_json + '\n')
 
-    def write_summary(self, path: str, summary: SummaryModel):
+    def write_summary(self, path: str, input_args: InputArgs, summary: SummaryModel):
+        if not input_args.save_data:
+            return
         with open(path + '/summary.json', 'w', encoding='utf-8') as f:
             json.dump(summary.to_dict(), f, indent=4, ensure_ascii=False)
 

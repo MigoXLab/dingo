@@ -30,8 +30,6 @@ def parse_args():
                         default=None, help="The number of data start to check.")
     parser.add_argument("--end_index", type=int,
                         default=None, help="The number of data end to check.")
-    parser.add_argument("--interval_size", type=int,
-                        default=None, help="The number of size to save while checking.")
     parser.add_argument("--max_workers", type=int,
                         default=None, help="The number of max workers to concurrent check. ")
     parser.add_argument("--batch_size", type=int,
@@ -112,8 +110,6 @@ if __name__ == '__main__':
             input_data['start_index'] = args.start_index
         if args.end_index:
             input_data['end_index'] = args.end_index
-        if args.interval_size:
-            input_data['interval_size'] = args.interval_size
         if args.max_workers:
             input_data['max_workers'] = args.max_workers
         if args.batch_size:

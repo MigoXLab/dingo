@@ -27,8 +27,6 @@ class LocalExecutor(ExecProto):
         self.input_args: InputArgs = input_args
         self.llm: Optional[BaseLLM] = None
         self.summary: SummaryModel = SummaryModel()
-        self.bad_info_list: List[ResultInfo] = []
-        self.good_info_list: List[ResultInfo] = []
 
     def load_data(self) -> Generator[MetaData, None, None]:
         """
@@ -68,19 +66,11 @@ class LocalExecutor(ExecProto):
                 eval_group=group_name,
                 input_path=input_path,
                 output_path=output_path if self.input_args.save_data else '',
-                create_time=create_time,
-                score=0,
-                num_good=0,
-                num_bad=0,
-                total=0,
-                type_ratio={},
-                name_ratio={}
+                create_time=create_time
             )
             self.evaluate()
             self.summary = self.summarize(self.summary)
-            self.summary.finish_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-            if self.input_args.save_data:
-                self.save_data(output_path, self.input_args, self.bad_info_list, self.good_info_list, self.summary)
+            self.write_summary(self.summary.output_path, self.summary)
 
         return [self.summary]
 
@@ -98,8 +88,6 @@ class LocalExecutor(ExecProto):
             pbar = tqdm(total=None, unit='items')
 
             def process_batch(batch: List):
-                save_flag = False
-
                 futures=[]
                 for group_type, group in Model.get_group(self.input_args.eval_group).items():
                     if group_type == 'rule':
@@ -111,46 +99,19 @@ class LocalExecutor(ExecProto):
 
                 for future in concurrent.futures.as_completed(futures):
                     result_info = future.result()
-                    # calculate summary ratio
+                    for t in result_info.type_list:
+                        self.summary.type_ratio[t] += 1
+                    for n in result_info.name_list:
+                        self.summary.name_ratio[n] += 1
                     if result_info.error_status:
-                        self.bad_info_list.append(result_info)
                         self.summary.num_bad += 1
-                        for t in result_info.type_list:
-                            if t not in self.summary.type_ratio:
-                                self.summary.type_ratio[t] = 1
-                            else:
-                                self.summary.type_ratio[t] += 1
-                        for n in result_info.name_list:
-                            if n not in self.summary.name_ratio:
-                                self.summary.name_ratio[n] = 1
-                            else:
-                                self.summary.name_ratio[n] += 1
                     else:
-                        if self.input_args.save_correct:
-                            self.good_info_list.append(result_info)
-                            for t in result_info.type_list:
-                                if t not in self.summary.type_ratio:
-                                    self.summary.type_ratio[t] = 1
-                                else:
-                                    self.summary.type_ratio[t] += 1
-                            for n in result_info.name_list:
-                                if n not in self.summary.name_ratio:
-                                    self.summary.name_ratio[n] = 1
-                                else:
-                                    self.summary.name_ratio[n] += 1
+                        self.summary.num_good += 1
                     self.summary.total += 1
-                    if self.summary.total % self.input_args.interval_size == 0:
-                        save_flag = True
+
+                    self.write_single_data(self.summary.output_path, self.input_args, result_info)
                     pbar.update()
-                # save data in file
-                if self.input_args.save_data:
-                    if save_flag:
-                        tmp_summary = self.summarize(self.summary)
-                        tmp_summary.finish_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-                        tmp_output_path = self.summary.output_path
-                        self.save_data(tmp_output_path, self.input_args, self.bad_info_list, self.good_info_list, tmp_summary)
-                        self.bad_info_list = []
-                        self.good_info_list = []
+                self.write_summary(self.summary.output_path, self.summarize(self.summary))
             while True:
                 batch = list(itertools.islice(data_iter, self.input_args.batch_size))
                 if not batch:
@@ -270,9 +231,9 @@ class LocalExecutor(ExecProto):
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:
         new_summary = copy.deepcopy(summary)
+        new_summary.finish_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
         if new_summary.total == 0:
             return new_summary
-        new_summary.num_good = new_summary.total - new_summary.num_bad
         new_summary.score = round(new_summary.num_good / new_summary.total * 100, 2)
         for t in new_summary.type_ratio:
             new_summary.type_ratio[t] = round(new_summary.type_ratio[t] / new_summary.total, 6)
@@ -282,52 +243,36 @@ class LocalExecutor(ExecProto):
         new_summary.name_ratio = dict(sorted(new_summary.name_ratio.items()))
         return new_summary
 
-    def get_summary(self):
-        return self.summary
+    def write_single_data(self, path: str, input_args: InputArgs, result_info: ResultInfo):
+        if not input_args.save_data:
+            return
 
-    def get_bad_info_list(self):
-        return self.bad_info_list
+        if not input_args.save_correct and not result_info.error_status:
+            return
 
-    def get_good_info_list(self):
-        return self.good_info_list
+        for new_name in result_info.name_list:
+            t = str(new_name).split('-')[0]
+            n = str(new_name).split('-')[1]
+            p_t = os.path.join(path, t)
+            if not os.path.exists(p_t):
+                os.makedirs(p_t)
+            f_n = os.path.join(path, t, n) + ".jsonl"
+            with open(f_n, 'a', encoding='utf-8') as f:
+                if input_args.save_raw:
+                    str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)
+                else:
+                    str_json = json.dumps(result_info.to_dict(), ensure_ascii=False)
+                f.write(str_json + '\n')
 
-    def save_data(
-            self,
-            path: str,
-            input_args: InputArgs,
-            bad_info_list: List[ResultInfo],
-            good_info_list: List[ResultInfo],
-            summary: SummaryModel,
-    ):
-        for result_info in bad_info_list:
-            for new_name in result_info.name_list:
-                t = str(new_name).split('-')[0]
-                n = str(new_name).split('-')[1]
-                p_t = os.path.join(path, t)
-                if not os.path.exists(p_t):
-                    os.makedirs(p_t)
-                f_n = os.path.join(path, t, n) + ".jsonl"
-                with open(f_n, 'a', encoding='utf-8') as f:
-                    if input_args.save_raw:
-                        str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)
-                    else:
-                        str_json = json.dumps(result_info.to_dict(), ensure_ascii=False)
-                    f.write(str_json + '\n')
-        if input_args.save_correct:
-            for result_info in good_info_list:
-                for new_name in result_info.name_list:
-                    t = str(new_name).split('-')[0]
-                    n = str(new_name).split('-')[1]
-                    p_t = os.path.join(path, t)
-                    if not os.path.exists(p_t):
-                        os.makedirs(p_t)
-                    f_n = os.path.join(path, t, n) + ".jsonl"
-                    with open(f_n, 'a', encoding='utf-8') as f:
-                        if input_args.save_raw:
-                            str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)
-                        else:
-                            str_json = json.dumps(result_info.to_dict(), ensure_ascii=False)
-                        f.write(str_json + '\n')
-
+    def write_summary(self, path: str, summary: SummaryModel):
         with open(path + '/summary.json', 'w', encoding='utf-8') as f:
             json.dump(summary.to_dict(), f, indent=4, ensure_ascii=False)
+
+    def get_summary(self):
+        pass
+
+    def get_bad_info_list(self):
+        pass
+
+    def get_good_info_list(self):
+        pass

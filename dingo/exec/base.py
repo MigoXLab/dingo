@@ -13,7 +13,7 @@ class ExecProto(Protocol):
     def execute(self) -> SummaryModel:
         ...
 
-    def evaluate(self):
+    def evaluate(self) -> None:
         ...
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:

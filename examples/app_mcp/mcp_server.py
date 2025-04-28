@@ -1,11 +1,10 @@
-from fastmcp import FastMCP
-
 from dingo.config.config import DynamicLLMConfig
 from dingo.io.input.MetaData import MetaData
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
 from dingo.model.prompt.base import BasePrompt
 from dingo.model.rule.rule_common import *
+from fastmcp import FastMCP
 
 mcp = FastMCP("Dingo Mcp Server")
 

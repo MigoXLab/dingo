@@ -36,7 +36,7 @@ The primary knowledge domain of the text from these options: Technology, Science
    - 3: Average quality
    - 4: Good quality
    - 5: Excellent quality
-3. Calculate an overall assessment of text quality: 
+3. Calculate an overall assessment of text quality:
    - If the average of all quality scores is 3 or higher, the text is considered good quality (score=1)
    - If the average is below 3, the text is considered low quality (score=0)
 4. For domain classification, select one domain from the provided options.
@@ -83,4 +83,4 @@ Please output only the JSON format data shown above, without any additional cont
 
 @Model.prompt_register("DATAMAN_ASSESSMENT", [])
 class PromptDataManAssessment(BasePrompt):
-    content = ROLE + DATAMAN_ASSESSMENT 
+    content = ROLE + DATAMAN_ASSESSMENT

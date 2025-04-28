@@ -24,7 +24,7 @@ class DatamanAssessment(BaseOpenAI):
             response = response[3:]
         if response.endswith('```'):
             response = response[:-3]
-        
+
         try:
             response_json = json.loads(response)
         except json.JSONDecodeError:
@@ -39,13 +39,13 @@ class DatamanAssessment(BaseOpenAI):
             result.error_status = False
         else:
             result.error_status = True
-            
+
         # Set type to the domain classification
         result.type = response_model.type
-        
+
         # Set name to the quality category
         result.name = response_model.name
-        
+
         # Set reason to the detailed assessment
         result.reason = [response_model.reason]
 

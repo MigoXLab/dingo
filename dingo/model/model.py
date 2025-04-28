@@ -36,6 +36,14 @@ class Model:
         return
 
     @classmethod
+    def get_rule_list(cls) -> List[BaseRule]:
+        return [v for k,v in cls.rule_name_map.items()]
+
+    @classmethod
+    def get_prompt_list(cls) -> List[BasePrompt]:
+        return [v for k,v in cls.prompt_name_map.items()]
+
+    @classmethod
     def get_group(cls, group_name) -> Dict[str, List]:
         res = {}
         if group_name not in Model.rule_groups and group_name not in Model.prompt_groups:
@@ -110,7 +118,7 @@ class Model:
         return [r.metric_type+'-'+r.__name__ for r in Model.get_rule_group(group_name)]
 
     @classmethod
-    def get_rule_by_name(cls, name: str) -> Callable:
+    def get_rule_by_name(cls, name: str) -> BaseRule:
         """
         Returns rule by name.
 
@@ -118,6 +126,16 @@ class Model:
             Rule function.
         """
         return cls.rule_name_map[name]
+
+    @classmethod
+    def get_prompt_by_name(cls, name: str) -> BasePrompt:
+        """
+        Returns prompt by name.
+
+        Returns:
+            Rule function.
+        """
+        return cls.prompt_name_map[name]
 
     @classmethod
     def get_llm_name_map(cls) -> Dict[str, BaseLLM]:

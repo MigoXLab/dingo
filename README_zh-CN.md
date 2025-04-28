@@ -266,6 +266,7 @@ Dingo在`dingo/model/prompt`目录下提供了多种基于LLM的评估方法。�
 |-------------|--------|-------------|
 | `TEXT_QUALITY_KAOTI` | 考题质量 | 专门评估考试题目的质量，关注公式渲染、表格格式、段落结构和答案格式 |
 | `Html_Abstract` | HTML提取质量 | 比较从HTML提取Markdown的不同方法，评估完整性、格式准确性和语义连贯性 |
+| `DATAMAN_ASSESSMENT` | 数据质量与领域 | 使用DataMan方法论（14个标准，15个领域）评估预训练数据质量。分配分数（0/1）、领域类型、质量状态和原因。 |
 
 ### 分类Prompt
 
@@ -463,6 +464,7 @@ result = executor.execute()
 
 
 - **"多语言网页数据的数据质量评估"** : [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/pdf/2501.14506)
+- **"使用DataMan方法论评估预训练数据质量"** : [DataMan: Data Manager for Pre-training Large Language Models](https://openreview.net/pdf?id=eNbA8Fqir4)
 
 # 未来计划
 

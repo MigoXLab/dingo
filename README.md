@@ -266,6 +266,7 @@ Dingo provides several LLM-based assessment methods defined by prompts in the `d
 |-------------|--------|-------------|
 | `TEXT_QUALITY_KAOTI` | Exam question quality | Specialized assessment for evaluating the quality of exam questions, focusing on formula rendering, table formatting, paragraph structure, and answer formatting |
 | `Html_Abstract` | HTML extraction quality | Compares different methods of extracting Markdown from HTML, evaluating completeness, formatting accuracy, and semantic coherence |
+| `DATAMAN_ASSESSMENT` | Data Quality & Domain | Evaluates pre-training data quality using the DataMan methodology (14 standards, 15 domains). Assigns a score (0/1), domain type, quality status, and reason. |
 
 ### Classification Prompts
 
@@ -461,6 +462,7 @@ Example summary:
 
 - **"Comprehensive Data Quality Assessment for Multilingual WebData"** : [WanJuanSiLu: A High-Quality Open-Source Webtext
 Dataset for Low-Resource Languages](https://arxiv.org/pdf/2501.14506)
+- **"Pre-training data quality using the DataMan methodology"** : [DataMan: Data Manager for Pre-training Large Language Models](https://openreview.net/pdf?id=eNbA8Fqir4)
 
 
 # Future Plans

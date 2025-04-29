@@ -501,3 +501,93 @@ If you find this project useful, please consider citing our tool:
   year={2024}
 }
 ```
+
+## MCP Server (Experimental)
+
+Dingo includes an experimental Model Context Protocol (MCP) server powered by FastMCP. This allows tools like Cursor (which uses the Claude Desktop client) to interact with Dingo.
+
+### Configuration for Cursor
+
+Instead of using `fastmcp install`, you can manually configure Cursor to use the Dingo MCP server by editing your MCP configuration file (usually `mcp.json` located in Cursor's user configuration directory, e.g., `.cursor/mcp.json`).
+
+1.  **Locate your Cursor `mcp.json` file.**
+2.  **Add or modify the entry for `dingo_evaluator` within the `mcpServers` object.** Ensure the paths to your Python executable and the `mcp_server.py` script are correct. Using absolute paths is recommended, as shown below:
+
+    ```json
+    {
+      "mcpServers": {
+        // ... other servers may be listed here ...
+        "dingo_evaluator": {
+          "command": "/path/to/your/python/env/python.exe", // Example: "D:/anaconda3/envs/Dingo/python.exe"
+          "args": ["/path/to/your/dataeval_dingo/mcp_server.py"] // Example: "D:/dataeval_dingo/mcp_server.py"
+          // Add other necessary env vars here if needed, e.g., for API keys used by other tools
+        }
+        // ...
+      }
+    }
+    ```
+
+3.  **API Keys & Sensitive Data:** For Dingo's LLM evaluations, API keys must be provided directly in the `custom_config`. Ensure your API keys are included in the `llm_config` section of the `custom_config` dictionary or file passed via `kwargs`. Do *not* place Dingo-specific API keys in the `env` section of `mcp.json`.
+
+4.  **Ensure Python Environment:** Make sure the `dingo` package is installed and importable by the Python interpreter specified in the `command`. Adjust paths as necessary for your environment.
+
+**Argument Handling Notes:**
+*   **`output_dir`:** If not specified, output files will be saved in a new subdirectory named `dingo_output_<task_name>` created inside the *parent directory* of the `input_path`.
+*   **`data_format`:** The tool attempts to infer `data_format` (`json`, `jsonl`, `plaintext`) from the `input_path` file extension if you don't provide it in `kwargs`. If inference fails, Dingo's default (`json`) is used.
+*   **`dataset`:** Automatically defaults to `local` if `input_path` is provided and `dataset` is not specified in `kwargs`.
+*   **Required Arguments (`column_content`, etc.):** Arguments like `column_content` are often required by Dingo depending on the `data_format`. Pass these *inside* the `kwargs` dictionary.
+*   **Other `InputArgs`:** Use `kwargs` to pass less common arguments like `column_id`, `column_prompt`, `max_workers`, `batch_size`, etc., or to override inferred/defaulted values. Note that `max_workers` and `batch_size` default to 1 when called via MCP for stability.
+*   **`custom_config`:** Pass complex rule/LLM configurations via `kwargs['custom_config']`. This can be a dictionary, a JSON string, or a file path to a JSON configuration file (as shown in the LLM example below). The server attempts basic normalization if the structure looks like common LLM config patterns.
+
+**Natural Language Example (Rule-based):**
+
+> Use the Dingo Evaluator tool to run the default rule evaluation on `test/data/test_local_jsonl.jsonl`. Make sure to use the 'content' column.
+
+*(Cursor should propose the tool call, inferring `data_format="jsonl"` and `dataset="local"`, and putting `column_content` in `kwargs`)*
+
+**Natural Language Example (LLM-based - Remote Model):**
+
+> Use the Dingo Evaluator tool to perform an LLM evaluation on `test/data/test_local_jsonl.jsonl`. Use the 'content' column. Configure it using the file `examples/mcp/config_mcp_example.json`.
+
+*(Cursor should propose a tool call similar to the structured LLM example below. Note: `eval_group_name` is optional here since `custom_config` is provided for an LLM evaluation; Dingo will auto-generate one if omitted.)*
+
+**Structured Tool Call Example (Rule-based):**
+
+```xml
+<use_mcp_tool>
+<server_name>dingo_evaluator</server_name>
+<tool_name>run_dingo_evaluation</tool_name>
+<arguments>
+{
+  "input_path": "test/data/test_local_jsonl.jsonl",
+  "evaluation_type": "rule",
+  "eval_group_name": "default",
+  "kwargs": {
+    "column_content": "content"
+    // data_format="jsonl" and dataset="local" will be inferred
+  }
+}
+</arguments>
+</use_mcp_tool>
+```
+
+**Structured Tool Call Example (LLM-based - Remote Model):**
+
+```xml
+<use_mcp_tool>
+<server_name>dingo_evaluator</server_name>
+<tool_name>run_dingo_evaluation</tool_name>
+<arguments>
+{
+  "input_path": "test/data/test_local_jsonl.jsonl",
+  "evaluation_type": "llm",
+  "eval_group_name": "custom_llm_eval", 
+  "kwargs": { 
+    "column_content": "content",
+    "custom_config": "examples/mcp/config_mcp_example.json"
+    // data_format="jsonl" and dataset="local" will be inferred
+  }
+}
+</arguments>
+</use_mcp_tool>
+```

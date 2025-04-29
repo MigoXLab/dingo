@@ -25,3 +25,4 @@ toml
 transformers
 wordninja==2.0.0
 zhon
+fastmcp>=2.0.0

@@ -140,5 +140,5 @@ if __name__ == '__main__':
         result = executor.execute()
         print(result)
 
-        if input_args.save_data:
-            os.system("python -m dingo.run.vsl --input " + result[0].output_path)
+        # if input_args.save_data:
+        #     os.system("python -m dingo.run.vsl --input " + result[0].output_path)

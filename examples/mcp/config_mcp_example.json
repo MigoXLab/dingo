@@ -1,0 +1,9 @@
+{
+  "prompt_list": ["PromptRepeat"],
+  "llm_config": {
+    "detect_text_quality": {
+      "key": "EMPTY",
+      "api_url": "http://10.140.54.48:29999/v1"
+    }
+  }
+} 

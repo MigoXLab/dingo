@@ -1,12 +1,12 @@
+import json
 import os
 import uuid
-import json
 from typing import Literal, Optional
 
-from fastmcp import FastMCP
 from dingo.exec import Executor
 from dingo.io import InputArgs
 from dingo.utils import log
+from fastmcp import FastMCP
 
 # Dingo log level can be set via InputArgs('log_level') if needed
 
@@ -23,7 +23,7 @@ def run_dingo_evaluation(
     task_name: Optional[str] = None,
     save_data: bool = True,
     save_correct: bool = True,
-    kwargs: dict = {} 
+    kwargs: dict = {}
 ) -> str:
     """Runs a Dingo evaluation (rule-based or LLM-based).
 
@@ -41,14 +41,14 @@ def run_dingo_evaluation(
         save_data: Whether to save the detailed JSONL output (default: True).
         save_correct: Whether to save correct data (default: True).
         kwargs: Dictionary containing additional arguments compatible with dingo.io.InputArgs.
-                Use for: dataset, data_format, column_content, column_id, 
+                Use for: dataset, data_format, column_content, column_id,
                 column_prompt, column_image, custom_config, max_workers, etc.
                 API keys for LLMs should be set via environment variables in mcp.json.
 
     Returns:
         The absolute path to the primary output file (summary.json or first .jsonl).
     """
-    log.info(f"Received Dingo request: type={evaluation_type}, group={eval_group_name}, input={input_path}") 
+    log.info(f"Received Dingo request: type={evaluation_type}, group={eval_group_name}, input={input_path}")
 
     # --- Path Resolution ---
     abs_input_path = None
@@ -109,7 +109,7 @@ def run_dingo_evaluation(
             original_config = loaded_custom_config
             normalized_config = {}
             llm_eval_section = original_config.get('llm_eval', {})
-            
+
             # Extract prompts
             prompts = []
             evaluations = llm_eval_section.get('evaluations', [])
@@ -123,7 +123,7 @@ def run_dingo_evaluation(
                 log.info(f"Normalized prompt_list: {prompts}")
             else:
                  log.warning("Could not extract prompt name(s) for normalization.")
-            
+
             # Extract llm_config
             models_section = llm_eval_section.get('models', {})
             if models_section and isinstance(models_section, dict):
@@ -138,7 +138,7 @@ def run_dingo_evaluation(
                     log.info(f"Normalized llm_config for model '{model_name}': {model_details}")
                 else:
                     log.warning("Could not extract model details for normalization.")
-            
+
             if 'prompt_list' in normalized_config and 'llm_config' in normalized_config:
                 loaded_custom_config = normalized_config
                 log.info("Successfully normalized custom_config structure.")
@@ -160,9 +160,9 @@ def run_dingo_evaluation(
              raise ValueError("Cannot determine default output directory without an input_path.")
         input_parent_dir = os.path.dirname(abs_input_path)
         abs_output_dir = os.path.join(input_parent_dir, f"dingo_output_{task_name_for_path}")
-        abs_output_dir = abs_output_dir.replace("\\","/") 
+        abs_output_dir = abs_output_dir.replace("\\","/")
         log.info(f"Using default output directory relative to input: {abs_output_dir}")
-        
+
     os.makedirs(abs_output_dir, exist_ok=True)
 
     # --- Prepare Dingo InputArgs Data ---
@@ -229,18 +229,18 @@ def run_dingo_evaluation(
              log.error(f"Evaluation result missing valid 'output_path' attribute.")
              raise RuntimeError("Dingo execution finished, but couldn't determine output path.")
 
-        result_output_dir = result.output_path 
+        result_output_dir = result.output_path
         log.info(f"Dingo reported output directory: {result_output_dir}")
 
         if not os.path.isdir(result_output_dir):
              log.error(f"Output directory from Dingo ({result_output_dir}) does not exist.")
              # Fallback: Return the parent dir used in InputArgs
              log.warning(f"Returning the base output directory used in InputArgs: {abs_output_dir}")
-             return abs_output_dir 
-        
+             return abs_output_dir
+
         # --- Find Primary Output File ---
         # Priority 1: summary.json
-        summary_path = os.path.join(result_output_dir, "summary.json") 
+        summary_path = os.path.join(result_output_dir, "summary.json")
         if os.path.isfile(summary_path):
              summary_path_abs = os.path.abspath(summary_path).replace("\\", "/")
              log.info(f"Found summary.json. Returning path: {summary_path_abs}")
@@ -256,7 +256,7 @@ def run_dingo_evaluation(
                         log.info(f"Found first .jsonl: {first_jsonl_path}. Returning this path.")
                         break
                 if first_jsonl_path: break
-            
+
             if first_jsonl_path:
                 return first_jsonl_path
             else:
@@ -271,4 +271,4 @@ def run_dingo_evaluation(
 
 
 if __name__ == "__main__":
-    mcp.run() 
+    mcp.run()

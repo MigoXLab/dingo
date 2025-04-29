@@ -581,8 +581,8 @@ Instead of using `fastmcp install`, you can manually configure Cursor to use the
 {
   "input_path": "test/data/test_local_jsonl.jsonl",
   "evaluation_type": "llm",
-  "eval_group_name": "custom_llm_eval", 
-  "kwargs": { 
+  "eval_group_name": "custom_llm_eval",
+  "kwargs": {
     "column_content": "content",
     "custom_config": "examples/mcp/config_mcp_example.json"
     // data_format="jsonl" and dataset="local" will be inferred

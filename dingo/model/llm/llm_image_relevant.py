@@ -1,9 +1,9 @@
 from typing import List
 
 from dingo.io.input import MetaData
-from dingo.model.prompt.prompt_image_relevant import PromptImageRelevant
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
+from dingo.model.prompt.prompt_image_relevant import PromptImageRelevant
 
 
 @Model.llm_register('LlmImageRelevant')

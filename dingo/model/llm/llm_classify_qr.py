@@ -4,8 +4,8 @@ from typing import List
 from dingo.io.input import MetaData
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.prompt.prompt_classify_qr import PromptClassifyQR
 from dingo.model.modelres import ModelRes
+from dingo.model.prompt.prompt_classify_qr import PromptClassifyQR
 from dingo.model.response.response_class import ResponseNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError

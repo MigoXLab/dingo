@@ -2,8 +2,8 @@ import json
 
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.prompt.prompt_classify_topic import PromptClassifyTopic
 from dingo.model.modelres import ModelRes
+from dingo.model.prompt.prompt_classify_topic import PromptClassifyTopic
 from dingo.model.response.response_class import ResponseNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError

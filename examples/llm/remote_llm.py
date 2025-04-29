@@ -13,7 +13,7 @@ input_data = {
             "prompt_list": ["PromptRepeat"],
             "llm_config":
                 {
-                    "detect_text_quality":
+                    "LlmTextQualityPromptBase":
                         {
                             "model": "enter your llm, such as:deepseek-chat",
                             "key": "enter your key, such as:sk-123456789012345678901234567890xx",

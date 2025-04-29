@@ -1,18 +1,18 @@
 from dingo.config.config import DynamicLLMConfig
 from dingo.io.input.MetaData import MetaData
-from dingo.model.llm.detect_text_quality_detail import DetectTextQualityDetail
+from dingo.model.llm.llm_text_quality_model_base import LlmTextQualityModelBase
 from dingo.model.prompt.prompt_common import PromptRepeat
 from dingo.model.rule.rule_common import RuleEnterAndSpace
 
 
 def llm():
-    DetectTextQualityDetail.prompt = PromptRepeat()
-    DetectTextQualityDetail.dynamic_config = DynamicLLMConfig(
+    LlmTextQualityModelBase.prompt = PromptRepeat()
+    LlmTextQualityModelBase.dynamic_config = DynamicLLMConfig(
         key='',
         api_url='',
         # model='',
     )
-    res = DetectTextQualityDetail.eval(MetaData(
+    res = LlmTextQualityModelBase.eval(MetaData(
         data_id='123',
         prompt="hello, introduce the world",
         content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."

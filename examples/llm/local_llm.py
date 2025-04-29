@@ -13,7 +13,7 @@ input_data = {
             "prompt_list": ["PromptRepeat"],
             "llm_config":
                 {
-                    "detect_text_quality":
+                    "LlmTextQualityPromptBase":
                         {
                             "key": "enter your key, such as:EMPTY",
                             "api_url": "enter your local llm api url, such as:http://127.0.0.1:8080/v1",

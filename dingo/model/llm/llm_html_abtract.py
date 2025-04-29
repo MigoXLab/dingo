@@ -5,14 +5,17 @@ from typing import Dict, List
 from dingo.io import MetaData
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
+from dingo.model.prompt.prompt_html_abstract import PromptHtmlAbstract
 from dingo.model.modelres import ModelRes
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('detect_html_abstract')
-class DetectHtmlAbstract(BaseOpenAI):
+@Model.llm_register('LlmHtmlAbstract')
+class LlmHtmlAbstract(BaseOpenAI):
+    prompt = PromptHtmlAbstract
+
     @classmethod
     def build_messages(cls, input_data: MetaData) -> List:
         messages = [{"role": "user",

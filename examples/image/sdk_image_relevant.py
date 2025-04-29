@@ -14,10 +14,10 @@ def image_relevant():
         "column_prompt": "url_1",
         "column_content": "url_2",
         "custom_config": {
-            "prompt_list": ["PromptImageRelevance"],
+            "prompt_list": ["PromptImageRelevant"],
             "llm_config":
                 {
-                    "detect_image_relevant":
+                    "LlmImageRelevant":
                         {
                             "key": "",
                             "api_url": "",

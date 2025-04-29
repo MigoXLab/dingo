@@ -1,15 +1,20 @@
 import json
 
+from dingo.config.config import DynamicLLMConfig
+from dingo.io.input.MetaData import MetaData
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.modelres import ModelRes
+from dingo.model.prompt.prompt_text_quality import PromptTextQualityV4
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('detect_security')
-class DetectSecurity(BaseOpenAI):
+@Model.llm_register('LlmTextQualityModelBase')
+class LlmTextQualityModelBase(BaseOpenAI):
+    prompt = PromptTextQualityV4
+
     @classmethod
     def process_response(cls, response: str) -> ModelRes:
         log.info(response)
@@ -25,12 +30,16 @@ class DetectSecurity(BaseOpenAI):
         except json.JSONDecodeError:
             raise ConvertJsonError(f'Convert to JSON format failed: {response}')
 
+        response_model = ResponseScoreTypeNameReason(**response_json)
+
         result = ModelRes()
-        for k,v in response_json.items():
-            if v == 'pos':
-                result.error_status = True
-                result.type = 'Security'
-                result.name = cls.prompt.__name__
-                result.reason.append(k)
+        # error_status
+        if response_model.score == 1:
+            result.reason = [response_model.reason]
+        else:
+            result.error_status = True
+            result.type = response_model.type
+            result.name = response_model.name
+            result.reason = [response_model.reason]
 
         return result

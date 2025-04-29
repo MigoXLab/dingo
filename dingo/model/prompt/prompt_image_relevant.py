@@ -2,8 +2,8 @@ from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
 
-@Model.prompt_register("IMAGE_RELEVANCE", [])
-class PromptImageRelevance(BasePrompt):
+@Model.prompt_register("IMAGE_RELEVANT", [])
+class PromptImageRelevant(BasePrompt):
     content = """
     作为一款专业的图片检测AI工具，请结合第一张图评估第二张图片是否符合标准。请先分析第一张图片，包括背景信息、人脸数量、以及每个人物的脸部和手部特征。
     然后根据以下标准对第二张图片进行评分：\n

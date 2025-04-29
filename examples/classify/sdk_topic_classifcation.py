@@ -15,7 +15,7 @@ def classify_topic():
             "prompt_list": ["PromptClassifyTopic"],
             "llm_config":
                 {
-                    "classify_topic":
+                    "LlmClassifyTopic":
                         {
                             "key": "",
                             "api_url": "",

@@ -16,7 +16,7 @@ def classify_QR():
             "prompt_list": ["PromptClassifyQR"],
             "llm_config":
                 {
-                    "LlmClassifyQR":
+                    "LLMClassifyQR":
                         {
                             "key": "",
                             "api_url": "",

@@ -13,7 +13,7 @@ input_data = {
             "prompt_list": ["PromptRepeat"],
             "llm_config":
                 {
-                    "LlmTextQualityPromptBase":
+                    "LLMTextQualityPromptBase":
                         {
                             "key": "",
                             "api_url": "",

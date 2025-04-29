@@ -17,7 +17,7 @@ def classify_3H():
                 "prompt_list": ["PromptTextHarmless"], # options:['PromptIsHelpful', 'PromptIsHonest']
                 "llm_config":
                     {
-                        "LlmText3hHarmless":
+                        "LLMText3HHarmless":
                             {
                                 "key": "",
                                 "api_url": ""

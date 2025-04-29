@@ -11,8 +11,8 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('LlmTextQualityModelBase')
-class LlmTextQualityModelBase(BaseOpenAI):
+@Model.llm_register('LLMTextQualityModelBase')
+class LLMTextQualityModelBase(BaseOpenAI):
     prompt = PromptTextQualityV4
 
     @classmethod

@@ -9,8 +9,8 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('LlmClassifyTopic')
-class LlmClassifyTopic(BaseOpenAI):
+@Model.llm_register('LLMClassifyTopic')
+class LLMClassifyTopic(BaseOpenAI):
     prompt = PromptClassifyTopic
 
     @classmethod

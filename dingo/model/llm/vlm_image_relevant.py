@@ -6,8 +6,8 @@ from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.prompt.prompt_image_relevant import PromptImageRelevant
 
 
-@Model.llm_register('LlmImageRelevant')
-class LlmImageRelevant(BaseOpenAI):
+@Model.llm_register('VLMImageRelevant')
+class VLMImageRelevant(BaseOpenAI):
     prompt = PromptImageRelevant
 
     @classmethod

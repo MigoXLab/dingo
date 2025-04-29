@@ -8,8 +8,8 @@ from dingo.model.modelres import ModelRes
 from dingo.utils import log
 
 
-@Model.llm_register('detect_perspective')
-class Perspective(BaseLLM):
+@Model.llm_register('LLMPerspective')
+class LLMPerspective(BaseLLM):
     client = None
 
     dynamic_config = DynamicLLMConfig(

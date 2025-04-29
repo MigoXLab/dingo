@@ -11,8 +11,8 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('LlmClassifyQR')
-class LlmClassifyQR(BaseOpenAI):
+@Model.llm_register('LLMClassifyQR')
+class LLMClassifyQR(BaseOpenAI):
     prompt = PromptClassifyQR
 
     @classmethod

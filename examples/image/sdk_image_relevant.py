@@ -17,7 +17,7 @@ def image_relevant():
             "prompt_list": ["PromptImageRelevant"],
             "llm_config":
                 {
-                    "LlmImageRelevant":
+                    "VLMImageRelevant":
                         {
                             "key": "",
                             "api_url": "",

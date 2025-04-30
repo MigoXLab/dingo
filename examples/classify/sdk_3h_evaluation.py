@@ -14,10 +14,10 @@ def classify_3H():
         "column_content": "response",
         "custom_config":
             {
-                "prompt_list": ["PromptIsHarmless"], # options:['PromptIsHelpful', 'PromptIsHonest']
+                "prompt_list": ["PromptTextHarmless"], # options:['PromptIsHelpful', 'PromptIsHonest']
                 "llm_config":
                     {
-                        "detect_text_quality_3h":
+                        "LLMText3HHarmless":
                             {
                                 "key": "",
                                 "api_url": ""

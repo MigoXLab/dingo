@@ -3,10 +3,12 @@ from typing import List
 from dingo.io.input import MetaData
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
+from dingo.model.prompt.prompt_image_relevant import PromptImageRelevant
 
 
-@Model.llm_register('detect_image_relevant')
-class DetectImageRelevant(BaseOpenAI):
+@Model.llm_register('VLMImageRelevant')
+class VLMImageRelevant(BaseOpenAI):
+    prompt = PromptImageRelevant
 
     @classmethod
     def build_messages(cls, input_data: MetaData) -> List:

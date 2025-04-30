@@ -3,13 +3,16 @@ import json
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.modelres import ModelRes
+from dingo.model.prompt.prompt_text_quality import PromptTextQualityV2
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('detect_text_quality_register')
-class DetectTextQualityRegister(BaseOpenAI):
+@Model.llm_register('LlmTextQualityRegister')
+class LlmTextQualityRegister(BaseOpenAI):
+    prompt = PromptTextQualityV2
+
     @classmethod
     def process_response(cls, response: str) -> ModelRes:
         log.debug(response)
@@ -57,7 +60,7 @@ if __name__ == '__main__':
                 "prompt_list": ["PromptTextQualityV2"],
                 "llm_config":
                     {
-                        "detect_text_quality_register":
+                        "LlmTextQualityRegister":
                             {
                                 "key": "",
                                 "api_url": "",

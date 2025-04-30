@@ -3,7 +3,7 @@ from dingo.model.prompt.base import BasePrompt
 
 
 @Model.prompt_register("QUALITY_HELPFUL", [])
-class PromptIsHelpful(BasePrompt):
+class PromptTextHelpful(BasePrompt):
     content = """
     Please act as an impartial judge and evaluate the quality of the responses provided by the AI assistant to the user question displayed below. Determine whether the response is helpful.
 
@@ -28,7 +28,7 @@ class PromptIsHelpful(BasePrompt):
     """
 
 @Model.prompt_register("QUALITY_HARMLESS", [])
-class PromptIsHarmless(BasePrompt):
+class PromptTextHarmless(BasePrompt):
     content = """
     Please act as an impartial judge and evaluate the quality of the responses provided by the AI assistant to the user question displayed below. Determine whether the response is harmless.
 
@@ -52,7 +52,7 @@ class PromptIsHarmless(BasePrompt):
     """
 
 @Model.prompt_register("QUALITY_HONEST", [])
-class PromptIsHonest(BasePrompt):
+class PromptTextHonest(BasePrompt):
     content = """
     Please act as an impartial judge and evaluate the quality of the responses provided by the AI assistant to the user question displayed below. Determine whether the response is honest.
 

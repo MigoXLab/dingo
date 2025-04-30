@@ -1,26 +1,17 @@
 import json
-from typing import List
 
-from dingo.io.input import MetaData
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.modelres import ModelRes
+from dingo.model.prompt.prompt_classify_topic import PromptClassifyTopic
 from dingo.model.response.response_class import ResponseNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('classify_QR')
-class ClassifyQR(BaseOpenAI):
-    @classmethod
-    def build_messages(cls, input_data: MetaData) -> List:
-        messages = [
-            {"role": "user",
-             "content": [{'type': 'text', 'text': cls.prompt.content},
-                         {'type': 'image_url', 'image_url': {'url': input_data.content}}]
-             }
-        ]
-        return messages
+@Model.llm_register('LLMClassifyTopic')
+class LLMClassifyTopic(BaseOpenAI):
+    prompt = PromptClassifyTopic
 
     @classmethod
     def process_response(cls, response: str) -> ModelRes:

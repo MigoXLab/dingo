@@ -17,7 +17,7 @@ input_data = {
             "prompt_list": ["PromptHtmlAbstract"],
             "llm_config":
                 {
-                    "detect_html_abstract":
+                    "LLMHtmlAbstract":
                         {
                             "key": "",
                             "api_url": ""

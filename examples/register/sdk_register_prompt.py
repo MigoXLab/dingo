@@ -29,7 +29,7 @@ if __name__ == '__main__':
                 "prompt_list": ["PromptRepeatDemo"],
                 "llm_config":
                     {
-                        "detect_text_quality_detail":
+                        "LLMTextQualityPromptBase":
                             {
                                 "key": "",
                                 "api_url": ""

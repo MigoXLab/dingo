@@ -91,7 +91,7 @@ class LocalExecutor(ExecProto):
                 futures=[]
                 for group_type, group in Model.get_group(self.input_args.eval_group).items():
                     if group_type == 'rule':
-                        futures += [thread_executor.submit(self.evaluate_single_data, group_type, group, data) for data in batch]
+                        futures += [process_executor.submit(self.evaluate_single_data, group_type, group, data) for data in batch]
                     elif group_type == 'prompt':
                         futures += [thread_executor.submit(self.evaluate_single_data, group_type, group, data) for data in batch]
                     else:

@@ -1,11 +1,12 @@
 import json
 import os
 import uuid
-from typing import Literal, Optional
+from typing import Literal, Optional, List, Dict
 
 from dingo.exec import Executor
 from dingo.io import InputArgs
 from dingo.utils import log
+from dingo.model import Model
 from fastmcp import FastMCP
 
 # Dingo log level can be set via InputArgs('log_level') if needed
@@ -18,7 +19,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 def run_dingo_evaluation(
     input_path: str,
     evaluation_type: Literal["rule", "llm"],
-    eval_group_name: Optional[str] = None,
+    eval_group_name: str = "",
     output_dir: Optional[str] = None,
     task_name: Optional[str] = None,
     save_data: bool = True,
@@ -185,16 +186,26 @@ def run_dingo_evaluation(
         "batch_size": kwargs.get('batch_size', 1),   # Defaulting to 1 for MCP stability
     }
 
-    # Only set eval_group if it's needed
-    # For LLM evaluations with custom_config and prompt_list, let InputArgs use a generated name
-    has_config_with_prompts = loaded_custom_config and isinstance(loaded_custom_config, dict) and 'prompt_list' in loaded_custom_config
-    if evaluation_type == "llm" and has_config_with_prompts and not eval_group_name:
-        log.info("LLM evaluation with custom prompt config detected. Using auto-generated eval_group name.")
-    else:
-        if not eval_group_name:
-            raise ValueError("eval_group_name is required for rule evaluations or when no custom config is provided.")
-        input_data["eval_group"] = eval_group_name
-        log.info(f"Using provided eval_group_name: {eval_group_name}")
+    # --- Handle eval_group_name based on evaluation type ---
+    input_data["eval_group"] = None  # Initialize to None
+    valid_rule_groups = {'default', 'sft', 'pretrain'}
+
+    if evaluation_type == "rule":
+        # Check if eval_group_name is provided and valid, otherwise default
+        if eval_group_name and eval_group_name in valid_rule_groups:
+            input_data["eval_group"] = eval_group_name
+            log.info(f"Using provided rule group: {eval_group_name}")
+        elif eval_group_name: # Provided but invalid
+             log.warning(f"Invalid rule group name '{eval_group_name}' provided. Valid options are: {valid_rule_groups}. Defaulting to 'default'.")
+             input_data["eval_group"] = "default"
+        else: # Not provided (eval_group_name is "")
+            log.info("No rule group name provided. Defaulting to 'default'.")
+            input_data["eval_group"] = "default"
+    elif evaluation_type == "llm":
+        log.info("LLM evaluation type selected. 'eval_group_name' will not be explicitly set; handled by Dingo based on custom_config.")
+        # Check if the default empty string was overridden
+        if eval_group_name:
+            log.warning(f"'eval_group_name' ('{eval_group_name}') provided for LLM evaluation, but it will be ignored.")
 
     # Merge valid InputArgs fields from kwargs, logging ignored keys
     processed_args = set(input_data.keys())
@@ -269,6 +280,33 @@ def run_dingo_evaluation(
         log.error(f"Dingo evaluation failed: {e}", exc_info=True)
         raise RuntimeError(f"Dingo evaluation failed: {e}") from e
 
+@mcp.tool()
+def list_dingo_components() -> Dict[str, List[str]]:
+    """Lists available Dingo rule groups and registered LLM model identifiers.
+
+    Ensures all models are loaded before retrieving the lists.
+
+    Returns:
+        A dictionary containing 'rule_groups' and 'llm_models'.
+    """
+    log.info("Received request to list Dingo components.")
+    try:
+        Model.load_model() # Ensure all modules are loaded and components registered
+
+        rule_groups = list(Model.get_rule_groups().keys())
+        log.info(f"Found rule groups: {rule_groups}")
+
+        llm_models = list(Model.get_llm_name_map().keys())
+        log.info(f"Found LLM models: {llm_models}")
+
+        return {
+            "rule_groups": rule_groups,
+            "llm_models": llm_models
+        }
+    except Exception as e:
+        log.error(f"Failed to list Dingo components: {e}", exc_info=True)
+        # Re-raise or return an error structure appropriate for MCP
+        raise RuntimeError(f"Failed to list Dingo components: {e}") from e
 
 if __name__ == "__main__":
-    mcp.run()
+    mcp.run(transport="sse")

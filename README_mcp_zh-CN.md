@@ -6,7 +6,7 @@
 
 ## 特性
 
-*   通过 MCP 暴露 Dingo 的评估逻辑。
+*   通过 MCP 调用 Dingo 的评估逻辑。
 *   提供两个主要工具：
     *   `run_dingo_evaluation`: 对指定数据执行基于规则或基于 LLM 的评估。
     *   `list_dingo_components`: 列出 Dingo 中可用的规则组和已注册的 LLM 模型。

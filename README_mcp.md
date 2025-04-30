@@ -22,7 +22,7 @@ The `mcp_server.py` script provides an experimental Model Context Protocol (MCP)
     ```
 3.  **Install Dependencies**: Install the required dependencies, including FastMCP and other Dingo requirements. It's recommended to use the `requirements.txt` file.
     ```bash
-    pip install -r requirements.txt 
+    pip install -r requirements.txt
     # Alternatively, at minimum: pip install fastmcp
     ```
 4.  **Ensure Dingo is Importable**: Make sure your Python environment can find the `dingo` package within the cloned repository when you run the server script.
@@ -162,4 +162,4 @@ Runs a Dingo evaluation (rule-based or LLM-based).
 </use_mcp_tool>
 ```
 
-Refer to `examples/mcp/config_api_llm.json` (for API-based LLMs) and `examples/mcp/config_self_deployed_llm.json` (for self-hosted LLMs) for the structure of the `custom_config` file, including where to place API keys or URLs. 
+Refer to `examples/mcp/config_api_llm.json` (for API-based LLMs) and `examples/mcp/config_self_deployed_llm.json` (for self-hosted LLMs) for the structure of the `custom_config` file, including where to place API keys or URLs.

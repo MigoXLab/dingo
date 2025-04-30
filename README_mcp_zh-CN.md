@@ -162,4 +162,4 @@ Cursor 将提示你输入必要的参数。
 </use_mcp_tool>
 ```
 
-请参阅 `examples/mcp/config_api_llm.json`（用于基于 API 的 LLM）和 `examples/mcp/config_self_deployed_llm.json`（用于自托管 LLM）了解 `custom_config` 文件的结构，包括放置 API 密钥或 URL 的位置。 
+请参阅 `examples/mcp/config_api_llm.json`（用于基于 API 的 LLM）和 `examples/mcp/config_self_deployed_llm.json`（用于自托管 LLM）了解 `custom_config` 文件的结构，包括放置 API 密钥或 URL 的位置。

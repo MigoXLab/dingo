@@ -1,12 +1,12 @@
 import json
 import os
 import uuid
-from typing import Literal, Optional, List, Dict
+from typing import Dict, List, Literal, Optional
 
 from dingo.exec import Executor
 from dingo.io import InputArgs
-from dingo.utils import log
 from dingo.model import Model
+from dingo.utils import log
 from fastmcp import FastMCP
 
 # Dingo log level can be set via InputArgs('log_level') if needed

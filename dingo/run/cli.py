@@ -20,12 +20,12 @@ def parse_args():
                         default=None, help="Input file or directory path")
     parser.add_argument("--output_path", type=str,
                         default=None, help="Output file or directory path")
-    parser.add_argument("--save_data", type=bool,
-                        default=None, help="Save data in output path")
-    parser.add_argument("--save_correct", type=bool,
-                        default=None, help="Save correct data in output path")
-    parser.add_argument("--save_raw", type=bool,
-                        default=None, help="Save raw data in output path")
+    parser.add_argument("--save_data", action="store_true",
+                        default=False, help="Save data in output path")
+    parser.add_argument("--save_correct", action="store_true",
+                        default=False, help="Save correct data in output path")
+    parser.add_argument("--save_raw", action="store_true",
+                        default=False, help="Save raw data in output path")
     parser.add_argument("--start_index", type=int,
                         default=None, help="The number of data start to check.")
     parser.add_argument("--end_index", type=int,
@@ -59,6 +59,8 @@ def parse_args():
     parser.add_argument("--log_level", type=str,
                         default="WARNING", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
                         help="Choose the logging level in [\"DEBUG\", \"INFO\", " + "\"WARNING\", \"ERROR\"], default is 'WARNING'")
+    parser.add_argument("--use_browser", action="store_true",
+                        default=False, help="Open browser after test.")
     return parser.parse_args()
 
 
@@ -134,11 +136,13 @@ if __name__ == '__main__':
             input_data['custom_config'] = args.custom_config
         if args.log_level:
             input_data['log_level'] = args.log_level
+        if args.use_browser:
+            input_data['use_browser'] = args.use_browser
 
         input_args = InputArgs(**input_data)
         executor = Executor.exec_map['local'](input_args)
         result = executor.execute()
         print(result)
 
-        if input_args.save_data:
+        if input_args.use_browser and input_args.save_data:
             os.system("python -m dingo.run.vsl --input " + result.output_path)

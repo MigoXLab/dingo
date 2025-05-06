@@ -45,6 +45,7 @@ class InputArgs(BaseModel):
     custom_config: Optional[str | dict] = None
 
     log_level: str = 'WARNING'
+    use_browser: bool = False
 
     class Config:
         extra = 'forbid'  # Forbid extra parameters

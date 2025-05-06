@@ -60,7 +60,7 @@ def parse_args():
                         default="WARNING", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
                         help="Choose the logging level in [\"DEBUG\", \"INFO\", " + "\"WARNING\", \"ERROR\"], default is 'WARNING'")
     parser.add_argument("--use_browser", action="store_true",
-                        default=False, help="Open browser after test.")
+                        default=False, help="Open browser to display result after evaluation.")
     return parser.parse_args()
 
 

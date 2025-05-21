@@ -2,8 +2,10 @@ import os
 from typing import Any, Dict, Tuple
 
 import fasttext
+import requests
 from dingo.utils import log
 from huggingface_hub import hf_hub_download
+from tqdm import tqdm
 
 _global_lang_detect = []
 _fasttext_path = ''

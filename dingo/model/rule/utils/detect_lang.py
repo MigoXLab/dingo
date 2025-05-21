@@ -12,9 +12,57 @@ def set_fasttext(path: str):
     _fasttext_path = path
 
 def download_fasttext() -> str:
+    def download_file_from_url(url, save_dir='downloads', filename='lid.176.bin'):
+        os.makedirs(save_dir, exist_ok=True)
+        save_path = os.path.join(save_dir, filename)
+
+        if os.path.exists(save_path):
+            print(f"文件已存在，直接返回: {save_path}")
+            return os.path.abspath(save_path)
+
+        temp_path = save_path + '.download'
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except:
+                pass
+
+        try:
+            with requests.get(url, stream=True) as response:
+                response.raise_for_status()
+
+                total_size = int(response.headers.get('content-length', 0))
+
+                with open(temp_path, 'wb') as f, tqdm(
+                        desc=filename,
+                        total=total_size,
+                        unit='B',
+                        unit_scale=True,
+                        unit_divisor=1024,
+                        miniters=1,
+                ) as bar:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            bar.update(len(chunk))
+
+                os.rename(temp_path, save_path)
+                print(f"文件下载完成: {save_path}")
+                return os.path.abspath(save_path)
+
+        except Exception as e:
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                    print(f"已清理不完整下载文件: {temp_path}")
+                except Exception as cleanup_error:
+                    print(f"清理临时文件失败: {cleanup_error}")
+
+            raise Exception(f"文件下载失败: {str(e)}")
+
     if _fasttext_path:
         return _fasttext_path
-    file_path = hf_hub_download(repo_id='chupei/fasttext.lib.176.bin', filename='lid.176.bin')
+    file_path = download_file_from_url(url='https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin')
     return file_path
 
 

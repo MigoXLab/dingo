@@ -1,3 +1,4 @@
+import hashlib
 import os
 from typing import Any, Dict, Tuple
 
@@ -10,18 +11,35 @@ from tqdm import tqdm
 _global_lang_detect = []
 _fasttext_path = ''
 
+def calculate_md5(file_path):
+    """计算文件的MD5哈希值"""
+    md5 = hashlib.md5()
+    with open(file_path, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            md5.update(chunk)
+    return md5.hexdigest()
+
 def set_fasttext(path: str):
     global _fasttext_path
     _fasttext_path = path
 
 def download_fasttext() -> str:
+    expected_md5 = '01810bc59c6a3d2b79c79e6336612f65'
+
     def download_file_from_url(url, save_dir='downloads', filename='lid.176.bin'):
         os.makedirs(save_dir, exist_ok=True)
         save_path = os.path.join(save_dir, filename)
 
         if os.path.exists(save_path):
-            print(f"文件已存在，直接返回: {save_path}")
-            return os.path.abspath(save_path)
+            # print(f"文件已存在，直接返回: {save_path}")
+            if calculate_md5(save_path) == expected_md5:
+                return os.path.abspath(save_path)
+            else:
+                try:
+                    os.remove(save_path)
+                    print(f"已清理不完整下载文件: {save_path}")
+                except Exception as cleanup_error:
+                    raise Exception(f"清理不完整下载文件失败: {cleanup_error}")
 
         temp_path = save_path + '.download'
         if os.path.exists(temp_path):
@@ -51,7 +69,10 @@ def download_fasttext() -> str:
 
                 os.rename(temp_path, save_path)
                 print(f"文件下载完成: {save_path}")
-                return os.path.abspath(save_path)
+                if calculate_md5(save_path) == expected_md5:
+                    return os.path.abspath(save_path)
+                else:
+                    raise Exception(f"文件下载失败，不完整有缺损: {save_path}")
 
         except Exception as e:
             if os.path.exists(temp_path):

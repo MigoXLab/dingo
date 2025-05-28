@@ -149,7 +149,7 @@ python -m dingo.run.vsl --input 输出目录
 
 Dingo 包含一个实验性的模型上下文协议 (MCP) 服务端。有关运行服务端以及将其与 Cursor 等客户端集成的详细信息，请参阅专门的文档：
 
-[**中文文档 (README_mcp_zh-CN.md)**](README_mcp_zh-CN.md)
+[English](README_mcp.md) · [简体中文](README_mcp_zh-CN.md) · [日本語](README_mcp_ja.md)
 
 ## 视频演示
 

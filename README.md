@@ -151,7 +151,7 @@ Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces
 
 Dingo includes an experimental Model Context Protocol (MCP) server. For details on running the server and integrating it with clients like Cursor, please see the dedicated documentation:
 
-[**Dingo MCP Server Documentation (README_mcp.md)**](README_mcp.md)
+[English](README_mcp.md) · [简体中文](README_mcp_zh-CN.md) · [日本語](README_mcp_ja.md)
 
 ## Video Demonstration
 

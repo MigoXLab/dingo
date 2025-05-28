@@ -151,7 +151,7 @@ python -m dingo.run.vsl --input output_directory
 
 Dingoには実験的なModel Context Protocol（MCP）サーバーが含まれています。サーバーの実行とCursorなどのクライアントとの統合の詳細については、専用のドキュメントをご覧ください：
 
-[**Dingo MCPサーバードキュメント (README_mcp_ja.md)**](README_mcp_ja.md)
+[English](README_mcp.md) · [简体中文](README_mcp_zh-CN.md) · [日本語](README_mcp_ja.md)
 
 ## ビデオデモンストレーション
 

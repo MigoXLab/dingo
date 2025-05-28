@@ -4,14 +4,6 @@
 
 `mcp_server.py` 脚本为 Dingo 提供了一个实验性的模型上下文协议 (MCP) 服务端，由 [FastMCP](https://github.com/modelcontextprotocol/fastmcp) 驱动。这允许 MCP 客户端（例如 Cursor）以编程方式与 Dingo 的数据评估功能进行交互。
 
-## 视频演示
-
-为了帮助您快速上手 Dingo MCP，我们制作了一个视频演示：
-
-https://github.com/user-attachments/assets/8bdaa15d-2e5e-4e46-9a05-ff1dca21cdc8
-
-此视频展示了关于 Dingo MCP 服务端与 Cursor 一起使用的分步演示。
-
 ## 特性
 
 *   通过 MCP 调用 Dingo 的评估逻辑。

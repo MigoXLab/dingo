@@ -4,14 +4,6 @@
 
 The `mcp_server.py` script provides an experimental Model Context Protocol (MCP) server for Dingo, powered by [FastMCP](https://github.com/modelcontextprotocol/fastmcp). This allows MCP clients, such as Cursor, to interact with Dingo's data evaluation capabilities programmatically.
 
-## Video Demonstration
-
-To help you get started quickly with Dingo MCP, we've created a video walkthrough:
-
-https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
-
-This video demonstrates step-by-step how to use Dingo MCP server with Cursor.
-
 ## Features
 
 *   Exposes Dingo's evaluation logic via MCP.

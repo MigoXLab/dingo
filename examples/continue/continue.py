@@ -1,6 +1,7 @@
 from dingo.exec import Executor
 from dingo.io import InputArgs
 
+
 def exec_first():
     input_data = {
         "eval_group": "sft",

@@ -2,9 +2,9 @@ import json
 import os.path
 
 import pytest
-
 from dingo.exec import Executor
 from dingo.io import InputArgs
+
 
 class TestContinue:
     def test_continue_local_jsonl(self):

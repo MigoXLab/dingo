@@ -64,4 +64,4 @@ jobs:
         python -m dingo.run.cli --input_path test/data/test_local_json.json --dataset local -e test --data_format json --column_content prediction --custom_config test/config/config_rule.json --log_level=DEBUG
     - name: Run unit tests with pytest
       run: |
-        pytest test/scripts/test_continue.py
+        pytest test/scripts --ignore=test/scripts/data

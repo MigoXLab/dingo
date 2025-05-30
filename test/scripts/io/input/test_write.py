@@ -10,7 +10,7 @@ class TestWrite:
     def test_write_local_jsonl(self):
         input_args = InputArgs(**{
             "eval_group": "qa_standard_v1",
-            "input_path": "../data/test_local_jsonl.jsonl",
+            "input_path": "test/data/test_local_jsonl.jsonl",
             "save_data": True,
             "save_correct": True,
             "dataset": "local",
@@ -19,12 +19,8 @@ class TestWrite:
             "column_content": "content",
         })
         executor = Executor.exec_map["local"](input_args)
-        result = executor.execute()
+        result = executor.execute().to_dict()
         # print(result)
-        output_path = result[0].output_path
+        output_path = result['output_path']
         assert os.path.exists(output_path)
         shutil.rmtree('outputs')
-
-
-if __name__ == '__main__':
-    pytest.main(["-s", "-q"])

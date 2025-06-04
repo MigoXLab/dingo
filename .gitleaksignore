@@ -1,0 +1,9 @@
+# Ignore false positives in bundled JavaScript files
+# These are minified/obfuscated variable names, not actual API keys
+
+# Main bundled JS file false positives
+web-static/assets/main-BtLo_Yv3.js:generic-api-key:14451
+web-static/assets/main-BtLo_Yv3.js:generic-api-key:35703
+
+# Pattern to ignore similar false positives in future bundled files
+# web-static/assets/*.js:generic-api-key:*

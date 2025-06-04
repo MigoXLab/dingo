@@ -2,7 +2,7 @@ from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
 
-@Model.prompt_register("QUALITY_BAD_SIMILARITY", [])
+@Model.prompt_register('QUALITY_BAD_SIMILARITY', [])
 class PromptRepeat(BasePrompt):
     content = """
     请判断一下文本是否存在重复问题。
@@ -12,7 +12,8 @@ class PromptRepeat(BasePrompt):
     以下是需要判断的文本：
     """
 
-@Model.prompt_register("QUALITY_BAD_EFFECTIVENESS", [])
+
+@Model.prompt_register('QUALITY_BAD_EFFECTIVENESS', [])
 class PromptContentChaos(BasePrompt):
     content = """
     请判断一下文本是否存在乱码与反扒文本。
@@ -21,7 +22,9 @@ class PromptContentChaos(BasePrompt):
     除了json不要有其他内容。
     以下是需要判断的文本：
     """
-@Model.prompt_register("WORD_STICK", [])
+
+
+@Model.prompt_register('WORD_STICK', [])
 class PromptWordStick(BasePrompt):
     content = """
     ### Role
@@ -46,7 +49,9 @@ class PromptWordStick(BasePrompt):
     Return your answer in JSON format: {"score": 0, "type": "xxx", "reason": "xxx"}.
     Here are the data you need to evaluate:
     """
-@Model.prompt_register("CODE_LIST_ISSUE", [])
+
+
+@Model.prompt_register('CODE_LIST_ISSUE', [])
 class PromptUnreadIssue(BasePrompt):
     content = """
     ### Role
@@ -68,7 +73,9 @@ class PromptUnreadIssue(BasePrompt):
     Return your answer in JSON format: {"score": 0, "type": "xxx", "reason": "xxx"}.
     Here are the data you need to evaluate:
     """
-@Model.prompt_register("UNREAD_ISSUE", [])
+
+
+@Model.prompt_register('UNREAD_ISSUE', [])
 class PromptUnreadIssue(BasePrompt):
     content = """
     ### Role

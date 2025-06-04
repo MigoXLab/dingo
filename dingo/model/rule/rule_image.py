@@ -12,7 +12,7 @@ from PIL import Image
 
 @Model.rule_register('QUALITY_BAD_EFFECTIVENESS', ['img'])
 class RuleImageValid(BaseRule):
-    """check whether image is not all white or black"""
+    """Check whether image is not all white or black."""
 
     dynamic_config = DynamicRuleConfig()
 
@@ -23,7 +23,7 @@ class RuleImageValid(BaseRule):
             img = Image.open(input_data.image[0])
         else:
             img = input_data.image[0]
-        img_new = img.convert("RGB")
+        img_new = img.convert('RGB')
         img_np = np.asarray(img_new)
         if np.all(img_np == (255, 255, 255)) or np.all(img_np == (0, 0, 0)):
             res.error_status = True
@@ -35,7 +35,7 @@ class RuleImageValid(BaseRule):
 
 @Model.rule_register('QUALITY_BAD_EFFECTIVENESS', ['img'])
 class RuleImageSizeValid(BaseRule):
-    """check whether image ratio of width to height is valid"""
+    """Check whether image ratio of width to height is valid."""
 
     dynamic_config = DynamicRuleConfig()
 
@@ -58,9 +58,9 @@ class RuleImageSizeValid(BaseRule):
 
 @Model.rule_register('QUALITY_BAD_EFFECTIVENESS', ['img'])
 class RuleImageQuality(BaseRule):
-    """check whether image quality is good."""
+    """Check whether image quality is good."""
 
-    dynamic_config = DynamicRuleConfig(threshold = 5.5)
+    dynamic_config = DynamicRuleConfig(threshold=5.5)
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
@@ -72,7 +72,7 @@ class RuleImageQuality(BaseRule):
             img = Image.open(input_data.image[0])
         else:
             img = input_data.image[0]
-        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         iqa_metric = pyiqa.create_metric('nima', device=device)
         score_fr = iqa_metric(img)
         score = score_fr.item()
@@ -93,10 +93,11 @@ class RuleImageRepeat(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from imagededup.methods import CNN, PHash
+
         res = ModelRes()
         image_dir = input_data.content
         if len(os.listdir(image_dir)) == 0:
-            raise ZeroDivisionError("The directory is empty, cannot calculate the ratio.")
+            raise ZeroDivisionError('The directory is empty, cannot calculate the ratio.')
         phasher = PHash()
         cnn_encoder = CNN()
         phash_encodings = phasher.encode_images(image_dir=image_dir)
@@ -112,9 +113,10 @@ class RuleImageRepeat(BaseRule):
             res.error_status = True
             res.type = cls.metric_type
             res.name = cls.__name__
-            res.reason = [f'{image} -> {duplicates_cnn[image]}' for image in common_duplicates]
-            res.reason.append({"duplicate_ratio": len(common_duplicates) / len(os.listdir(image_dir))})
+            res.reason = [f"{image} -> {duplicates_cnn[image]}" for image in common_duplicates]
+            res.reason.append({'duplicate_ratio': len(common_duplicates) / len(os.listdir(image_dir))})
         return res
+
 
 @Model.rule_register('QUALITY_BAD_EFFECTIVENESS', [])
 class RuleImageTextSimilarity(BaseRule):
@@ -124,6 +126,7 @@ class RuleImageTextSimilarity(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         import nltk
+
         nltk.download('punkt_tab')
         from dingo.model.rule.utils.image_util import download_similar_tool
         from nltk.tokenize import word_tokenize
@@ -156,10 +159,6 @@ class RuleImageTextSimilarity(BaseRule):
 
 
 if __name__ == '__main__':
-    data = Data(
-        data_id = '',
-        prompt = '',
-        content = ''
-    )
+    data = Data(data_id='', prompt='', content='')
     tmp = RuleImageRepeat().eval(data)
     print(tmp)

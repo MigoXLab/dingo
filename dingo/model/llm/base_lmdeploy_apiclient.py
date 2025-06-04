@@ -27,14 +27,13 @@ class BaseLmdeployApiClient(BaseLLM):
         from lmdeploy.serve.openai.api_client import APIClient
 
         if not cls.dynamic_config.api_url:
-            raise ValueError("api_url cannot be empty in llm config.")
+            raise ValueError('api_url cannot be empty in llm config.')
         else:
             cls.client = APIClient(cls.dynamic_config.api_url)
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
-        messages = [{"role": "user",
-                     "content": cls.prompt.content + input_data.content}]
+        messages = [{'role': 'user', 'content': cls.prompt.content + input_data.content}]
         return messages
 
     @classmethod
@@ -57,7 +56,7 @@ class BaseLmdeployApiClient(BaseLLM):
         try:
             response_json = json.loads(response)
         except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         response_model = ResponseScoreReason(**response_json)
 
@@ -97,9 +96,4 @@ class BaseLmdeployApiClient(BaseLLM):
                 except_msg = str(e)
                 except_name = e.__class__.__name__
 
-        return ModelRes(
-            error_status=True,
-            type='QUALITY_BAD',
-            name=except_name,
-            reason=[except_msg]
-        )
+        return ModelRes(error_status=True, type='QUALITY_BAD', name=except_name, reason=[except_msg])

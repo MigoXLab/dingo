@@ -2,7 +2,7 @@ from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
 
-@Model.prompt_register("CLASSIFY_QR", [])
+@Model.prompt_register('CLASSIFY_QR', [])
 class PromptClassifyQR(BasePrompt):
     content = """
     'Classify the image into one of the following categories: "CAPTCHA", "QR code", or "Normal image". '

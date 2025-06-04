@@ -1,10 +1,11 @@
 # Dataset Redpajama
 
 ## Dataset Introduction
+
 This dataset aims to evaluate the accuracy of the built-in prompt words in dingo, therefore, the open-source dataset redpajama is selected, and data is extracted from it to build a test set.
 
 | Field Name   | Description                                                                        |
-|--------------|------------------------------------------------------------------------------------|
+| ------------ | ---------------------------------------------------------------------------------- |
 | data_id      | Data ID, without special meaning, users can modify it according to their own needs |
 | content      | Data to be tested                                                                  |
 | language     | Language type                                                                      |
@@ -18,8 +19,9 @@ https://huggingface.co/datasets/chupei/redpajama_good_model<br>
 https://huggingface.co/datasets/chupei/redpajama_bad_model
 
 ### Dataset Composition
+
 | Type                                    | Count |
-|-----------------------------------------|-------|
+| --------------------------------------- | ----- |
 | Positive Examples                       | 101   |
 | Negative Examples: disfluency           | 4     |
 | Negative Examples: dissimilarity        | 3     |
@@ -29,16 +31,19 @@ https://huggingface.co/datasets/chupei/redpajama_bad_model
 | Negative Examples: irrelevance          | 49    |
 
 ## Prompt Introduction
+
 The built-in **PromptTextQualityV2** is used as the prompt for this test.<br>
 Specific content can be referred to: [Introduction to PromptTextQualityV2](../../../dingo/model/prompt/prompt_text_quality.py)<br>
 The built-in prompt collection can be referred to: [Prompt Collection](../../../dingo/model/prompt)
 
 ## Evaluation Results
+
 ### Concept Introduction
+
 Both positive and negative examples will generate corresponding summary files after evaluation, so the results need to be defined and the concepts clarified.
 
 | Name     | Description                                                                 |
-|----------|-----------------------------------------------------------------------------|
+| -------- | --------------------------------------------------------------------------- |
 | TP       | True Positive: Number of positive examples evaluated as positive            |
 | FP       | False Positive: Number of negative examples evaluated as positive           |
 | TN       | True Negative: Number of negative examples evaluated as negative            |
@@ -48,9 +53,10 @@ Both positive and negative examples will generate corresponding summary files af
 | F1       | (Accuracy + Recall) / 2                                                     |
 
 ### Result Display
-| Dataset Name | TP | FP | TN  | FN | Accuracy% | Recall% | F1 |
-|--------------|----|----|-----|----|-----------|---------|----|
-| redpajama    | 95 | 0  | 101 | 6  | 100       | 94      | 97 |
+
+| Dataset Name | TP  | FP  | TN  | FN  | Accuracy% | Recall% | F1  |
+| ------------ | --- | --- | --- | --- | --------- | ------- | --- |
+| redpajama    | 95  | 0   | 101 | 6   | 100       | 94      | 97  |
 
 ## Evaluation Method
 

@@ -23,10 +23,10 @@ class LLMSecurity(BaseOpenAI):
         try:
             response_json = json.loads(response)
         except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         result = ModelRes()
-        for k,v in response_json.items():
+        for k, v in response_json.items():
             if v == 'pos':
                 result.error_status = True
                 result.type = 'Security'

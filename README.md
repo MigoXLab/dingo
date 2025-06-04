@@ -5,6 +5,7 @@
 </p>
 
 <!-- badges -->
+
 <p align="center">
   <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white" alt="pre-commit"></a>
   <a href="https://pypi.org/project/dingo-python/"><img src="https://img.shields.io/pypi/v/dingo-python.svg" alt="PyPI version"></a>
@@ -18,20 +19,17 @@
 
 </div>
 
-
 <div align="center">
 
 [English](README.md) · [简体中文](README_zh-CN.md) · [日本語](README_ja.md)
 
 </div>
 
-
 <!-- join us -->
 
 <p align="center">
     👋 join us on <a href="https://discord.gg/Jhgb2eKWh8" target="_blank">Discord</a> and <a href="./docs/assets/wechat.jpg" target="_blank">WeChat</a>
 </p>
-
 
 # Changelog
 
@@ -119,6 +117,7 @@ python -m dingo.run.cli --input_path data.json --dataset local -e openai --data_
 ```
 
 Example `config_gpt.json`:
+
 ```json
 {
   "llm_config": {
@@ -144,8 +143,8 @@ Where `output_directory` contains the evaluation results with a `summary.json` f
 ![GUI output](docs/assets/dingo_gui.png)
 
 ## Online Demo
-Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
+Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
 # MCP Server
 
@@ -161,20 +160,19 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 
 This video demonstrates step-by-step how to use Dingo MCP server with Cursor.
 
-
 # Data Quality Metrics
 
 Dingo classifies data quality issues into 7 dimensions of Quality Metrics. Each dimension can be evaluated using both rule-based methods and LLM-based prompts:
 
-| Quality Metric    | Description | Rule Examples | LLM Prompt Examples |
-|-------------------|-------------|---------------|---------------------|
-| **COMPLETENESS** | Checks if data is incomplete or missing | `RuleColonEnd`, `RuleContentNull` | Evaluates if text abruptly ends with a colon or ellipsis, has mismatched parentheses, or missing critical components |
-| **EFFECTIVENESS** | Checks if data is meaningful and properly formatted | `RuleAbnormalChar`, `RuleHtmlEntity`, `RuleSpecialCharacter` | Detects garbled text, words stuck together without spaces, and text lacking proper punctuation |
-| **FLUENCY** | Checks if text is grammatically correct and reads naturally | `RuleAbnormalNumber`, `RuleNoPunc`, `RuleWordStuck` | Identifies excessively long words, text fragments without punctuation, or content with chaotic reading order |
-| **RELEVANCE** | Detects irrelevant content within the data | `RuleHeadWord` variants for different languages | Examines for irrelevant information like citation details, headers/footers, entity markers, HTML tags |
-| **SECURITY** | Identifies sensitive information or value conflicts | `RuleIDCard`, `RuleUnsafeWords` | Checks for personal information, and content related to gambling, pornography, political issues |
-| **SIMILARITY** | Detects repetitive or highly similar content | `RuleDocRepeat` | Evaluates text for consecutive repeated content or multiple occurrences of special characters |
-| **UNDERSTANDABILITY** | Assesses how easily data can be interpreted | `RuleCapitalWords` | Ensures LaTeX formulas and Markdown are correctly formatted, with proper segmentation and line breaks |
+| Quality Metric        | Description                                              | Rule Examples                                              | LLM Prompt Examples                                               |
+| --------------------- | -------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------- |
+| **COMPLETENESS**      | Checks if data is incomplete or missing                  | `RuleColonEnd`, `RuleContentNull`                          | Evaluates if text abruptly ends with a colon or ellipsis, has mismatched parentheses, or missing critical components |
+| **EFFECTIVENESS**     | Checks if data is meaningful and properly formatted      | `RuleAbnormalChar`, `RuleHtmlEntity`, `RuleSpecialCharacter` | Detects garbled text, words stuck together without spaces, and text lacking proper punctuation |
+| **FLUENCY**           | Checks if text is grammatically correct and reads naturally | `RuleAbnormalNumber`, `RuleNoPunc`, `RuleWordStuck`        | Identifies excessively long words, text fragments without punctuation, or content with chaotic reading order |
+| **RELEVANCE**         | Detects irrelevant content within the data               | `RuleHeadWord` variants for different languages            | Examines for irrelevant information like citation details, headers/footers, entity markers, HTML tags |
+| **SECURITY**          | Identifies sensitive information or value conflicts      | `RuleIDCard`, `RuleUnsafeWords`                            | Checks for personal information, and content related to gambling, pornography, political issues |
+| **SIMILARITY**        | Detects repetitive or highly similar content             | `RuleDocRepeat`                                            | Evaluates text for consecutive repeated content or multiple occurrences of special characters |
+| **UNDERSTANDABILITY** | Assesses how easily data can be interpreted              | `RuleCapitalWords`                                         | Ensures LaTeX formulas and Markdown are correctly formatted, with proper segmentation and line breaks |
 
 ## LLM Quality Assessment
 
@@ -182,42 +180,42 @@ Dingo provides several LLM-based assessment methods defined by prompts in the `d
 
 ### Text Quality Assessment Prompts
 
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
+| Prompt Type                          | Metric                     | Description                                                                                                                                |
+| ------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `TEXT_QUALITY_V2`, `TEXT_QUALITY_V3` | Various quality dimensions | Comprehensive text quality evaluation covering effectiveness, relevance, completeness, understandability, similarity, fluency, and security |
-| `QUALITY_BAD_EFFECTIVENESS` | Effectiveness | Detects garbled text and anti-crawling content |
-| `QUALITY_BAD_SIMILARITY` | Similarity | Identifies text repetition issues |
-| `WORD_STICK` | Fluency | Checks for words stuck together without proper spacing |
-| `CODE_LIST_ISSUE` | Completeness | Evaluates code blocks and list formatting issues |
-| `UNREAD_ISSUE` | Effectiveness | Detects unreadable characters due to encoding issues |
+| `QUALITY_BAD_EFFECTIVENESS`          | Effectiveness              | Detects garbled text and anti-crawling content                                                                                             |
+| `QUALITY_BAD_SIMILARITY`             | Similarity                 | Identifies text repetition issues                                                                                                          |
+| `WORD_STICK`                         | Fluency                    | Checks for words stuck together without proper spacing                                                                                     |
+| `CODE_LIST_ISSUE`                    | Completeness               | Evaluates code blocks and list formatting issues                                                                                           |
+| `UNREAD_ISSUE`                       | Effectiveness              | Detects unreadable characters due to encoding issues                                                                                       |
 
 ### 3H Assessment Prompts (Honest, Helpful, Harmless)
 
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
-| `QUALITY_HONEST` | Honesty | Evaluates if responses provide accurate information without fabrication or deception |
-| `QUALITY_HELPFUL` | Helpfulness | Assesses if responses address questions directly and follow instructions appropriately |
+| Prompt Type        | Metric       | Description                                                                                  |
+| ------------------ | ------------ | -------------------------------------------------------------------------------------------- |
+| `QUALITY_HONEST`   | Honesty      | Evaluates if responses provide accurate information without fabrication or deception         |
+| `QUALITY_HELPFUL`  | Helpfulness  | Assesses if responses address questions directly and follow instructions appropriately       |
 | `QUALITY_HARMLESS` | Harmlessness | Checks if responses avoid harmful content, discriminatory language, and dangerous assistance |
 
 ### Domain-Specific Assessment Prompts
 
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
-| `TEXT_QUALITY_KAOTI` | Exam question quality | Specialized assessment for evaluating the quality of exam questions, focusing on formula rendering, table formatting, paragraph structure, and answer formatting |
-| `Html_Abstract` | HTML extraction quality | Compares different methods of extracting Markdown from HTML, evaluating completeness, formatting accuracy, and semantic coherence |
-| `DATAMAN_ASSESSMENT` | Data Quality & Domain | Evaluates pre-training data quality using the DataMan methodology (14 standards, 15 domains). Assigns a score (0/1), domain type, quality status, and reason. |
+| Prompt Type          | Metric                  | Description                                                                                                                                                   |
+| -------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TEXT_QUALITY_KAOTI` | Exam question quality   | Specialized assessment for evaluating the quality of exam questions, focusing on formula rendering, table formatting, paragraph structure, and answer formatting |
+| `Html_Abstract`      | HTML extraction quality | Compares different methods of extracting Markdown from HTML, evaluating completeness, formatting accuracy, and semantic coherence                             |
+| `DATAMAN_ASSESSMENT` | Data Quality & Domain   | Evaluates pre-training data quality using the DataMan methodology (14 standards, 15 domains). Assigns a score (0/1), domain type, quality status, and reason. |
 
 ### Classification Prompts
 
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
+| Prompt Type      | Metric               | Description                                                                                                       |
+| ---------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `CLASSIFY_TOPIC` | Topic Categorization | Classifies text into categories like language processing, writing, code, mathematics, role-play, or knowledge Q&A |
-| `CLASSIFY_QR` | Image Classification | Identifies images as CAPTCHA, QR code, or normal images |
+| `CLASSIFY_QR`    | Image Classification | Identifies images as CAPTCHA, QR code, or normal images                                                           |
 
 ### Image Assessment Prompts
 
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
+| Prompt Type       | Metric          | Description                                                                                                |
+| ----------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
 | `IMAGE_RELEVANCE` | Image Relevance | Evaluates if an image matches reference image in terms of face count, feature details, and visual elements |
 
 ### Using LLM Assessment in Evaluation
@@ -246,10 +244,10 @@ You can customize these prompts to focus on specific quality dimensions or to ad
 
 Dingo provides pre-configured rule groups for different types of datasets:
 
-| Group | Use Case | Example Rules |
-|-------|----------|---------------|
-| `default` | General text quality | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`, etc. |
-| `sft` | Fine-tuning datasets | Rules from `default` plus `RuleLineStartWithBulletpoint` |
+| Group      | Use Case              | Example Rules                                                                       |
+| ---------- | --------------------- | ----------------------------------------------------------------------------------- |
+| `default`  | General text quality  | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`, etc.                            |
+| `sft`      | Fine-tuning datasets  | Rules from `default` plus `RuleLineStartWithBulletpoint`                            |
 | `pretrain` | Pre-training datasets | Comprehensive set of 20+ rules including `RuleAlphaWords`, `RuleCapitalWords`, etc. |
 
 To use a specific rule group:
@@ -328,6 +326,7 @@ class MyCustomModel(BaseOpenAI):
 ```
 
 See more examples in:
+
 - [Register Rules](examples/register/sdk_register_rule.py)
 - [Register Prompts](examples/register/sdk_register_prompt.py)
 - [Register Models](examples/register/sdk_register_llm.py)
@@ -374,6 +373,7 @@ After evaluation, Dingo generates:
 2. **Detailed Reports**: Specific issues for each rule violation
 
 Example summary:
+
 ```json
 {
     "task_id": "d6c922ec-981c-11ef-b723-7c10c9512fac",
@@ -397,14 +397,15 @@ Example summary:
 }
 ```
 
-
 # Research & Publications
 
 ## Research Powered by Dingo
+
 - **WanJuanSiLu**: [A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/pdf/2501.14506)
   *Uses Dingo for comprehensive data quality assessment of multilingual web data*
 
 ## Methodologies Implemented in Dingo
+
 - **DataMan Methodology**: [DataMan: Data Manager for Pre-training Large Language Models](https://openreview.net/pdf?id=eNbA8Fqir4)
   *Dingo implements the DataMan methodology for pre-training data quality assessment*
 - **RedPajama-Data-v2**: [RedPajama-Data](https://github.com/togethercomputer/RedPajama-Data)

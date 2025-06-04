@@ -18,10 +18,13 @@ class LLMClassifyQR(BaseOpenAI):
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
         messages = [
-            {"role": "user",
-             "content": [{'type': 'text', 'text': cls.prompt.content},
-                         {'type': 'image_url', 'image_url': {'url': input_data.content}}]
-             }
+            {
+                'role': 'user',
+                'content': [
+                    {'type': 'text', 'text': cls.prompt.content},
+                    {'type': 'image_url', 'image_url': {'url': input_data.content}},
+                ],
+            }
         ]
         return messages
 
@@ -38,7 +41,7 @@ class LLMClassifyQR(BaseOpenAI):
         try:
             response_json = json.loads(response)
         except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         response_model = ResponseNameReason(**response_json)
 

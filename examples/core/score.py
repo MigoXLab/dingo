@@ -7,8 +7,8 @@ from dingo.model.rule.rule_common import RuleEnterAndSpace
 def llm():
     data = Data(
         data_id='123',
-        prompt="hello, introduce the world",
-        content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."
+        prompt='hello, introduce the world',
+        content='Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty.',
     )
 
     LLMTextQualityModelBase.dynamic_config = DynamicLLMConfig(
@@ -19,16 +19,18 @@ def llm():
     res = LLMTextQualityModelBase.eval(data)
     print(res)
 
+
 def rule():
     data = Data(
         data_id='123',
-        prompt="hello, introduce the world",
-        content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."
+        prompt='hello, introduce the world',
+        content='Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty.',
     )
 
     res = RuleEnterAndSpace().eval(data)
     print(res)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     llm()
     rule()

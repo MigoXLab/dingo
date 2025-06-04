@@ -1,58 +1,61 @@
 # Multi_Lan Dataset
 
 ## Dataset Introduction
+
 Multi_Lan Dataset aims to evaluate the ability of Dingo's built-in prompt to mine low-quality data in multi-language pre-training datasets. We extracted a portion of data from the Common Crawl (CC) dataset, which was then annotated by experts in these languages based on seven quality dimensions（[quality_metrics](../../metrics.md)）. If any dimension has problems, the data will be marked as low-quality data.
 
-| Field Name          | Description                           |
-|--------------|------------------------------|
-| data_id      | A unique identifier for each data entry, without special significance; users can modify it according to their needs.      |
-| content      | The text content awaiting quality inspection.                   |
-| language     | The language of the content.                           |
-| error_status | Data status: True indicates low-quality data, False indicates high-quality data.|
-| type_list    | Types of problems found in low-quality data; this field is an empty list for normal data.       |
-| name_list    | Names of issues found in low-quality data; this field is an empty list for normal data.       |
-| reason_list  | Descriptions of problems found in low-quality data; this field is an empty list for normal data.       |
+| Field Name   | Description                                                                                                          |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| data_id      | A unique identifier for each data entry, without special significance; users can modify it according to their needs. |
+| content      | The text content awaiting quality inspection.                                                                        |
+| language     | The language of the content.                                                                                         |
+| error_status | Data status: True indicates low-quality data, False indicates high-quality data.                                     |
+| type_list    | Types of problems found in low-quality data; this field is an empty list for normal data.                            |
+| name_list    | Names of issues found in low-quality data; this field is an empty list for normal data.                              |
+| reason_list  | Descriptions of problems found in low-quality data; this field is an empty list for normal data.                     |
 
 ### Dataset Link
+
 The dataset is available for different languages through the following links:
 
 | Language   | Dataset Link                                 |
-|------------|----------------------------------------------|
+| ---------- | -------------------------------------------- |
 | Russian    | https://huggingface.co/datasets/chupei/cc_ru |
 | Thai       | https://huggingface.co/datasets/chupei/cc_th |
 | Vietnamese | https://huggingface.co/datasets/chupei/cc_vi |
 | Hungarian  | https://huggingface.co/datasets/chupei/cc_hu |
 | Serbian    | https://huggingface.co/datasets/chupei/cc_sr |
 
-
 ### Dataset Composition
+
 The dataset includes five languages: Russian, Thai, Vietnamese, Hungarian, and Serbian. Below is a summary of each language's data:
 
 | Language   | Number of dataset | Number of High-Quality Data | Number of Low-Quality Data |
-|------------|-------------------|-----------------------------|----------------------------|
+| ---------- | ----------------- | --------------------------- | -------------------------- |
 | Russian    | 154               | 71                          | 83                         |
 | Thai       | 267               | 128                         | 139                        |
 | Vietnamese | 214               | 101                         | 113                        |
 | Hungarian  | 225               | 99                          | 126                        |
 | Serbian    | 144               | 38                          | 76                         |
 
-
-
 ## Prompt Validation Metrics
+
 ### Indicator Description
+
 For prompt validation, we focus on the precision of identifying low-quality data. The metrics are defined as follows:
 
-| Indicator                     | Description                                     |
-|-------------------------------|----------------------------------------|
-| TP(True Positive)             |The number of high-quality data points correctly identified as high-quality.         |
-| FP(False Positive)            |The number of low-quality data points incorrectly identified as high-quality.        |
-| TN(True Negative)             |The number of low-quality data points correctly identified as low-quality.          |
-| FN(False Negative)            |The number of high-quality data points incorrectly identified as low-quality.        |
+| Indicator                     | Description                                                                                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| TP(True Positive)             | The number of high-quality data points correctly identified as high-quality.                                      |
+| FP(False Positive)            | The number of low-quality data points incorrectly identified as high-quality.                                     |
+| TN(True Negative)             | The number of low-quality data points correctly identified as low-quality.                                        |
+| FN(False Negative)            | The number of high-quality data points incorrectly identified as low-quality.                                     |
 | Precision of Low-Quality Data | TN / (TN + FN) , the ratio of low-quality data correctly identified as such among all data marked as low-quality. |
 
-
 ## prompt_text_quality_multilan 设计
+
 When evaluating different languages, the Role should be set to correspond with the language being evaluated. For instance, when evaluating Serbian, the prompt would be as follows:
+
 <pre>
 ### Role
 You are an expert in Serbian language model.
@@ -79,18 +82,17 @@ Please remember to output only a JSON format data, without any additional conten
 
 </pre>
 
-
 ### Experiment Results
+
 Below are the experimental results showcasing the performance of the prompt across different languages:
 
-| Language    | number | TP  | FP | TN | FN | Precision of Low-Quality Data (%) |
-|-------|--------|-----|----|----|----|-----------|
-| Russian    | 154    | 79  | 16 | 55 | 4  | 93.22     |
-| Thai    | 267    | 130 | 30 | 98 | 9  | 91.59     |
-| Vietnamese   | 214    | 107 | 32 | 69 | 6  | 92.0      |
-| Hungarian  | 225    | 124 | 30 | 69 | 2  | 97.18     |
-| Serbian | 114    | 75  | 6  | 32 | 1  | 96.97     |
-
+| Language   | number | TP  | FP  | TN  | FN  | Precision of Low-Quality Data (%) |
+| ---------- | ------ | --- | --- | --- | --- | --------------------------------- |
+| Russian    | 154    | 79  | 16  | 55  | 4   | 93.22                             |
+| Thai       | 267    | 130 | 30  | 98  | 9   | 91.59                             |
+| Vietnamese | 214    | 107 | 32  | 69  | 6   | 92.0                              |
+| Hungarian  | 225    | 124 | 30  | 69  | 2   | 97.18                             |
+| Serbian    | 114    | 75  | 6   | 32  | 1   | 96.97                             |
 
 ## Evaluation
 

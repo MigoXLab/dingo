@@ -2,7 +2,7 @@ from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
 
-@Model.prompt_register("Html_Abstract", [])
+@Model.prompt_register('Html_Abstract', [])
 class PromptHtmlAbstract(BasePrompt):
     content = """
 你是一位经验丰富的前端工程师，擅长分析 HTML 代码和 Markdown 文本。现在我会提供三段内容：

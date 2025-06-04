@@ -81,6 +81,7 @@ For low-quality text with multiple issues:
 Please output only the JSON format data shown above, without any additional content.
 """
 
-@Model.prompt_register("DATAMAN_ASSESSMENT", [])
+
+@Model.prompt_register('DATAMAN_ASSESSMENT', [])
 class PromptDataManAssessment(BasePrompt):
     content = ROLE + DATAMAN_ASSESSMENT

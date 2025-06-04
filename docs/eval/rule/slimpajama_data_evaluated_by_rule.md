@@ -1,10 +1,11 @@
 # Slimpajama Dataset
 
 ## Dataset Introduction
+
 This dataset aims to evaluate the accuracy of the built-in rules in dingo. Therefore, the open-source dataset Slimpajama was selected, and data was extracted from it to construct the test set.
 
 | Field Name   | Description                                                                   |
-|--------------|-------------------------------------------------------------------------------|
+| ------------ | ----------------------------------------------------------------------------- |
 | data_id      | Data ID, without special meaning, can be modified according to user needs     |
 | content      | Data to be tested                                                             |
 | language     | Language type                                                                 |
@@ -18,8 +19,9 @@ https://huggingface.co/datasets/chupei/slimpajama_badcase_rule
 https://huggingface.co/datasets/chupei/slimpajama_goodcase_rule
 
 ### Dataset Composition
+
 | Type                                            | Count |
-|-------------------------------------------------|-------|
+| ----------------------------------------------- | ----- |
 | Positive examples                               | 82    |
 | Negative examples: RuleAlphaWords               | 27    |
 | Negative examples: RuleCapitalWords             | 26    |
@@ -40,15 +42,18 @@ https://huggingface.co/datasets/chupei/slimpajama_goodcase_rule
 | Negative examples: RuleWordNumber               | 7     |
 
 ## Rules Introduction
+
 This test uses the built-in **pretrain** as the eval_group. For specific rules included, please refer to: [Group Introduction](../../groups.md).<br>
 For rules within the group, please refer to: [Rules Introduction](../../rules.md).
 
 ## Evaluation Results
+
 ### Definitions
+
 After evaluation, both positive and negative data will generate corresponding summary files. Therefore, the results need to be defined with clear concepts.
 
 | Term     | Description                                                                    |
-|----------|--------------------------------------------------------------------------------|
+| -------- | ------------------------------------------------------------------------------ |
 | TP       | True Positive: Number of positive examples correctly identified                |
 | FP       | False Positive: Number of negative examples incorrectly identified as positive |
 | TN       | True Negative: Number of negative examples correctly identified                |
@@ -58,11 +63,13 @@ After evaluation, both positive and negative data will generate corresponding su
 | F1       | (Accuracy + Recall) / 2                                                        |
 
 ### Results Display
-| Dataset Name | TP | FP | TN  | FN | Accuracy% | Recall% | F1   |
-|--------------|----|----|-----|----|-----------|---------|------|
-| slimpajama   | 78 | 5  | 103 | 4  | 94        | 95      | 94.5 |
+
+| Dataset Name | TP  | FP  | TN  | FN  | Accuracy% | Recall% | F1   |
+| ------------ | --- | --- | --- | --- | --------- | ------- | ---- |
+| slimpajama   | 78  | 5   | 103 | 4   | 94        | 95      | 94.5 |
 
 ## Evaluation Method
+
 Translate this markdown into English.
 
 ```python

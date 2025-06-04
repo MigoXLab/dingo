@@ -18,19 +18,18 @@ def get_folder_structure(root_path):
     for item in os.listdir(root_path):
         item_path = os.path.join(root_path, item)
         if os.path.isdir(item_path):
-            category = {
-                "name": item,
-                "files": []
-            }
+            category = {'name': item, 'files': []}
             for subitem in os.listdir(item_path):
                 if subitem.endswith('.jsonl'):
-                    category["files"].append(subitem)
+                    category['files'].append(subitem)
             structure.append(category)
     return structure
+
 
 def get_summary_data(summary_path):
     with open(summary_path, 'r') as file:
         return json.load(file)
+
 
 def get_evaluation_details(root_path):
     details = {}
@@ -45,15 +44,17 @@ def get_evaluation_details(root_path):
                         details[key] = [json.loads(line) for line in file]
     return details
 
+
 def create_data_source(root_path, summary_data, folder_structure, evaluation_details):
     return {
-        "inputPath": root_path,
-        "data": {
-            "summary": summary_data,
-            "evaluationFileStructure": folder_structure,
-            "evaluationDetailList": evaluation_details
-        }
+        'inputPath': root_path,
+        'data': {
+            'summary': summary_data,
+            'evaluationFileStructure': folder_structure,
+            'evaluationDetailList': evaluation_details,
+        },
     }
+
 
 def inject_data_to_html(html_path, data_source):
     # 生成新的HTML文件名
@@ -86,17 +87,19 @@ def inject_data_to_html(html_path, data_source):
     print(f"Data source injected into {new_html_path}")
     return new_html_filename
 
+
 def start_http_server(directory, port=8000):
     os.chdir(directory)
     handler = SimpleHTTPRequestHandler
-    server = HTTPServer(("", port), handler)
+    server = HTTPServer(('', port), handler)
     print(f"Server started on port {port}")
     return server
 
+
 def process_and_inject(root_path):
-    summary_path = os.path.join(root_path, "summary.json")
-    web_static_dir = os.path.join(os.path.dirname(__file__), "..", "..", "web-static")
-    html_path = os.path.join(web_static_dir, "index.html")
+    summary_path = os.path.join(root_path, 'summary.json')
+    web_static_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'web-static')
+    html_path = os.path.join(web_static_dir, 'index.html')
 
     if not os.path.exists(root_path):
         print(f"Error: The specified input path '{root_path}' does not exist.")
@@ -115,33 +118,34 @@ def process_and_inject(root_path):
     evaluation_details = get_evaluation_details(root_path)
     data_source = create_data_source(root_path, summary_data, folder_structure, evaluation_details)
 
-    data_source["inputPath"] = root_path
+    data_source['inputPath'] = root_path
 
     new_html_filename = inject_data_to_html(html_path, data_source)
 
-    print("Data processing and injection completed successfully.")
+    print('Data processing and injection completed successfully.')
     print(f"Input path: {root_path}")
     print(f"New HTML file created: {new_html_filename}")
 
     return True, new_html_filename
 
+
 def run_visual_app(input_path=None):
-    app_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "app")
+    app_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'app')
     os.chdir(app_dir)
 
     try:
-        node_version = subprocess.check_output(["node", "--version"]).decode().strip()
+        node_version = subprocess.check_output(['node', '--version']).decode().strip()
         print(f"Node.js version: {node_version}")
     except subprocess.CalledProcessError:
-        print("Node.js is not installed. Please install the latest version of Node.js and try again.")
+        print('Node.js is not installed. Please install the latest version of Node.js and try again.')
         return False
 
     try:
-        subprocess.run(["npm", "install"], check=True)
+        subprocess.run(['npm', 'install'], check=True)
 
-        command = ["npm", "run", "dev"]
+        command = ['npm', 'run', 'dev']
         if input_path:
-            command.extend(["--", "--input", input_path])
+            command.extend(['--', '--input', input_path])
 
         print(f"Running command: {' '.join(map(shlex.quote, command))}")
         subprocess.run(command, check=True)
@@ -151,11 +155,18 @@ def run_visual_app(input_path=None):
 
     return True
 
+
 def parse_args():
-    parser = argparse.ArgumentParser("dingo visualization")
-    parser.add_argument("--input", required=True, help="Path to the root folder containing summary.json and subfolders")
-    parser.add_argument("--mode", choices=["visualization", "app"], default="visualization", help="Choose the mode: visualization or app")
+    parser = argparse.ArgumentParser('dingo visualization')
+    parser.add_argument('--input', required=True, help='Path to the root folder containing summary.json and subfolders')
+    parser.add_argument(
+        '--mode',
+        choices=['visualization', 'app'],
+        default='visualization',
+        help='Choose the mode: visualization or app',
+    )
     return parser.parse_args()
+
 
 def open_browser(url):
     system = platform.system().lower()
@@ -170,15 +181,16 @@ def open_browser(url):
         print(f"Failed to open browser automatically: {e}")
         print(f"Please open {url} manually in your browser.")
 
+
 def main():
     args = parse_args()
 
-    if args.mode == "app":
+    if args.mode == 'app':
         success = run_visual_app(args.input)
     else:  # visualization mode
         success, new_html_filename = process_and_inject(args.input)
         if success:
-            web_static_dir = os.path.join(os.path.dirname(__file__), "..", "..", "web-static")
+            web_static_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'web-static')
             port = 8000
             try:
                 server = start_http_server(web_static_dir, port)
@@ -186,15 +198,17 @@ def main():
                 print(f"Visualization is ready at {url}")
                 open_browser(url)
 
-                print("HTTP server started. Press Ctrl+C to stop the server.")
+                print('HTTP server started. Press Ctrl+C to stop the server.')
                 try:
                     server.serve_forever()
                 except KeyboardInterrupt:
-                    print("\nServer stopped.")
+                    print('\nServer stopped.')
                     server.shutdown()
             except Exception as e:
                 print(f"Failed to start server: {e}")
-                print(f"You can try opening the file directly in your browser: file://{os.path.abspath(os.path.join(web_static_dir, new_html_filename))}")
+                print(
+                    f"You can try opening the file directly in your browser: file://{os.path.abspath(os.path.join(web_static_dir, new_html_filename))}"
+                )
                 url = f"http://localhost:{port}/{new_html_filename}"
                 open_browser(url)
                 success = True
@@ -202,5 +216,6 @@ def main():
     if not success:
         sys.exit(1)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()

@@ -21,14 +21,15 @@ from pyspark.sql import DataFrame, Row, SparkSession
 
 @Executor.register('spark')
 class SparkExecutor(ExecProto):
-    """
-    Spark executor
-    """
+    """Spark executor."""
 
-    def __init__(self, input_args: InputArgs,
-                 spark_rdd: RDD = None,
-                 spark_session: SparkSession = None,
-                 spark_conf: SparkConf = None):
+    def __init__(
+        self,
+        input_args: InputArgs,
+        spark_rdd: RDD = None,
+        spark_session: SparkSession = None,
+        spark_conf: SparkConf = None,
+    ):
         # Evaluation parameters
         self.llm: Optional[BaseLLM] = None
         self.group: Optional[Dict] = None
@@ -87,10 +88,10 @@ class SparkExecutor(ExecProto):
             for llm_name in GlobalConfig.config.llm_config:
                 self.llm = Model.get_llm(llm_name)
 
-        print("============= Init PySpark =============")
+        print('============= Init PySpark =============')
         spark, sc = self.initialize_spark()
         self._sc = sc
-        print("============== Init Done ===============")
+        print('============== Init Done ===============')
 
         try:
             # Load and process data
@@ -127,7 +128,7 @@ class SparkExecutor(ExecProto):
                 score=round((total - num_bad) / total * 100, 2) if total > 0 else 0,
                 num_good=total - num_bad,
                 num_bad=num_bad,
-                total=total
+                total=total,
             )
             # Generate detailed summary
             self.summary = self.summarize(self.summary)
@@ -168,7 +169,7 @@ class SparkExecutor(ExecProto):
             elif group_type == 'prompt':
                 r_i = self.evaluate_prompt(group_items, data, llm)
             else:
-                raise RuntimeError(f'Unsupported group type: {group_type}')
+                raise RuntimeError(f"Unsupported group type: {group_type}")
 
             if r_i.error_status:
                 result_info.error_status = True
@@ -227,7 +228,7 @@ class SparkExecutor(ExecProto):
     def evaluate_prompt(self, group: List[BasePrompt], data: Data, llm: BaseLLM) -> ResultInfo:
         """Evaluate data against a group of prompts using LLM."""
         if llm is None:
-            raise ValueError("LLM is required for prompt evaluation")
+            raise ValueError('LLM is required for prompt evaluation')
 
         result_info = ResultInfo(data_id=data.data_id, prompt=data.prompt, content=data.content)
 
@@ -262,18 +263,14 @@ class SparkExecutor(ExecProto):
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:
         """Generate summary statistics from bad info list."""
+
         def collect_ratio(data_info_list, key_name: str, total_count: int):
             data_info_counts = (
-                data_info_list
-                .flatMap(lambda x: [(t, 1) for t in x[key_name]])
+                data_info_list.flatMap(lambda x: [(t, 1) for t in x[key_name]])
                 .reduceByKey(lambda a, b: a + b)
                 .collectAsMap()
             )
-            return {
-                k: round(v / total_count, 6)
-                for k, v in data_info_counts.items()
-            }
-
+            return {k: round(v / total_count, 6) for k, v in data_info_counts.items()}
 
         new_summary = copy.deepcopy(self.summary)
         if not self.bad_info_list and not self.good_info_list:
@@ -302,26 +299,30 @@ class SparkExecutor(ExecProto):
 
     def get_bad_info_list(self):
         if self.input_args.save_raw:
-            return self.bad_info_list.map(lambda x: {
-                **x['raw_data'],
-                'dingo_result': {
-                    'error_status': x['error_status'],
-                    'type_list': x['type_list'],
-                    'name_list': x['name_list'],
-                    'reason_list': x['reason_list']
+            return self.bad_info_list.map(
+                lambda x: {
+                    **x['raw_data'],
+                    'dingo_result': {
+                        'error_status': x['error_status'],
+                        'type_list': x['type_list'],
+                        'name_list': x['name_list'],
+                        'reason_list': x['reason_list'],
+                    },
                 }
-            })
+            )
         return self.bad_info_list
 
     def get_good_info_list(self):
         if self.input_args.save_raw:
-            return self.good_info_list.map(lambda x: {
-                **x['raw_data'],
-                'dingo_result': {
-                    'error_status': x['error_status'],
-                    'type_list': x['type_list'],
-                    'name_list': x['name_list'],
-                    'reason_list': x['reason_list']
+            return self.good_info_list.map(
+                lambda x: {
+                    **x['raw_data'],
+                    'dingo_result': {
+                        'error_status': x['error_status'],
+                        'type_list': x['type_list'],
+                        'name_list': x['name_list'],
+                        'reason_list': x['reason_list'],
+                    },
                 }
-            })
+            )
         return self.good_info_list

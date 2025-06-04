@@ -10,10 +10,11 @@ from dingo.utils.exception import ConvertJsonError
 
 @Model.llm_register('dataman_assessment')
 class DatamanAssessment(BaseOpenAI):
-    """
-    Implementation of DataMan assessment using OpenAI API.
+    """Implementation of DataMan assessment using OpenAI API.
+
     Evaluates text based on 14 quality standards and assigns a domain type.
     """
+
     @classmethod
     def process_response(cls, response: str) -> ModelRes:
         log.info(response)
@@ -28,7 +29,7 @@ class DatamanAssessment(BaseOpenAI):
         try:
             response_json = json.loads(response)
         except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         # Parse the response using the ResponseScoreTypeNameReason model
         response_model = ResponseScoreTypeNameReason(**response_json)

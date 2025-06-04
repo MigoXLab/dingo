@@ -18,17 +18,16 @@ class BaseEvalModel(BaseModel):
 
 
 class Model:
-    """
-    Model configuration class.
-    """
+    """Model configuration class."""
+
     module_loaded = False
     rule_groups = {}  # such as: {'default': [<class.RuleAlphaWords>]}
     prompt_groups = {}
 
-    rule_metric_type_map = {}   # such as: {'QUALITY_INEFFECTIVENESS': [<class.RuleAlphaWords>]}
-    prompt_metric_type_map = {} # such as: {'QUALITY_INEFFECTIVENESS': [<class.QaRepeat>]}
+    rule_metric_type_map = {}  # such as: {'QUALITY_INEFFECTIVENESS': [<class.RuleAlphaWords>]}
+    prompt_metric_type_map = {}  # such as: {'QUALITY_INEFFECTIVENESS': [<class.QaRepeat>]}
 
-    rule_name_map = {} # such as: {'RuleAlphaWords': <class.RuleAlphaWords>}
+    rule_name_map = {}  # such as: {'RuleAlphaWords': <class.RuleAlphaWords>}
     prompt_name_map = {}
     llm_name_map = {}
 
@@ -50,8 +49,7 @@ class Model:
 
     @classmethod
     def get_rule_metric_type_map(cls) -> Dict[str, List[Callable]]:
-        """
-        Returns the rule metric type map.
+        """Returns the rule metric type map.
 
         Returns:
             Rule metric type map ( { rule_metric_type: [rules] } )
@@ -60,8 +58,8 @@ class Model:
 
     @classmethod
     def get_metric_type_by_rule_name(cls, rule_name: str) -> str:
-        """
-        Returns the metric_type by rule_name.
+        """Returns the metric_type by rule_name.
+
         Args:
             rule_name (str): The name of the rule.
         Returns:
@@ -81,8 +79,7 @@ class Model:
 
     @classmethod
     def get_rule_group(cls, rule_group_name: str) -> List[Callable]:
-        """
-        Returns the rule groups by rule_group_name.
+        """Returns the rule groups by rule_group_name.
 
         Returns:
             Rule groups ( [rules] ).
@@ -91,8 +88,7 @@ class Model:
 
     @classmethod
     def get_rule_groups(cls) -> Dict[str, List[Callable]]:
-        """
-        Returns the rule groups.
+        """Returns the rule groups.
 
         Returns:
             Rule groups map ( { rule_group_id: [rules] } ).
@@ -101,18 +97,16 @@ class Model:
 
     @classmethod
     def get_rules_by_group(cls, group_name: str) -> List[str]:
-        """
-        Returns rule by group name.
+        """Returns rule by group name.
 
         Returns:
             Rule name list.
         """
-        return [r.metric_type+'-'+r.__name__ for r in Model.get_rule_group(group_name)]
+        return [r.metric_type + '-' + r.__name__ for r in Model.get_rule_group(group_name)]
 
     @classmethod
     def get_rule_by_name(cls, name: str) -> Callable:
-        """
-        Returns rule by name.
+        """Returns rule by name.
 
         Returns:
             Rule function.
@@ -121,8 +115,7 @@ class Model:
 
     @classmethod
     def get_llm_name_map(cls) -> Dict[str, BaseLLM]:
-        """
-        Returns the llm models.
+        """Returns the llm models.
 
         Returns:
             LLM models class List
@@ -143,8 +136,7 @@ class Model:
 
     @classmethod
     def print_rule_list(cls) -> None:
-        """
-        Print the rule list.
+        """Print the rule list.
 
         Returns:
             List of rules.
@@ -152,23 +144,23 @@ class Model:
         rule_list = []
         for rule_name in cls.rule_name_map:
             rule_list.append(rule_name)
-        print("\n".join(rule_list))
+        print('\n'.join(rule_list))
 
     @classmethod
     def get_all_info(cls):
-        """
-        Returns rules' map and llm models' map
-        """
+        """Returns rules' map and llm models' map."""
         raise NotImplementedError()
 
     @classmethod
     def rule_register(cls, metric_type: str, group: List[str]) -> Callable:
-        """
-        Register a model. (register)
+        """Register a model.
+
+        (register)
         Args:
             metric_type (str): The metric type (quality map).
             group (List[str]): The group names.
         """
+
         def decorator(root_class):
             # group
             for group_name in group:
@@ -190,21 +182,22 @@ class Model:
 
     @classmethod
     def llm_register(cls, llm_id: str) -> Callable:
-        """
-        Register a model. (register)
+        """Register a model.
+
+        (register)
         Args:
             llm_id (str): Name of llm model class.
         """
+
         def decorator(root_class):
             cls.llm_name_map[llm_id] = root_class
 
             if inspect.isclass(root_class):
                 return root_class
             else:
-                raise ValueError("root_class must be a class")
+                raise ValueError('root_class must be a class')
 
         return decorator
-
 
     @classmethod
     def prompt_register(cls, metric_type: str, group: List[str]) -> Callable:
@@ -252,7 +245,7 @@ class Model:
                 log.debug(f"[Rule config]: config {llm_config} for {llm}")
                 cls_llm: BaseLLM = cls.llm_name_map[llm]
                 config_default = getattr(cls_llm, 'dynamic_config')
-                for k,v in llm_config:
+                for k, v in llm_config:
                     if v is not None:
                         setattr(config_default, k, v)
                 setattr(cls_llm, 'dynamic_config', config_default)
@@ -275,24 +268,26 @@ class Model:
             for prompt in GlobalConfig.config.prompt_list:
                 assert isinstance(prompt, str)
                 if prompt not in Model.prompt_name_map:
-                    raise KeyError(f"{prompt} not in Model.prompt_name_map, there are {str(Model.prompt_name_map.keys())}")
+                    raise KeyError(
+                        f"{prompt} not in Model.prompt_name_map, there are {str(Model.prompt_name_map.keys())}"
+                    )
                 model.append(Model.prompt_name_map[prompt])
             Model.prompt_groups[eval_group] = model
 
     @classmethod
-    def apply_config(cls, custom_config: Optional[str|dict], eval_group: str = ''):
+    def apply_config(cls, custom_config: Optional[str | dict], eval_group: str = ''):
         GlobalConfig.read_config_file(custom_config)
         cls.apply_config_rule()
         cls.apply_config_llm()
         if GlobalConfig.config:
             if GlobalConfig.config.rule_list or GlobalConfig.config.prompt_list:
                 if eval_group in Model.rule_groups or eval_group in Model.prompt_groups:
-                    raise KeyError(f'eval group: [{eval_group}] already in Model, please input other name.')
+                    raise KeyError(f"eval group: [{eval_group}] already in Model, please input other name.")
         cls.apply_config_rule_list(eval_group)
         cls.apply_config_prompt_list(eval_group)
 
     @classmethod
-    def apply_config_for_spark_driver(cls, custom_config: Optional[str|dict], eval_group: str = ''):
+    def apply_config_for_spark_driver(cls, custom_config: Optional[str | dict], eval_group: str = ''):
         GlobalConfig.read_config_file(custom_config)
         cls.apply_config_rule()
         cls.apply_config_llm()
@@ -331,7 +326,7 @@ class Model:
                 except ModuleNotFoundError as e:
                     log.debug(e)
                 except ImportError as e:
-                    log.debug("=" * 30 + " ImportError " + "=" * 30)
-                    log.debug(f'module {file.split(".")[0]} not imported because: \n{e}')
-                    log.debug("=" * 73)
+                    log.debug('=' * 30 + ' ImportError ' + '=' * 30)
+                    log.debug(f'module {file.split('.')[0]} not imported because: \n{e}')
+                    log.debug('=' * 73)
         cls.module_loaded = True

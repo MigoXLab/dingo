@@ -7,6 +7,7 @@ url = 'https://labelu-tools.shlab.tech/?tool=extract'
 total_requests = 6000  # 总请求数
 concurrent_requests_list = [1000]  # 不同的并发请求数
 
+
 async def make_request(session):
     try:
         async with session.get(url) as response:
@@ -15,6 +16,7 @@ async def make_request(session):
     except Exception as e:
         print(f"请求失败: {str(e)}")
         return False
+
 
 async def run_test(concurrent_requests):
     start_time = time.time()
@@ -47,9 +49,11 @@ async def run_test(concurrent_requests):
     print(f"总耗时: {duration:.2f} 秒")
     print(f"平均每秒处理请求数: {total_requests / duration:.2f}")
 
+
 async def main():
     for concurrent_requests in concurrent_requests_list:
         await run_test(concurrent_requests)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     asyncio.run(main())

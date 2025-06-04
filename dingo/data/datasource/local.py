@@ -6,8 +6,8 @@ from dingo.io import InputArgs
 
 
 def find_all_files(path: str, file_list: List[str]):
-    """
-    Find all files in path recursively.
+    """Find all files in path recursively.
+
     Args:
         path (str): The path to find all files in.
         file_list (List[str]): The list of files to find.
@@ -50,12 +50,12 @@ def load_local_file(path: str, by_line: bool = True) -> Generator[str, None, Non
 class LocalDataSource(DataSource):
 
     def __init__(
-            self,
-            input_args: InputArgs = None,
-            config_name: Optional[str] = None,
-
+        self,
+        input_args: InputArgs = None,
+        config_name: Optional[str] = None,
     ):
         """Create a `LocalDataSource` instance.
+
         Args:
             input_args: A `InputArgs` instance to load the dataset from.
             config_name: The name of the Hugging Face dataset configuration.
@@ -66,24 +66,25 @@ class LocalDataSource(DataSource):
 
     @staticmethod
     def get_source_type() -> str:
-        return "local"
+        return 'local'
 
     def load(self, **kwargs) -> Generator[str, None, None]:
         """Load the local file dataset based on `LocalDataSource`.
+
         Args:
             kwargs: Additional keyword arguments used for loading the dataset.
         Returns:
             An instance of `Iterable`.
         """
         load_kwargs = {
-            "path": self.path,
+            'path': self.path,
         }
-        if self.input_args.data_format in ["json", "listjson"]:
-            load_kwargs["by_line"] = False
+        if self.input_args.data_format in ['json', 'listjson']:
+            load_kwargs['by_line'] = False
         return load_local_file(**load_kwargs)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "path": self.path,
-            "config_name": self.config_name,
+            'path': self.path,
+            'config_name': self.config_name,
         }

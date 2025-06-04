@@ -8,14 +8,13 @@ from pydantic import BaseModel, ValidationError
 
 
 class InputArgs(BaseModel):
-    """
-    Input arguments, input of project.
-    """
-    task_name: str = "dingo"
+    """Input arguments, input of project."""
+
+    task_name: str = 'dingo'
     eval_group: str = ''
 
-    input_path: str = "test/data/test_local_json.json"
-    output_path: str = "outputs/"
+    input_path: str = 'test/data/test_local_json.json'
+    output_path: str = 'outputs/'
 
     save_data: bool = False
     save_correct: bool = False
@@ -30,11 +29,11 @@ class InputArgs(BaseModel):
     batch_size: int = 1
 
     # Dataset setting
-    dataset: str = "hugging_face"  # ['local', 'hugging_face']
-    data_format: str = "json"
+    dataset: str = 'hugging_face'  # ['local', 'hugging_face']
+    data_format: str = 'json'
 
     # Huggingface specific setting
-    huggingface_split: str = ""
+    huggingface_split: str = ''
     huggingface_config_name: Optional[str] = None
 
     column_id: str = ''
@@ -61,7 +60,7 @@ class InputArgs(BaseModel):
         # check eval group
         if not self.eval_group:
             if not self.custom_config:
-                raise ValueError("eval_group cannot be empty.")
+                raise ValueError('eval_group cannot be empty.')
             else:
                 tmp_config = {}
                 if isinstance(self.custom_config, str):
@@ -70,9 +69,11 @@ class InputArgs(BaseModel):
                 else:
                     tmp_config = self.custom_config
                 if 'rule_list' in tmp_config or 'prompt_list' in tmp_config:
-                    self.eval_group = 'custom_group' + '_' + time.strftime('%H%M%S', time.localtime()) + '_' + str(uuid.uuid1())[:8]
+                    self.eval_group = (
+                        'custom_group' + '_' + time.strftime('%H%M%S', time.localtime()) + '_' + str(uuid.uuid1())[:8]
+                    )
                 else:
-                    raise ValueError("eval_group cannot be empty.")
+                    raise ValueError('eval_group cannot be empty.')
 
         # check input path
         if self.dataset != 'hugging_face' and not os.path.exists(self.input_path):
@@ -84,27 +85,27 @@ class InputArgs(BaseModel):
 
         # check start index
         if self.start_index < 0:
-            raise ValueError("start_index must be non negative.")
+            raise ValueError('start_index must be non negative.')
 
         if self.end_index >= 0 and self.end_index < self.start_index:
-            raise ValueError("if end_index is non negative, end_index must be greater than start_index")
+            raise ValueError('if end_index is non negative, end_index must be greater than start_index')
 
         # check max workers
         if self.max_workers <= 0:
-            raise ValueError("max_workers must be a positive integer.")
+            raise ValueError('max_workers must be a positive integer.')
 
         # check batch size
         if self.batch_size <= 0:
-            raise ValueError("batch_size must be a positive integer.")
+            raise ValueError('batch_size must be a positive integer.')
 
         # check dataset
         if self.dataset not in ['local', 'hugging_face']:
             raise ValueError("dataset must in ['local', 'hugging_face']")
 
         # check llm config
-        if self.custom_config and isinstance(self.custom_config, dict) and self.custom_config.get("prompt_list"):
-            if not self.custom_config.get("llm_config"):
-                raise ValueError("llm_config in custom_config cannot be empty when using llm evaluation.")
+        if self.custom_config and isinstance(self.custom_config, dict) and self.custom_config.get('prompt_list'):
+            if not self.custom_config.get('llm_config'):
+                raise ValueError('llm_config in custom_config cannot be empty when using llm evaluation.')
 
         # check log_level
         if self.log_level not in ['DEBUG', 'INFO', 'WARNING', 'ERROR']:

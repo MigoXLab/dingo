@@ -10,8 +10,9 @@ from dingo.model.rule.base import BaseRule
 
 @Model.rule_register('QUALITY_BAD_RELEVANCE', ['test'])
 class CommonPatternDemo(BaseRule):
-    """let user input pattern to search"""
-    dynamic_config = DynamicRuleConfig(pattern = "blue")
+    """Let user input pattern to search."""
+
+    dynamic_config = DynamicRuleConfig(pattern='blue')
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
@@ -24,18 +25,19 @@ class CommonPatternDemo(BaseRule):
             res.reason = matches
         return res
 
+
 if __name__ == '__main__':
     from dingo.exec import Executor
     from dingo.io import InputArgs
 
     input_data = {
-        "eval_group": "test",
-        "input_path": "../../test/data/test_local_json.json",  # local filesystem dataset
-        "dataset": "local",
-        "data_format": "json",
-        "column_content": "prediction"
+        'eval_group': 'test',
+        'input_path': '../../test/data/test_local_json.json',  # local filesystem dataset
+        'dataset': 'local',
+        'data_format': 'json',
+        'column_content': 'prediction',
     }
     input_args = InputArgs(**input_data)
-    executor = Executor.exec_map["local"](input_args)
+    executor = Executor.exec_map['local'](input_args)
     result = executor.execute()
     print(result)

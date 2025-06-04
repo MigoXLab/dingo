@@ -30,11 +30,13 @@ insecurity: Ensure the data does not contain insecure content. Texts should be f
 Please remember to output only a JSON format data, without any additional content.
 """
 
-@Model.prompt_register("TEXT_QUALITY_V2", [])
+
+@Model.prompt_register('TEXT_QUALITY_V2', [])
 class PromptTextQualityV2(BasePrompt):
     content = ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2
 
-@Model.prompt_register("TEXT_QUALITY_V3", [])
+
+@Model.prompt_register('TEXT_QUALITY_V3', [])
 class PromptTextQualityV3(BasePrompt):
     content = """
 # Role
@@ -75,7 +77,8 @@ Please remember to output only a JSON format data, without any additional conten
 # Input content
 """
 
-@Model.prompt_register("TEXT_QUALITY_V4", [])
+
+@Model.prompt_register('TEXT_QUALITY_V4', [])
 class PromptTextQualityV4(BasePrompt):
     content = """
 # Role

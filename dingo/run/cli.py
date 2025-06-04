@@ -11,56 +11,78 @@ from dingo.utils import log
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("dingo run with local script. (CLI)")
-    parser.add_argument("-n", "--task_name", type=str,
-                        default=None, help="Input task name")
-    parser.add_argument("-e", "--eval_group", type=str, default=None,
-                        help="Eval models, can be specified multiple times like '-e default' or '-e pretrain'")
-    parser.add_argument("-i", "--input_path", type=str,
-                        default=None, help="Input file or directory path")
-    parser.add_argument("--output_path", type=str,
-                        default=None, help="Output file or directory path")
-    parser.add_argument("--save_data", action="store_true",
-                        default=False, help="Save data in output path")
-    parser.add_argument("--save_correct", action="store_true",
-                        default=False, help="Save correct data in output path")
-    parser.add_argument("--save_raw", action="store_true",
-                        default=False, help="Save raw data in output path")
-    parser.add_argument("--start_index", type=int,
-                        default=None, help="The number of data start to check.")
-    parser.add_argument("--end_index", type=int,
-                        default=None, help="The number of data end to check.")
-    parser.add_argument("--max_workers", type=int,
-                        default=None, help="The number of max workers to concurrent check. ")
-    parser.add_argument("--batch_size", type=int,
-                        default=None, help="the number of max data for concurrent check. ")
-    parser.add_argument("--dataset", type=str,
-                        default=None, choices=['hugging_face', 'local'],
-                        help="Dataset type (in ['hugging_face', 'local']), default is 'hugging_face'")
-    parser.add_argument("--data_format", type=str,
-                        default=None, choices=['json', 'jsonl', 'listjson', 'plaintext', 'image', 's3_image'],
-                        help="Dataset format (in ['json', 'jsonl', 'listjson', 'plaintext', 'image', 's3_image']), default is 'json'")
-    parser.add_argument("--huggingface_split", type=str,
-                        default=None, help="Huggingface split, default is 'train'")
-    parser.add_argument("--huggingface_config_name", type=str,
-                        default=None, help="Huggingface config name")
-    parser.add_argument("--column_id", type=str, default=None,
-                        help="Column name of id in the input file. If exists multiple levels, use '.' separate")
-    parser.add_argument("--column_prompt", type=str, default=None,
-                        help="Column name of prompt in the input file. If exists multiple levels, use '.' separate")
-    parser.add_argument("--column_content", type=str, default=None,
-                        help="Column name of content in the input file. If exists multiple levels, use '.' separate")
-    parser.add_argument("--column_image", type=str, default=None, action='append',
-                        help="Column name of image in the input file. If exists multiple levels, use '.' separate")
-    parser.add_argument("--custom_config", type=str,
-                        default=None, help="Custom config file path")
+    parser = argparse.ArgumentParser('dingo run with local script. (CLI)')
+    parser.add_argument('-n', '--task_name', type=str, default=None, help='Input task name')
+    parser.add_argument(
+        '-e',
+        '--eval_group',
+        type=str,
+        default=None,
+        help="Eval models, can be specified multiple times like '-e default' or '-e pretrain'",
+    )
+    parser.add_argument('-i', '--input_path', type=str, default=None, help='Input file or directory path')
+    parser.add_argument('--output_path', type=str, default=None, help='Output file or directory path')
+    parser.add_argument('--save_data', action='store_true', default=False, help='Save data in output path')
+    parser.add_argument('--save_correct', action='store_true', default=False, help='Save correct data in output path')
+    parser.add_argument('--save_raw', action='store_true', default=False, help='Save raw data in output path')
+    parser.add_argument('--start_index', type=int, default=None, help='The number of data start to check.')
+    parser.add_argument('--end_index', type=int, default=None, help='The number of data end to check.')
+    parser.add_argument('--max_workers', type=int, default=None, help='The number of max workers to concurrent check. ')
+    parser.add_argument('--batch_size', type=int, default=None, help='the number of max data for concurrent check. ')
+    parser.add_argument(
+        '--dataset',
+        type=str,
+        default=None,
+        choices=['hugging_face', 'local'],
+        help="Dataset type (in ['hugging_face', 'local']), default is 'hugging_face'",
+    )
+    parser.add_argument(
+        '--data_format',
+        type=str,
+        default=None,
+        choices=['json', 'jsonl', 'listjson', 'plaintext', 'image', 's3_image'],
+        help="Dataset format (in ['json', 'jsonl', 'listjson', 'plaintext', 'image', 's3_image']), default is 'json'",
+    )
+    parser.add_argument('--huggingface_split', type=str, default=None, help="Huggingface split, default is 'train'")
+    parser.add_argument('--huggingface_config_name', type=str, default=None, help='Huggingface config name')
+    parser.add_argument(
+        '--column_id',
+        type=str,
+        default=None,
+        help="Column name of id in the input file. If exists multiple levels, use '.' separate",
+    )
+    parser.add_argument(
+        '--column_prompt',
+        type=str,
+        default=None,
+        help="Column name of prompt in the input file. If exists multiple levels, use '.' separate",
+    )
+    parser.add_argument(
+        '--column_content',
+        type=str,
+        default=None,
+        help="Column name of content in the input file. If exists multiple levels, use '.' separate",
+    )
+    parser.add_argument(
+        '--column_image',
+        type=str,
+        default=None,
+        action='append',
+        help="Column name of image in the input file. If exists multiple levels, use '.' separate",
+    )
+    parser.add_argument('--custom_config', type=str, default=None, help='Custom config file path')
 
     # Warning: arguments bellow are not associated with inner abilities.
-    parser.add_argument("--log_level", type=str,
-                        default="WARNING", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-                        help="Choose the logging level in [\"DEBUG\", \"INFO\", " + "\"WARNING\", \"ERROR\"], default is 'WARNING'")
-    parser.add_argument("--use_browser", action="store_true",
-                        default=False, help="Open browser to display result after evaluation.")
+    parser.add_argument(
+        '--log_level',
+        type=str,
+        default='WARNING',
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+        help='Choose the logging level in ["DEBUG", "INFO", ' + '"WARNING", "ERROR"], default is \'WARNING\'',
+    )
+    parser.add_argument(
+        '--use_browser', action='store_true', default=False, help='Open browser to display result after evaluation.'
+    )
     return parser.parse_args()
 
 
@@ -69,27 +91,27 @@ if __name__ == '__main__':
     log.setLevel(args.log_level)
 
     if not args.eval_group:
-        print("\n=========+++ Help +++==========")
-        print("Eval models not specified")
-        print("\n========= Rule Model ==========")
+        print('\n=========+++ Help +++==========')
+        print('Eval models not specified')
+        print('\n========= Rule Model ==========')
         print("You can use '-e default' or '-e pretrain' to run all eval models\n")
         print([i for i in Model.get_rule_groups().keys()])
-        print("=================================")
-        print("Rule Model details are as follows: \n")
+        print('=================================')
+        print('Rule Model details are as follows: \n')
         for i in Model.get_rule_groups():
             tb = pt.PrettyTable()
-            tb.field_names = ["ModelName", "Rules"]
-            tb.add_row([i, ",\n".join([str(j.__name__).split('.')[-1] for j in Model.get_rule_groups()[i]])])
+            tb.field_names = ['ModelName', 'Rules']
+            tb.add_row([i, ',\n'.join([str(j.__name__).split('.')[-1] for j in Model.get_rule_groups()[i]])])
             print(tb)
-        print("=================================")
-        print("Or combine them with a json file select from this list\n")
+        print('=================================')
+        print('Or combine them with a json file select from this list\n')
         Model.print_rule_list()
-        print("=================================")
-        print("\n")
-        print("=========== LLM Model ===========")
-        print(",".join([i for i in Model.llm_name_map.keys()]))
-        print("=================================")
-        print("\n")
+        print('=================================')
+        print('\n')
+        print('=========== LLM Model ===========')
+        print(','.join([i for i in Model.llm_name_map.keys()]))
+        print('=================================')
+        print('\n')
 
     else:
         # parse input
@@ -145,4 +167,4 @@ if __name__ == '__main__':
         print(result)
 
         if input_args.use_browser and input_args.save_data:
-            os.system("python -m dingo.run.vsl --input " + result.output_path)
+            os.system('python -m dingo.run.vsl --input ' + result.output_path)

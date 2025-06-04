@@ -2,7 +2,6 @@
 
 dingo 是一个基于 Electron 和 React 的桌面应用程序，用于可视化数据评测result。提供可同时支持build spa应用web应用，也支持build 桌面应用。
 
-
 ## 推荐的 IDE 设置
 
 - [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
@@ -52,7 +51,6 @@ python -m dingo.run.vsl  --input /path/to/your/input/directory  --mode app #拉�
 ```
 
 ### CLI可视化web 与 Dingo桌面应用的对比
-
 
 ```bash
 CLI可视化web: 默认执行cli的时候一次性注入数据，不支持更换本地目录，需cli重新执行

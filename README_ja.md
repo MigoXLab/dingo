@@ -5,6 +5,7 @@
 </p>
 
 <!-- badges -->
+
 <p align="center">
   <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white" alt="pre-commit"></a>
   <a href="https://pypi.org/project/dingo-python/"><img src="https://img.shields.io/pypi/v/dingo-python.svg" alt="PyPI version"></a>
@@ -18,20 +19,17 @@
 
 </div>
 
-
 <div align="center">
 
 [English](README.md) · [简体中文](README_zh-CN.md) · [日本語](README_ja.md)
 
 </div>
 
-
 <!-- join us -->
 
 <p align="center">
     👋 <a href="https://discord.gg/Jhgb2eKWh8" target="_blank">Discord</a>と<a href="./docs/assets/wechat.jpg" target="_blank">WeChat</a>でご参加ください
 </p>
-
 
 # 更新履歴
 
@@ -119,6 +117,7 @@ python -m dingo.run.cli --input_path data.json --dataset local -e openai --data_
 ```
 
 `config_gpt.json`の例:
+
 ```json
 {
   "llm_config": {
@@ -144,8 +143,8 @@ python -m dingo.run.vsl --input output_directory
 ![GUI output](docs/assets/dingo_gui.png)
 
 ## オンラインデモ
-オンラインデモでDingoをお試しください: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
+オンラインデモでDingoをお試しください: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
 # MCPサーバー
 
@@ -161,20 +160,19 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 
 このビデオでは、Dingo MCPサーバーをCursorと一緒に使用する方法をステップバイステップで説明しています。
 
-
 # データ品質メトリクス
 
 Dingoはデータ品質問題を7つの品質メトリクス次元に分類します。各次元は、ルールベース手法とLLMベースプロンプトの両方で評価できます：
 
-| 品質メトリクス | 説明 | ルール例 | LLMプロンプト例 |
-|----------------|------|----------|-----------------|
-| **COMPLETENESS** | データが不完全または欠落していないかをチェック | `RuleColonEnd`, `RuleContentNull` | テキストがコロンや省略記号で突然終わっているか、括弧が不一致か、重要な要素が欠落していないかを評価 |
-| **EFFECTIVENESS** | データが意味があり適切にフォーマットされているかをチェック | `RuleAbnormalChar`, `RuleHtmlEntity`, `RuleSpecialCharacter` | 文字化けテキスト、スペースなしで結合された単語、適切な句読点のないテキストを検出 |
-| **FLUENCY** | テキストが文法的に正しく自然に読めるかをチェック | `RuleAbnormalNumber`, `RuleNoPunc`, `RuleWordStuck` | 過度に長い単語、句読点のないテキスト断片、読み順が混乱したコンテンツを識別 |
-| **RELEVANCE** | データ内の無関係なコンテンツを検出 | 異なる言語用の`RuleHeadWord`バリアント | 引用詳細、ヘッダー/フッター、エンティティマーカー、HTMLタグなどの無関係な情報を検査 |
-| **SECURITY** | 機密情報や価値観の対立を識別 | `RuleIDCard`, `RuleUnsafeWords` | 個人情報、ギャンブル、ポルノ、政治問題に関連するコンテンツをチェック |
-| **SIMILARITY** | 反復的または非常に類似したコンテンツを検出 | `RuleDocRepeat` | 連続した反復コンテンツや特殊文字の複数出現についてテキストを評価 |
-| **UNDERSTANDABILITY** | データがどれだけ容易に解釈できるかを評価 | `RuleCapitalWords` | LaTeX数式とMarkdownが正しくフォーマットされ、適切なセグメンテーションと改行があることを確認 |
+| 品質メトリクス        | 説明                                                     | ルール例                                                    | LLMプロンプト例                                                  |
+| --------------------- | -------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
+| **COMPLETENESS**      | データが不完全または欠落していないかをチェック           | `RuleColonEnd`, `RuleContentNull`                           | テキストがコロンや省略記号で突然終わっているか、括弧が不一致か、重要な要素が欠落していないかを評価 |
+| **EFFECTIVENESS**     | データが意味があり適切にフォーマットされているかをチェック | `RuleAbnormalChar`, `RuleHtmlEntity`, `RuleSpecialCharacter` | 文字化けテキスト、スペースなしで結合された単語、適切な句読点のないテキストを検出 |
+| **FLUENCY**           | テキストが文法的に正しく自然に読めるかをチェック         | `RuleAbnormalNumber`, `RuleNoPunc`, `RuleWordStuck`         | 過度に長い単語、句読点のないテキスト断片、読み順が混乱したコンテンツを識別 |
+| **RELEVANCE**         | データ内の無関係なコンテンツを検出                       | 異なる言語用の`RuleHeadWord`バリアント                      | 引用詳細、ヘッダー/フッター、エンティティマーカー、HTMLタグなどの無関係な情報を検査 |
+| **SECURITY**          | 機密情報や価値観の対立を識別                             | `RuleIDCard`, `RuleUnsafeWords`                             | 個人情報、ギャンブル、ポルノ、政治問題に関連するコンテンツをチェック |
+| **SIMILARITY**        | 反復的または非常に類似したコンテンツを検出               | `RuleDocRepeat`                                             | 連続した反復コンテンツや特殊文字の複数出現についてテキストを評価 |
+| **UNDERSTANDABILITY** | データがどれだけ容易に解釈できるかを評価                 | `RuleCapitalWords`                                          | LaTeX数式とMarkdownが正しくフォーマットされ、適切なセグメンテーションと改行があることを確認 |
 
 ## LLM品質評価
 
@@ -182,42 +180,42 @@ Dingoは`dingo/model/prompt`ディレクトリ内のプロンプトで定義さ�
 
 ### テキスト品質評価プロンプト
 
-| プロンプトタイプ | メトリクス | 説明 |
-|------------------|------------|------|
+| プロンプトタイプ                     | メトリクス     | 説明                                                                                             |
+| ------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------ |
 | `TEXT_QUALITY_V2`, `TEXT_QUALITY_V3` | 様々な品質次元 | 効果性、関連性、完全性、理解しやすさ、類似性、流暢性、セキュリティを含む包括的なテキスト品質評価 |
-| `QUALITY_BAD_EFFECTIVENESS` | 効果性 | 文字化けテキストとアンチクローリングコンテンツを検出 |
-| `QUALITY_BAD_SIMILARITY` | 類似性 | テキスト反復問題を識別 |
-| `WORD_STICK` | 流暢性 | 適切なスペースなしで結合された単語をチェック |
-| `CODE_LIST_ISSUE` | 完全性 | コードブロックとリストフォーマット問題を評価 |
-| `UNREAD_ISSUE` | 効果性 | エンコーディング問題による読み取り不可能な文字を検出 |
+| `QUALITY_BAD_EFFECTIVENESS`          | 効果性         | 文字化けテキストとアンチクローリングコンテンツを検出                                             |
+| `QUALITY_BAD_SIMILARITY`             | 類似性         | テキスト反復問題を識別                                                                           |
+| `WORD_STICK`                         | 流暢性         | 適切なスペースなしで結合された単語をチェック                                                     |
+| `CODE_LIST_ISSUE`                    | 完全性         | コードブロックとリストフォーマット問題を評価                                                     |
+| `UNREAD_ISSUE`                       | 効果性         | エンコーディング問題による読み取り不可能な文字を検出                                             |
 
 ### 3H評価プロンプト（正直、有用、無害）
 
-| プロンプトタイプ | メトリクス | 説明 |
-|------------------|------------|------|
-| `QUALITY_HONEST` | 正直性 | 捏造や欺瞞なしに正確な情報を提供するかどうかを評価 |
-| `QUALITY_HELPFUL` | 有用性 | 質問に直接答え、指示に適切に従うかどうかを評価 |
-| `QUALITY_HARMLESS` | 無害性 | 有害なコンテンツ、差別的言語、危険な支援を避けるかどうかをチェック |
+| プロンプトタイプ   | メトリクス | 説明                                                               |
+| ------------------ | ---------- | ------------------------------------------------------------------ |
+| `QUALITY_HONEST`   | 正直性     | 捏造や欺瞞なしに正確な情報を提供するかどうかを評価                 |
+| `QUALITY_HELPFUL`  | 有用性     | 質問に直接答え、指示に適切に従うかどうかを評価                     |
+| `QUALITY_HARMLESS` | 無害性     | 有害なコンテンツ、差別的言語、危険な支援を避けるかどうかをチェック |
 
 ### ドメイン固有評価プロンプト
 
-| プロンプトタイプ | メトリクス | 説明 |
-|------------------|------------|------|
-| `TEXT_QUALITY_KAOTI` | 試験問題品質 | 数式レンダリング、表フォーマット、段落構造、回答フォーマットに焦点を当てた試験問題品質の専門評価 |
-| `Html_Abstract` | HTML抽出品質 | HTMLからMarkdownを抽出する異なる手法を比較し、完全性、フォーマット精度、意味的一貫性を評価 |
+| プロンプトタイプ     | メトリクス           | 説明                                                                                                                         |
+| -------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `TEXT_QUALITY_KAOTI` | 試験問題品質         | 数式レンダリング、表フォーマット、段落構造、回答フォーマットに焦点を当てた試験問題品質の専門評価                             |
+| `Html_Abstract`      | HTML抽出品質         | HTMLからMarkdownを抽出する異なる手法を比較し、完全性、フォーマット精度、意味的一貫性を評価                                   |
 | `DATAMAN_ASSESSMENT` | データ品質とドメイン | DataMan手法（14基準、15ドメイン）を使用して事前学習データ品質を評価。スコア（0/1）、ドメインタイプ、品質状態、理由を割り当て |
 
 ### 分類プロンプト
 
-| プロンプトタイプ | メトリクス | 説明 |
-|------------------|------------|------|
+| プロンプトタイプ | メトリクス   | 説明                                                                              |
+| ---------------- | ------------ | --------------------------------------------------------------------------------- |
 | `CLASSIFY_TOPIC` | トピック分類 | 言語処理、執筆、コード、数学、ロールプレイ、知識Q&Aなどのカテゴリにテキストを分類 |
-| `CLASSIFY_QR` | 画像分類 | 画像をCAPTCHA、QRコード、または通常の画像として識別 |
+| `CLASSIFY_QR`    | 画像分類     | 画像をCAPTCHA、QRコード、または通常の画像として識別                               |
 
 ### 画像評価プロンプト
 
-| プロンプトタイプ | メトリクス | 説明 |
-|------------------|------------|------|
+| プロンプトタイプ  | メトリクス | 説明                                                                       |
+| ----------------- | ---------- | -------------------------------------------------------------------------- |
 | `IMAGE_RELEVANCE` | 画像関連性 | 顔の数、特徴の詳細、視覚的要素の観点から、画像が参照画像と一致するかを評価 |
 
 ### 評価でのLLM評価の使用
@@ -246,11 +244,11 @@ input_data = {
 
 Dingoは異なるタイプのデータセット用に事前設定されたルールグループを提供します：
 
-| グループ | 使用例 | ルール例 |
-|----------|--------|----------|
-| `default` | 一般的なテキスト品質 | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`など |
-| `sft` | ファインチューニングデータセット | `default`のルールに加えて`RuleLineStartWithBulletpoint` |
-| `pretrain` | 事前学習データセット | `RuleAlphaWords`, `RuleCapitalWords`などを含む20以上のルールの包括的セット |
+| グループ   | 使用例                           | ルール例                                                                   |
+| ---------- | -------------------------------- | -------------------------------------------------------------------------- |
+| `default`  | 一般的なテキスト品質             | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`など                     |
+| `sft`      | ファインチューニングデータセット | `default`のルールに加えて`RuleLineStartWithBulletpoint`                    |
+| `pretrain` | 事前学習データセット             | `RuleAlphaWords`, `RuleCapitalWords`などを含む20以上のルールの包括的セット |
 
 特定のルールグループを使用するには：
 
@@ -328,6 +326,7 @@ class MyCustomModel(BaseOpenAI):
 ```
 
 詳細な例については以下をご覧ください：
+
 - [ルール登録](examples/register/sdk_register_rule.py)
 - [プロンプト登録](examples/register/sdk_register_prompt.py)
 - [モデル登録](examples/register/sdk_register_llm.py)
@@ -374,6 +373,7 @@ result = executor.execute()
 2. **詳細レポート**: 各ルール違反の具体的な問題
 
 サマリー例：
+
 ```json
 {
     "task_id": "d6c922ec-981c-11ef-b723-7c10c9512fac",
@@ -397,14 +397,15 @@ result = executor.execute()
 }
 ```
 
-
 # 研究・出版物
 
 ## Dingoを活用した研究
+
 - **WanJuanSiLu**: [A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/pdf/2501.14506)
   *多言語ウェブデータの包括的なデータ品質評価にDingoを使用*
 
 ## Dingoに実装された手法
+
 - **DataMan手法**: [DataMan: Data Manager for Pre-training Large Language Models](https://openreview.net/pdf?id=eNbA8Fqir4)
   *Dingoは事前学習データ品質評価のためのDataMan手法を実装*
 - **RedPajama-Data-v2**: [RedPajama-Data](https://github.com/togethercomputer/RedPajama-Data)

@@ -12,9 +12,7 @@ from dingo.utils import log
 class LLMPerspective(BaseLLM):
     client = None
 
-    dynamic_config = DynamicLLMConfig(
-        api_url = 'https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1'
-    )
+    dynamic_config = DynamicLLMConfig(api_url='https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1')
 
     @classmethod
     def create_client(cls):
@@ -22,18 +20,19 @@ class LLMPerspective(BaseLLM):
             from googleapiclient import discovery
         except ImportError:
             log.warning(
-                "=========== perspective register fail. Please check whether install googleapiclient. ===========")
+                '=========== perspective register fail. Please check whether install googleapiclient. ==========='
+            )
 
         if cls.client is None:
 
             if not cls.dynamic_config.key:
-                raise ValueError("key cannot be empty in llm config.")
+                raise ValueError('key cannot be empty in llm config.')
             elif not cls.dynamic_config.api_url:
-                raise ValueError("api_url cannot be empty in llm config.")
+                raise ValueError('api_url cannot be empty in llm config.')
             else:
                 cls.client = discovery.build(
-                    "commentanalyzer",
-                    "v1alpha1",
+                    'commentanalyzer',
+                    'v1alpha1',
                     developerKey=cls.dynamic_config.key,
                     discoveryServiceUrl=cls.dynamic_config.api_url,
                     static_discovery=False,
@@ -53,7 +52,7 @@ class LLMPerspective(BaseLLM):
                 'THREAT': {},
                 # 'SEXUALLY_EXPLICIT': {},
                 # 'FLIRTATION': {},
-            }
+            },
         }
 
         attempts = 0
@@ -73,20 +72,10 @@ class LLMPerspective(BaseLLM):
                 if is_good:
                     return ModelRes()
                 else:
-                    return ModelRes(
-                        error_status=True,
-                        type='QUALITY_BAD',
-                        name="PERSPECTIVE",
-                        reason=error_list
-                    )
+                    return ModelRes(error_status=True, type='QUALITY_BAD', name='PERSPECTIVE', reason=error_list)
             except Exception as e:
                 attempts += 1
                 time.sleep(1)
                 except_msg = str(e)
 
-        return ModelRes(
-            error_status=True,
-            type='QUALITY_BAD',
-            name="API_LOSS",
-            reason=[except_msg]
-        )
+        return ModelRes(error_status=True, type='QUALITY_BAD', name='API_LOSS', reason=[except_msg])

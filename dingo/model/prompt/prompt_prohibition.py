@@ -2,7 +2,7 @@ from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
 
-@Model.prompt_register("TEXT_PROHIBITION", [])
+@Model.prompt_register('TEXT_PROHIBITION', [])
 class PromptProhibition(BasePrompt):
     content = """
 You are a content safety reviewer. I will provide a text and you need to judge whether its content contains harmful information.

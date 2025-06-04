@@ -3,28 +3,28 @@ from pydantic import BaseModel
 
 class ResponseScoreReason(BaseModel):
     score: int
-    reason: str = ""
+    reason: str = ''
 
     class Config:
-        extra = "forbid"
+        extra = 'forbid'
         validate_assignment = True
 
 
 class ResponseNameReason(BaseModel):
     name: str
-    reason: str = ""
+    reason: str = ''
 
     class Config:
-        extra = "forbid"
+        extra = 'forbid'
         validate_assignment = True
 
 
 class ResponseScoreTypeNameReason(BaseModel):
     score: int
-    type: str = "Type"
-    name: str = "Name"
-    reason: str = ""
+    type: str = 'Type'
+    name: str = 'Name'
+    reason: str = ''
 
     class Config:
-        extra = "forbid"
+        extra = 'forbid'
         validate_assignment = True

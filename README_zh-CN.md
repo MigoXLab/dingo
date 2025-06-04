@@ -5,6 +5,7 @@
 </p>
 
 <!-- badges -->
+
 <p align="center">
   <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white" alt="pre-commit"></a>
   <a href="https://pypi.org/project/dingo-python/"><img src="https://img.shields.io/pypi/v/dingo-python.svg" alt="PyPI 版本"></a>
@@ -16,13 +17,11 @@
   <a href="https://mseep.ai/app/dataeval-dingo"><img src="https://mseep.net/pr/dataeval-dingo-badge.png" alt="MseeP.ai 安全评估徽章" height="20"></a>
 </p>
 
-
 <div align="center">
 
 [English](README.md) · [简体中文](README_zh-CN.md) · [日本語](README_ja.md)
 
 </div>
-
 
 <p align="center">
     👋 加入我们 <a href="https://discord.gg/Jhgb2eKWh8" target="_blank">Discord</a> 和 <a href="./docs/assets/wechat.jpg" target="_blank">微信</a>
@@ -41,7 +40,6 @@ Dingo是一款数据质量评估工具，帮助你自动化检测数据集中的
 ## 1. 架构图
 
 ![Architecture of dingo](./docs/assets/architeture.png)
-
 
 # 快速启动
 
@@ -117,6 +115,7 @@ python -m dingo.run.cli --input_path data.json --dataset local -e openai --data_
 ```
 
 `config_gpt.json`示例:
+
 ```json
 {
   "llm_config": {
@@ -142,8 +141,8 @@ python -m dingo.run.vsl --input 输出目录
 ![GUI output](docs/assets/dingo_gui.png)
 
 ## 5. 在线演示
-尝试我们的在线演示: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
+尝试我们的在线演示: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
 # MCP 服务端
 
@@ -159,20 +158,19 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 
 此视频展示了关于 Dingo MCP 服务端与 Cursor 一起使用的分步演示。
 
-
 # 数据质量指标
 
 Dingo将数据质量问题分为7个维度的质量指标。每个维度可以通过基于规则的方法和基于LLM的prompt进行评估：
 
-| 质量指标    | 描述 | 规则示例 | LLM Prompt示例 |
-|-------------------|-------------|---------------|---------------------|
-| **完整性(COMPLETENESS)** | 检查数据是否不完整或缺失 | `RuleColonEnd`, `RuleContentNull` | 评估文本是否突然以冒号或省略号结束，是否有不匹配的括号，或缺少关键组件 |
-| **有效性(EFFECTIVENESS)** | 检查数据是否有意义且格式正确 | `RuleAbnormalChar`, `RuleHtmlEntity`, `RuleSpecialCharacter` | 检测乱码文本、没有空格的粘连单词和缺少适当标点的文本 |
-| **流畅性(FLUENCY)** | 检查文本是否语法正确且自然易读 | `RuleAbnormalNumber`, `RuleNoPunc`, `RuleWordStuck` | 识别过长的单词、无标点的文本片段或阅读顺序混乱的内容 |
-| **相关性(RELEVANCE)** | 检测数据中的不相关内容 | 不同语言的`RuleHeadWord`变体 | 检查引用详情、页眉/页脚、实体标记、HTML标签等不相关信息 |
-| **安全性(SECURITY)** | 识别敏感信息或价值冲突 | `RuleIDCard`, `RuleUnsafeWords` | 检查个人信息和与赌博、色情、政治问题相关的内容 |
-| **相似性(SIMILARITY)** | 检测重复或高度相似的内容 | `RuleDocRepeat` | 评估文本中连续重复的内容或特殊字符的多次出现 |
-| **可理解性(UNDERSTANDABILITY)** | 评估数据解释的容易程度 | `RuleCapitalWords` | 确保LaTeX公式和Markdown格式正确，具有适当的分段和换行 |
+| 质量指标                        | 描述                           | 规则示例                                                     | LLM Prompt示例                                                         |
+| ------------------------------- | ------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| **完整性(COMPLETENESS)**        | 检查数据是否不完整或缺失       | `RuleColonEnd`, `RuleContentNull`                            | 评估文本是否突然以冒号或省略号结束，是否有不匹配的括号，或缺少关键组件 |
+| **有效性(EFFECTIVENESS)**       | 检查数据是否有意义且格式正确   | `RuleAbnormalChar`, `RuleHtmlEntity`, `RuleSpecialCharacter` | 检测乱码文本、没有空格的粘连单词和缺少适当标点的文本                   |
+| **流畅性(FLUENCY)**             | 检查文本是否语法正确且自然易读 | `RuleAbnormalNumber`, `RuleNoPunc`, `RuleWordStuck`          | 识别过长的单词、无标点的文本片段或阅读顺序混乱的内容                   |
+| **相关性(RELEVANCE)**           | 检测数据中的不相关内容         | 不同语言的`RuleHeadWord`变体                                 | 检查引用详情、页眉/页脚、实体标记、HTML标签等不相关信息                |
+| **安全性(SECURITY)**            | 识别敏感信息或价值冲突         | `RuleIDCard`, `RuleUnsafeWords`                              | 检查个人信息和与赌博、色情、政治问题相关的内容                         |
+| **相似性(SIMILARITY)**          | 检测重复或高度相似的内容       | `RuleDocRepeat`                                              | 评估文本中连续重复的内容或特殊字符的多次出现                           |
+| **可理解性(UNDERSTANDABILITY)** | 评估数据解释的容易程度         | `RuleCapitalWords`                                           | 确保LaTeX公式和Markdown格式正确，具有适当的分段和换行                  |
 
 ## LLM质量评估
 
@@ -180,42 +178,42 @@ Dingo在`dingo/model/prompt`目录下提供了多种基于LLM的评估方法。�
 
 ### 文本质量评估Prompt
 
-| Prompt类型 | 指标 | 描述 |
-|-------------|--------|-------------|
+| Prompt类型                           | 指标         | 描述                                                                             |
+| ------------------------------------ | ------------ | -------------------------------------------------------------------------------- |
 | `TEXT_QUALITY_V2`, `TEXT_QUALITY_V3` | 多种质量维度 | 全面的文本质量评估，涵盖有效性、相关性、完整性、可理解性、相似性、流畅性和安全性 |
-| `QUALITY_BAD_EFFECTIVENESS` | 有效性 | 检测乱码文本和反爬虫内容 |
-| `QUALITY_BAD_SIMILARITY` | 相似性 | 识别文本重复问题 |
-| `WORD_STICK` | 流畅性 | 检查单词是否缺少适当间距而粘连在一起 |
-| `CODE_LIST_ISSUE` | 完整性 | 评估代码块和列表格式问题 |
-| `UNREAD_ISSUE` | 有效性 | 检测由编码问题导致的不可读字符 |
+| `QUALITY_BAD_EFFECTIVENESS`          | 有效性       | 检测乱码文本和反爬虫内容                                                         |
+| `QUALITY_BAD_SIMILARITY`             | 相似性       | 识别文本重复问题                                                                 |
+| `WORD_STICK`                         | 流畅性       | 检查单词是否缺少适当间距而粘连在一起                                             |
+| `CODE_LIST_ISSUE`                    | 完整性       | 评估代码块和列表格式问题                                                         |
+| `UNREAD_ISSUE`                       | 有效性       | 检测由编码问题导致的不可读字符                                                   |
 
 ### 3H评估Prompt (诚实、有帮助、无害)
 
-| Prompt类型 | 指标 | 描述 |
-|-------------|--------|-------------|
-| `QUALITY_HONEST` | 诚实性 | 评估回答是否提供准确信息，不含虚构或欺骗内容 |
-| `QUALITY_HELPFUL` | 有帮助性 | 评估回答是否直接解决问题并适当遵循指令 |
-| `QUALITY_HARMLESS` | 无害性 | 检查回答是否避免有害内容、歧视性语言和危险指导 |
+| Prompt类型         | 指标     | 描述                                           |
+| ------------------ | -------- | ---------------------------------------------- |
+| `QUALITY_HONEST`   | 诚实性   | 评估回答是否提供准确信息，不含虚构或欺骗内容   |
+| `QUALITY_HELPFUL`  | 有帮助性 | 评估回答是否直接解决问题并适当遵循指令         |
+| `QUALITY_HARMLESS` | 无害性   | 检查回答是否避免有害内容、歧视性语言和危险指导 |
 
 ### 领域专用评估Prompt
 
-| Prompt类型 | 指标 | 描述 |
-|-------------|--------|-------------|
-| `TEXT_QUALITY_KAOTI` | 考题质量 | 专门评估考试题目的质量，关注公式渲染、表格格式、段落结构和答案格式 |
-| `Html_Abstract` | HTML提取质量 | 比较从HTML提取Markdown的不同方法，评估完整性、格式准确性和语义连贯性 |
+| Prompt类型           | 指标           | 描述                                                                                                   |
+| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| `TEXT_QUALITY_KAOTI` | 考题质量       | 专门评估考试题目的质量，关注公式渲染、表格格式、段落结构和答案格式                                     |
+| `Html_Abstract`      | HTML提取质量   | 比较从HTML提取Markdown的不同方法，评估完整性、格式准确性和语义连贯性                                   |
 | `DATAMAN_ASSESSMENT` | 数据质量与领域 | 使用DataMan方法论（14个标准，15个领域）评估预训练数据质量。分配分数（0/1）、领域类型、质量状态和原因。 |
 
 ### 分类Prompt
 
-| Prompt类型 | 指标 | 描述 |
-|-------------|--------|-------------|
+| Prompt类型       | 指标     | 描述                                                             |
+| ---------------- | -------- | ---------------------------------------------------------------- |
 | `CLASSIFY_TOPIC` | 主题分类 | 将文本分类为语言处理、写作、代码、数学、角色扮演或知识问答等类别 |
-| `CLASSIFY_QR` | 图像分类 | 识别图像为验证码、二维码或普通图像 |
+| `CLASSIFY_QR`    | 图像分类 | 识别图像为验证码、二维码或普通图像                               |
 
 ### 图像评估Prompt
 
-| Prompt类型 | 指标 | 描述 |
-|-------------|--------|-------------|
+| Prompt类型        | 指标       | 描述                                                         |
+| ----------------- | ---------- | ------------------------------------------------------------ |
 | `IMAGE_RELEVANCE` | 图像相关性 | 评估图像是否在面部数量、特征细节和视觉元素方面与参考图像匹配 |
 
 ### 在评估中使用LLM评估
@@ -246,10 +244,10 @@ input_data = {
 
 Dingo为不同类型的数据集提供预配置的规则组：
 
-| 组名 | 用例 | 示例规则 |
-|-------|----------|---------------|
-| `default` | 通用文本质量 | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`等 |
-| `sft` | 微调数据集 | `default`中的规则加上`RuleLineStartWithBulletpoint` |
+| 组名       | 用例         | 示例规则                                                       |
+| ---------- | ------------ | -------------------------------------------------------------- |
+| `default`  | 通用文本质量 | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`等           |
+| `sft`      | 微调数据集   | `default`中的规则加上`RuleLineStartWithBulletpoint`            |
 | `pretrain` | 预训练数据集 | 包括`RuleAlphaWords`, `RuleCapitalWords`等20多条规则的全面集合 |
 
 使用特定规则组：
@@ -328,6 +326,7 @@ class MyCustomModel(BaseOpenAI):
 ```
 
 查看更多示例：
+
 - [注册规则](examples/register/sdk_register_rule.py)
 - [注册Prompts](examples/register/sdk_register_prompt.py)
 - [注册模型](examples/register/sdk_register_llm.py)
@@ -374,6 +373,7 @@ result = executor.execute()
 2. **详细报告**：每个规则违反的具体问题
 
 概要示例：
+
 ```json
 {
     "task_id": "d6c922ec-981c-11ef-b723-7c10c9512fac",
@@ -400,10 +400,12 @@ result = executor.execute()
 # 研究与学术成果
 
 ## Dingo驱动的研究
+
 - **WanJuanSiLu**: [A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/pdf/2501.14506)
   *使用Dingo对多语言网页数据进行全面的数据质量评估*
 
 ## Dingo实现的方法论
+
 - **DataMan方法论**: [DataMan: Data Manager for Pre-training Large Language Models](https://openreview.net/pdf?id=eNbA8Fqir4)
   *Dingo实现了DataMan方法论用于预训练数据质量评估*
 - **RedPajama-Data-v2**: [RedPajama-Data](https://github.com/togethercomputer/RedPajama-Data)

@@ -29,8 +29,7 @@ class LocalExecutor(ExecProto):
         self.summary: SummaryModel = SummaryModel()
 
     def load_data(self) -> Generator[Data, None, None]:
-        """
-        Reads data from given path.
+        """Reads data from given path.
 
         **Run in executor.**
 
@@ -66,7 +65,7 @@ class LocalExecutor(ExecProto):
                 eval_group=group_name,
                 input_path=input_path,
                 output_path=output_path if self.input_args.save_data else '',
-                create_time=create_time
+                create_time=create_time,
             )
             self.evaluate()
             self.summary = self.summarize(self.summary)
@@ -75,30 +74,45 @@ class LocalExecutor(ExecProto):
         return self.summary
 
     def evaluate(self):
-        """
-        get score (main progres).
+        """Get score (main progres).
+
         Args:
             group (Any): _description_
             group_type (str): _description_
         """
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.input_args.max_workers) as thread_executor, \
-             concurrent.futures.ProcessPoolExecutor(max_workers=self.input_args.max_workers) as process_executor:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.input_args.max_workers
+        ) as thread_executor, concurrent.futures.ProcessPoolExecutor(
+            max_workers=self.input_args.max_workers
+        ) as process_executor:
             data_iter = self.load_data()
-            data_iter = itertools.islice(data_iter, self.input_args.start_index, self.input_args.end_index if self.input_args.end_index >= 0 else None )
+            data_iter = itertools.islice(
+                data_iter,
+                self.input_args.start_index,
+                self.input_args.end_index if self.input_args.end_index >= 0 else None,
+            )
             pbar = tqdm(total=None, unit='items')
 
             def process_batch(batch: List):
-                futures=[]
+                futures = []
                 for group_type, group in Model.get_group(self.input_args.eval_group).items():
                     if group_type == 'rule':
-                        if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
-                            futures += [thread_executor.submit(self.evaluate_single_data, group_type, group, data) for data in batch]
+                        if os.environ.get('LOCAL_DEPLOYMENT_MODE') == 'true':
+                            futures += [
+                                thread_executor.submit(self.evaluate_single_data, group_type, group, data)
+                                for data in batch
+                            ]
                         else:
-                            futures += [process_executor.submit(self.evaluate_single_data, group_type, group, data) for data in batch]
+                            futures += [
+                                process_executor.submit(self.evaluate_single_data, group_type, group, data)
+                                for data in batch
+                            ]
                     elif group_type == 'prompt':
-                        futures += [thread_executor.submit(self.evaluate_single_data, group_type, group, data) for data in batch]
+                        futures += [
+                            thread_executor.submit(self.evaluate_single_data, group_type, group, data) for data in batch
+                        ]
                     else:
-                        raise RuntimeError(f'Unsupported group type: {group_type}')
+                        raise RuntimeError(f"Unsupported group type: {group_type}")
 
                 for future in concurrent.futures.as_completed(futures):
                     result_info = future.result()
@@ -115,6 +129,7 @@ class LocalExecutor(ExecProto):
                     self.write_single_data(self.summary.output_path, self.input_args, result_info)
                     pbar.update()
                 self.write_summary(self.summary.output_path, self.input_args, self.summarize(self.summary))
+
             while True:
                 batch = list(itertools.islice(data_iter, self.input_args.batch_size))
                 if not batch:
@@ -139,7 +154,7 @@ class LocalExecutor(ExecProto):
         elif group_type == 'prompt':
             r_i = self.evaluate_prompt(group, data)
         else:
-            raise RuntimeError(f'Unsupported group type: {group_type}')
+            raise RuntimeError(f"Unsupported group type: {group_type}")
         if r_i.error_status:
             result_info.error_status = True
             bad_type_list = bad_type_list + r_i.type_list
@@ -169,7 +184,7 @@ class LocalExecutor(ExecProto):
 
     def evaluate_rule(self, group: List[BaseRule], d: Data) -> ResultInfo:
         result_info = ResultInfo(data_id=d.data_id, prompt=d.prompt, content=d.content)
-        log.debug("[RuleGroup]: " + str(group))
+        log.debug('[RuleGroup]: ' + str(group))
         bad_type_list = []
         good_type_list = []
         bad_name_list = []
@@ -201,7 +216,7 @@ class LocalExecutor(ExecProto):
 
     def evaluate_prompt(self, group: List[BasePrompt], d: Data) -> ResultInfo:
         result_info = ResultInfo(data_id=d.data_id, prompt=d.prompt, content=d.content)
-        log.debug("[PromptGroup]: " + str(group))
+        log.debug('[PromptGroup]: ' + str(group))
         bad_type_list = []
         good_type_list = []
         bad_name_list = []
@@ -260,7 +275,7 @@ class LocalExecutor(ExecProto):
             p_t = os.path.join(path, t)
             if not os.path.exists(p_t):
                 os.makedirs(p_t)
-            f_n = os.path.join(path, t, n) + ".jsonl"
+            f_n = os.path.join(path, t, n) + '.jsonl'
             with open(f_n, 'a', encoding='utf-8') as f:
                 if input_args.save_raw:
                     str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)

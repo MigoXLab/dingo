@@ -1,6 +1,8 @@
 ftfy
-imagededup
+
+git+https://github.com/openai/CLIP.git
 google-api-python-client
+imagededup
 lmdeploy
 opencv-python-headless
 pyiqa
@@ -11,5 +13,3 @@ tiktoken
 torch>=1.7.1
 torchvision
 tqdm
-
-git+https://github.com/openai/CLIP.git

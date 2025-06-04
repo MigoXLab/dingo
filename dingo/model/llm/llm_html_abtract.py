@@ -18,8 +18,14 @@ class LLMHtmlAbstract(BaseOpenAI):
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
-        messages = [{"role": "user",
-                     "content": cls.prompt.content.format(input_data.content, input_data.raw_data['markdown_ours'], input_data.raw_data['markdown_m10'])}]
+        messages = [
+            {
+                'role': 'user',
+                'content': cls.prompt.content.format(
+                    input_data.content, input_data.raw_data['markdown_ours'], input_data.raw_data['markdown_m10']
+                ),
+            }
+        ]
         return messages
 
     @classmethod
@@ -43,7 +49,7 @@ class LLMHtmlAbstract(BaseOpenAI):
             response_json['reason'] += '\n'
             response_json['reason'] += response_think
         except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         response_model = ResponseScoreTypeNameReason(**response_json)
 

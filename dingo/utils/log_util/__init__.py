@@ -7,9 +7,8 @@ from pydantic import BaseModel
 
 
 class LogConfig(BaseModel):
-    """
-    Logging configuration model.
-    """
+    """Logging configuration model."""
+
     filename: Optional[str] = None
     level: Optional[str] = 'warning'
     fmt: Optional[str] = '[%(asctime)s][%(levelname)s] %(pathname)s[line:%(lineno)d] -: %(message)s'

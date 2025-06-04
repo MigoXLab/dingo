@@ -1,17 +1,19 @@
 # Topic Classification
 
 ## 任务介绍
+
 ### 定义
+
 本功能旨在对输入数据进行主题分类，支持六大主题类别：
 
-| 主题类别                          | 英文名称                          |
-|----------------------------------|----------------------------------|
-| 语言理解与处理                    | Language Understanding and Processing |
-| 写作能力                          | Writing Ability                  |
-| 代码                              | Code                             |
-| 数学与推理                        | Mathematics & Reasoning          |
-| 任务导向角色扮演                  | Task-oriented Role Play          |
-| 知识问答                          | Knowledge-based Question and Answering |
+| 主题类别         | 英文名称                               |
+| ---------------- | -------------------------------------- |
+| 语言理解与处理   | Language Understanding and Processing  |
+| 写作能力         | Writing Ability                        |
+| 代码             | Code                                   |
+| 数学与推理       | Mathematics & Reasoning                |
+| 任务导向角色扮演 | Task-oriented Role Play                |
+| 知识问答         | Knowledge-based Question and Answering |
 
 ### 输入与输出
 
@@ -21,6 +23,7 @@
   - 每条数据的分类结果
 
 ## PromptClassifyTopic设计
+
 <pre>
 Assume you are a topic classifier, and your task is to categorize user-provided instructions. There are six options in the list provided. You are required to select one category from the following list: ["Language Understanding and Processing", "Writing Ability", "Code", "Mathematics & Reasoning", "Task-oriented Role Play", "Knowledge-based Question and Answering"].Make sure your answer is within the list provided and do not create any additional answers.
 
@@ -44,28 +47,30 @@ Below is an instruction:
 </pre>
 
 ## PromptClassifyTopic验证
+
 ### 数据准备
 
 我们使用了AlignBench( https://github.com/THUDM/AlignBench )中的 683 条数据对 PromptClassifyTopic 进行了多轮迭代和测试，最终确定了更具正交性的六大主题类别与描述。
 
 ### 主题说明
-| 主题类别                          | 子类别                                           |
-|----------------------------------|------------------------------------------------|
-| **语言理解与处理**                | （中文）字词理解，成语&诗歌，语法和句法分析，改写&翻译，NLP任务（如信息抽取, 文本分类等），观点&建议，语法检查，句式修改，文本摘要，情感分析等 |
-| **文本写作**                      | 实用文体写作，创意文体写作，专业文体写作，其他写作类        |
-| **代码**                          | 代码生成，代码检查，代码调试等
-| **数学与推理**                    | 初等数学，高等数学，应用数学，公式&原理，数学证明，逻辑推理，逻辑关系推导等 |
-| **角色扮演**                      | 游戏娱乐类，（虚拟）恋爱类，功能类，现实名人类，现实生活类         |
-| **知识问答**                      | 专业知识，常识                                     |
 
+| 主题类别           | 子类别                                                                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **语言理解与处理** | （中文）字词理解，成语&诗歌，语法和句法分析，改写&翻译，NLP任务（如信息抽取, 文本分类等），观点&建议，语法检查，句式修改，文本摘要，情感分析等 |
+| **文本写作**       | 实用文体写作，创意文体写作，专业文体写作，其他写作类                                                                                           |
+| **代码**           | 代码生成，代码检查，代码调试等                                                                                                                 |
+| **数学与推理**     | 初等数学，高等数学，应用数学，公式&原理，数学证明，逻辑推理，逻辑关系推导等                                                                    |
+| **角色扮演**       | 游戏娱乐类，（虚拟）恋爱类，功能类，现实名人类，现实生活类                                                                                     |
+| **知识问答**       | 专业知识，常识                                                                                                                                 |
 
 ### 实验结果
-| Model              | Precision | Recall | F1 |
-|-------------------|--------------------|------------------|------------|
-| Qwen2.5-7B       |  0.77               | 0.75             | 0.75       |
-| Qwen2.5-72B      | 0.90               | 0.89             | 0.89       |
-| GPT-4o      | 0.94               | 0.94             | 0.94       |
 
+| Model       | Precision | Recall | F1   |
+| ----------- | --------- | ------ | ---- |
+| Qwen2.5-7B  | 0.77      | 0.75   | 0.75 |
+| Qwen2.5-72B | 0.90      | 0.89   | 0.89 |
+| GPT-4o      | 0.94      | 0.94   | 0.94 |
 
 ## 使用示例
+
 [示例文档](../examples/classify/sdk_topic_classifcation.py)

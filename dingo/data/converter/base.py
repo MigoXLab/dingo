@@ -8,8 +8,7 @@ from dingo.io import Data, InputArgs
 
 class ConverterProto(Protocol):
     @classmethod
-    def convertor(cls, input_args: InputArgs) -> Callable:
-        ...
+    def convertor(cls, input_args: InputArgs) -> Callable: ...
 
 
 class BaseConverter(ConverterProto):
@@ -45,11 +44,10 @@ class BaseConverter(ConverterProto):
         res = reduce(lambda x, y: x[y], levels.split('.'), data)
         return res if isinstance(res, List) else [res]
 
-@BaseConverter.register("chatml-jsonl")
+
+@BaseConverter.register('chatml-jsonl')
 class ChatMLConvertor(BaseConverter):
-    """
-    ddm chatml file converter.
-    """
+    """Ddm chatml file converter."""
 
     def __init__(self):
         super().__init__()
@@ -61,32 +59,28 @@ class ChatMLConvertor(BaseConverter):
             if isinstance(raw, str):
                 j = json.loads(raw)
 
-            dialogs: list = j["dialogs"]
-            prompt = ""
-            content = ""
+            dialogs: list = j['dialogs']
+            prompt = ''
+            content = ''
 
             for i in dialogs[:-1]:
                 prompt += f"{i['role']:}\n\n"
                 prompt += f"{i['content']}\n\n"
 
             if len(dialogs) > 1:
-                prompt += dialogs[-1]["role"]
-                content += dialogs[-1]["content"]
+                prompt += dialogs[-1]['role']
+                content += dialogs[-1]['content']
 
-            return Data(**{
-                'data_id': j["_id"],
-                'prompt': prompt,
-                'content': content,
-                'raw_data': j
-            })
+            return Data(**{'data_id': j['_id'], 'prompt': prompt, 'content': content, 'raw_data': j})
 
         return _convert
 
 
 @BaseConverter.register('multi_turn_dialog')
 class MultiTurnDialogConverter(BaseConverter):
-    """
-    Unified multi-turn dialog converter for datasets like MT-Bench101 and MT-Bench.
+    """Unified multi-turn dialog converter for datasets like MT-Bench101 and
+    MT-Bench.
+
     Current supported mode: 'all'.
     """
 
@@ -103,7 +97,9 @@ class MultiTurnDialogConverter(BaseConverter):
                 j = json.loads(raw)
             cls.data_id += 1
 
-            raw_history: list = j.get(input_args.column_content, []) if input_args.column_content != '' else j.get('history', [])
+            raw_history: list = (
+                j.get(input_args.column_content, []) if input_args.column_content != '' else j.get('history', [])
+            )
             keys = list({key for d in raw_history for key in d.keys()})
 
             # get multi-turn dialogues base on the format of the input data
@@ -120,11 +116,14 @@ class MultiTurnDialogConverter(BaseConverter):
                         history.append({'user': turn.get('content')})
             else:
                 raise ValueError(
-                    "The provided data does not conform to the multi-turn dialogue format. Please check the corresponding field.")
+                    'The provided data does not conform to the multi-turn dialogue format. Please check the corresponding field.'
+                )
 
             if not history:
                 # if not multi-turn dialogues, raise error
-                raise ValueError("The provided data does not conform to the multi-turn dialogue format. Please check the corresponding field.")
+                raise ValueError(
+                    'The provided data does not conform to the multi-turn dialogue format. Please check the corresponding field.'
+                )
 
             # process each turn of dialogue based on mode
             if input_args.custom_config and input_args.custom_config.get('multi_turn_mode') == 'all':
@@ -134,21 +133,25 @@ class MultiTurnDialogConverter(BaseConverter):
                         content += '\n\n'
                     content += f"user: {turn.get('user', '')}"
                     content += f"\n\nassistant: {turn.get('bot', '')}"
-                yield Data(**{
-                    'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
-                    'prompt': '',
-                    'content': content,
-                    'raw_data': j
-                })
+                yield Data(
+                    **{
+                        'data_id': (
+                            cls.find_levels_data(j, input_args.column_id)
+                            if input_args.column_id != ''
+                            else str(cls.data_id)
+                        ),
+                        'prompt': '',
+                        'content': content,
+                        'raw_data': j,
+                    }
+                )
 
         return _convert
 
 
 @BaseConverter.register('json')
 class JsonConverter(BaseConverter):
-    """
-    Json file converter.
-    """
+    """Json file converter."""
 
     def __init__(self):
         super().__init__()
@@ -160,21 +163,30 @@ class JsonConverter(BaseConverter):
             if isinstance(raw, str):
                 j = json.loads(raw)
             for k, v in j.items():
-                yield Data(**{
-                    'data_id': cls.find_levels_data(v, input_args.column_id) if input_args.column_id != '' else str(k),
-                    'prompt': cls.find_levels_data(v, input_args.column_prompt) if input_args.column_prompt != '' else '',
-                    'content': cls.find_levels_data(v, input_args.column_content) if input_args.column_content != '' else '',
-                    'raw_data': v
-                })
+                yield Data(
+                    **{
+                        'data_id': (
+                            cls.find_levels_data(v, input_args.column_id) if input_args.column_id != '' else str(k)
+                        ),
+                        'prompt': (
+                            cls.find_levels_data(v, input_args.column_prompt) if input_args.column_prompt != '' else ''
+                        ),
+                        'content': (
+                            cls.find_levels_data(v, input_args.column_content)
+                            if input_args.column_content != ''
+                            else ''
+                        ),
+                        'raw_data': v,
+                    }
+                )
 
         return _convert
 
 
 @BaseConverter.register('plaintext')
 class PlainConverter(BaseConverter):
-    """
-    Plain text file converter
-    """
+    """Plain text file converter."""
+
     data_id = 0
 
     def __init__(self):
@@ -185,12 +197,7 @@ class PlainConverter(BaseConverter):
         def _convert(raw: Union[str, Dict]):
             if isinstance(raw, Dict):
                 raw = json.dumps(raw)
-            data = Data(**{
-                'data_id': str(cls.data_id),
-                'prompt': '',
-                'content': raw,
-                'raw_data': {'content': raw}
-            })
+            data = Data(**{'data_id': str(cls.data_id), 'prompt': '', 'content': raw, 'raw_data': {'content': raw}})
             cls.data_id += 1
             return data
 
@@ -199,9 +206,8 @@ class PlainConverter(BaseConverter):
 
 @BaseConverter.register('jsonl')
 class JsonLineConverter(BaseConverter):
-    """
-    Json line file converter.
-    """
+    """Json line file converter."""
+
     data_id = 0
 
     def __init__(self):
@@ -214,21 +220,29 @@ class JsonLineConverter(BaseConverter):
             if isinstance(raw, str):
                 j = json.loads(raw)
             cls.data_id += 1
-            return Data(**{
-                'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
-                'prompt': cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else '',
-                'content': cls.find_levels_data(j, input_args.column_content) if input_args.column_content != '' else '',
-                'raw_data': j
-            })
+            return Data(
+                **{
+                    'data_id': (
+                        cls.find_levels_data(j, input_args.column_id)
+                        if input_args.column_id != ''
+                        else str(cls.data_id)
+                    ),
+                    'prompt': (
+                        cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else ''
+                    ),
+                    'content': (
+                        cls.find_levels_data(j, input_args.column_content) if input_args.column_content != '' else ''
+                    ),
+                    'raw_data': j,
+                }
+            )
 
         return _convert
 
 
 @BaseConverter.register('listjson')
 class ListJsonConverter(BaseConverter):
-    """
-    List json file converter.
-    """
+    """List json file converter."""
 
     data_id = 0
 
@@ -242,12 +256,24 @@ class ListJsonConverter(BaseConverter):
             if isinstance(raw, str):
                 l_j = json.loads(raw)
             for j in l_j:
-                yield Data(**{
-                    'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
-                    'prompt': cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else '',
-                    'content': cls.find_levels_data(j, input_args.column_content) if input_args.column_content != '' else '',
-                    'raw_data': j
-                })
+                yield Data(
+                    **{
+                        'data_id': (
+                            cls.find_levels_data(j, input_args.column_id)
+                            if input_args.column_id != ''
+                            else str(cls.data_id)
+                        ),
+                        'prompt': (
+                            cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else ''
+                        ),
+                        'content': (
+                            cls.find_levels_data(j, input_args.column_content)
+                            if input_args.column_content != ''
+                            else ''
+                        ),
+                        'raw_data': j,
+                    }
+                )
                 cls.data_id += 1
 
         return _convert
@@ -255,9 +281,7 @@ class ListJsonConverter(BaseConverter):
 
 @BaseConverter.register('image')
 class ImageConverter(BaseConverter):
-    """
-    Image converter.
-    """
+    """Image converter."""
 
     data_id = 0
 
@@ -271,22 +295,30 @@ class ImageConverter(BaseConverter):
             if isinstance(raw, str):
                 j = json.loads(raw)
             cls.data_id += 1
-            return Data(**{
-                'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
-                'prompt': cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else '',
-                'content': cls.find_levels_data(j, input_args.column_content) if input_args.column_content != '' else '',
-                'image': cls.find_levels_image(j, input_args.column_image) if input_args.column_image != '' else '',
-                'raw_data': j
-            })
+            return Data(
+                **{
+                    'data_id': (
+                        cls.find_levels_data(j, input_args.column_id)
+                        if input_args.column_id != ''
+                        else str(cls.data_id)
+                    ),
+                    'prompt': (
+                        cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else ''
+                    ),
+                    'content': (
+                        cls.find_levels_data(j, input_args.column_content) if input_args.column_content != '' else ''
+                    ),
+                    'image': cls.find_levels_image(j, input_args.column_image) if input_args.column_image != '' else '',
+                    'raw_data': j,
+                }
+            )
 
         return _convert
 
 
 @BaseConverter.register('s3_image')
 class S3ImageConverter(BaseConverter):
-    """
-    S3 Image converter.
-    """
+    """S3 Image converter."""
 
     data_id = 0
 
@@ -300,12 +332,22 @@ class S3ImageConverter(BaseConverter):
             if isinstance(raw, str):
                 j = json.loads(raw)
             cls.data_id += 1
-            return Data(**{
-                'data_id': cls.find_levels_data(j, input_args.column_id) if input_args.column_id != '' else str(cls.data_id),
-                'prompt': cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else '',
-                'content': cls.find_levels_data(j, input_args.column_content) if input_args.column_content != '' else '',
-                'image': find_s3_image(j, input_args) if input_args.column_image != '' else '',
-                'raw_data': j
-            })
+            return Data(
+                **{
+                    'data_id': (
+                        cls.find_levels_data(j, input_args.column_id)
+                        if input_args.column_id != ''
+                        else str(cls.data_id)
+                    ),
+                    'prompt': (
+                        cls.find_levels_data(j, input_args.column_prompt) if input_args.column_prompt != '' else ''
+                    ),
+                    'content': (
+                        cls.find_levels_data(j, input_args.column_content) if input_args.column_content != '' else ''
+                    ),
+                    'image': find_s3_image(j, input_args) if input_args.column_image != '' else '',
+                    'raw_data': j,
+                }
+            )
 
         return _convert

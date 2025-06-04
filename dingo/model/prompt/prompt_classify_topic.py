@@ -2,7 +2,7 @@ from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
 
-@Model.prompt_register("CLASSIFY_TOPIC", [])
+@Model.prompt_register('CLASSIFY_TOPIC', [])
 class PromptClassifyTopic(BasePrompt):
     content = """
       Assume you are a topic classifier, and your task is to categorize user-provided instructions.

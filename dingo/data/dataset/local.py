@@ -9,19 +9,17 @@ from dingo.io import Data
 
 @Dataset.register()
 class LocalDataset(Dataset):
-    """
-    Represents a HuggingFace dataset for use with Dingo Tracking.
-    """
+    """Represents a HuggingFace dataset for use with Dingo Tracking."""
 
     @property
     def profile(self) -> Optional[Any]:
         return None
 
     def __init__(
-            self,
-            source: LocalDataSource,
-            name: Optional[str] = None,
-            digest: Optional[str] = None,
+        self,
+        source: LocalDataSource,
+        name: Optional[str] = None,
+        digest: Optional[str] = None,
     ):
         """
         Args:
@@ -36,31 +34,33 @@ class LocalDataset(Dataset):
 
     @staticmethod
     def get_dataset_type() -> str:
-        return "local"
+        return 'local'
 
     def _compute_digest(self) -> str:
-        """
-        Computes a digest for the dataset. Called if the user doesn't supply
-        a digest when constructing the dataset.
+        """Computes a digest for the dataset.
+
+        Called if the user doesn't supply a digest when constructing the
+        dataset.
         """
         return str(hash(json.dumps(self.source.to_dict())))[:8]
 
     def to_dict(self) -> Dict[str, str]:
         """Create config dictionary for the dataset.
+
         Returns a string dictionary containing the following fields: name, digest, source, source
         type, schema, and profile.
         """
         config = super().to_dict()
         config.update(
             {
-                "profile": json.dumps(self.profile),
+                'profile': json.dumps(self.profile),
             }
         )
         return config
 
     def get_data(self) -> Generator[Data, None, None]:
-        """
-        Returns the input model for the dataset.
+        """Returns the input model for the dataset.
+
         Convert data here.
         """
         for data_raw in self._ds:
@@ -74,6 +74,7 @@ class LocalDataset(Dataset):
     @property
     def ds(self):
         """Datasets' generator instance.
+
         Returns:
             Datasets' generator instance.
         """
@@ -82,6 +83,7 @@ class LocalDataset(Dataset):
     @property
     def source(self) -> DataSource:
         """Hugging Face dataset source information.
+
         Returns:
             A :py:class:`mlflow.data.huggingface_dataset_source.HuggingFaceSource`
         """

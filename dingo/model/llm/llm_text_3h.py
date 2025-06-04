@@ -16,7 +16,7 @@ class LLMText3H(BaseOpenAI):
         response = input_data.content
         prompt_content = cls.prompt.content % (question, response)
 
-        messages = [{"role": "user", "content": prompt_content}]
+        messages = [{'role': 'user', 'content': prompt_content}]
 
         return messages
 
@@ -33,7 +33,7 @@ class LLMText3H(BaseOpenAI):
         try:
             response_json = json.loads(response)
         except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         response_model = ResponseScoreReason(**response_json)
 
@@ -47,6 +47,6 @@ class LLMText3H(BaseOpenAI):
             result.error_status = True
             result.type = 'QUALITY_BAD'
             result.reason = [response_model.reason]
-            result.name = "NOT_" + cls.prompt.__name__[8:].upper()
+            result.name = 'NOT_' + cls.prompt.__name__[8:].upper()
 
         return result

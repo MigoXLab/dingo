@@ -22,7 +22,7 @@ class ResultInfo(BaseModel):
             'type_list': self.type_list,
             'name_list': self.name_list,
             'reason_list': self.reason_list,
-            'raw_data': self.raw_data
+            'raw_data': self.raw_data,
         }
 
     def to_raw_dict(self):

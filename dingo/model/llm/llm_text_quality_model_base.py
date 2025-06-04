@@ -28,7 +28,7 @@ class LLMTextQualityModelBase(BaseOpenAI):
         try:
             response_json = json.loads(response)
         except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         response_model = ResponseScoreTypeNameReason(**response_json)
 

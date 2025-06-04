@@ -22,7 +22,7 @@ from dingo.data.utils import insecure_hash
 from packaging.version import Version
 
 logger = logging.getLogger(__name__)
-logger.setLevel("ERROR")
+logger.setLevel('ERROR')
 MAX_ROWS = 10000
 
 
@@ -42,7 +42,7 @@ def compute_pandas_digest(df) -> str:
     trimmed_df = df.head(MAX_ROWS)
 
     # keep string and number columns, drop other column types
-    if Version(pd.__version__) >= Version("2.1.0"):
+    if Version(pd.__version__) >= Version('2.1.0'):
         string_columns = trimmed_df.columns[(df.map(type) == str).all(0)]
     else:
         string_columns = trimmed_df.columns[(df.applymap(type) == str).all(0)]
@@ -72,7 +72,7 @@ def get_normalized_md5_digest(elements: List[Any]) -> str:
 
     if not elements:
         raise RuntimeError(
-            "No hashable elements were provided for md5 digest creation",
+            'No hashable elements were provided for md5 digest creation',
         )
 
     md5 = insecure_hash.md5()

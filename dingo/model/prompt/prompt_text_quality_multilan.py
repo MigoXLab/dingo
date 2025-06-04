@@ -40,38 +40,47 @@ VI_ROLE = """
     You are an expert in Vietnamese language model.
     """
 
-@Model.prompt_register("TEXT_QUALITY_AR", [])
+
+@Model.prompt_register('TEXT_QUALITY_AR', [])
 class PromptTextQualityAr(BasePrompt):
     content = AR_ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2
 
-@Model.prompt_register("TEXT_QUALITY_CS", [])
+
+@Model.prompt_register('TEXT_QUALITY_CS', [])
 class PromptTextQualityCs(BasePrompt):
     content = CS_ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2
 
-@Model.prompt_register("TEXT_QUALITY_DE", [])
+
+@Model.prompt_register('TEXT_QUALITY_DE', [])
 class PromptTextQualityDe(BasePrompt):
     content = DE_ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2
 
-@Model.prompt_register("TEXT_QUALITY_HU", [])
+
+@Model.prompt_register('TEXT_QUALITY_HU', [])
 class PromptTextQualityHu(BasePrompt):
     content = HU_ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2
 
-@Model.prompt_register("TEXT_QUALITY_KO", [])
+
+@Model.prompt_register('TEXT_QUALITY_KO', [])
 class PromptTextQualityKo(BasePrompt):
     content = KO_ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2
 
-@Model.prompt_register("TEXT_QUALITY_RU", [])
+
+@Model.prompt_register('TEXT_QUALITY_RU', [])
 class PromptTextQualityRu(BasePrompt):
     content = RU_ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2
 
-@Model.prompt_register("TEXT_QUALITY_SR", [])
+
+@Model.prompt_register('TEXT_QUALITY_SR', [])
 class PromptTextQualitySr(BasePrompt):
     content = SR_ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2
 
-@Model.prompt_register("TEXT_QUALITY_TH", [])
+
+@Model.prompt_register('TEXT_QUALITY_TH', [])
 class PromptTextQualityTh(BasePrompt):
     content = TH_ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2
 
-@Model.prompt_register("TEXT_QUALITY_VI", [])
+
+@Model.prompt_register('TEXT_QUALITY_VI', [])
 class PromptTextQualityVi(BasePrompt):
     content = VI_ROLE + TEXT_QUALITY_WITHOUT_ROLE_V2

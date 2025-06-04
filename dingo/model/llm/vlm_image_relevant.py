@@ -13,10 +13,13 @@ class VLMImageRelevant(BaseOpenAI):
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
         messages = [
-            {"role": "user",
-             "content": [{'type': 'text', 'text': cls.prompt.content},
-                         {'type': 'image_url', 'image_url': {'url': input_data.prompt}},
-                         {'type': 'image_url', 'image_url': {'url': input_data.content}}]
-             }
+            {
+                'role': 'user',
+                'content': [
+                    {'type': 'text', 'text': cls.prompt.content},
+                    {'type': 'image_url', 'image_url': {'url': input_data.prompt}},
+                    {'type': 'image_url', 'image_url': {'url': input_data.content}},
+                ],
+            }
         ]
         return messages

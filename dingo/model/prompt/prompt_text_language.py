@@ -71,34 +71,42 @@ Please return the results in the format: {"language": level, "percent": tagert l
 4. Return the answer in JSON format.
 """
 
-@Model.prompt_register("TEXT_LANGUAGE_AR", [])
+
+@Model.prompt_register('TEXT_LANGUAGE_AR', [])
 class PromptTextLanguageAr(BasePrompt):
     content = AR_LAN_ROLE + TEXT_LANGUAGE
 
-@Model.prompt_register("TEXT_LANGUAGE_CS", [])
+
+@Model.prompt_register('TEXT_LANGUAGE_CS', [])
 class PromptTextLanguageCs(BasePrompt):
     content = CS_LAN_ROLE + TEXT_LANGUAGE
 
-@Model.prompt_register("TEXT_LANGUAGE_HU", [])
+
+@Model.prompt_register('TEXT_LANGUAGE_HU', [])
 class PromptTextLanguageHu(BasePrompt):
     content = HU_LAN_ROLE + TEXT_LANGUAGE
 
-@Model.prompt_register("TEXT_LANGUAGE_KO", [])
+
+@Model.prompt_register('TEXT_LANGUAGE_KO', [])
 class PromptTextLanguageKo(BasePrompt):
     content = KO_LAN_ROLE + TEXT_LANGUAGE
 
-@Model.prompt_register("TEXT_LANGUAGE_RU", [])
+
+@Model.prompt_register('TEXT_LANGUAGE_RU', [])
 class PromptTextLanguageRu(BasePrompt):
     content = RU_LAN_ROLE + TEXT_LANGUAGE
 
-@Model.prompt_register("TEXT_LANGUAGE_SR", [])
+
+@Model.prompt_register('TEXT_LANGUAGE_SR', [])
 class PromptTextLanguageSr(BasePrompt):
     content = SR_LAN_ROLE + TEXT_LANGUAGE
 
-@Model.prompt_register("TEXT_LANGUAGE_TH", [])
+
+@Model.prompt_register('TEXT_LANGUAGE_TH', [])
 class PromptTextLanguageTh(BasePrompt):
     content = TH_LAN_ROLE + TEXT_LANGUAGE
 
-@Model.prompt_register("TEXT_LANGUAGE_VI", [])
+
+@Model.prompt_register('TEXT_LANGUAGE_VI', [])
 class PromptTextLanguageVi(BasePrompt):
     content = VI_LAN_ROLE + TEXT_LANGUAGE

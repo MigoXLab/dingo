@@ -39,19 +39,21 @@ class GlobalConfig:
             if type(custom_config) == dict:
                 data_json = custom_config
             else:
-                with open(custom_config, "r", encoding="utf-8") as f:
+                with open(custom_config, 'r', encoding='utf-8') as f:
                     data_json = json.load(f)
         except FileNotFoundError:
-            log.error("No config file found, error path.")
+            log.error('No config file found, error path.')
 
         try:
             cls.config = Config(
                 rule_list=data_json.get('rule_list', []),
                 prompt_list=data_json.get('prompt_list', []),
-                rule_config={i: DynamicRuleConfig(**rule_config) for i, rule_config in
-                             data_json.get('rule_config', {}).items()},
-                llm_config={i: DynamicLLMConfig(**llm_config) for i, llm_config in
-                            data_json.get('llm_config', {}).items()},
+                rule_config={
+                    i: DynamicRuleConfig(**rule_config) for i, rule_config in data_json.get('rule_config', {}).items()
+                },
+                llm_config={
+                    i: DynamicLLMConfig(**llm_config) for i, llm_config in data_json.get('llm_config', {}).items()
+                },
             )
         except Exception as e:
             raise RuntimeError(f"Error loading config: {e}")

@@ -13,15 +13,13 @@ _MAX_ROWS_FOR_DIGEST_COMPUTATION_AND_SCHEMA_INFERENCE = 10000
 
 @Dataset.register()
 class HuggingFaceDataset(Dataset):
-    """
-    Represents a HuggingFace dataset for use with Dingo Tracking.
-    """
+    """Represents a HuggingFace dataset for use with Dingo Tracking."""
 
     def __init__(
-            self,
-            source: HuggingFaceSource,
-            name: Optional[str] = None,
-            digest: Optional[str] = None,
+        self,
+        source: HuggingFaceSource,
+        name: Optional[str] = None,
+        digest: Optional[str] = None,
     ):
         """
         Args:
@@ -32,8 +30,8 @@ class HuggingFaceDataset(Dataset):
                 is automatically computed.
         """
         self._ds: datasets.Dataset = source.load()
-        self._targets = "text"
-        if source.input_args.data_format == "plaintext":
+        self._targets = 'text'
+        if source.input_args.data_format == 'plaintext':
             if source.input_args.column_content != '':
                 self._targets = source.input_args.column_content
             if self._targets is not None and self._targets not in self._ds.column_names:
@@ -46,40 +44,38 @@ class HuggingFaceDataset(Dataset):
 
     @staticmethod
     def get_dataset_type() -> str:
-        return "hugging_face"
+        return 'hugging_face'
 
     def _compute_digest(self) -> str:
+        """Computes a digest for the dataset.
+
+        Called if the user doesn't supply a digest when constructing the
+        dataset.
         """
-        Computes a digest for the dataset. Called if the user doesn't supply
-        a digest when constructing the dataset.
-        """
-        df = next(
-            self._ds.to_pandas(
-                batch_size=_MAX_ROWS_FOR_DIGEST_COMPUTATION_AND_SCHEMA_INFERENCE, batched=True
-            )
-        )
+        df = next(self._ds.to_pandas(batch_size=_MAX_ROWS_FOR_DIGEST_COMPUTATION_AND_SCHEMA_INFERENCE, batched=True))
         return compute_pandas_digest(df)
 
     def to_dict(self) -> Dict[str, str]:
         """Create config dictionary for the dataset.
+
         Returns a string dictionary containing the following fields: name, digest, source, source
         type, schema, and profile.
         """
         config = super().to_dict()
         config.update(
             {
-                "profile": json.dumps(self.profile),
+                'profile': json.dumps(self.profile),
             }
         )
         return config
 
     def get_data(self) -> Generator[Data, None, None]:
-        """
-        Returns the input model for the dataset.
+        """Returns the input model for the dataset.
+
         Convert data here.
         """
         for data_raw in self._ds:
-            if self._converter == "plaintext":
+            if self._converter == 'plaintext':
                 data_raw = data_raw[self._targets]
             data: Union[Generator[Data], Data] = self.converter(data_raw)
             if isinstance(data, Generator):
@@ -91,6 +87,7 @@ class HuggingFaceDataset(Dataset):
     @property
     def ds(self) -> datasets.Dataset:
         """The Hugging Face ``datasets.Dataset`` instance.
+
         Returns:
             The Hugging Face ``datasets.Dataset`` instance.
         """
@@ -98,9 +95,9 @@ class HuggingFaceDataset(Dataset):
 
     @property
     def targets(self) -> Optional[str]:
-        """
-        The name of the Hugging Face dataset column containing targets (labels) for supervised
-        learning.
+        """The name of the Hugging Face dataset column containing targets
+        (labels) for supervised learning.
+
         Returns:
             The string name of the Hugging Face dataset column containing targets.
         """
@@ -109,6 +106,7 @@ class HuggingFaceDataset(Dataset):
     @property
     def source(self) -> DataSource:
         """Hugging Face dataset source information.
+
         Returns:
             A :py:class:`mlflow.data.huggingface_dataset_source.HuggingFaceSource`
         """
@@ -116,27 +114,25 @@ class HuggingFaceDataset(Dataset):
 
     @property
     def profile(self) -> Optional[Any]:
-        """
-        Summary statistics for the Hugging Face dataset, including the number of rows,
-        size, and size in bytes.
-        """
+        """Summary statistics for the Hugging Face dataset, including the
+        number of rows, size, and size in bytes."""
         return {
-            "num_rows": self._ds.num_rows,
-            "dataset_size": self._ds.dataset_size,
-            "size_in_bytes": self._ds.size_in_bytes,
+            'num_rows': self._ds.num_rows,
+            'dataset_size': self._ds.dataset_size,
+            'size_in_bytes': self._ds.size_in_bytes,
         }
 
 
 def from_huggingface(
-        path: Optional[str] = None,
-        split: str = "train",
-        targets: Optional[str] = None,
-        data_dir: Optional[str] = None,
-        data_files: Optional[Union[str, Sequence[str], Mapping[str, Union[str, Sequence[str]]]]] = None,
-        revision=None,
-        name: Optional[str] = None,
-        digest: Optional[str] = None,
-        trust_remote_code: Optional[bool] = None,
+    path: Optional[str] = None,
+    split: str = 'train',
+    targets: Optional[str] = None,
+    data_dir: Optional[str] = None,
+    data_files: Optional[Union[str, Sequence[str], Mapping[str, Union[str, Sequence[str]]]]] = None,
+    revision=None,
+    name: Optional[str] = None,
+    digest: Optional[str] = None,
+    trust_remote_code: Optional[bool] = None,
 ) -> HuggingFaceDataset:
     """
     Create a `dingo.data.dataset.huggingface.HuggingFaceDataset` from a Hugging Face dataset.
@@ -178,5 +174,5 @@ def from_huggingface(
             trust_remote_code=trust_remote_code,
         )
     else:
-        raise RuntimeError("You must specify a path to Hugging Face dataset.")
+        raise RuntimeError('You must specify a path to Hugging Face dataset.')
     return HuggingFaceDataset(targets=targets, source=source, name=name, digest=digest)

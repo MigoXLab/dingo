@@ -9,19 +9,19 @@ from dingo.io import InputArgs
 class TestContinue:
     def test_continue_local_jsonl(self):
         input_data = {
-            "eval_group": "sft",
-            "input_path": "test/data/test_local_jsonl.jsonl",
-            "save_data": True,
-            "save_correct": True,
-            "dataset": "local",
-            "data_format": "jsonl",
-            "column_id": "id",
-            "column_content": "content",
-            "start_index": 1
+            'eval_group': 'sft',
+            'input_path': 'test/data/test_local_jsonl.jsonl',
+            'save_data': True,
+            'save_correct': True,
+            'dataset': 'local',
+            'data_format': 'jsonl',
+            'column_id': 'id',
+            'column_content': 'content',
+            'start_index': 1,
         }
 
         input_args = InputArgs(**input_data)
-        executor = Executor.exec_map["local"](input_args)
+        executor = Executor.exec_map['local'](input_args)
         result = executor.execute().to_dict()
 
         output_path = result['output_path']

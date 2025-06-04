@@ -27,16 +27,15 @@ class BaseOpenAI(BaseLLM):
         from openai import OpenAI
 
         if not cls.dynamic_config.key:
-            raise ValueError("key cannot be empty in llm config.")
+            raise ValueError('key cannot be empty in llm config.')
         elif not cls.dynamic_config.api_url:
-            raise ValueError("api_url cannot be empty in llm config.")
+            raise ValueError('api_url cannot be empty in llm config.')
         else:
             cls.client = OpenAI(api_key=cls.dynamic_config.key, base_url=cls.dynamic_config.api_url)
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
-        messages = [{"role": "user",
-                     "content": cls.prompt.content + input_data.content}]
+        messages = [{'role': 'user', 'content': cls.prompt.content + input_data.content}]
         return messages
 
     @classmethod
@@ -56,10 +55,10 @@ class BaseOpenAI(BaseLLM):
             top_p=params.get('top_p', 1) if params else 1,
             max_tokens=params.get('max_tokens', 4000) if params else 4000,
             presence_penalty=params.get('presence_penalty', 0) if params else 0,
-            frequency_penalty=params.get('frequency_penalty', 0) if params else 0
+            frequency_penalty=params.get('frequency_penalty', 0) if params else 0,
         )
 
-        if completions.choices[0].finish_reason == "length":
+        if completions.choices[0].finish_reason == 'length':
             raise ExceedMaxTokens(f"Exceed max tokens: {params.get('max_tokens', 4000) if params else 4000}")
 
         return str(completions.choices[0].message.content)
@@ -84,24 +83,24 @@ class BaseOpenAI(BaseLLM):
             return
 
         # validate temperature
-        if "temperature" in parameters:
-            cls.validate_numeric_range(parameters["temperature"], 0, 2, "temperature")
+        if 'temperature' in parameters:
+            cls.validate_numeric_range(parameters['temperature'], 0, 2, 'temperature')
 
         # validate top_p
-        if "top_p" in parameters:
-            cls.validate_numeric_range(parameters["top_p"], 0, 1, "top_p")
+        if 'top_p' in parameters:
+            cls.validate_numeric_range(parameters['top_p'], 0, 1, 'top_p')
 
         # validate max_tokens
-        if "max_tokens" in parameters:
-            cls.validate_integer_positive(parameters["max_tokens"], "max_tokens")
+        if 'max_tokens' in parameters:
+            cls.validate_integer_positive(parameters['max_tokens'], 'max_tokens')
 
         # validate presence_penalty
-        if "presence_penalty" in parameters:
-            cls.validate_numeric_range(parameters["presence_penalty"], -2.0, 2.0, "presence_penalty")
+        if 'presence_penalty' in parameters:
+            cls.validate_numeric_range(parameters['presence_penalty'], -2.0, 2.0, 'presence_penalty')
 
         # validate frequency_penalty
-        if "frequency_penalty" in parameters:
-            cls.validate_numeric_range(parameters["frequency_penalty"], -2.0, 2.0, "frequency_penalty")
+        if 'frequency_penalty' in parameters:
+            cls.validate_numeric_range(parameters['frequency_penalty'], -2.0, 2.0, 'frequency_penalty')
 
     @classmethod
     def process_response(cls, response: str) -> ModelRes:
@@ -116,7 +115,7 @@ class BaseOpenAI(BaseLLM):
         try:
             response_json = json.loads(response)
         except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         response_model = ResponseScoreReason(**response_json)
 
@@ -156,9 +155,4 @@ class BaseOpenAI(BaseLLM):
                 except_msg = str(e)
                 except_name = e.__class__.__name__
 
-        return ModelRes(
-            error_status=True,
-            type='QUALITY_BAD',
-            name=except_name,
-            reason=[except_msg]
-        )
+        return ModelRes(error_status=True, type='QUALITY_BAD', name=except_name, reason=[except_msg])

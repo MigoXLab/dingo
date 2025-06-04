@@ -2,6 +2,7 @@ from fastapi import HTTPException
 
 # tokens
 
+
 class TokensException(HTTPException):
     pass
 
@@ -9,11 +10,12 @@ class TokensException(HTTPException):
 class ExceedMaxTokens(TokensException):
     status_code = 400
 
-    def __init__(self, detail="Exceeded maximum allowed tokens."):
+    def __init__(self, detail='Exceeded maximum allowed tokens.'):
         self.detail = detail
 
 
 # convert
+
 
 class ConvertError(HTTPException):
     pass
@@ -22,5 +24,5 @@ class ConvertError(HTTPException):
 class ConvertJsonError(ConvertError):
     status_code = 500
 
-    def __init__(self, detail="Failed to convert JSON data."):
+    def __init__(self, detail='Failed to convert JSON data.'):
         self.detail = detail

@@ -146,6 +146,12 @@ Where `output_directory` contains the evaluation results with a `summary.json` f
 ## Online Demo
 Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
+## Google Colab Demo
+Experience Dingo interactively with our comprehensive Google Colab notebook:
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
+
+
 
 # MCP Server
 

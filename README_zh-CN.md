@@ -144,6 +144,12 @@ python -m dingo.run.vsl --input 输出目录
 ## 5. 在线演示
 尝试我们的在线演示: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
+## 6. Google Colab 演示
+通过我们的综合Google Colab笔记本交互式体验Dingo：
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
+
+
 
 # MCP 服务端
 

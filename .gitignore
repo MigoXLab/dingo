@@ -11,7 +11,7 @@ __pycache__
 *.pyc
 .vscode
 debug/
-*.ipynb
+# *.ipynb
 .idea
 .python-version
 
@@ -45,6 +45,4 @@ output/
 .coverage*
 coverage.xml
 
-llm_web_kit.egg-info/*
-.llm-web-kit.jsonc
-.llm-web-kit-pageclassify.jsonc
+dingo_python.egg-info/*

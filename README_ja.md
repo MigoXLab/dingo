@@ -146,6 +146,11 @@ python -m dingo.run.vsl --input output_directory
 ## オンラインデモ
 オンラインデモでDingoをお試しください: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
+## Google Colabデモ
+包括的なGoogle ColabノートブックでDingoをインタラクティブに体験してください：
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
+
 
 # MCPサーバー
 

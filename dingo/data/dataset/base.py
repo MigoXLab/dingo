@@ -27,23 +27,26 @@ from dingo.utils import log
 
 
 class Dataset:
-    """
-    Represents a dataset for use with Dingo Tracking, including the name, digest (hash),
-    schema, and profile of the dataset as well as source information (e.g. the S3 bucket or
-    managed Delta table from which the dataset was derived). Most datasets expose features
-    and targets for training and evaluation as well.
+    """Represents a dataset for use with Dingo Tracking, including the name,
+    digest (hash), schema, and profile of the dataset as well as source
+    information (e.g. the S3 bucket or managed Delta table from which the
+    dataset was derived).
+
+    Most datasets expose features and targets for training and evaluation as
+    well.
     """
 
     dataset_map = {}
 
     def __init__(
-            self,
-            source: DataSource,
-            name: Optional[str] = None,
-            digest: Optional[str] = None,
+        self,
+        source: DataSource,
+        name: Optional[str] = None,
+        digest: Optional[str] = None,
     ):
-        """
-        Base constructor for a dataset. All subclasses must call this constructor.
+        """Base constructor for a dataset.
+
+        All subclasses must call this constructor.
         """
         self.input_args = None
         self.converter = None
@@ -57,7 +60,7 @@ class Dataset:
         try:
             converter_cls: BaseConverter = converters[self._converter]
         except KeyError as e:
-            log.error(f"Convertor \"{self._converter}\" not exist in {str(converters.keys())}")
+            log.error(f'Convertor "{self._converter}" not exist in {str(converters.keys())}')
             raise e
 
         self.converter: Callable = converter_cls.convertor(self.input_args)
@@ -70,7 +73,6 @@ class Dataset:
 
         Returns:
             A string representing the type of the dataset, e.g. "hugging_face", "spark", "local", ...
-
         """
 
     @abstractmethod
@@ -81,7 +83,6 @@ class Dataset:
         Returns:
             A string digest for the dataset. We recommend a maximum digest length
             of 10 characters with an ideal length of 8 characters.
-
         """
 
     @abstractmethod
@@ -103,12 +104,10 @@ class Dataset:
 
     @abstractmethod
     def get_data(self, **kwargs) -> Generator[Data, None, None]:
-        """Eval Data Generator.
-        """
+        """Eval Data Generator."""
 
     def to_json(self) -> str:
-        """
-        Obtains a JSON string representation of the :py:class:`Dataset
+        """Obtains a JSON string representation of the :py:class:`Dataset
         <dingo.data.dataset.Dataset>`.
 
         Returns:
@@ -119,9 +118,8 @@ class Dataset:
 
     @property
     def name(self) -> str:
-        """
-        The name of the dataset, e.g. ``"iris_data"``, ``"myschema.mycatalog.mytable@v1"``, etc.
-        """
+        """The name of the dataset, e.g. ``"iris_data"``,
+        ``"myschema.mycatalog.mytable@v1"``, etc."""
         if self._name is not None:
             return self._name
         else:
@@ -129,34 +127,30 @@ class Dataset:
 
     @property
     def digest(self) -> str:
-        """
-        A unique hash or fingerprint of the dataset, e.g. ``"498c7496"``.
-        """
+        """A unique hash or fingerprint of the dataset, e.g. ``"498c7496"``."""
         return self._digest
 
     @property
     def source(self) -> DataSource:
-        """
-        Information about the dataset's source, represented as an instance of
-        :py:class:`DataSource <dingo.data.dataset_source.DataSource>`. For example, this
-        may be the S3 location or the name of the managed Delta Table from which the dataset
-        was derived.
+        """Information about the dataset's source, represented as an instance
+        of :py:class:`DataSource <dingo.data.dataset_source.DataSource>`.
+
+        For example, this may be the S3 location or the name of the managed
+        Delta Table from which the dataset was derived.
         """
         return self._source
 
     @property
     @abstractmethod
     def profile(self) -> Optional[Any]:
-        """
-        Optional summary statistics for the dataset, such as the number of rows in a table, the
-        mean / median / std of each table column, etc.
-        """
+        """Optional summary statistics for the dataset, such as the number of
+        rows in a table, the mean / median / std of each table column, etc."""
 
     @classmethod
     def register(cls):
-        """
-        Register a dataset. (register)
+        """Register a dataset.
 
+        (register)
         """
 
         def decorator(root_class):

@@ -32,40 +32,43 @@ def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_co
 
         final_input_path = uploaded_file.name
 
-    input_data = {
-        "dataset": dataset_source,
-        "input_path": final_input_path,
-        "output_path": "" if dataset_source == 'hugging_face' else os.path.dirname(final_input_path),
-        "save_data": True,
-        "save_raw": True,
-        "data_format": data_format,
-        "column_content": column_content,
-        "custom_config":{
-            "rule_list": rule_list,
-            "prompt_list": prompt_list,
-            "llm_config":
-                {
-                    "LLMTextQualityPromptBase":
-                        {
-                            "model": model,
-                            "key": key,
-                            "api_url": api_url,
-                        }
-                }
+    try:
+        input_data = {
+            "dataset": dataset_source,
+            "input_path": final_input_path,
+            "output_path": "" if dataset_source == 'hugging_face' else os.path.dirname(final_input_path),
+            "save_data": True,
+            "save_raw": True,
+            "data_format": data_format,
+            "column_content": column_content,
+            "custom_config":{
+                "rule_list": rule_list,
+                "prompt_list": prompt_list,
+                "llm_config":
+                    {
+                        "LLMTextQualityPromptBase":
+                            {
+                                "model": model,
+                                "key": key,
+                                "api_url": api_url,
+                            }
+                    }
+            }
         }
-    }
-    input_args = InputArgs(**input_data)
-    executor = Executor.exec_map["local"](input_args)
-    summary = executor.execute().to_dict()
-    detail = executor.get_bad_info_list()
-    new_detail = []
-    for item in detail:
-        new_detail.append(item)
-    if summary['output_path']:
-        shutil.rmtree(summary['output_path'])
+        input_args = InputArgs(**input_data)
+        executor = Executor.exec_map["local"](input_args)
+        summary = executor.execute().to_dict()
+        detail = executor.get_bad_info_list()
+        new_detail = []
+        for item in detail:
+            new_detail.append(item)
+        if summary['output_path']:
+            shutil.rmtree(summary['output_path'])
 
-    # 返回两个值：概要信息和详细信息
-    return json.dumps(summary, indent=4), new_detail
+        # 返回两个值：概要信息和详细信息
+        return json.dumps(summary, indent=4), new_detail
+    except Exception as e:
+        raise gr.Error(e)
 
 
 def update_input_components(dataset_source):

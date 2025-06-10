@@ -39,20 +39,19 @@ def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_co
         "save_raw": True,
         "data_format": data_format,
         "column_content": column_content,
-        "custom_config":
-            {
-                "rule_list": rule_list,
-                "prompt_list": prompt_list,
-                "llm_config":
-                    {
-                        "detect_text_quality_detail":
-                            {
-                                "model": model,
-                                "key": key,
-                                "api_url": api_url,
-                            }
-                    }
-            }
+        "custom_config":{
+            "rule_list": rule_list,
+            "prompt_list": prompt_list,
+            "llm_config":
+                {
+                    "detect_text_quality_detail":
+                        {
+                            "model": model,
+                            "key": key,
+                            "api_url": api_url,
+                        }
+                }
+        }
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

@@ -146,6 +146,16 @@ Where `output_directory` contains the evaluation results with a `summary.json` f
 ## Online Demo
 Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
+## Local Demo
+Try Dingo in local: 
+
+```shell
+python app_gradio/app.py
+```
+
+![Gradio demo](docs/assets/gradio_demo.png)
+
+
 ## Google Colab Demo
 Experience Dingo interactively with Google Colab notebook: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
 

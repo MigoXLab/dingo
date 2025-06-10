@@ -146,6 +146,15 @@ python -m dingo.run.vsl --input output_directory
 ## オンラインデモ
 オンラインデモでDingoをお試しください: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
+## ローカルデモ
+地元でDingoを試してみましょう：
+
+```shell
+python app_gradio/app.py
+```
+
+![Gradio demo](docs/assets/gradio_demo.png)
+
 ## Google Colabデモ
 Google ColabノートブックでDingoをインタラクティブに体験してください：[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
 

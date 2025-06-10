@@ -147,7 +147,7 @@ Where `output_directory` contains the evaluation results with a `summary.json` f
 Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
 
 ## Local Demo
-Try Dingo in local: 
+Try Dingo in local:
 
 ```shell
 python app_gradio/app.py

@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+from pathlib import Path
 
 import gradio as gr
 from dingo.exec import Executor
@@ -87,7 +88,8 @@ if __name__ == '__main__':
     rule_options = ['RuleAbnormalChar', 'RuleAbnormalHtml', 'RuleContentNull', 'RuleContentShort', 'RuleEnterAndSpace', 'RuleOnlyUrl']
     prompt_options = ['PromptRepeat', 'PromptContentChaos']
 
-    with open("header.html", "r") as file:
+    current_dir = Path(__file__).parent
+    with open(os.path.join(current_dir, 'header.html'), "r") as file:
         header = file.read()
     with gr.Blocks() as demo:
         gr.HTML(header)

@@ -315,10 +315,39 @@ class LocalExecutor(ExecProto):
             json.dump(summary.to_dict(), f, indent=4, ensure_ascii=False)
 
     def get_summary(self):
-        pass
+        return self.summary
+
+    def get_info_list(self, high_quality: bool) -> list:
+        info_list = []
+
+        save_raw = self.input_args.save_raw
+        output_path = self.summary.output_path
+        if not os.path.isdir(output_path):
+            raise ValueError(f"output_path not exists: {output_path}")
+
+        for root, dirs, files in os.walk(output_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                file_name = file
+                if file_name == "summary.json":
+                    continue
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        data = json.loads(line.strip())
+
+                        if save_raw:
+                            error_status = data['dingo_result']['error_status']
+                        else:
+                            error_status = data['error_status']
+                        if high_quality and not error_status:
+                            info_list.append(data)
+                        if not high_quality and error_status:
+                            info_list.append(data)
+
+        return info_list
 
     def get_bad_info_list(self):
-        pass
+        return self.get_info_list(high_quality=False)
 
     def get_good_info_list(self):
-        pass
+        return self.get_info_list(high_quality=True)

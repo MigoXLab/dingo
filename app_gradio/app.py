@@ -44,7 +44,7 @@ def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_co
             "prompt_list": prompt_list,
             "llm_config":
                 {
-                    "detect_text_quality_detail":
+                    "LLMTextQualityPromptBase":
                         {
                             "model": model,
                             "key": key,
@@ -55,12 +55,11 @@ def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_co
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)
-    executor.execute()
-    summary = executor.get_summary().to_dict()
+    summary = executor.execute().to_dict()
     detail = executor.get_bad_info_list()
     new_detail = []
     for item in detail:
-        new_detail.append(item.to_raw_dict())
+        new_detail.append(item)
     if summary['output_path']:
         shutil.rmtree(summary['output_path'])
 

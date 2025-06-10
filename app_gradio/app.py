@@ -10,20 +10,25 @@ from dingo.io import InputArgs
 def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_content, rule_list, prompt_list, model,
                key, api_url):
     if not data_format:
-        return 'ValueError: data_format can not be empty, please input.', None
+        raise gr.Error('ValueError: data_format can not be empty, please input.')
     if not column_content:
-        return 'ValueError: column_content can not be empty, please input.', None
+        raise gr.Error('ValueError: column_content can not be empty, please input.')
     if not rule_list and not prompt_list:
-        return 'ValueError: rule_list and prompt_list can not be empty at the same time.', None
+        raise gr.Error('ValueError: rule_list and prompt_list can not be empty at the same time.')
 
     # Handle input path based on dataset source
     if dataset_source == "hugging_face":
         if not input_path:
-            return 'ValueError: input_path can not be empty for hugging_face dataset, please input.', None
+            raise gr.Error('ValueError: input_path can not be empty for hugging_face dataset, please input.')
         final_input_path = input_path
     else:  # local
         if not uploaded_file:
-            return 'ValueError: Please upload a file for local dataset.', None
+            raise gr.Error('Please upload a file for local dataset.')
+
+        file_base_name = os.path.basename(uploaded_file.name)
+        if not str(file_base_name).endswith(('.jsonl', '.json', '.txt')):
+            raise gr.Error('File format must be \'.jsonl\', \'.json\' or \'.txt\'')
+
         final_input_path = uploaded_file.name
 
     input_data = {

@@ -68,7 +68,7 @@ def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_co
         # 返回两个值：概要信息和详细信息
         return json.dumps(summary, indent=4), new_detail
     except Exception as e:
-        raise gr.Error(e)
+        raise gr.Error(str(e))
 
 
 def update_input_components(dataset_source):

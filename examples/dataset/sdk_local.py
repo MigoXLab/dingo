@@ -5,7 +5,7 @@ from dingo.io import InputArgs
 def local_plaintext():
     input_data = {
         "eval_group": "sft",
-        "input_path": "../../test/data/test_local_plaintext.txt", # local filesystem dataset
+        "input_path": "../../test/data/test_local_plaintext.txt",  # local filesystem dataset
         "dataset": "local",
         "data_format": "plaintext",
     }
@@ -14,6 +14,7 @@ def local_plaintext():
     executor = Executor.exec_map["local"](input_args)
     result = executor.execute()
     print(result)
+
 
 def local_json():
     input_data = {
@@ -29,6 +30,7 @@ def local_json():
     result = executor.execute()
     print(result)
 
+
 def local_jsonl():
     input_data = {
         "eval_group": "sft",
@@ -43,6 +45,7 @@ def local_jsonl():
     result = executor.execute()
     print(result)
 
+
 def local_listjson():
     input_data = {
         "eval_group": "sft",
@@ -56,6 +59,7 @@ def local_listjson():
     executor = Executor.exec_map["local"](input_args)
     result = executor.execute()
     print(result)
+
 
 if __name__ == '__main__':
     local_plaintext()

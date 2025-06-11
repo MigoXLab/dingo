@@ -8,18 +8,15 @@ input_data = {
     "dataset": "local",
     "data_format": "jsonl",
     "column_content": "content",
-    "custom_config":
-        {
-            "prompt_list": ["PromptRepeat"],
-            "llm_config":
-                {
-                    "LLMTextQualityPromptBase":
-                        {
-                            "key": "",
-                            "api_url": "",
-                        }
-                }
+    "custom_config": {
+        "prompt_list": ["PromptRepeat"],
+        "llm_config": {
+            "LLMTextQualityPromptBase": {
+                "key": "",
+                "api_url": "",
+            }
         }
+    }
 }
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["local"](input_args)

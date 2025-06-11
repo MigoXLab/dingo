@@ -15,6 +15,7 @@ def huggingface_plaintext():
     result = executor.execute()
     print(result)
 
+
 def huggingface_json():
     input_data = {
         "eval_group": "sft",
@@ -29,6 +30,7 @@ def huggingface_json():
     result = executor.execute()
     print(result)
 
+
 def huggingface_jsonl():
     input_data = {
         "eval_group": "sft",
@@ -41,6 +43,7 @@ def huggingface_jsonl():
     executor = Executor.exec_map["local"](input_args)
     result = executor.execute()
     print(result)
+
 
 def huggingface_listjson():
     input_data = {
@@ -55,6 +58,7 @@ def huggingface_listjson():
     executor = Executor.exec_map["local"](input_args)
     result = executor.execute()
     print(result)
+
 
 if __name__ == '__main__':
     huggingface_plaintext()

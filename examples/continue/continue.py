@@ -20,6 +20,7 @@ def exec_first():
     result = executor.execute()
     print(result)
 
+
 def exec_second():
     input_data = {
         "eval_group": "sft",
@@ -37,6 +38,7 @@ def exec_second():
     executor = Executor.exec_map["local"](input_args)
     result = executor.execute()
     print(result)
+
 
 if __name__ == '__main__':
     exec_first()

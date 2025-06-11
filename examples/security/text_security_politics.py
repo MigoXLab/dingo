@@ -8,18 +8,15 @@ input_data = {
     "dataset": "local",
     "data_format": "jsonl",
     "column_content": "content",
-    "custom_config":
-        {
-            "prompt_list": ["PromptPolitics"],
-            "llm_config":
-                {
-                    "LLMSecurityPolitics":
-                        {
-                            "key": "",
-                            "api_url": "",
-                        }
-                }
-        },
+    "custom_config": {
+        "prompt_list": ["PromptPolitics"],
+        "llm_config": {
+            "LLMSecurityPolitics": {
+                "key": "",
+                "api_url": "",
+            }
+        }
+    },
     "log_level": "INFO"
 }
 input_args = InputArgs(**input_data)

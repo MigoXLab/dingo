@@ -1,5 +1,4 @@
 import re
-from typing import List
 
 from dingo.config.config import DynamicRuleConfig
 from dingo.io import Data
@@ -23,6 +22,7 @@ class CommonPatternDemo(BaseRule):
             res.name = cls.__name__
             res.reason = matches
         return res
+
 
 if __name__ == '__main__':
     from dingo.exec import Executor

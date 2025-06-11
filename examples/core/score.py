@@ -19,6 +19,7 @@ def llm():
     res = LLMTextQualityModelBase.eval(data)
     print(res)
 
+
 def rule():
     data = Data(
         data_id='123',
@@ -28,6 +29,7 @@ def rule():
 
     res = RuleEnterAndSpace().eval(data)
     print(res)
+
 
 if __name__ == "__main__":
     llm()

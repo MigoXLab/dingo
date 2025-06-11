@@ -22,5 +22,6 @@ def image_text_similar():
     result = executor.execute()
     print(result)
 
+
 if __name__ == '__main__':
     image_text_similar()

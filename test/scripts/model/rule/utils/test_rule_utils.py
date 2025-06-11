@@ -1,7 +1,7 @@
 import time
 
 import pytest
-from dingo.model.rule.utils.detect_lang import *
+from dingo.model.rule.utils.detect_lang import download_fasttext
 
 
 class TestDownloadFasttext:

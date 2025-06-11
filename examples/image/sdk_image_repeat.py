@@ -20,5 +20,6 @@ def image_repeat():
     result = executor.execute()
     print(result)
 
+
 if __name__ == '__main__':
     image_repeat()

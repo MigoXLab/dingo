@@ -6,8 +6,8 @@ from pyspark.sql import DataFrame, SparkSession
 
 ##################
 # please prepare #
-spark: SparkSession = None # please input
-input_df: DataFrame = None # please input
+spark: SparkSession = None  # please input
+input_df: DataFrame = None  # please input
 input_rdd = input_df.rdd.map(lambda x: Data(
     data_id= str(json.loads(x)['id']),
     prompt=str(json.loads(x)['prompt']),

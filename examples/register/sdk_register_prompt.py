@@ -12,6 +12,7 @@ class PromptRepeatDemo(BasePrompt):
     以下是需要判断的文本：
     """
 
+
 if __name__ == '__main__':
     from dingo.exec import Executor
     from dingo.io import InputArgs
@@ -24,18 +25,15 @@ if __name__ == '__main__':
         "dataset": "local",
         "data_format": "jsonl",
         "column_content": "content",
-        "custom_config":
-            {
-                "prompt_list": ["PromptRepeatDemo"],
-                "llm_config":
-                    {
-                        "LLMTextQualityPromptBase":
-                            {
-                                "key": "",
-                                "api_url": ""
-                            }
-                    }
+        "custom_config": {
+            "prompt_list": ["PromptRepeatDemo"],
+            "llm_config": {
+                "LLMTextQualityPromptBase": {
+                    "key": "",
+                    "api_url": ""
+                }
             }
+        }
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

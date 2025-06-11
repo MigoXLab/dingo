@@ -43,6 +43,7 @@ class LlmTextQualityRegister(BaseOpenAI):
 
         return result
 
+
 if __name__ == '__main__':
     from dingo.exec import Executor
     from dingo.io import InputArgs
@@ -55,18 +56,15 @@ if __name__ == '__main__':
         "dataset": "local",
         "data_format": "jsonl",
         "column_content": "content",
-        "custom_config":
-            {
-                "prompt_list": ["PromptTextQualityV2"],
-                "llm_config":
-                    {
-                        "LlmTextQualityRegister":
-                            {
-                                "key": "",
-                                "api_url": "",
-                            }
-                    }
+        "custom_config": {
+            "prompt_list": ["PromptTextQualityV2"],
+            "llm_config": {
+                "LlmTextQualityRegister": {
+                    "key": "",
+                    "api_url": "",
+                }
             }
+        }
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

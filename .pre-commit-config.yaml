@@ -17,4 +17,4 @@ repos:
     hooks:
     -   id: flake8
         args: [ "--max-line-length=2200", "--ignore=E121,E131,E125,W503,W504,W604,E203,E231,E702,E128,F541" ]
-        exclude: 'app/|examples/|test/|dingo/run/vsl.py'
+        exclude: 'app/'

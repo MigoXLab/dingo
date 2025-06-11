@@ -13,20 +13,19 @@ def classify_topic():
         "column_content": "question",
         "custom_config": {
             "prompt_list": ["PromptClassifyTopic"],
-            "llm_config":
-                {
-                    "LLMClassifyTopic":
-                        {
-                            "key": "",
-                            "api_url": "",
-                        }
+            "llm_config": {
+                "LLMClassifyTopic": {
+                    "key": "",
+                    "api_url": "",
                 }
+            }
         }
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)
     result = executor.execute()
     print(result)
+
 
 if __name__ == '__main__':
     classify_topic()

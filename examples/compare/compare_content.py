@@ -15,14 +15,12 @@ input_data = {
     "custom_config":
         {
             "prompt_list": ["PromptHtmlAbstract"],
-            "llm_config":
-                {
-                    "LLMHtmlAbstract":
-                        {
-                            "key": "",
-                            "api_url": ""
-                        }
+            "llm_config": {
+                "LLMHtmlAbstract": {
+                    "key": "",
+                    "api_url": ""
                 }
+            }
         },
     "log_level": "INFO"
 }

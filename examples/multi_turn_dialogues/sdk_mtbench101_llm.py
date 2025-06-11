@@ -12,14 +12,12 @@ input_data = {
     "custom_config":
         {
             "prompt_list": ["PromptTextQualityV3"],
-            "llm_config":
-                {
-                    "detect_text_quality_detail":
-                        {
-                            "key": "",
-                            "api_url": "",
-                        }
-                },
+            "llm_config": {
+                "detect_text_quality_detail": {
+                    "key": "",
+                    "api_url": "",
+                }
+            },
             "multi_turn_mode": "all"
         }
 }

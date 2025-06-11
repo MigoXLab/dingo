@@ -11,15 +11,13 @@ input_data = {
     "custom_config":
         {
             "prompt_list": ["PromptRepeat"],
-            "llm_config":
-                {
-                    "LLMTextQualityPromptBase":
-                        {
-                            "model": "enter your llm, such as:deepseek-chat",
-                            "key": "enter your key, such as:sk-123456789012345678901234567890xx",
-                            "api_url": "enter remote llm api url, such as:https://api.deepseek.com/v1",
-                        }
+            "llm_config": {
+                "LLMTextQualityPromptBase": {
+                    "model": "enter your llm, such as:deepseek-chat",
+                    "key": "enter your key, such as:sk-123456789012345678901234567890xx",
+                    "api_url": "enter remote llm api url, such as:https://api.deepseek.com/v1",
                 }
+            }
         },
     "log_level": "INFO"
 }

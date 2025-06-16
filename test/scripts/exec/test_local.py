@@ -1,7 +1,7 @@
 import pytest
-
 from dingo.exec import LocalExecutor
 from dingo.io import ResultInfo
+
 
 class TestLocal:
     def test_merge_result_info(self):

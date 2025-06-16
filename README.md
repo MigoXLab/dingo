@@ -388,7 +388,7 @@ After evaluation, Dingo generates:
 1. **Summary Report** (`summary.json`): Overall metrics and scores
 2. **Detailed Reports**: Specific issues for each rule violation
 
-Warning:
+Report Description:
 1. **score**: `num_good` / `total`
 2. **type_ratio**: The count of type / total, such as: `QUALITY_BAD_COMPLETENESS` / `total`
 3. **name_ratio**: The count of name / total, such as: `QUALITY_BAD_COMPLETENESS-RuleColonEnd` / `total`

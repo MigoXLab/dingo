@@ -82,6 +82,59 @@ class LocalExecutor(ExecProto):
             group (Any): _description_
             group_type (str): _description_
         """
+
+        def process_batch(batch: List):
+            futures = []
+            for group_type, group in Model.get_group(
+                    self.input_args.eval_group
+            ).items():
+                if group_type == "rule":
+                    if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
+                        futures += [
+                            thread_executor.submit(
+                                self.evaluate_single_data, group_type, group, data
+                            )
+                            for data in batch
+                        ]
+                    else:
+                        futures += [
+                            process_executor.submit(
+                                self.evaluate_single_data, group_type, group, data
+                            )
+                            for data in batch
+                        ]
+                elif group_type == "prompt":
+                    futures += [
+                        thread_executor.submit(
+                            self.evaluate_single_data, group_type, group, data
+                        )
+                        for data in batch
+                    ]
+                else:
+                    raise RuntimeError(f"Unsupported group type: {group_type}")
+
+            for future in concurrent.futures.as_completed(futures):
+                result_info = future.result()
+                for t in result_info.type_list:
+                    self.summary.type_ratio[t] += 1
+                for n in result_info.name_list:
+                    self.summary.name_ratio[n] += 1
+                if result_info.error_status:
+                    self.summary.num_bad += 1
+                else:
+                    self.summary.num_good += 1
+                self.summary.total += 1
+
+                self.write_single_data(
+                    self.summary.output_path, self.input_args, result_info
+                )
+                pbar.update()
+            self.write_summary(
+                self.summary.output_path,
+                self.input_args,
+                self.summarize(self.summary),
+            )
+
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self.input_args.max_workers
         ) as thread_executor, concurrent.futures.ProcessPoolExecutor(
@@ -94,58 +147,6 @@ class LocalExecutor(ExecProto):
                 self.input_args.end_index if self.input_args.end_index >= 0 else None,
             )
             pbar = tqdm(total=None, unit="items")
-
-            def process_batch(batch: List):
-                futures = []
-                for group_type, group in Model.get_group(
-                    self.input_args.eval_group
-                ).items():
-                    if group_type == "rule":
-                        if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
-                            futures += [
-                                thread_executor.submit(
-                                    self.evaluate_single_data, group_type, group, data
-                                )
-                                for data in batch
-                            ]
-                        else:
-                            futures += [
-                                process_executor.submit(
-                                    self.evaluate_single_data, group_type, group, data
-                                )
-                                for data in batch
-                            ]
-                    elif group_type == "prompt":
-                        futures += [
-                            thread_executor.submit(
-                                self.evaluate_single_data, group_type, group, data
-                            )
-                            for data in batch
-                        ]
-                    else:
-                        raise RuntimeError(f"Unsupported group type: {group_type}")
-
-                for future in concurrent.futures.as_completed(futures):
-                    result_info = future.result()
-                    for t in result_info.type_list:
-                        self.summary.type_ratio[t] += 1
-                    for n in result_info.name_list:
-                        self.summary.name_ratio[n] += 1
-                    if result_info.error_status:
-                        self.summary.num_bad += 1
-                    else:
-                        self.summary.num_good += 1
-                    self.summary.total += 1
-
-                    self.write_single_data(
-                        self.summary.output_path, self.input_args, result_info
-                    )
-                    pbar.update()
-                self.write_summary(
-                    self.summary.output_path,
-                    self.input_args,
-                    self.summarize(self.summary),
-                )
 
             while True:
                 batch = list(itertools.islice(data_iter, self.input_args.batch_size))

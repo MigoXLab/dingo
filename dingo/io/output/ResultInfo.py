@@ -13,12 +13,6 @@ class ResultInfo(BaseModel):
     reason_list: List[str] = []
     raw_data: Dict = {}
 
-    def __init__(self, data: Dict):
-        super().__init__(**{
-            **self.__class__.model_fields,
-            **data
-        })
-
     def to_dict(self):
         return {
             'data_id': self.data_id,

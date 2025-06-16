@@ -6,26 +6,26 @@ from dingo.io import ResultInfo
 class TestLocal:
     def test_merge_result_info(self):
         existing_list = []
-        new_item1 = ResultInfo({
-            "data_id": "1",
-            "prompt": "",
-            "content": "�I am 8 years old. ^I love apple because:",
-            "error_status": True,
-            "type_list": ["QUALITY_BAD_EFFECTIVENESS"],
-            "name_list": ["QUALITY_BAD_EFFECTIVENESS-RuleColonEnd"],
-            "reason_list": ["�I am 8 years old. ^I love apple because:"],
-            "raw_data": {}
-        })
-        new_item2 = ResultInfo({
-            "data_id": "1",
-            "prompt": "",
-            "content": "�I am 8 years old. ^I love apple because:",
-            "error_status": True,
-            "type_list": ["QUALITY_BAD_EFFECTIVENESS"],
-            "name_list": ["QUALITY_BAD_EFFECTIVENESS-PromptContentChaos"],
-            "reason_list": ["文本中包含不可见字符或乱码（如�和^），可能影响阅读理解。"],
-            "raw_data": {}
-        })
+        new_item1 = ResultInfo(
+            data_id = "1",
+            prompt = "",
+            content = "�I am 8 years old. ^I love apple because:",
+            error_status = True,
+            type_list = ["QUALITY_BAD_EFFECTIVENESS"],
+            name_list = ["QUALITY_BAD_EFFECTIVENESS-RuleColonEnd"],
+            reason_list = ["�I am 8 years old. ^I love apple because:"],
+            raw_data = {}
+        )
+        new_item2 = ResultInfo(
+            data_id = "1",
+            prompt = "",
+            content = "�I am 8 years old. ^I love apple because:",
+            error_status = True,
+            type_list = ["QUALITY_BAD_EFFECTIVENESS"],
+            name_list = ["QUALITY_BAD_EFFECTIVENESS-PromptContentChaos"],
+            reason_list = ["文本中包含不可见字符或乱码（如�和^），可能影响阅读理解。"],
+            raw_data = {}
+        )
 
         localexecutor = LocalExecutor({})
 

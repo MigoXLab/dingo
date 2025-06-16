@@ -386,6 +386,11 @@ result = executor.execute()
 1. **サマリーレポート** (`summary.json`): 全体的なメトリクスとスコア
 2. **詳細レポート**: 各ルール違反の具体的な問題
 
+に注意：
+1. **score**: `num_good` / `total`
+2. **type_ratio**: タイプの数 / 総数, 例: `QUALITY_BAD_COMPLETENESS` / `total`
+3. **name_ratio**: 名前の数 / 総数, 例: `QUALITY_BAD_COMPLETENESS-RuleColonEnd` / `total`
+
 サマリー例：
 ```json
 {

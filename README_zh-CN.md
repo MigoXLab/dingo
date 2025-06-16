@@ -387,6 +387,11 @@ result = executor.execute()
 1. **概要报告**（`summary.json`）：总体指标和分数
 2. **详细报告**：每个规则违反的具体问题
 
+注意：
+1. **score**: `num_good` / `total`
+2. **type_ratio**: 类型的数量 / 总数, 例如: `QUALITY_BAD_COMPLETENESS` / `total`
+3. **name_ratio**: 名称的数量 / 总数, 例如: `QUALITY_BAD_COMPLETENESS-RuleColonEnd` / `total`
+
 概要示例：
 ```json
 {

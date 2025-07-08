@@ -26,3 +26,6 @@ transformers
 wordninja==2.0.0
 zhon
 fastmcp>=2.0.0
+twine==6.0.1
+packaging==24.1
+pkginfo==1.12.0

@@ -4,19 +4,15 @@
 按照 3H Assessment Prompts 表格的格式生成文档
 """
 
-import importlib
-import inspect
-import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
-from dingo.model.model import Model
-from dingo.model.prompt.base import BasePrompt
-
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+from dingo.model.model import Model  # noqa: E402
 
 
 def scan_prompt_classes() -> List[Dict[str, Any]]:
@@ -108,7 +104,8 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
                         links.append(f"[{title}]({url})")
                     paper_source = " & ".join(links)
                 else:
-                    paper_source = f"[{first_metric['paper_title']}]({first_metric['paper_url']})"
+                    paper_source = f"[{first_metric['paper_title']}](" \
+                        f"{first_metric['paper_url']})"
 
                 if first_metric.get('paper_authors'):
                     paper_source += f" ({first_metric['paper_authors']})"
@@ -121,10 +118,12 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
             else:
                 eval_results = "N/A"
 
-            table += f"| {type_name} | {combined_metrics} | {combined_description} | {paper_source} | {eval_results} |\n"
+            table += f"| {type_name} | {combined_metrics} | " \
+                f"{combined_description} | {paper_source} | {eval_results} |\n"
     else:
         # 对于prompt类，保持原有逻辑
-        for metric in sorted(metrics, key=lambda x: x.get('prompt_type', x.get('rule_type', ''))):
+        sort_key = lambda x: x.get('prompt_type', x.get('rule_type', ''))  # noqa: E731
+        for metric in sorted(metrics, key=sort_key):
             # 处理type列
             if metric.get('type') == 'prompt':
                 type_name = f"`{metric['prompt_type']}`"
@@ -152,7 +151,8 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
                         links.append(f"[{title}]({url})")
                     paper_source = " & ".join(links)
                 else:
-                    paper_source = f"[{metric['paper_title']}]({metric['paper_url']})"
+                    paper_source = f"[{metric['paper_title']}](" \
+                        f"{metric['paper_url']})"
 
                 if metric.get('paper_authors'):
                     paper_source += f" ({metric['paper_authors']})"
@@ -165,7 +165,8 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
             else:
                 eval_results = "N/A"
 
-            table += f"| {type_name} | {metric_name} | {description} | {paper_source} | {eval_results} |\n"
+            table += f"| {type_name} | {metric_name} | {description} | " \
+                f"{paper_source} | {eval_results} |\n"
 
     table += "\n"
     return table
@@ -190,8 +191,10 @@ def generate_metrics_documentation() -> str:
 
     # 生成文档
     doc = "# Data Quality Metrics\n\n"
-    doc += "This document provides comprehensive information about all quality metrics used in Dingo.\n\n"
-    doc += "**Note**: All metrics are backed by academic sources to ensure objectivity and scientific rigor.\n\n"
+    doc += "This document provides comprehensive information about " \
+           "all quality metrics used in Dingo.\n\n"
+    doc += "**Note**: All metrics are backed by academic sources to " \
+           "ensure objectivity and scientific rigor.\n\n"
 
     # 定义类别标题映射
     category_titles = {
@@ -205,7 +208,9 @@ def generate_metrics_documentation() -> str:
     }
 
     # 按预定义顺序生成各个类别
-    for category in ["3h_assessment", "text_quality", "domain_specific", "classification", "image_assessment", "rule_based", "other"]:
+    category_order = ["3h_assessment", "text_quality", "domain_specific",
+                      "classification", "image_assessment", "rule_based", "other"]
+    for category in category_order:
         if category in categories:
             title = category_titles.get(category, category.title())
             doc += generate_table_section(title, categories[category])

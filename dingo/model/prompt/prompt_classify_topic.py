@@ -4,6 +4,19 @@ from dingo.model.prompt.base import BasePrompt
 
 @Model.prompt_register("CLASSIFY_TOPIC", [])
 class PromptClassifyTopic(BasePrompt):
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "classification",
+        "metric_name": "Topic Categorization",
+        "description": "Classifies text into categories like language processing, writing, code, mathematics, role-play, or knowledge Q&A. Based on BERTopic and INSTAG methodologies",
+        "paper_title": "BERTopic & INSTAG",
+        "paper_url": "https://maartengr.github.io/BERTopic/index.html#quick-start, https://arxiv.org/pdf/2308.07074",
+        "paper_authors": "Grootendorst, 2022; Wei et al., 2023",
+        "evaluation_results": "docs/eval/prompt/text_data_classified_by_topic.md",
+        "validation_dataset": "AlignBench (https://github.com/THUDM/AlignBench)"
+    }
+
     content = """
       Assume you are a topic classifier, and your task is to categorize user-provided instructions.
     There are six options in the list provided. You are required to select one category from the following list: ["Language Understanding and Processing", "Writing Ability", "Code", "Mathematics & Reasoning", "Task-oriented Role Play", "Knowledge-based Question and Answering"].

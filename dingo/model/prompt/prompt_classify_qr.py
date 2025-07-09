@@ -4,6 +4,15 @@ from dingo.model.prompt.base import BasePrompt
 
 @Model.prompt_register("CLASSIFY_QR", [])
 class PromptClassifyQR(BasePrompt):
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "classification",
+        "metric_name": "Image Classification",
+        "description": "Identifies images as CAPTCHA, QR code, or normal images",
+        "evaluation_results": ""
+    }
+
     content = """
     'Classify the image into one of the following categories: "CAPTCHA", "QR code", or "Normal image". '
     'Return the type as the image category (CAPTCHA or QR code or Normal image) and the reason as the specific type of CAPTCHA or QR code. '

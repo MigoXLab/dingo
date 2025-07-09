@@ -179,61 +179,18 @@ This video demonstrates step-by-step how to use Dingo MCP server with Cursor.
 
 # Data Quality Metrics
 
-Dingo classifies data quality issues into 7 dimensions of Quality Metrics. Each dimension can be evaluated using both rule-based methods and LLM-based prompts:
+Dingo provides comprehensive data quality assessment through both rule-based and prompt-based evaluation metrics. These metrics cover multiple quality dimensions including effectiveness, completeness, similarity, security, and more.
 
-| Quality Metric    | Description | Rule Examples | LLM Prompt Examples |
-|-------------------|-------------|---------------|---------------------|
-| **COMPLETENESS** | Checks if data is incomplete or missing | `RuleColonEnd`, `RuleContentNull` | Evaluates if text abruptly ends with a colon or ellipsis, has mismatched parentheses, or missing critical components |
-| **EFFECTIVENESS** | Checks if data is meaningful and properly formatted | `RuleAbnormalChar`, `RuleHtmlEntity`, `RuleSpecialCharacter` | Detects garbled text, words stuck together without spaces, and text lacking proper punctuation |
-| **FLUENCY** | Checks if text is grammatically correct and reads naturally | `RuleAbnormalNumber`, `RuleNoPunc`, `RuleWordStuck` | Identifies excessively long words, text fragments without punctuation, or content with chaotic reading order |
-| **RELEVANCE** | Detects irrelevant content within the data | `RuleHeadWord` variants for different languages | Examines for irrelevant information like citation details, headers/footers, entity markers, HTML tags |
-| **SECURITY** | Identifies sensitive information or value conflicts | `RuleIDCard`, `RuleUnsafeWords` | Checks for personal information, and content related to gambling, pornography, political issues |
-| **SIMILARITY** | Detects repetitive or highly similar content | `RuleDocRepeat` | Evaluates text for consecutive repeated content or multiple occurrences of special characters |
-| **UNDERSTANDABILITY** | Assesses how easily data can be interpreted | `RuleCapitalWords` | Ensures LaTeX formulas and Markdown are correctly formatted, with proper segmentation and line breaks |
+📊 **[View Complete Metrics Documentation →](docs/metrics.md)**
 
-## LLM Quality Assessment
+Our evaluation system includes:
+- **3H Assessment Prompts**: Honest, Helpful, Harmless evaluation
+- **Text Quality Assessment**: Multi-dimensional quality evaluation
+- **Classification Prompts**: Topic categorization and content classification
+- **Rule-Based Metrics**: 20+ heuristic rules for automated quality checks
+- etc
 
-Dingo provides several LLM-based assessment methods defined by prompts in the `dingo/model/prompt` directory. These prompts are registered using the `prompt_register` decorator and can be combined with LLM models for quality evaluation:
-
-### Text Quality Assessment Prompts
-
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
-| `TEXT_QUALITY_V2`, `TEXT_QUALITY_V3` | Various quality dimensions | Comprehensive text quality evaluation covering effectiveness, relevance, completeness, understandability, similarity, fluency, and security |
-| `QUALITY_BAD_EFFECTIVENESS` | Effectiveness | Detects garbled text and anti-crawling content |
-| `QUALITY_BAD_SIMILARITY` | Similarity | Identifies text repetition issues |
-| `WORD_STICK` | Fluency | Checks for words stuck together without proper spacing |
-| `CODE_LIST_ISSUE` | Completeness | Evaluates code blocks and list formatting issues |
-| `UNREAD_ISSUE` | Effectiveness | Detects unreadable characters due to encoding issues |
-
-### 3H Assessment Prompts (Honest, Helpful, Harmless)
-
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
-| `QUALITY_HONEST` | Honesty | Evaluates if responses provide accurate information without fabrication or deception |
-| `QUALITY_HELPFUL` | Helpfulness | Assesses if responses address questions directly and follow instructions appropriately |
-| `QUALITY_HARMLESS` | Harmlessness | Checks if responses avoid harmful content, discriminatory language, and dangerous assistance |
-
-### Domain-Specific Assessment Prompts
-
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
-| `TEXT_QUALITY_KAOTI` | Exam question quality | Specialized assessment for evaluating the quality of exam questions, focusing on formula rendering, table formatting, paragraph structure, and answer formatting |
-| `Html_Abstract` | HTML extraction quality | Compares different methods of extracting Markdown from HTML, evaluating completeness, formatting accuracy, and semantic coherence |
-| `DATAMAN_ASSESSMENT` | Data Quality & Domain | Evaluates pre-training data quality using the DataMan methodology (14 standards, 15 domains). Assigns a score (0/1), domain type, quality status, and reason. |
-
-### Classification Prompts
-
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
-| `CLASSIFY_TOPIC` | Topic Categorization | Classifies text into categories like language processing, writing, code, mathematics, role-play, or knowledge Q&A |
-| `CLASSIFY_QR` | Image Classification | Identifies images as CAPTCHA, QR code, or normal images |
-
-### Image Assessment Prompts
-
-| Prompt Type | Metric | Description |
-|-------------|--------|-------------|
-| `IMAGE_RELEVANCE` | Image Relevance | Evaluates if an image matches reference image in terms of face count, feature details, and visual elements |
+All metrics are backed by academic sources to ensure objectivity and scientific rigor.
 
 ### Using LLM Assessment in Evaluation
 

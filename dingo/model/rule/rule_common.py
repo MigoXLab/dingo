@@ -13,6 +13,18 @@ from dingo.model.rule.base import BaseRule
 class RuleAbnormalChar(BaseRule):
     # consist of [RuleSpecialCharacter, RuleInvisibleChar]
 
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "rule_based",
+        "quality_dimension": "EFFECTIVENESS",
+        "metric_name": "Abnormal Character Detection",
+        "description": "Detects garbled text and anti-crawling characters by combining special character and invisible character detection",
+        "paper_title": "RedPajama: an Open Dataset for Training Large Language Models",
+        "paper_url": "https://github.com/togethercomputer/RedPajama-Data",
+        "paper_authors": "Together Computer, 2023",
+        "evaluation_results": ""
+    }
+
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         res = ModelRes()
@@ -172,6 +184,18 @@ class RuleCharSplit(BaseRule):
 class RuleColonEnd(BaseRule):
     """check whether the last char is ':'"""
 
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "rule_based",
+        "quality_dimension": "EFFECTIVENESS",
+        "metric_name": "Colon End Detection",
+        "description": "Checks if text abruptly ends with a colon, indicating incomplete content",
+        "paper_title": "RedPajama: an Open Dataset for Training Large Language Models",
+        "paper_url": "https://github.com/togethercomputer/RedPajama-Data",
+        "paper_authors": "Together Computer, 2023",
+        "evaluation_results": ""
+    }
+
     dynamic_config = DynamicRuleConfig()
 
     @classmethod
@@ -326,12 +350,24 @@ class RuleCurlyBracket(BaseRule):
 class RuleDocRepeat(BaseRule):
     """check whether content repeats"""
 
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "rule_based",
+        "quality_dimension": "SIMILARITY",
+        "metric_name": "Document Repetition Detection",
+        "description": "Evaluates text for consecutive repeated content and multiple occurrences of special characters",
+        "paper_title": "RedPajama: an Open Dataset for Training Large Language Models",
+        "paper_url": "https://github.com/togethercomputer/RedPajama-Data",
+        "paper_authors": "Together Computer, 2023",
+        "evaluation_results": ""
+    }
+
     dynamic_config = DynamicRuleConfig(threshold=80)
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import \
-          base_rps_frac_chars_in_dupe_ngrams
+            base_rps_frac_chars_in_dupe_ngrams
 
         res = ModelRes()
         repeat_score = base_rps_frac_chars_in_dupe_ngrams(6, input_data.content)
@@ -1172,6 +1208,18 @@ class RuleSpaceMore(BaseRule):
 class RuleSpecialCharacter(BaseRule):
     """check whether content has special characters."""
 
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "rule_based",
+        "quality_dimension": "EFFECTIVENESS",
+        "metric_name": "Special Character Detection",
+        "description": "Checks if data is meaningful and properly formatted by detecting excessive special characters",
+        "paper_title": "RedPajama: an Open Dataset for Training Large Language Models",
+        "paper_url": "https://github.com/togethercomputer/RedPajama-Data",
+        "paper_authors": "Together Computer, 2023",
+        "evaluation_results": ""
+    }
+
     dynamic_config = DynamicRuleConfig(
         key_list=[
             r"u200e",
@@ -1212,8 +1260,9 @@ class RuleStopWord(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
-        from dingo.model.rule.utils.util import get_stop_words
         from nltk.tokenize import WordPunctTokenizer
+
+        from dingo.model.rule.utils.util import get_stop_words
 
         res = ModelRes()
         raw_content = input_data.content
@@ -1304,6 +1353,7 @@ class RuleUnsafeWords(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         import ahocorasick
+
         from dingo.model.rule.utils.util import get_unsafe_words
 
         res = ModelRes()
@@ -1462,6 +1512,7 @@ class RuleWordStuck(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         import wordninja
+
         from dingo.model.rule.utils.detect_lang import decide_language_by_str
         from dingo.model.rule.utils.util import is_sha256
 

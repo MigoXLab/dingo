@@ -80,6 +80,17 @@ Please remember to output only a JSON format data, without any additional conten
 
 @Model.prompt_register("TEXT_QUALITY_V4", [])
 class PromptTextQualityV4(BasePrompt):
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "text_quality",
+        "metric_name": "Text Quality Assessment V4",
+        "description": "Enhanced text quality evaluation covering completeness (formulas, tables, code), effectiveness (garbled text, spacing), similarity (duplicates), and security (politics, prohibited content)",
+        "paper_title": "WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages",
+        "paper_url": "https://arxiv.org/abs/2501.14506",
+        "paper_authors": "Yu et al., 2025",
+        "evaluation_results": ""
+    }
     content = """
 # Role
 You are an expert in language model evaluation.

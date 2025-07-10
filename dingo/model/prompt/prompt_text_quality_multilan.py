@@ -1,7 +1,6 @@
 from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
-from dingo.model.prompt.prompt_text_quality_v2 import \
-  TEXT_QUALITY_WITHOUT_ROLE_V2
+from dingo.model.prompt.prompt_text_quality_v2 import TEXT_QUALITY_WITHOUT_ROLE_V2
 
 AR_ROLE = """
     ### Role

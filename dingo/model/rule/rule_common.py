@@ -486,8 +486,7 @@ class RuleDocRepeat(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
-        from dingo.model.rule.utils.util import \
-            base_rps_frac_chars_in_dupe_ngrams
+        from dingo.model.rule.utils.util import base_rps_frac_chars_in_dupe_ngrams
 
         res = ModelRes()
         repeat_score = base_rps_frac_chars_in_dupe_ngrams(6, input_data.content)
@@ -1228,8 +1227,7 @@ class RuleLineJavascriptCount(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
-        from dingo.model.rule.utils.util import (TextSlice, normalize,
-                                                 split_paragraphs)
+        from dingo.model.rule.utils.util import TextSlice, normalize, split_paragraphs
 
         res = ModelRes()
         raw_content = input_data.content

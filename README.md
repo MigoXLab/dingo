@@ -375,19 +375,6 @@ Example summary:
 }
 ```
 
-
-# Research & Publications
-
-## Research Powered by Dingo
-- **WanJuanSiLu**: [A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/pdf/2501.14506)
-  *Uses Dingo for comprehensive data quality assessment of multilingual web data*
-
-## Methodologies Implemented in Dingo
-- **DataMan Methodology**: [DataMan: Data Manager for Pre-training Large Language Models](https://openreview.net/pdf?id=eNbA8Fqir4)
-  *Dingo implements the DataMan methodology for pre-training data quality assessment*
-- **RedPajama-Data-v2**: [RedPajama-Data](https://github.com/togethercomputer/RedPajama-Data)
-  *Dingo implements parts of the RedPajama-Data-v2 methodology for web text quality assessment and filtering*
-
 # Future Plans
 
 - [ ] Richer graphic and text evaluation indicators

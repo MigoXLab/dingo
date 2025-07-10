@@ -375,19 +375,6 @@ result = executor.execute()
 }
 ```
 
-
-# 研究・出版物
-
-## Dingoを活用した研究
-- **WanJuanSiLu**: [A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/pdf/2501.14506)
-  *多言語ウェブデータの包括的なデータ品質評価にDingoを使用*
-
-## Dingoに実装された手法
-- **DataMan手法**: [DataMan: Data Manager for Pre-training Large Language Models](https://openreview.net/pdf?id=eNbA8Fqir4)
-  *Dingoは事前学習データ品質評価のためのDataMan手法を実装*
-- **RedPajama-Data-v2**: [RedPajama-Data](https://github.com/togethercomputer/RedPajama-Data)
-  *Dingoはウェブテキストの品質評価とフィルタリングのためのRedPajama-Data-v2手法の一部を実装*
-
 # 今後の計画
 
 - [ ] より豊富なグラフィックとテキスト評価指標

@@ -372,18 +372,6 @@ result = executor.execute()
 }
 ```
 
-# 研究与学术成果
-
-## Dingo驱动的研究
-- **WanJuanSiLu**: [A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/pdf/2501.14506)
-  *使用Dingo对多语言网页数据进行全面的数据质量评估*
-
-## Dingo实现的方法论
-- **DataMan方法论**: [DataMan: Data Manager for Pre-training Large Language Models](https://openreview.net/pdf?id=eNbA8Fqir4)
-  *Dingo实现了DataMan方法论用于预训练数据质量评估*
-- **RedPajama-Data-v2**: [RedPajama-Data](https://github.com/togethercomputer/RedPajama-Data)
-  *Dingo实现了部分RedPajama-Data-v2方法论用于网页文本质量评估和过滤*
-
 # 未来计划
 
 - [ ] 更丰富的图文评测指标

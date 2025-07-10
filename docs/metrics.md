@@ -43,3 +43,4 @@ This document provides comprehensive information about all quality metrics used 
 |------|--------|-------------|--------------|-------------------|
 | `QUALITY_BAD_EFFECTIVENESS` | RuleAbnormalChar, RuleColonEnd, RuleSpecialCharacter | Detects garbled text and anti-crawling characters by combining special character and invisible character detection; Checks if text abruptly ends with a colon, indicating incomplete content; Checks if data is meaningful and properly formatted by detecting excessive special characters | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | N/A |
 | `QUALITY_BAD_SIMILARITY` | RuleDocRepeat | Evaluates text for consecutive repeated content and multiple occurrences of special characters | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | N/A |
+

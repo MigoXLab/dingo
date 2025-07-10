@@ -7,7 +7,7 @@ class PromptClassifyQR(BasePrompt):
 
     # Metadata for documentation generation
     _metric_info = {
-        "category": "classification",
+        "category": "Multimodality Assessment Metrics",
         "metric_name": "Image Classification",
         "description": "Identifies images as CAPTCHA, QR code, or normal images",
         "evaluation_results": ""

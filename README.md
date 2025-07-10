@@ -184,13 +184,14 @@ Dingo provides comprehensive data quality assessment through both rule-based and
 📊 **[View Complete Metrics Documentation →](docs/metrics.md)**
 
 Our evaluation system includes:
-- **3H Assessment Prompts**: Honest, Helpful, Harmless evaluation
-- **Text Quality Assessment**: Multi-dimensional quality evaluation
-- **Classification Prompts**: Topic categorization and content classification
-- **Rule-Based Metrics**: 20+ heuristic rules for automated quality checks
+- **Text Quality Assessment Metrics**: Pre-training data quality evaluation using DataMan methodology and enhanced multi-dimensional assessment
+- **SFT Data Assessment Metrics**: Honest, Helpful, Harmless evaluation for supervised fine-tuning data
+- **Classification Metrics**: Topic categorization and content classification
+- **Multimodality Assessment Metrics**: Image classification and relevance evaluation
+- **Rule-Based Quality Metrics**: Automated quality checks using heuristic rules for effectiveness and similarity detection
 - etc
 
-All metrics are backed by academic sources to ensure objectivity and scientific rigor.
+Most metrics are backed by academic sources to ensure objectivity and scientific rigor.
 
 ### Using LLM Assessment in Evaluation
 

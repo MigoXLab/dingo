@@ -50,9 +50,21 @@ def scan_rule_classes() -> List[Dict[str, Any]]:
                 info['rule_type'] = metric_type
                 info['class_name'] = rule_class.__name__
                 info['type'] = 'rule'
+
+                # 如果 _metric_info 中没有设置 category，则根据类型设置默认值
+                if 'category' not in info or not info['category']:
+                    info['category'] = 'Rule-Based Quality Metrics'
+
                 metrics_info.append(info)
 
     return metrics_info
+
+
+def truncate_description(description: str, max_length: int = 80) -> str:
+    """截断description到指定长度"""
+    if len(description) <= max_length:
+        return description
+    return description[:max_length - 3] + "..."
 
 
 def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
@@ -66,7 +78,7 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
     table += "|------|--------|-------------|--------------|-------------------|\n"
 
     # 对于rule类，按type分组合并；对于prompt类，保持原有逻辑
-    if title == "Rule-Based Quality Metrics":
+    if title.startswith("Rule-Based") and "Quality Metrics" in title:
         # 按type分组
         type_groups = {}
         for metric in metrics:
@@ -88,6 +100,7 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
             # 合并描述（取第一个作为代表，或者合并所有描述）
             descriptions = [m['description'] for m in group_metrics]
             combined_description = "; ".join(descriptions)
+            combined_description = truncate_description(combined_description)
 
             # 取第一个metric的论文信息（因为都是相同的）
             first_metric = group_metrics[0]
@@ -114,7 +127,11 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
 
             # 处理评测结果
             if first_metric.get('evaluation_results'):
-                eval_results = f"[📊 See Results]({first_metric['evaluation_results']})"
+                # 修正相对路径：从 docs/metrics.md 到 docs/eval/prompt/xxx.md
+                eval_path = first_metric['evaluation_results']
+                if eval_path.startswith('docs/'):
+                    eval_path = eval_path[5:]  # 去掉 'docs/' 前缀
+                eval_results = f"[📊 See Results]({eval_path})"
             else:
                 eval_results = "N/A"
 
@@ -137,7 +154,7 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
                 metric_name = metric['class_name']
             else:
                 metric_name = metric['metric_name']
-            description = metric['description']
+            description = truncate_description(metric['description'])
 
             # 处理论文来源
             if metric.get('paper_url') and metric.get('paper_title'):
@@ -161,7 +178,11 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
 
             # 处理评测结果
             if metric.get('evaluation_results'):
-                eval_results = f"[📊 See Results]({metric['evaluation_results']})"
+                # 修正相对路径：从 docs/metrics.md 到 docs/eval/prompt/xxx.md
+                eval_path = metric['evaluation_results']
+                if eval_path.startswith('docs/'):
+                    eval_path = eval_path[5:]  # 去掉 'docs/' 前缀
+                eval_results = f"[📊 See Results]({eval_path})"
             else:
                 eval_results = "N/A"
 
@@ -196,24 +217,14 @@ def generate_metrics_documentation() -> str:
     doc += "**Note**: All metrics are backed by academic sources to " \
            "ensure objectivity and scientific rigor.\n\n"
 
-    # 定义类别标题映射
-    category_titles = {
-        "3h_assessment": "3H Assessment Prompts (Honest, Helpful, Harmless)",
-        "text_quality": "Text Quality Assessment Prompts",
-        "domain_specific": "Domain-Specific Assessment Prompts",
-        "classification": "Classification Prompts",
-        "image_assessment": "Image Assessment Prompts",
-        "rule_based": "Rule-Based Quality Metrics",
-        "other": "Other Metrics"
-    }
-
     # 按预定义顺序生成各个类别
-    category_order = ["3h_assessment", "text_quality", "domain_specific",
-                      "classification", "image_assessment", "rule_based", "other"]
+    category_order = ["Text Quality Assessment Metrics", "SFT Data Assessment Metrics",
+                      "Classification Metrics", "Multimodality Assessment Metrics",
+                      "Rule-Based TEXT Quality Metrics", "Rule-Based IMG Quality Metrics",
+                      "other"]
     for category in category_order:
         if category in categories:
-            title = category_titles.get(category, category.title())
-            doc += generate_table_section(title, categories[category])
+            doc += generate_table_section(category, categories[category])
 
     return doc
 

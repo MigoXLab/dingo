@@ -3,11 +3,12 @@ from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import uvicorn
+from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import StreamingResponse
+
 from dingo.exec import ExecProto, Executor
 from dingo.io import InputArgs
 from dingo.model import Model
-from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import StreamingResponse
 
 app = FastAPI(title="dingo: Tool for detect language quality")
 

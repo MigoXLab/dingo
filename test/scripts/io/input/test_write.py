@@ -2,6 +2,7 @@ import os
 import shutil
 
 import pytest
+
 from dingo.exec import Executor
 from dingo.io import InputArgs
 

@@ -1,4 +1,5 @@
 import pytest
+
 from dingo.exec import LocalExecutor
 from dingo.io import ResultInfo
 

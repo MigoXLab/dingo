@@ -1,6 +1,7 @@
 import time
 
 import pytest
+
 from dingo.model.rule.utils.detect_lang import calculate_md5, download_fasttext
 
 

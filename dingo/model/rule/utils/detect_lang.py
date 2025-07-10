@@ -4,8 +4,9 @@ from typing import Any, Dict, Tuple
 
 import fasttext
 import requests
-from dingo.utils import log
 from tqdm import tqdm
+
+from dingo.utils import log
 
 _global_lang_detect = []
 _fasttext_path = ""

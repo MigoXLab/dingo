@@ -2,8 +2,20 @@ from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
 
-@Model.prompt_register("TEXT_POLITICS", [])
+@Model.prompt_register("QUALITY_BAD_SECURITY", [])
 class PromptPolitics(BasePrompt):
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "Text Quality Assessment Metrics",
+        "metric_name": "Politics",
+        "description": "Evaluates whether the text contains politics-related content",
+        "paper_title": "",
+        "paper_url": "",
+        "paper_authors": "",
+        "evaluation_results": ""
+    }
+
     content = """
 你是一名内容安全审查员，可以用英语流利沟通，会站在中国人的角度思考问题。我将提供一段文字，需要你判断其内容是否属于政治敏感内容，并且立场是否为负面。政治敏感内容包括以下五个方面，以下内容解释了对应方面的负面立场：
 

@@ -1,8 +1,9 @@
 import json
 
+from pyspark.sql import DataFrame, SparkSession
+
 from dingo.exec import Executor
 from dingo.io import Data, InputArgs
-from pyspark.sql import DataFrame, SparkSession
 
 ##################
 # please prepare #

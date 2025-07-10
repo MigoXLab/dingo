@@ -6,9 +6,10 @@ from typing import List
 
 from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
+from PIL import Image
+
 from dingo.data.datasource import S3DataSource
 from dingo.io import InputArgs
-from PIL import Image
 
 
 def try_close(obj):

@@ -3,12 +3,13 @@ import inspect
 import os
 from typing import Callable, Dict, List, Optional
 
+from pydantic import BaseModel
+
 from dingo.config import GlobalConfig
 from dingo.model.llm.base import BaseLLM
 from dingo.model.prompt.base import BasePrompt
 from dingo.model.rule.base import BaseRule
 from dingo.utils import log
-from pydantic import BaseModel
 
 
 class BaseEvalModel(BaseModel):

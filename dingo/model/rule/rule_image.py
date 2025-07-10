@@ -1,17 +1,30 @@
 import os
 
 import numpy as np
+from PIL import Image
+
 from dingo.config.config import DynamicRuleConfig
 from dingo.io import Data
 from dingo.model.model import Model
 from dingo.model.modelres import ModelRes
 from dingo.model.rule.base import BaseRule
-from PIL import Image
 
 
-@Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["img"])
+@Model.rule_register("QUALITY_BAD_IMG_EFFECTIVENESS", ["img"])
 class RuleImageValid(BaseRule):
     """check whether image is not all white or black"""
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "Rule-Based IMG Quality Metrics",
+        "quality_dimension": "IMG_EFFECTIVENESS",
+        "metric_name": "Image Valid Detection",
+        "description": "Checks whether image is not all white or black, ensuring visual content validity",
+        "paper_title": "",
+        "paper_url": "",
+        "paper_authors": "",
+        "evaluation_results": ""
+    }
 
     dynamic_config = DynamicRuleConfig()
 
@@ -32,9 +45,21 @@ class RuleImageValid(BaseRule):
         return res
 
 
-@Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["img"])
+@Model.rule_register("QUALITY_BAD_IMG_EFFECTIVENESS", ["img"])
 class RuleImageSizeValid(BaseRule):
     """check whether image ratio of width to height is valid"""
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "Rule-Based IMG Quality Metrics",
+        "quality_dimension": "IMG_EFFECTIVENESS",
+        "metric_name": "Image Size Valid Detection",
+        "description": "Checks whether image ratio of width to height is within valid range",
+        "paper_title": "",
+        "paper_url": "",
+        "paper_authors": "",
+        "evaluation_results": ""
+    }
 
     dynamic_config = DynamicRuleConfig()
 
@@ -58,9 +83,21 @@ class RuleImageSizeValid(BaseRule):
         return res
 
 
-@Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["img"])
+@Model.rule_register("QUALITY_BAD_IMG_EFFECTIVENESS", ["img"])
 class RuleImageQuality(BaseRule):
     """check whether image quality is good."""
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "Rule-Based IMG Quality Metrics",
+        "quality_dimension": "IMG_EFFECTIVENESS",
+        "metric_name": "Image Quality Assessment",
+        "description": "Evaluates image quality using NIMA (Neural Image Assessment) metrics",
+        "paper_title": "NIMA: Neural Image Assessment",
+        "paper_url": "https://arxiv.org/abs/1709.05424",
+        "paper_authors": "Talebi & Milanfar, 2018",
+        "evaluation_results": ""
+    }
 
     dynamic_config = DynamicRuleConfig(threshold=5.5)
 
@@ -88,9 +125,21 @@ class RuleImageQuality(BaseRule):
         return res
 
 
-@Model.rule_register("QUALITY_BAD_EFFECTIVENESS", [])
+@Model.rule_register("QUALITY_BAD_IMG_SIMILARITY", [])
 class RuleImageRepeat(BaseRule):
     """Check for duplicate images using PHash and CNN methods."""
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "Rule-Based IMG Quality Metrics",
+        "quality_dimension": "IMG_SIMILARITY",
+        "metric_name": "Image Duplicate Detection",
+        "description": "Detects duplicate images using PHash and CNN methods to ensure data diversity",
+        "paper_title": "ImageNet Classification with Deep Convolutional Neural Networks",
+        "paper_url": "https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf",
+        "paper_authors": "Krizhevsky et al., 2012",
+        "evaluation_results": ""
+    }
 
     dynamic_config = DynamicRuleConfig()
 
@@ -132,8 +181,22 @@ class RuleImageRepeat(BaseRule):
         return res
 
 
-@Model.rule_register("QUALITY_BAD_EFFECTIVENESS", [])
+@Model.rule_register("QUALITY_BAD_IMG_RELEVANCE", [])
 class RuleImageTextSimilarity(BaseRule):
+    """Check similarity between image and text content"""
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "Rule-Based IMG Quality Metrics",
+        "quality_dimension": "IMG_RELEVANCE",
+        "metric_name": "Image-Text Similarity",
+        "description": "Evaluates semantic similarity between image and text content using CLIP model",
+        "paper_title": "Learning Transferable Visual Representations with Natural Language Supervision",
+        "paper_url": "https://arxiv.org/abs/2103.00020",
+        "paper_authors": "Radford et al., 2021",
+        "evaluation_results": ""
+    }
+
     dynamic_config = DynamicRuleConfig(threshold=0.17)
 
     @classmethod
@@ -141,9 +204,10 @@ class RuleImageTextSimilarity(BaseRule):
         import nltk
 
         nltk.download("punkt_tab")
-        from dingo.model.rule.utils.image_util import download_similar_tool
         from nltk.tokenize import word_tokenize
         from similarities import ClipSimilarity
+
+        from dingo.model.rule.utils.image_util import download_similar_tool
 
         res = ModelRes()
         if not input_data.image or not input_data.content:

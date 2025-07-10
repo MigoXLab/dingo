@@ -2,6 +2,7 @@ import argparse
 import os
 
 import prettytable as pt
+
 from dingo.exec import Executor
 from dingo.io import InputArgs
 from dingo.model import Model

@@ -18,8 +18,9 @@
 import logging
 from typing import Any, List
 
-from dingo.data.utils import insecure_hash
 from packaging.version import Version
+
+from dingo.data.utils import insecure_hash
 
 logger = logging.getLogger(__name__)
 logger.setLevel("ERROR")

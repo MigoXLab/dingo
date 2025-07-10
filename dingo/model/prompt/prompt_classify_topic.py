@@ -7,7 +7,7 @@ class PromptClassifyTopic(BasePrompt):
 
     # Metadata for documentation generation
     _metric_info = {
-        "category": "classification",
+        "category": "Classification Metrics",
         "metric_name": "Topic Categorization",
         "description": "Classifies text into categories like language processing, writing, code, mathematics, role-play, or knowledge Q&A. Based on BERTopic and INSTAG methodologies",
         "paper_title": "BERTopic & INSTAG",

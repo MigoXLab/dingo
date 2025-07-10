@@ -7,7 +7,7 @@ class PromptImageRelevant(BasePrompt):
 
     # Metadata for documentation generation
     _metric_info = {
-        "category": "image_assessment",
+        "category": "Multimodality Assessment Metrics",
         "metric_name": "Image Relevance",
         "description": "Evaluates if an image matches reference image in terms of face count, feature details, and visual elements",
         "evaluation_results": ""

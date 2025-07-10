@@ -3,11 +3,12 @@ import os
 import uuid
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
+from fastmcp import FastMCP
+
 from dingo.exec import Executor
 from dingo.io import InputArgs
 from dingo.model import Model
 from dingo.utils import log
-from fastmcp import FastMCP
 
 # Configure logging based on environment variable
 log_level = os.environ.get("LOG_LEVEL", "info").upper()

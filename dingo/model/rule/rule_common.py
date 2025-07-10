@@ -367,7 +367,7 @@ class RuleDocRepeat(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import \
-            base_rps_frac_chars_in_dupe_ngrams
+          base_rps_frac_chars_in_dupe_ngrams
 
         res = ModelRes()
         repeat_score = base_rps_frac_chars_in_dupe_ngrams(6, input_data.content)
@@ -1260,9 +1260,8 @@ class RuleStopWord(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
-        from nltk.tokenize import WordPunctTokenizer
-
         from dingo.model.rule.utils.util import get_stop_words
+        from nltk.tokenize import WordPunctTokenizer
 
         res = ModelRes()
         raw_content = input_data.content
@@ -1353,7 +1352,6 @@ class RuleUnsafeWords(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         import ahocorasick
-
         from dingo.model.rule.utils.util import get_unsafe_words
 
         res = ModelRes()
@@ -1512,7 +1510,6 @@ class RuleWordStuck(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         import wordninja
-
         from dingo.model.rule.utils.detect_lang import decide_language_by_str
         from dingo.model.rule.utils.util import is_sha256
 

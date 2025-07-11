@@ -1,4 +1,4 @@
-# dingo.exec.local 技术报告
+# Dingo: Executor的Local模式介绍
 
 ## 一、模块定位与作用
 

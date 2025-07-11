@@ -1,4 +1,4 @@
-# 文稿一
+# 文案一
 [OC] Comprehensive AI Data Quality Metrics Documentation - 50+ Evaluation Metrics with Academic Sources
 
 We've just released what might be the most comprehensive documentation of AI data quality evaluation metrics available. This covers everything from pre-training data assessment to multimodal evaluation.
@@ -26,7 +26,7 @@ The documentation includes detailed academic references and practical implementa
 
 Thoughts? What metrics do you find most valuable in your work?
 
-# 文稿二
+# 文案二
 [P] Comprehensive AI Data Quality Metrics Documentation - 50+ Evaluation Metrics with Academic Sources for Dingo Framework
 
 Hey r/MachineLearning!

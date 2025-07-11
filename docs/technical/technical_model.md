@@ -73,15 +73,15 @@ class BaseEvalModel(BaseModel):
 class Model:
     # 模块加载状态管理
     module_loaded = False
-    
+
     # 分组管理
     rule_groups = {}      # {group_name: [rule_classes]}
     prompt_groups = {}    # {group_name: [prompt_classes]}
-    
+
     # 按metric_type分类
     rule_metric_type_map = {}    # {metric_type: [rule_classes]}
     prompt_metric_type_map = {}  # {metric_type: [prompt_classes]}
-    
+
     # 名称映射
     rule_name_map = {}    # {rule_name: rule_class}
     prompt_name_map = {}  # {prompt_name: prompt_class}
@@ -350,7 +350,7 @@ class CustomRule(BaseRule):
     def __init__(self):
         super().__init__()
         self.custom_param = "default"
-    
+
     def eval(self, data: Data) -> ModelRes:
         # 自定义评测逻辑
         result = self.custom_evaluation(data)
@@ -371,10 +371,10 @@ class CustomLLM(BaseLLM):
         super().__init__()
         self.api_key = None
         self.endpoint = None
-    
+
     def set_prompt(self, prompt: BasePrompt):
         self.current_prompt = prompt
-    
+
     def eval(self, data: Data) -> ModelRes:
         # 自定义LLM调用逻辑
         response = self.call_custom_api(data)

@@ -9,8 +9,10 @@ from dingo.exec import Executor
 from dingo.io import InputArgs
 
 
-def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_content, rule_list, prompt_list, model,
-               key, api_url):
+def dingo_demo(dataset_source, input_path, uploaded_file, data_format, max_workers, batch_size,
+               column_id, column_prompt, column_content, column_image,
+               rule_list, prompt_list,
+               model, key, api_url):
     if not data_format:
         raise gr.Error('ValueError: data_format can not be empty, please input.')
     if not column_content:
@@ -33,6 +35,11 @@ def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_co
 
         final_input_path = uploaded_file.name
 
+    if max_workers <= 0:
+        raise gr.Error('Please input value > 0 in max_workers.')
+    if batch_size <= 0:
+        raise gr.Error('Please input value > 0 in batch_size.')
+
     try:
         input_data = {
             "dataset": dataset_source,
@@ -40,6 +47,8 @@ def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_co
             "output_path": "" if dataset_source == 'hugging_face' else os.path.dirname(final_input_path),
             "save_data": True,
             "save_raw": True,
+            "max_workers": max_workers,
+            "batch_size": batch_size,
             "data_format": data_format,
             "column_content": column_content,
             "custom_config":{
@@ -56,6 +65,13 @@ def dingo_demo(dataset_source, input_path, uploaded_file, data_format, column_co
                     }
             }
         }
+        if column_id:
+            input_data['column_id'] = column_id
+        if column_prompt:
+            input_data['column_prompt'] = column_prompt
+        if column_image:
+            input_data['column_image'] = column_image
+
         input_args = InputArgs(**input_data)
         executor = Executor.exec_map["local"](input_args)
         summary = executor.execute().to_dict()
@@ -120,11 +136,40 @@ if __name__ == '__main__':
                         ["jsonl", "json", "plaintext", "listjson"],
                         label="data_format"
                     )
-                    column_content = gr.Textbox(
-                        value="content",
-                        placeholder="please input column name of content in dataset",
-                        label="column_content"
-                    )
+                    with gr.Row():
+                        max_workers = gr.Number(
+                            value=1,
+                            # placeholder="",
+                            label="max_workers",
+                            precision=0
+                        )
+                        batch_size = gr.Number(
+                            value=1,
+                            # placeholder="",
+                            label="batch_size",
+                            precision=0
+                        )
+                    with gr.Row():
+                        column_id = gr.Textbox(
+                            value="",
+                            # placeholder="please input column name of data id in dataset",
+                            label="column_id"
+                        )
+                        column_prompt = gr.Textbox(
+                            value="",
+                            # placeholder="please input column name of prompt in dataset",
+                            label="column_prompt"
+                        )
+                        column_content = gr.Textbox(
+                            value="content",
+                            # placeholder="please input column name of content in dataset",
+                            label="column_content"
+                        )
+                        column_image = gr.Textbox(
+                            value="",
+                            # placeholder="please input column name of image in dataset",
+                            label="column_image"
+                        )
 
                     rule_list = gr.CheckboxGroup(
                         choices=rule_options,
@@ -167,7 +212,9 @@ if __name__ == '__main__':
 
         submit_single.click(
             fn=dingo_demo,
-            inputs=[dataset_source, input_path, uploaded_file, data_format, column_content, rule_list, prompt_list,
+            inputs=[dataset_source, input_path, uploaded_file, data_format, max_workers, batch_size,
+                    column_id, column_prompt, column_content, column_image,
+                    rule_list, prompt_list,
                     model, key, api_url],
             outputs=[summary_output, detail_output]  # 修改输出为两个组件
         )

@@ -33,21 +33,39 @@ def parse_args():
     )
     parser.add_argument(
         "--save_data",
-        action="store_true",
+        nargs='?',
+        const=True,
         default=False,
-        help="Save data in output path",
+        type=lambda x: (
+            True if x.lower() in ('true', '1') else
+            False if x.lower() in ('false', '0') else
+            argparse.ArgumentTypeError(f"Invalid boolean value: {x}")
+        ),
+        help="Save data in output path (default: False, use --save_data or --save_data True to enable)"
     )
     parser.add_argument(
         "--save_correct",
-        action="store_true",
+        nargs='?',
+        const=True,
         default=False,
-        help="Save correct data in output path",
+        type=lambda x: (
+            True if x.lower() in ('true', '1') else
+            False if x.lower() in ('false', '0') else
+            argparse.ArgumentTypeError(f"Invalid boolean value: {x}")
+        ),
+        help="Save correct data in output path (default: False, use --save_correct or --save_correct True to enable)",
     )
     parser.add_argument(
         "--save_raw",
-        action="store_true",
+        nargs='?',
+        const=True,
         default=False,
-        help="Save raw data in output path",
+        type=lambda x: (
+            True if x.lower() in ('true', '1') else
+            False if x.lower() in ('false', '0') else
+            argparse.ArgumentTypeError(f"Invalid boolean value: {x}")
+        ),
+        help="Save raw data in output path (default: False, use --save_raw or --save_raw True to enable)",
     )
     parser.add_argument(
         "--start_index",
@@ -136,9 +154,15 @@ def parse_args():
     )
     parser.add_argument(
         "--use_browser",
-        action="store_true",
+        nargs='?',
+        const=True,
         default=False,
-        help="Open browser to display result after evaluation.",
+        type=lambda x: (
+            True if x.lower() in ('true', '1') else
+            False if x.lower() in ('false', '0') else
+            argparse.ArgumentTypeError(f"Invalid boolean value: {x}")
+        ),
+        help="Open browser to display result (default: False, use --use_browser or --use_browser True to enable)",
     )
     return parser.parse_args()
 

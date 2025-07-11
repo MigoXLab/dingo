@@ -1,6 +1,6 @@
-# 开始你的第一步
+# Dingo: 开始你的第一步
 
-## 安装
+## 一、安装
 
 ### 基础安装
 1. 使用conda准备 dingo 运行环境:
@@ -32,7 +32,7 @@ pip install -r requirements/optional.txt
 pip install -r requirements/web.txt
 ```
 
-## 快速开始
+## 二、快速开始
 
 ### 概览
 在 dingo 中启动一个评估任务可以通过以下2种方式：命令行、代码。
@@ -94,9 +94,9 @@ outputs/
 ├── ...
 ```
 
-# 教程
+## 三、教程
 
-## 整体概括
+### 整体概括
 本项目的架构可以分为以下3个模块：Data、Evaluator、Executor
 + Data: 负责数据的加载与格式转化
 + Evaluator: 负责评估的执行
@@ -104,7 +104,7 @@ outputs/
 
 ![Architecture of dingo](assets/architeture.png)
 
-## 基础配置
+### 基础配置
 dingo 启动方式具有2种，因此配置方式也分为以下2种情况:
 1. [命令行配置列表](config.md#cli-config)
 2. [代码配置列表](config.md#sdk-config)
@@ -137,7 +137,7 @@ input_data = {
 input_args = InputArgs(**input_data)
 ```
 
-## 加载数据
+### 加载数据
 如果想要 dingo 顺利读入数据，那么需要在配置时设置以下参数:
 - input_path
 - dataset
@@ -151,7 +151,7 @@ input_args = InputArgs(**input_data)
 最终数据以 [Data](../dingo/io/input/Data.py) 类对象的形式在项目中流转。
 如果用户在配置时将参数 save_raw 设置为True，那么 Data 类对象的 raw_data 有值否则为空字典。
 
-## 设置并发
+### 设置并发
 dingo 默认状态下没有开启并发，如果有大规模评估任务需要开启并发，那么应该在配置时设置以下参数:
 + max_workers
 + batch_size
@@ -160,7 +160,7 @@ dingo 默认状态下没有开启并发，如果有大规模评估任务需要�
 
 建议batch_size大于等于max_workers。
 
-## 结果保存
+### 结果保存
 评估任务完成后会在当前目录下创建 outputs 文件夹并且不保存原始数据格式，除非用户在配置时设置了以下参数:
 + save_data
 + save_raw
@@ -171,13 +171,13 @@ dingo 默认状态下没有开启并发，如果有大规模评估任务需要�
 
 如果 save_raw 设置为True，那么将执行 [ResultInfo](../dingo/io/output/ResultInfo.py) 类的 to_dict_raw 函数，否则将执行 to_dict 函数。
 
-## 启动前端页面
+### 启动前端页面
 dingo 评估任务结束后，如果保存了评估结果，那么就可以通过一下方式启动前端页面展示结果:
 ```shell
 python -m dingo.run.vsl --input outputs/20250609_101837_50b5c0be
 ```
 
-# 规则
+## 四、规则
 dingo 内置了不同类型的评估规则，详情见: [规则列表](rules.md)。
 每条评估规则都有自己的 metric_type 和所属的 group。
 
@@ -185,22 +185,22 @@ dingo 内置了不同类型的评估规则，详情见: [规则列表](rules.md)
 
 用户可以通过配置 eval_group 参数来调用该 group 内的所有规则执行评估任务。 如果用户需要组合一批评估规则用来评估，那么请参考下文的 **自定义配置** 。
 
-# 提示词
+## 五、提示词
 dingo 提示词与规则类似，都有 metric_type 和 group ，并且他们的作用也相同。
 但是提示词需要与场景配合才能执行评估任务，详情见:
 
 - [提示词列表](../dingo/model/prompt)
 
-# 场景
+## 六、场景
 dingo 的场景负责将数据打包发送给模型，并接收模型返回的结果，然后进行解析，处理成统一的 ModelRes 类对象。
 
 - [场景列表](../dingo/model/llm)
 
 请注意，不同场景对于评估结果 ModelRes 类对象的构建思路也不同，其 type 和 name 的意义也因此不同。
 
-# 进阶教程
+## 七、进阶教程
 
-## 自定义配置
+### 自定义配置
 上文的 **教程-基础配置** 篇章中介绍了项目配置的方式与参数列表，但是并没有涉及到自定义，现在让我们来详细了解 **自定义配置** 。
 
 自定义配置离不开参数 [custom_config](config.md#custom-config) , 这个参数包括能够自定义的所有内容，如下所示：
@@ -210,7 +210,7 @@ dingo 的场景负责将数据打包发送给模型，并接收模型返回的�
 - llm_config
 - multi_turn_mode
 
-## 自定义规则
+### 自定义规则
 dingo 内置的规则向用户开放了接口，允许用户根据不同的评估任务进行动态配置。
 
 规则的自定义通过上文 custom_config 参数中的 [rule_config](config.md#rule_config) 实现，可以设置的值包括:
@@ -219,7 +219,7 @@ dingo 内置的规则向用户开放了接口，允许用户根据不同的评�
 + key_list
 + refer_path
 
-## 自定义场景
+### 自定义场景
 dingo 在使用提示词进行评估任务的时候，必须同时使用场景，执行数据的打包发送与接收处理。
 
 场景的自定义同样是通过上文 custom_config 参数实现，不同的是需要参数 [llm_config](config.md#llm_config) ，可以设置的值包括:
@@ -237,7 +237,7 @@ dingo 在使用提示词进行评估任务的时候，必须同时使用场景�
 
 更多参数细节可参考OpenAI API官方文档。
 
-## 新增数据格式转化
+### 新增数据格式转化
 上文的 **教程-基础配置** 篇章中介绍了项目配置的参数列表，其中 data_format 表示数据的格式，同时也代表了一种数据转化的方式。
 
 dingo 内置的数据转化方式有4种，即 data_format 的4个可取的值: json, jsonl, plaintext, listjson.
@@ -359,7 +359,7 @@ dynamic_config = DynamicRuleConfig()
 def eval(cls, input_data: Data) -> ModelRes:
 ```
 
-## 新增提示词
+### 新增提示词
 
 上文的 **提示词** 篇章中已经介绍了 [提示词列表](../dingo/model/prompt) ，如果用户在评估过程中产生了新的评估任务，需要涉及自己的提示词。
 
@@ -403,7 +403,7 @@ content = """
     """
 ```
 
-## 新增场景
+### 新增场景
 上文的 **场景** 篇章介绍了场景的职责，即: 打包发送数据、接收解析数据
 
 那么，新增一个场景就需要实现以上2个功能，详情见下方模板:

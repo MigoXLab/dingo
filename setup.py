@@ -1,5 +1,6 @@
-from setuptools import find_packages, setup
 import os
+
+from setuptools import find_packages, setup
 
 with open("README.md", "r", encoding='utf-8') as fh:
     long_description = fh.read()
@@ -10,6 +11,7 @@ with open("./requirements/runtime.txt", "r", encoding='utf-8') as f:
 with open("./requirements/web.txt", "r", encoding='utf-8') as f:
     requirements.extend(f.readlines())
 
+
 # 获取 app 和 web-static 目录下的所有文件
 def get_data_files(directory):
     paths = []
@@ -17,6 +19,7 @@ def get_data_files(directory):
         for filename in filenames:
             paths.append(os.path.join('..', path, filename))
     return paths
+
 
 app_files = get_data_files('app')
 web_static_files = get_data_files('web-static')

@@ -118,6 +118,16 @@ def update_prompt_list(scene_prompt_mapping, scene):
         label="prompt_list"
     )
 
+
+# prompt_list变化时，动态控制model、key、api_url的显示
+def toggle_llm_fields(prompt_values):
+    visible = bool(prompt_values)
+    return (
+        gr.update(visible=visible),
+        gr.update(visible=visible),
+        gr.update(visible=visible)
+    )
+
 if __name__ == '__main__':
     rule_options = ['RuleAbnormalChar', 'RuleAbnormalHtml', 'RuleContentNull', 'RuleContentShort', 'RuleEnterAndSpace', 'RuleOnlyUrl']
     # prompt_options = ['PromptRepeat', 'PromptContentChaos']
@@ -216,17 +226,23 @@ if __name__ == '__main__':
                         choices=scene_prompt_mapping.get(scene_options[0]),
                         label="prompt_list"
                     )
+                    # LLM模型名
                     model = gr.Textbox(
                         placeholder="If want to use llm, please input model, such as: deepseek-chat",
-                        label="model"
+                        label="model",
+                        visible=False
                     )
+                    # LLM API KEY
                     key = gr.Textbox(
                         placeholder="If want to use llm, please input key, such as: 123456789012345678901234567890xx",
-                        label="API KEY"
+                        label="API KEY",
+                        visible=False
                     )
+                    # LLM API URL
                     api_url = gr.Textbox(
                         placeholder="If want to use llm, please input api_url, such as: https://api.deepseek.com/v1",
-                        label="API URL"
+                        label="API URL",
+                        visible=False
                     )
 
                 with gr.Row():
@@ -251,6 +267,12 @@ if __name__ == '__main__':
             fn=partial(update_prompt_list, scene_prompt_mapping),
             inputs=scene_list,
             outputs=prompt_list
+        )
+
+        prompt_list.change(
+            fn=toggle_llm_fields,
+            inputs=prompt_list,
+            outputs=[model, key, api_url]
         )
 
         submit_single.click(

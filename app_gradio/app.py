@@ -112,9 +112,10 @@ def update_input_components(dataset_source):
         ]
 
 def update_prompt_list(scene_prompt_mapping, scene):
-    """根据选择的场景更新可用的prompt列表"""
+    """根据选择的场景更新可用的prompt列表，并清空所有勾选"""
     return gr.CheckboxGroup(
         choices=scene_prompt_mapping.get(scene, []),
+        value=[],  # 清空所有勾选
         label="prompt_list"
     )
 

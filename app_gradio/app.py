@@ -125,8 +125,15 @@ if __name__ == '__main__':
     scene_prompt_mapping = {
         # 示例映射关系，你可以根据实际需求修改
         "LLMTextQualityPromptBase": ['PromptRepeat', 'PromptContentChaos'],
-        # 'LLMTextQualityModelBase': ['PromptTextQualityV3', 'PromptTextQualityV4'],
-        "VLMImageRelevant": ["PromptImageRelevant"]
+        'LLMTextQualityModelBase': ['PromptTextQualityV3', 'PromptTextQualityV4'],
+        'LLMSecurityPolitics': ['PromptPolitics'],
+        'LLMSecurityProhibition': ['PromptProhibition'],
+        'LLMText3HHarmless': ['PromptTextHelpful'],
+        'LLMText3HHelpful': ['PromptTextHelpful'],
+        'LLMText3HHonest': ['PromptTextHonest'],
+        'LLMClassifyTopic': ['PromptClassifyTopic'],
+        'LLMClassifyQR': ['PromptClassifyQR'],
+        "VLMImageRelevant": ["PromptImageRelevant"],
     }
     scene_options = list(scene_prompt_mapping.keys())
 

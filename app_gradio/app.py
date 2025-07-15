@@ -111,6 +111,13 @@ def update_input_components(dataset_source):
             gr.File(visible=True),
         ]
 
+def update_rule_list(rule_type_mapping, rule_type):
+    return gr.CheckboxGroup(
+        choices=rule_type_mapping.get(rule_type, []),
+        value=[],
+        label="rule_list"
+    )
+
 def update_prompt_list(scene_prompt_mapping, scene):
     """根据选择的场景更新可用的prompt列表，并清空所有勾选"""
     return gr.CheckboxGroup(
@@ -131,6 +138,26 @@ def toggle_llm_fields(prompt_values):
 
 if __name__ == '__main__':
     rule_options = ['RuleAbnormalChar', 'RuleAbnormalHtml', 'RuleContentNull', 'RuleContentShort', 'RuleEnterAndSpace', 'RuleOnlyUrl']
+    rule_type_mapping = {
+        'QUALITY_BAD_COMPLETENESS': ['RuleLineEndWithEllipsis', 'RuleLineEndWithTerminal', 'RuleSentenceNumber',
+                                     'RuleWordNumber'],
+        'QUALITY_BAD_EFFECTIVENESS': ['RuleAbnormalChar', 'RuleAbnormalHtml', 'RuleAlphaWords', 'RuleCharNumber',
+                                      'RuleColonEnd', 'RuleContentNull', 'RuleContentShort', 'RuleContentShortMultiLan',
+                                      'RuleEnterAndSpace', 'RuleEnterMore', 'RuleEnterRatioMore', 'RuleHtmlEntity',
+                                      'RuleHtmlTag', 'RuleInvisibleChar', 'RuleLineJavascriptCount', 'RuleLoremIpsum',
+                                      'RuleMeanWordLength', 'RuleSpaceMore', 'RuleSpecialCharacter', 'RuleStopWord',
+                                      'RuleSymbolWordRatio', 'RuleOnlyUrl'],
+        'QUALITY_BAD_FLUENCY': ['RuleAbnormalNumber', 'RuleCharSplit', 'RuleNoPunc', 'RuleWordSplit', 'RuleWordStuck'],
+        'QUALITY_BAD_RELEVANCE': ['RuleHeadWordAr'],
+        'QUALITY_BAD_SIMILARITY': ['RuleDocRepeat'],
+        'QUALITY_BAD_UNDERSTANDABILITY': ['RuleCapitalWords', 'RuleCurlyBracket', 'RuleLineStartWithBulletpoint',
+                                          'RuleUniqueWords'],
+        'QUALITY_BAD_IMG_EFFECTIVENESS': ['RuleImageValid', 'RuleImageSizeValid', 'RuleImageQuality'],
+        'QUALITY_BAD_IMG_RELEVANCE': ['RuleImageTextSimilarity'],
+        'QUALITY_BAD_IMG_SIMILARITY': ['RuleImageRepeat']
+    }
+    rule_type_options = list(rule_type_mapping.keys())
+
     # prompt_options = ['PromptRepeat', 'PromptContentChaos']
     scene_options = []
     scene_prompt_mapping = {
@@ -211,9 +238,15 @@ if __name__ == '__main__':
                             label="column_image"
                         )
 
+                    # Add the rule_type dropdown near where scene_list is defined
+                    rule_type = gr.Dropdown(
+                        choices=rule_type_options,
+                        value=rule_type_options[0],
+                        label="rule_type",
+                        interactive=True
+                    )
                     rule_list = gr.CheckboxGroup(
-                        choices=rule_options,
-                        value=['RuleAbnormalChar', 'RuleAbnormalHtml'],
+                        choices=rule_type_mapping.get(rule_type_options[0], []),
                         label="rule_list"
                     )
                     # 添加场景选择下拉框
@@ -224,7 +257,7 @@ if __name__ == '__main__':
                         interactive=True
                     )
                     prompt_list = gr.CheckboxGroup(
-                        choices=scene_prompt_mapping.get(scene_options[0]),
+                        choices=scene_prompt_mapping.get(scene_options[0], []),
                         label="prompt_list"
                     )
                     # LLM模型名
@@ -261,6 +294,12 @@ if __name__ == '__main__':
             fn=update_input_components,
             inputs=dataset_source,
             outputs=[input_path, uploaded_file]
+        )
+
+        rule_type.change(
+            fn=partial(update_rule_list, rule_type_mapping),
+            inputs=rule_type,
+            outputs=rule_list
         )
 
         # 场景变化时更新prompt列表

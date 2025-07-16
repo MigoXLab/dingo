@@ -1,9 +1,9 @@
 import json
 import os
-import shutil
 import pprint
-from pathlib import Path
+import shutil
 from functools import partial
+from pathlib import Path
 
 import gradio as gr
 
@@ -111,12 +111,14 @@ def update_input_components(dataset_source):
             gr.File(visible=True),
         ]
 
+
 def update_rule_list(rule_type_mapping, rule_type):
     return gr.CheckboxGroup(
         choices=rule_type_mapping.get(rule_type, []),
-        value=[],
+        # value=[],
         label="rule_list"
     )
+
 
 def update_prompt_list(scene_prompt_mapping, scene):
     """根据选择的场景更新可用的prompt列表，并清空所有勾选"""
@@ -136,9 +138,54 @@ def toggle_llm_fields(prompt_values):
         gr.update(visible=visible)
     )
 
-if __name__ == '__main__':
-    rule_options = ['RuleAbnormalChar', 'RuleAbnormalHtml', 'RuleContentNull', 'RuleContentShort', 'RuleEnterAndSpace', 'RuleOnlyUrl']
-    rule_type_mapping = {
+
+# 控制column_id、column_prompt、column_content、column_image的显示
+def update_column_fields(rule_list, prompt_list):
+    rule_type_mapping = get_rule_type_mapping()
+    scene_prompt_mapping = get_scene_prompt_mapping()
+    data_column_mapping = get_data_column_mapping()
+    status_mapping = {
+        'id': False,
+        'prompt': False,
+        'content': False,
+        'image': False,
+    }
+
+    res = (
+        gr.update(visible=status_mapping['id']),
+        gr.update(visible=status_mapping['prompt']),
+        gr.update(visible=status_mapping['content']),
+        gr.update(visible=status_mapping['image'])
+    )
+    if not rule_list and not prompt_list:
+        return res
+
+    key_list = []
+    key_list += get_key_by_mapping(rule_type_mapping, rule_list)
+    key_list += get_key_by_mapping(scene_prompt_mapping, prompt_list)
+
+    data_column = []
+    for key in key_list:
+        if not data_column:
+            data_column = data_column_mapping[key]
+        else:
+            new_data_column = data_column_mapping[key]
+            if data_column != new_data_column:
+                raise gr.Error(f'ConflictError: {key} need data type is different from other.')
+
+    for c in data_column:
+        status_mapping[c] = True
+    res = (
+        gr.update(visible=status_mapping['id']),
+        gr.update(visible=status_mapping['prompt']),
+        gr.update(visible=status_mapping['content']),
+        gr.update(visible=status_mapping['image'])
+    )
+    return res
+
+
+def get_rule_type_mapping():
+    return {
         'QUALITY_BAD_COMPLETENESS': ['RuleLineEndWithEllipsis', 'RuleLineEndWithTerminal', 'RuleSentenceNumber',
                                      'RuleWordNumber'],
         'QUALITY_BAD_EFFECTIVENESS': ['RuleAbnormalChar', 'RuleAbnormalHtml', 'RuleAlphaWords', 'RuleCharNumber',
@@ -156,11 +203,10 @@ if __name__ == '__main__':
         'QUALITY_BAD_IMG_RELEVANCE': ['RuleImageTextSimilarity'],
         'QUALITY_BAD_IMG_SIMILARITY': ['RuleImageRepeat']
     }
-    rule_type_options = list(rule_type_mapping.keys())
 
-    # prompt_options = ['PromptRepeat', 'PromptContentChaos']
-    scene_options = []
-    scene_prompt_mapping = {
+
+def get_scene_prompt_mapping():
+    return {
         # 示例映射关系，你可以根据实际需求修改
         "LLMTextQualityPromptBase": ['PromptRepeat', 'PromptContentChaos'],
         'LLMTextQualityModelBase': ['PromptTextQualityV3', 'PromptTextQualityV4'],
@@ -173,6 +219,48 @@ if __name__ == '__main__':
         'LLMClassifyQR': ['PromptClassifyQR'],
         "VLMImageRelevant": ["PromptImageRelevant"],
     }
+
+
+def get_key_by_mapping(map_dict: dict, value_list: list):
+    key_list = []
+    for k,v in map_dict.items():
+        if bool(set(v) & set(value_list)):
+            key_list.append(k)
+
+    return key_list
+
+
+def get_data_column_mapping():
+    return {
+        'LLMTextQualityPromptBase': ['content'],
+        'LLMTextQualityModelBase': ['content'],
+        'LLMSecurityPolitics': ['content'],
+        'LLMSecurityProhibition': ['content'],
+        'LLMText3HHarmless': ['content'],
+        'LLMText3HHelpful': ['content'],
+        'LLMText3HHonest': ['content'],
+        'LLMClassifyTopic': ['content'],
+        'LLMClassifyQR': ['content'],
+        'VLMImageRelevant': ['prompt', 'content'],
+        'QUALITY_BAD_COMPLETENESS': ['content'],
+        'QUALITY_BAD_EFFECTIVENESS': ['content'],
+        'QUALITY_BAD_FLUENCY': ['content'],
+        'QUALITY_BAD_RELEVANCE': ['content'],
+        'QUALITY_BAD_SIMILARITY': ['content'],
+        'QUALITY_BAD_UNDERSTANDABILITY': ['content'],
+        'QUALITY_BAD_IMG_EFFECTIVENESS': ['image'],
+        'QUALITY_BAD_IMG_RELEVANCE': ['content','image'],
+        'QUALITY_BAD_IMG_SIMILARITY': ['content'],
+    }
+
+
+if __name__ == '__main__':
+    rule_options = ['RuleAbnormalChar', 'RuleAbnormalHtml', 'RuleContentNull', 'RuleContentShort', 'RuleEnterAndSpace', 'RuleOnlyUrl']
+    rule_type_mapping = get_rule_type_mapping()
+    rule_type_options = list(rule_type_mapping.keys())
+
+    # prompt_options = ['PromptRepeat', 'PromptContentChaos']
+    scene_prompt_mapping = get_scene_prompt_mapping()
     scene_options = list(scene_prompt_mapping.keys())
 
     current_dir = Path(__file__).parent
@@ -216,27 +304,6 @@ if __name__ == '__main__':
                             label="batch_size",
                             precision=0
                         )
-                    with gr.Row():
-                        column_id = gr.Textbox(
-                            value="",
-                            # placeholder="please input column name of data id in dataset",
-                            label="column_id"
-                        )
-                        column_prompt = gr.Textbox(
-                            value="",
-                            # placeholder="please input column name of prompt in dataset",
-                            label="column_prompt"
-                        )
-                        column_content = gr.Textbox(
-                            value="content",
-                            # placeholder="please input column name of content in dataset",
-                            label="column_content"
-                        )
-                        column_image = gr.Textbox(
-                            value="",
-                            # placeholder="please input column name of image in dataset",
-                            label="column_image"
-                        )
 
                     # Add the rule_type dropdown near where scene_list is defined
                     rule_type = gr.Dropdown(
@@ -279,6 +346,32 @@ if __name__ == '__main__':
                         visible=False
                     )
 
+                    with gr.Row():
+                        column_id = gr.Textbox(
+                            value="",
+                            # placeholder="please input column name of data id in dataset",
+                            label="column_id",
+                            visible=False
+                        )
+                        column_prompt = gr.Textbox(
+                            value="",
+                            # placeholder="please input column name of prompt in dataset",
+                            label="column_prompt",
+                            visible=False
+                        )
+                        column_content = gr.Textbox(
+                            value="content",
+                            # placeholder="please input column name of content in dataset",
+                            label="column_content",
+                            visible=False
+                        )
+                        column_image = gr.Textbox(
+                            value="",
+                            # placeholder="please input column name of image in dataset",
+                            label="column_image",
+                            visible=False
+                        )
+
                 with gr.Row():
                     submit_single = gr.Button(value="Submit", interactive=True, variant="primary")
 
@@ -314,6 +407,14 @@ if __name__ == '__main__':
             inputs=prompt_list,
             outputs=[model, key, api_url]
         )
+
+        # column字段显示控制
+        for comp in [rule_list, prompt_list]:
+            comp.change(
+                fn=update_column_fields,
+                inputs=[rule_list, prompt_list],
+                outputs=[column_id, column_prompt, column_content, column_image]
+            )
 
         submit_single.click(
             fn=dingo_demo,

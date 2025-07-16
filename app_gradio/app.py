@@ -347,29 +347,29 @@ if __name__ == '__main__':
                     with gr.Row():
                         # 字段映射说明文本，带示例链接
                         with gr.Column():
-                            gr.Markdown("Field Mapping: Please match the fields in the dataset with the input boxes below ( [examples](https://github.com/MigoXLab/dingo/tree/main/examples) )")
+                            gr.Markdown("Field Matching: Please input the column name of dataset in the input boxes below ( [examples](https://github.com/MigoXLab/dingo/tree/main/examples) )")
 
                         column_id = gr.Textbox(
                             value="",
-                            # placeholder="please input column name of data id in dataset",
+                            placeholder="Column name of id in the input file. If exists multiple levels, use '.' separate",
                             label="column_id",
                             visible=False
                         )
                         column_prompt = gr.Textbox(
                             value="",
-                            # placeholder="please input column name of prompt in dataset",
+                            placeholder="Column name of prompt in the input file. If exists multiple levels, use '.' separate",
                             label="column_prompt",
                             visible=False
                         )
                         column_content = gr.Textbox(
                             value="content",
-                            # placeholder="please input column name of content in dataset",
+                            placeholder="Column name of content in the input file. If exists multiple levels, use '.' separate",
                             label="column_content",
                             visible=False
                         )
                         column_image = gr.Textbox(
                             value="",
-                            # placeholder="please input column name of image in dataset",
+                            placeholder="Column name of image in the input file. If exists multiple levels, use '.' separate",
                             label="column_image",
                             visible=False
                         )

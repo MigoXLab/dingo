@@ -115,7 +115,7 @@ def update_input_components(dataset_source):
 def update_rule_list(rule_type_mapping, rule_type):
     return gr.CheckboxGroup(
         choices=rule_type_mapping.get(rule_type, []),
-        # value=[],
+        value=[],
         label="rule_list"
     )
 
@@ -255,11 +255,9 @@ def get_data_column_mapping():
 
 
 if __name__ == '__main__':
-    rule_options = ['RuleAbnormalChar', 'RuleAbnormalHtml', 'RuleContentNull', 'RuleContentShort', 'RuleEnterAndSpace', 'RuleOnlyUrl']
     rule_type_mapping = get_rule_type_mapping()
     rule_type_options = list(rule_type_mapping.keys())
 
-    # prompt_options = ['PromptRepeat', 'PromptContentChaos']
     scene_prompt_mapping = get_scene_prompt_mapping()
     scene_options = list(scene_prompt_mapping.keys())
 

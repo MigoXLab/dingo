@@ -345,6 +345,10 @@ if __name__ == '__main__':
                     )
 
                     with gr.Row():
+                        # 字段映射说明文本，带示例链接
+                        with gr.Column():
+                            gr.Markdown("Field Mapping: Please match the fields in the dataset with the input boxes below ( [examples](https://github.com/MigoXLab/dingo/tree/main/examples) )")
+
                         column_id = gr.Textbox(
                             value="",
                             # placeholder="please input column name of data id in dataset",

@@ -347,7 +347,7 @@ if __name__ == '__main__':
                     with gr.Row():
                         # 字段映射说明文本，带示例链接
                         with gr.Column():
-                            gr.Markdown("Field Matching: Please input the column name of dataset in the input boxes below ( [examples](https://github.com/MigoXLab/dingo/tree/main/examples) )")
+                            gr.Markdown("Please input the column name of dataset in the input boxes below ( [examples](https://github.com/MigoXLab/dingo/tree/main/examples) )")
 
                         column_id = gr.Textbox(
                             value="",

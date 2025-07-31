@@ -14,7 +14,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    environment: ci-tests
+    environment: ci-test
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python

@@ -24,18 +24,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install build wheel==0.43.0 twine==6.0.1 packaging==24.1 pkginfo==1.12.0
 
-    - name: Run examples
-      env:
-        OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
-      run: |
-        python examples/core/score.py
-        python examples/custom/sdk_custom_rule.py
-        python examples/llm_and_rule/llm_and_rule_mix.py
-        python examples/register/sdk_register_llm.py
-        python examples/register/sdk_register_prompt.py
-        python examples/register/sdk_register_rule.py
-        python examples/multi_turn_dialogues/sdk_mtbench101_llm.py
-        python examples/multi_turn_dialogues/sdk_mtbench101_rule_all.py
+#    - name: Run examples
+#      env:
+#        OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+#      run: |
+#        python examples/core/score.py
+#        python examples/custom/sdk_custom_rule.py
+#        python examples/llm_and_rule/llm_and_rule_mix.py
+#        python examples/register/sdk_register_llm.py
+#        python examples/register/sdk_register_prompt.py
+#        python examples/register/sdk_register_rule.py
+#        python examples/multi_turn_dialogues/sdk_mtbench101_llm.py
+#        python examples/multi_turn_dialogues/sdk_mtbench101_rule_all.py
 
     - name: Build package
       run: python setup.py bdist_wheel

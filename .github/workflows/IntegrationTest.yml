@@ -58,3 +58,15 @@ jobs:
     - name: Run unit tests
       run: |
         pytest test/scripts --ignore=test/scripts/data
+    - name: Run examples
+      env:
+        OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+      run: |
+        python examples/core/score.py
+        python examples/custom/sdk_custom_rule.py
+        python examples/llm_and_rule/llm_and_rule_mix.py
+        python examples/register/sdk_register_llm.py
+        python examples/register/sdk_register_prompt.py
+        python examples/register/sdk_register_rule.py
+        python examples/multi_turn_dialogues/sdk_mtbench101_llm.py
+        python examples/multi_turn_dialogues/sdk_mtbench101_rule_all.py

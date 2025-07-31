@@ -6,6 +6,8 @@ from dingo.model.prompt.base import BasePrompt
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = 'https://api.deepseek.com/v1'
 OPENAI_KEY = os.getenv("OPENAI_KEY")
+if not OPENAI_KEY:
+    raise ValueError('OPENAI_KEY is not set correctly.')
 
 
 @Model.prompt_register("QUALITY_BAD_SIMILARITY", [])

@@ -12,6 +12,8 @@ from dingo.utils.exception import ConvertJsonError
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = 'https://api.deepseek.com/v1'
 OPENAI_KEY = os.getenv("OPENAI_KEY")
+if not OPENAI_KEY:
+    raise ValueError('OPENAI_KEY is not set correctly.')
 
 
 @Model.llm_register('LlmTextQualityRegister')

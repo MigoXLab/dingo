@@ -8,6 +8,8 @@ from dingo.model.rule.rule_common import RuleEnterAndSpace
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = 'https://api.deepseek.com/v1'
 OPENAI_KEY = os.getenv("OPENAI_KEY")
+if not OPENAI_KEY:
+    raise ValueError('OPENAI_KEY is not set correctly.')
 
 
 def llm():

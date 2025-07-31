@@ -24,7 +24,7 @@ if __name__ == '__main__':
     from dingo.exec import Executor
 
     input_data = {
-        "input_path": "../../test/data/test_local_jsonl.jsonl",
+        "input_path": "test/data/test_local_jsonl.jsonl",
         "dataset": {
             "source": "local",
             "format": "jsonl",

@@ -2,7 +2,7 @@ from dingo.config import InputArgs
 from dingo.exec import Executor
 
 input_data = {
-    "input_path": "../../test/data/test_mtbench101_jsonl.jsonl",
+    "input_path": "test/data/test_mtbench101_jsonl.jsonl",
     "dataset": {
         "source": "local",
         "format": "multi_turn_dialog",

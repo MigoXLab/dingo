@@ -6,7 +6,7 @@ name: Test
 on:
   push:
     branches: [ "main", "dev" ]
-  pull_request:
+  pull_request_target:
     branches: [ "main", "dev" ]
   workflow_dispatch:
 
@@ -14,7 +14,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    environment: ci-test
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python

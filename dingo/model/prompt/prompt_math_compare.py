@@ -2,7 +2,7 @@ from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
 
-@Model.prompt_register('MathCompare', [], ['LLMMathCompare'])
+@Model.prompt_register("MathCompare", [], ['LLMMathCompare'])
 class PromptMathCompare(BasePrompt):
     # prompt v3
     content = """

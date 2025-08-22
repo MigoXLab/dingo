@@ -11,20 +11,22 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('LLMMathCompare')
+@Model.llm_register("LLMMathCompare")
 class LLMMathCompare(BaseOpenAI):
-    """专注于数学公式抽取效果的对比."""
+    """
+    专注于数学公式抽取效果的对比
+    """
     prompt = PromptMathCompare
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
         messages = [
             {
-                'role': 'user',
-                'content': cls.prompt.content.format(
+                "role": "user",
+                "content": cls.prompt.content.format(
                     input_data.content,
-                    input_data.raw_data.get('webkit_extract_md', ''),
-                    input_data.raw_data.get('megamath_md', ''),
+                    input_data.raw_data.get("webkit_extract_md", ""),
+                    input_data.raw_data.get("megamath_md", ""),
                 ),
             }
         ]
@@ -40,15 +42,15 @@ class LLMMathCompare(BaseOpenAI):
 
         try:
             response_json = json.loads(response)
-            if response_think and 'reason' in response_json:
-                response_json['reason'] += '\n' + response_think
+            if response_think and "reason" in response_json:
+                response_json["reason"] += "\n" + response_think
             elif response_think:
-                response_json['reason'] = response_think
+                response_json["reason"] = response_think
         except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         # 处理特殊情况：没有数学公式
-        if response_json.get('no_formula'):
+        if response_json.get("no_formula"):
             return cls._create_no_formula_result(response_json)
 
         # 处理正常情况
@@ -56,21 +58,21 @@ class LLMMathCompare(BaseOpenAI):
 
     @staticmethod
     def _extract_think_content(response: str) -> str:
-        if response.startswith('<think>'):
-            think_content = re.search(r'<think>(.*?)</think>', response, flags=re.DOTALL)
-            return think_content.group(1).strip() if think_content else ''
-        return ''
+        if response.startswith("<think>"):
+            think_content = re.search(r"<think>(.*?)</think>", response, flags=re.DOTALL)
+            return think_content.group(1).strip() if think_content else ""
+        return ""
 
     @staticmethod
     def _clean_response(response: str) -> str:
-        response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL).strip()
+        response = re.sub(r"<think>.*?</think>", "", response, flags=re.DOTALL).strip()
 
-        if response.startswith('```json'):
+        if response.startswith("```json"):
             response = response[7:]
-        elif response.startswith('```'):
+        elif response.startswith("```"):
             response = response[3:]
 
-        if response.endswith('```'):
+        if response.endswith("```"):
             response = response[:-3]
 
         return response
@@ -79,19 +81,19 @@ class LLMMathCompare(BaseOpenAI):
     def _create_no_formula_result(response_json: dict) -> ModelRes:
         result = ModelRes()
         result.error_status = False
-        result.type = 'NO_FORMULA'
-        result.name = 'math'
+        result.type = "NO_FORMULA"
+        result.name = "math"
         result.reason = [json.dumps(response_json, ensure_ascii=False)]
         return result
 
     @staticmethod
     def _create_normal_result(response_json: dict) -> ModelRes:
         result = ModelRes()
-        score = response_json.get('score', 0)
+        score = response_json.get("score", 0)
 
         result.error_status = score != 1
-        result.type = {1: 'TOOL_ONE_BETTER', 2: 'TOOL_TWO_BETTER'}.get(score, 'TOOL_EQUAL')
-        result.name = 'math'
+        result.type = {1: "TOOL_ONE_BETTER", 2: "TOOL_TWO_BETTER"}.get(score, "TOOL_EQUAL")
+        result.name = "math"
         result.reason = [json.dumps(response_json, ensure_ascii=False)]
 
         return result

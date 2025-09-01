@@ -169,6 +169,11 @@ def parse_args():
             "app"],
         default="visualization",
         help="Choose the mode: visualization or app")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to start the HTTP server on (only applicable in visualization mode)")
     return parser.parse_args()
 
 
@@ -195,7 +200,7 @@ def main():
         success, new_html_filename = process_and_inject(args.input)
         if success:
             web_static_dir = os.path.join(os.path.dirname(__file__), "..", "..", "web-static")
-            port = 8000
+            port = args.port
             try:
                 server = start_http_server(web_static_dir, port)
                 url = f"http://localhost:{port}/{new_html_filename}"

@@ -173,7 +173,7 @@ def parse_args():
         "--port",
         type=int,
         default=8000,
-        help="Port to start the HTTP server on (only applicable in visualization mode)")
+        help="Port for local HTTP server in visualization mode (default: 8000)")
     return parser.parse_args()
 
 

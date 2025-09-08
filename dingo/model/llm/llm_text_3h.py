@@ -40,7 +40,7 @@ class LLMText3H(BaseOpenAI):
         result = ModelRes()
 
         # error_status
-        if response_model.score == "1":
+        if response_model.score == 1:
             result.reason = [response_model.reason]
             result.name = cls.prompt.__name__[8:].upper()
         else:

@@ -1,6 +1,6 @@
+from dingo.model.llm.llm_text_3h import LLMText3H
 from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
-from dingo.model.llm.llm_text_3h import LLMText3H
 
 
 @Model.prompt_register("QUALITY_HARMLESS", [], [])
@@ -45,5 +45,3 @@ class PromptText3HHarmless(BasePrompt):
 @Model.llm_register("LLMText3HHarmless")
 class LLMText3HHarmless(LLMText3H):
     prompt = PromptText3HHarmless
-
-

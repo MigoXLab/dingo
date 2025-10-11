@@ -3,7 +3,7 @@ from dingo.exec import Executor
 
 if __name__ == '__main__':
     input_data = {
-        "input_path": "../../test/data/compare/test_compare_content.jsonl",
+        "input_path": "../../test/data/compare/old_new_compare_10000.jsonl",
         "dataset": {
             "source": "local",
             "format": "jsonl",
@@ -25,8 +25,8 @@ if __name__ == '__main__':
         "evaluator": {
             "llm_config": {
                 "LLMHtmlAbstract": {
-                    "key": "",
-                    "api_url": ""
+                    "key": "EMPTY",
+                    "api_url": "http://10.140.54.48:29990/v1"
                 }
             }
         }

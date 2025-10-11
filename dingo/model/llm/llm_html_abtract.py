@@ -23,8 +23,8 @@ class LLMHtmlAbstract(BaseOpenAI):
                 "role": "user",
                 "content": cls.prompt.content.format(
                     input_data.content,
-                    input_data.raw_data["markdown_ours"],
-                    input_data.raw_data["markdown_m10"],
+                    input_data.raw_data["content"],
+                    input_data.raw_data["magic_md"],
                 ),
             }
         ]

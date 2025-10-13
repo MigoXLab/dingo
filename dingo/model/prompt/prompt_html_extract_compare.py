@@ -2,8 +2,8 @@ from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
 
-@Model.prompt_register("Html_Abstract", [], ['LLMHtmlAbstract'])
-class PromptHtmlAbstract(BasePrompt):
+@Model.prompt_register("Html_Extract_Compare", [], ['LLMHtmlExtractCompare'])
+class PromptHtmlExtractCompare(BasePrompt):
     _metric_info = {
         'category': 'SFT Data Assessment Metrics',
         'metric_name': 'PromptHtmlExtractCompare',
@@ -14,7 +14,7 @@ class PromptHtmlAbstract(BasePrompt):
         'evaluation_results': ''
     }
 
-    content = """
+    content = r"""
 你是一位专业的 HTML 内容提取评估专家，擅长分析 HTML 代码和 Markdown 文本的转换质量。现在我会提供三段内容：
 
 1. **原始网页的 HTML 代码**：这是网页的完整 HTML 结构。

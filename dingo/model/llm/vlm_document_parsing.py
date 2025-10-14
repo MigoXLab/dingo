@@ -58,7 +58,7 @@ class VLMDocumentParsingQuality(BaseOpenAI):
                         names.append(error_label)
             except json.JSONDecodeError as e:
                 log.error(f"JSON解析错误: {e}")
-            
+
         result = ModelRes()
         result.error_status = False
         result.type = types

@@ -30,6 +30,8 @@ def load_local_file(path: str, by_line: bool = True) -> Generator[str, None, Non
     Returns:
         str: The contents of the file.
     """
+    import gzip
+
     if not os.path.exists(path):
         raise RuntimeError(f'"{path}" is not a valid path')
     f_list = []
@@ -37,13 +39,42 @@ def load_local_file(path: str, by_line: bool = True) -> Generator[str, None, Non
         f_list = [path]
     elif os.path.exists(path) and os.path.isdir(path):
         find_all_files(path, f_list)
+
     for f in f_list:
-        with open(f, "r", encoding="utf-8") as _f:
-            if by_line:
-                for line in _f.readlines():
-                    yield line
-            else:
-                yield _f.read()
+        # Check if file is gzipped
+        if f.endswith('.gz'):
+            try:
+                with gzip.open(f, 'rt', encoding='utf-8') as _f:
+                    if by_line:
+                        for line in _f.readlines():
+                            yield line
+                    else:
+                        yield _f.read()
+            except Exception as gz_error:
+                raise RuntimeError(
+                    f'Failed to read gzipped file "{f}": {str(gz_error)}. '
+                    f'Please ensure the file is a valid gzip-compressed text file.'
+                )
+        else:
+            # For regular files, try UTF-8 encoding
+            try:
+                with open(f, "r", encoding="utf-8") as _f:
+                    if by_line:
+                        for line in _f.readlines():
+                            yield line
+                    else:
+                        yield _f.read()
+            except UnicodeDecodeError as decode_error:
+                raise RuntimeError(
+                    f'Failed to read file "{f}": Unsupported file format or encoding. '
+                    f'Dingo only supports UTF-8 text files (.jsonl, .json, .txt) and .gz compressed text files. '
+                    f'Original error: {str(decode_error)}'
+                )
+            except Exception as e:
+                raise RuntimeError(
+                    f'Unexpected error reading file "{f}": {str(e)}. '
+                    f'Please check if the file exists and is readable.'
+                )
 
 
 @DataSource.register()

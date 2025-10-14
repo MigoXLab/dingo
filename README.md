@@ -1,7 +1,18 @@
-<div align="center" xmlns="http://www.w3.org/1999/html">
+<!-- SEO Meta Information and Structured Data -->
+<div itemscope itemtype="https://schema.org/SoftwareApplication" align="center" xmlns="http://www.w3.org/1999/html">
+  <meta itemprop="name" content="Dingo: A Comprehensive AI Data Quality Evaluation Tool">
+  <meta itemprop="description" content="Comprehensive AI-powered data quality assessment platform for machine learning datasets, LLM training data validation, hallucination detection, and RAG system evaluation">
+  <meta itemprop="applicationCategory" content="Data Quality Software">
+  <meta itemprop="operatingSystem" content="Cross-platform">
+  <meta itemprop="programmingLanguage" content="Python">
+  <meta itemprop="url" content="https://github.com/MigoXLab/dingo">
+  <meta itemprop="downloadUrl" content="https://pypi.org/project/dingo-python/">
+  <meta itemprop="softwareVersion" content="latest">
+  <meta itemprop="license" content="Apache-2.0">
+
 <!-- logo -->
 <p align="center">
-  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;">
+  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;" alt="Dingo AI Data Quality Evaluation Tool Logo">
 </p>
 
 <!-- badges -->
@@ -15,8 +26,7 @@
   <a href="https://github.com/DataEval/dingo/issues"><img src="https://img.shields.io/github/issues/DataEval/dingo" alt="GitHub issues"></a>
   <a href="https://mseep.ai/app/dataeval-dingo"><img src="https://mseep.net/pr/dataeval-dingo-badge.png" alt="MseeP.ai Security Assessment Badge" height="20"></a>
   <a href="https://deepwiki.com/MigoXLab/dingo"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-
-[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/DataEval/dingo)](https://archestra.ai/mcp-catalog/dataeval__dingo)
+  <a href="https://archestra.ai/mcp-catalog/dataeval__dingo"><img src="https://archestra.ai/mcp-catalog/api/badge/quality/DataEval/dingo" alt="Trust Score"></a>
 </p>
 
 </div>
@@ -45,7 +55,7 @@
 </p>
 
 
-# Introduction
+# Introduction of Dingo
 
 Dingo is a data quality evaluation tool that helps you automatically detect data quality issues in your datasets. Dingo provides a variety of built-in rules and model evaluation methods, and also supports custom evaluation methods. Dingo supports commonly used text datasets and multimodal datasets, including pre-training datasets, fine-tuning datasets, and evaluation datasets. In addition, Dingo supports multiple usage methods, including local CLI and SDK, making it easy to integrate into various evaluation platforms, such as [OpenCompass](https://github.com/open-compass/opencompass).
 
@@ -61,7 +71,7 @@ Dingo is a data quality evaluation tool that helps you automatically detect data
 pip install dingo-python
 ```
 
-## Example Use Cases
+## Example Use Cases of Dingo
 
 ### 1. Evaluate LLM chat data
 
@@ -438,9 +448,9 @@ If you find this project useful, please consider citing our tool:
 
 ```
 @misc{dingo,
-  title={Dingo: A Comprehensive Data Quality Evaluation Tool for Large Models},
+  title={Dingo: A Comprehensive AI Data Quality Evaluation Tool for Large Models},
   author={Dingo Contributors},
-  howpublished={\url{https://github.com/DataEval/dingo}},
+  howpublished={\url{https://github.com/MigoXLab/dingo}},
   year={2024}
 }
 ```

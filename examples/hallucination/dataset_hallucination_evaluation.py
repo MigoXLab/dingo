@@ -7,6 +7,7 @@ for batch evaluation of datasets, particularly useful for:
 - LLM response validation
 - SFT data quality assessment
 """
+from pathlib import Path
 
 from dingo.config import InputArgs
 from dingo.exec import Executor
@@ -25,7 +26,7 @@ def evaluate_hallucination_jsonl_dataset():
     print("=== Example 1: JSONL Dataset Evaluation ===")
 
     input_data = {
-        "input_path": "test/data/hallucination_test.jsonl",  # Your JSONL file path
+        "input_path": str(Path("test/data/hallucination_test.jsonl")),  # Your JSONL file path
         "output_path": "output/hallucination_evaluation/",
         "dataset": {
             "source": "local",
@@ -46,8 +47,8 @@ def evaluate_hallucination_jsonl_dataset():
             "llm_config": {
                 "LLMHallucination": {
                     "model": "deepseek-chat",
-                    "key": "YOUR_API_KEY",
-                    "api_url": "https://api.deepseek.com"
+                    "key": "Your API Key",
+                    "api_url": "https://api.deepseek.com/v1"
                 }
             }
         }
@@ -58,101 +59,102 @@ def evaluate_hallucination_jsonl_dataset():
     result = executor.execute()
 
     print(result)
-    print(f"Evaluation completed successfully!")
-    print(f"Total processed: {result.total}")
-    print(f"Hallucinations detected: {result.num_bad}")
-    print(f"Clean responses: {result.num_good}")
-    print(f"Overall score: {result.score}%")
-    print(f"Type distribution: {result.type_ratio}")
-    print(f"Name distribution: {result.name_ratio}")
-    print()
 
 
-# def evaluate_rag_responses():
-#     """
-#     Example 2: Evaluate RAG system responses
-#     """
-#     print("=== Example 2: RAG System Evaluation ===")
+def evaluate_hallucination_with_hhem_rule():
+    """
+    Example 2: Evaluate hallucinations using RuleHallucinationHHEM (Local HHEM model)
 
-#     input_data = {
-#         "input_path": "test_data/rag_responses.jsonl",
-#         "data_format": "jsonl",
-#         "dataset": "local",
-#         "column_content": "generated_response",  # The LLM generated response
-#         "column_prompt": "user_question",       # The user's question
-#         "column_context": "retrieved_contexts", # The retrieved contexts
-#         "custom_config": {
-#             "prompt_list": ["PromptHallucination"],  # Use hallucination detection prompt
-#             "llm_config": {
-#                 "LLMHallucination": {
-#                     "model": "gpt-4o-mini",  # Use cheaper model for batch processing
-#                     "key": "YOUR_API_KEY",
-#                     "api_url": "https://api.openai.com/v1/chat/completions",
-#                     "threshold": 0.3  # Lower threshold for more sensitive detection
-#                 }
-#             }
-#         },
-#         "max_workers": 5,  # Process 5 items in parallel
-#         "batch_size": 50,
-#         "save_data": True,
-#         "output_path": "output/rag_hallucination_check/"
-#     }
+    RuleHallucinationHHEM uses Vectara's HHEM-2.1-Open model for local inference:
+    - Superior performance compared to GPT-3.5/GPT-4 on benchmarks
+    - Local inference with <600MB RAM usage
+    - Fast processing (~1.5s for 2k tokens on modern CPU)
+    - No API costs or rate limits
+    """
+    print("=== Example 2: HHEM Rule-Based Evaluation ===")
 
-#     input_args = InputArgs(**input_data)
-#     executor = Executor.exec_map["local"](input_args)
-#     result = executor.execute()
+    input_data = {
+        "input_path": str(Path("test/data/hallucination_test.jsonl")),
+        "output_path": "output/hhem_evaluation/",
+        "dataset": {
+            "source": "local",
+            "format": "jsonl",
+            "field": {
+                "prompt": "prompt",
+                "content": "content",
+                "context": "context",
+            }
+        },
+        "executor": {
+            "rule_list": ["RuleHallucinationHHEM"],  # Use HHEM rule instead of LLM
+            "result_save": {
+                "bad": True,
+                "good": True  # Also save good examples for comparison
+            }
+        },
+        "evaluator": {
+            "rule_config": {
+                "RuleHallucinationHHEM": {
+                    "threshold": 0.8  # Default threshold (0.0-1.0, higher = more strict)
+                }
+            }
+        }
+    }
 
-#     print(f"RAG evaluation completed!")
-#     print(f"Hallucination rate: {result.bad_count / result.total_count:.2%}")
-#     print()
+    input_args = InputArgs(**input_data)
+    executor = Executor.exec_map["local"](input_args)
+    result = executor.execute()
+
+    print(result)
 
 
-# def evaluate_sft_dataset_with_references():
-#     """
-#     Example 3: Evaluate SFT dataset with reference contexts
-#     """
-#     print("=== Example 3: SFT Dataset with References ===")
+def evaluate_combined_llm_and_hhem():
+    """
+    Example 3: Combined evaluation using both LLM and HHEM for comprehensive analysis
+    """
+    print("=== Example 3: Combined LLM + HHEM Evaluation ===")
 
-#     input_data = {
-#         "input_path": "your_sft_dataset.jsonl",
-#         "data_format": "jsonl",
-#         "dataset": "local",
-#         "column_content": "response",
-#         "column_prompt": "instruction",
-#         "column_context": "reference_docs",  # Reference documents for fact-checking
-#         "eval_group": "sft",  # Use comprehensive SFT evaluation group
-#         "custom_config": {
-#             # Include multiple evaluations
-#             "prompt_list": [
-#                 "QUALITY_BAD_HALLUCINATION",
-#                 "QUALITY_HELPFUL",
-#                 "QUALITY_HARMLESS"
-#             ],
-#             "llm_config": {
-#                 "LLMHallucination": {
-#                     "model": "gpt-4o",
-#                     "key": "YOUR_API_KEY",
-#                     "api_url": "https://api.openai.com/v1/chat/completions"
-#                 },
-#                 "LLMText3HHelpful": {
-#                     "model": "gpt-4o",
-#                     "key": "YOUR_API_KEY",
-#                     "api_url": "https://api.openai.com/v1/chat/completions"
-#                 }
-#             }
-#         },
-#         "save_data": True,
-#         "save_correct": True,  # Also save data that passes all checks
-#         "output_path": "output/sft_comprehensive_evaluation/"
-#     }
+    input_data = {
+        "input_path": str(Path("test/data/hallucination_test.jsonl")),
+        "output_path": "output/combined_evaluation/",
+        "dataset": {
+            "source": "local",
+            "format": "jsonl",
+            "field": {
+                "prompt": "prompt",
+                "content": "content",
+                "context": "context",
+            }
+        },
+        "executor": {
+            "rule_list": ["RuleHallucinationHHEM"],  # Local HHEM rule
+            "prompt_list": ["PromptHallucination"],   # LLM-based evaluation
+            "result_save": {
+                "bad": True,
+                "good": True
+            }
+        },
+        "evaluator": {
+            "rule_config": {
+                "RuleHallucinationHHEM": {
+                    "threshold": 0.5  # HHEM threshold
+                }
+            },
+            "llm_config": {
+                "LLMHallucination": {
+                    "model": "deepseek-chat",
+                    "key": "Your API Key",
+                    "api_url": "https://api.deepseek.com/v1"
+                }
+            }
+        }
+    }
 
-#     input_args = InputArgs(**input_data)
-#     executor = Executor.exec_map["local"](input_args)
-#     result = executor.execute()
+    input_args = InputArgs(**input_data)
+    executor = Executor.exec_map["local"](input_args)
+    result = executor.execute()
 
-#     print(f"SFT dataset evaluation completed!")
-#     print(f"Quality metrics summary: {result.summary}")
-#     print()
+    print(result)
 
 
 def create_sample_test_data():
@@ -196,25 +198,14 @@ def create_sample_test_data():
 
 
 if __name__ == "__main__":
-    print("📊 Dingo Dataset Hallucination Evaluation Examples")
-    print("=" * 60)
-    print()
-
-    # Create sample data first
+    # Create sample data first (if needed)
     # create_sample_test_data()  # Commented out - using pre-built test data
     print()
 
-    print("⚠️  Configuration Notes:")
-    print("1. Set your OpenAI API key in the custom_config")
-    print("2. Adjust file paths to your actual data")
-    print("3. Modify column names to match your data format")
-    print("4. Tune threshold values based on your requirements")
-    print()
-
     # Run examples (comment out if you don't have actual data)
-    evaluate_hallucination_jsonl_dataset()
-    # evaluate_rag_responses()
-    # evaluate_sft_dataset_with_references()
+    # evaluate_hallucination_jsonl_dataset()
+    evaluate_hallucination_with_hhem_rule()
+    # evaluate_combined_llm_and_hhem()  # Uncomment to test combined approach
 
     print("💡 Usage Tips:")
     print("- Use lower thresholds (0.2-0.3) for sensitive hallucination detection")
@@ -222,3 +213,4 @@ if __name__ == "__main__":
     print("- Combine with other quality metrics for comprehensive assessment")
     print("- Use parallel processing (max_workers) for large datasets")
     print("- Check output files for detailed per-item analysis")
+    print()

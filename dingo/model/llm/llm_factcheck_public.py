@@ -99,6 +99,9 @@ class LLMFactCheckPublic(BaseOpenAI):
 
         except Exception as e:
             return ModelRes(
+                error_status=True,
+                type="QUALITY_BAD_FACTUALITY",
+                name="FACTUALITY_CHECK_ERROR",
                 score=0.0,
                 threshold=cls.threshold,
                 reason=[f"Evaluation failed: {str(e)}"],
@@ -210,41 +213,23 @@ class LLMFactCheckPublic(BaseOpenAI):
 
             results = []
             for item in data:
-                evidence_list = [
-                    Evidence(**e) for e in item["supporting_evidence"]
-                ]
+                # 处理 evidence，确保所有必需字段都存在
+                evidence_list = []
+                for e in item.get("supporting_evidence", []):
+                    # 确保所有必需字段都存在，提供默认值
+                    evidence = Evidence(
+                        url=e.get("url", ""),
+                        snippet=e.get("snippet", ""),  # 提供默认值避免缺失
+                        summary=e.get("summary", "")
+                    )
+                    evidence_list.append(evidence)
+
                 results.append(FactCheckResult(
-                    claim=item["claim"],
-                    answer=item["answer"],
-                    reasoning=item["reasoning"],
+                    claim=item.get("claim", ""),
+                    answer=item.get("answer", "unsure"),  # 默认为 unsure
+                    reasoning=item.get("reasoning", ""),
                     supporting_evidence=evidence_list
                 ))
             return results
         except Exception as e:
             raise ValueError(f"Invalid results format: {str(e)}")
-
-    @classmethod
-    def send_messages(cls, messages: List) -> str:
-        """重写发送消息方法，避免使用 models.list()"""
-        if not cls.dynamic_config.model:
-            raise ValueError("model name must be specified")
-
-        params = cls.dynamic_config.parameters or {}
-        cls.validate_config(params)
-
-        completions = cls.client.chat.completions.create(
-            model=cls.dynamic_config.model,
-            messages=messages,
-            temperature=params.get("temperature", 0.3),
-            top_p=params.get("top_p", 1),
-            max_tokens=params.get("max_tokens", 4000),
-            presence_penalty=params.get("presence_penalty", 0),
-            frequency_penalty=params.get("frequency_penalty", 0),
-        )
-
-        if completions.choices[0].finish_reason == "length":
-            raise ExceedMaxTokens(
-                f"Exceed max tokens: {params.get('max_tokens', 4000)}"
-            )
-
-        return str(completions.choices[0].message.content)

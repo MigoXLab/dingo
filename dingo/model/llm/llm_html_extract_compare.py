@@ -6,15 +6,15 @@ from dingo.io import Data
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.modelres import ModelRes
-from dingo.model.prompt.prompt_html_abstract import PromptHtmlAbstract
+from dingo.model.prompt.prompt_html_extract_compare import PromptHtmlExtractCompare
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register("LLMHtmlAbstract")
-class LLMHtmlAbstract(BaseOpenAI):
-    prompt = PromptHtmlAbstract
+@Model.llm_register("LLMHtmlExtractCompare")
+class LLMHtmlExtractCompare(BaseOpenAI):
+    prompt = PromptHtmlExtractCompare
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
@@ -23,8 +23,8 @@ class LLMHtmlAbstract(BaseOpenAI):
                 "role": "user",
                 "content": cls.prompt.content.format(
                     input_data.content,
-                    input_data.raw_data["markdown_ours"],
-                    input_data.raw_data["markdown_m10"],
+                    input_data.raw_data["magic_md"],
+                    input_data.raw_data["content"],
                 ),
             }
         ]

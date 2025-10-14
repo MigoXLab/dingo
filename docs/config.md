@@ -2,130 +2,231 @@
 
 `Dingo` 为不同模块设置了各自的配置，让用户可以更加自由地使用项目完成自身的质检需求。
 
-## Cli Config
+## CLI Config
 
-用户在命令行输入指令启动项目时会使用到的参数，本质是为了实例化`InputArgs`类：
+用户在命令行输入指令启动项目时只需要指定配置文件路径：
 
-| Parameter                 | Type |             Default              | Required | Description                                                                                  |
-|---------------------------|------|:--------------------------------:|:--------:|----------------------------------------------------------------------------------------------|
-| --task_name / -n          | str  |             "dingo"              |    No    | task name.                                                                                   |
-| --eval_group / -e         | str  |                ""                |   Yes    | Eval models, can be specified multiple times like '-e default' or '-e pretrain'              |
-| --input_path / -i         | str  | "test/data/test_local_json.json" |   Yes    | file or directory path to check.                                                             |
-| --output_path             | str  |            "outputs/"            |    No    | output path of result.                                                                       |
-| --save_data               | bool |              False               |    No    | whether save results into files.                                                             |
-| --save_correct            | bool |              False               |    No    | whether save correct data.                                                                   |
-| --save_raw                | bool |              False               |    No    | whether save raw data.                                                                       |
-| --start_index             | int  |                0                 |    No    | the number of data start to check.                                                           |
-| --end_index               | int  |                -1                |    No    | the number of data end to check. if it's negative, include the data from start_index to end. |
-| --max_workers             | int  |                1                 |    No    | the number of max workers to concurrent check.                                               |
-| --batch_size              | int  |                1                 |    No    | the number of max data for concurrent check.                                                 |
-| --dataset                 | str  |          "hugging_face"          |   Yes    | dataset type, in ['hugging_face', 'local']                                                   |
-| --data_format             | str  |              "json"              |   Yes    | data format, such as: ['json', 'jsonl', 'plaintext', 'listjson'].                            |
-| --huggingface_split       | str  |                ""                |    No    | Huggingface split, default is 'train'                                                        |
-| --huggingface_config_name | str  |               None               |    No    | Huggingface config name                                                                      |
-| --column_id               | str  |                ""                | Depends  | Column name of id in the input file. If exists multiple levels, use '.' separate             |
-| --column_prompt           | str  |                ""                | Depends  | Column name of prompt in the input file. If exists multiple levels, use '.' separate         |
-| --column_content          | str  |                ""                |   Yes    | Column name of content in the input file. If exists multiple levels, use '.' separate        |
-| --column_image            | str  |                ""                | Depends  | Column name of image in the input file. If exists multiple levels, use '.' separate          |
-| --custom_config           | str  |               None               | Depends  | Custom config file path                                                                      |
-| --log_level               | str  |            "WARNING"             |    No    | printing level of logs, in ['DEBUG', 'INFO', 'WARNING', 'ERROR']                             |
+| Parameter | Type | Default | Required | Description           |
+|-----------|------|---------|----------|-----------------------|
+| --input / -i | str  | None    | Yes      | 配置文件路径           |
 
- ## SDK Config
+## 配置文件结构
 
-用户通过SDK方式启动项目时会使用到的参数，即`InputArgs`类：
+配置文件采用 JSON 格式，包含以下主要结构：
 
-| Parameter               | Type                  |             Default              | Required | Description                                                                                  |
-|-------------------------|-----------------------|:--------------------------------:|:--------:|----------------------------------------------------------------------------------------------|
-| task_name               | str                   |             "dingo"              |    No    | task name .                                                                                  |
-| eval_group              | str                   |                ""                |   Yes    | eval model.                                                                                  |
-| input_path              | str                   | "test/data/test_local_json.json" |   Yes    | file or directory path to check.                                                             |
-| output_path             | str                   |            "outputs/"            |    No    | output path of result.                                                                       |
-| save_data               | bool                  |              False               |    No    | whether save results into files.                                                             |
-| save_correct            | bool                  |              False               |    No    | whether save correct data.                                                                   |
-| save_raw                | bool                  |              False               |    No    | whether save raw data.                                                                       |
-| start_index             | int                   |                0                 |    No    | the number of data start to check.                                                           |
-| end_index               | int                   |                -1                |    No    | the number of data end to check. if it's negative, include the data from start_index to end. |
-| max_workers             | int                   |                1                 |    No    | the number of max workers to concurrent check.                                               |
-| batch_size              | int                   |                1                 |    No    | the number of max data for concurrent check.                                                 |
-| dataset                 | str                   |          "hugging_face"          |   Yes    | dataset type, in ['hugging_face', 'local']                                                   |
-| data_format             | str                   |              "json"              |   Yes    | data format, such as: ['json', 'jsonl', 'plaintext', 'listjson'].                            |
-| huggingface_split       | str                   |                ""                |    No    | Huggingface split                                                                            |
-| huggingface_config_name | Optional[str]         |               None               |    No    | Huggingface config name                                                                      |
-| column_id               | str                   |                ""                | Depends  | Column name of id in the input file. If exists multiple levels, use '.' separate             |
-| column_prompt           | str                   |                ""                | Depends  | Column name of prompt in the input file. If exists multiple levels, use '.' separate         |
-| column_content          | str                   |                ""                |   Yes    | Column name of content in the input file. If exists multiple levels, use '.' separate        |
-| column_image            | str                   |                ""                | Depends  | Column name of image in the input file. If exists multiple levels, use '.' separate          |
-| custom_config           | Optional[str \| dict] |               None               | Depends  | custom config, file path or dict                                                             |
-| log_level               | str                   |            "WARNING"             |    No    | printing level of logs, in ['DEBUG', 'INFO', 'WARNING', 'ERROR']                             |
+### InputArgs 根配置
 
-## Custom Config
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| task_name | str | "dingo" | No | 任务名称 |
+| input_path | str | "test/data/test_local_json.json" | Yes | 要检查的文件或目录路径 |
+| output_path | str | "outputs/" | No | 结果输出路径 |
+| log_level | str | "WARNING" | No | 日志级别，可选值：['DEBUG', 'INFO', 'WARNING', 'ERROR'] |
+| use_browser | bool | false | No | 是否使用浏览器进行可视化 |
 
-`Dingo` 通过启发式规则、第三方质量检测工具或服务以及大型模型，使用户能够个性化他们的数据质量检查方法。这些能力可以通过配置来实现。
-进一步来说，就是使用上述配置项中提到的 `custom_config` 的参数，该参数指向配置文件路径或字典。如果所指向的是文件，那么文件中仅包含一个json格式
-的数据，例如： [config_template.json](../test/config/config_template.json)
+### Dataset 配置 (dataset)
 
-| Parameter       | Type | Description                                              |
-|-----------------|------|----------------------------------------------------------|
-| rule_list       | list | choose these functions as a group to check data quality. |
-| prompt_list     | list | choose these prompts as a group to check data quality.   |
-| rule_config     | dict | parameters related to rules and key is rule name.        |
-| llm_config      | dict | parameters related to llm and key is llm name.           |
-| multi_turn_mode | str  | choose parse mode for multi-turn dialogue.               |
+数据集相关配置：
 
-`rule_list` 和 `prompt_list` 参数与上述提到的 `eval_group` 配合使用。
-如果 `eval_group` 已经内置，那 `rule_list` 和 `prompt_list` 则报错提示。
-如果 `eval_group` 没有内置，那么项目则根据 `rule_list` 和 `prompt_list` 罗列的规则与prompt进行质检。
-具体的使用方法，可以参考：[sdk_custom_rule.py](../examples/custom/sdk_custom_rule.py)、[sdk_custom_llm.py](../examples/custom/sdk_custom_llm.py)
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| source | str | "hugging_face" | Yes | 数据源类型，可选值：['hugging_face', 'local'] |
+| format | str | "json" | Yes | 数据格式，可选值：['json', 'jsonl', 'plaintext', 'listjson'] |
+| field | object | - | Yes | 字段映射配置 |
+| hf_config | object | - | No | HuggingFace 特定配置 |
 
-### rule_config
+#### DatasetField 配置 (dataset.field)
 
-启发式规则是数据处理和质量检查的常用方法，`Dingo` 已经实施了一系列启发式规则，并将其分为规则组，如 `pretrain` 和 `sft`。
-在配置文件的模板中，与启发式规则配置相关的项是 `rule_config` ，它的key是具体的规则名称。
-通过 `rule_config` 用户可以在不去修改源代码的情况下，动态的设置规则中的阈值、模式、关键词列表与引用路径。
+字段映射配置：
 
-| Parameter          | Type     | Description                                                |
-|--------------------|----------|------------------------------------------------------------|
-| threshold          | float    | rule uses the number to decide.                            |
-| pattern            | string   | rule uses the character string to match.                   |
-| key_list           | list     | rule uses these keys to match.                             |
-| refer_path         | list     | rule loads the file content or small models.               |
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| id | str | "" | Depends | ID 字段名，多级用 '.' 分隔 |
+| prompt | str | "" | Depends | prompt 字段名，多级用 '.' 分隔 |
+| content | str | "" | Yes | 内容字段名，多级用 '.' 分隔 |
+| context | str | "" | Depends | 上下文字段名，多级用 '.' 分隔 |
+| image | str | "" | Depends | 图像字段名，多级用 '.' 分隔 |
 
-### llm_config
+#### DatasetHFConfig 配置 (dataset.hf_config)
 
-`Dingo` 在进行大模型质检时，一些必要的配置是无法避免的，比如密钥、链接等。但是考虑到隐私与安全问题，用户需要自行设置且对他人保密。、
-所以上述的 `llm_config` 参数就显得十分必要，它的key是项目注册的大语言模型，如 `openai`。
+HuggingFace 特定配置：
 
-| Parameter  | Type | Description                                         |
-|------------|------|-----------------------------------------------------|
-| model      | list | llm uses which model.                               |
-| key        | list | llm uses the key to verify identity.                |
-| api_url    | list | llm uses the url to access the model.               |
-| parameters | dict | llm uses the parameters to tune LLM configurations. |
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| huggingface_split | str | "" | No | HuggingFace 数据集分割 |
+| huggingface_config_name | str | null | No | HuggingFace 配置名称 |
 
-#### parameters
+### Executor 配置 (executor)
 
-`temperature` 数字类型，可选。默认为 1。要使用的采样温度(temperature)，介于 0 和 2 之间。
-我们通常建议只修改此参数或 top_p 一个参数而不是两个同时修改。
+执行器相关配置：
 
-`top_p` 数字类型，可选。默认为 1。
-我们通常建议只修改此参数或 temperature 一个参数而不是两个同时修改。
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| eval_group | str | "" | Yes | 评估模型组 |
+| rule_list | list | [] | Depends | 规则函数列表 |
+| prompt_list | list | [] | Depends | prompt 列表 |
+| start_index | int | 0 | No | 开始检查的数据索引 |
+| end_index | int | -1 | No | 结束检查的数据索引 |
+| max_workers | int | 1 | No | 最大并发工作线程数 |
+| batch_size | int | 1 | No | 并发检查的最大数据量 |
+| multi_turn_mode | str | null | No | 多轮对话解析模式 |
+| result_save | object | - | No | 结果保存配置 |
 
-`max_tokens` 整数类型，可选。默认为 4000。要生成的最大令牌数。
+#### ExecutorResultSave 配置 (executor.result_save)
 
-`presence_penalty` 数字类型，可选。默认为 0。介于 -2.0 和 2.0 之间的数字。
+结果保存配置：
 
-`frequency_penalty` 数字类型，可选。默认为 0。范围在 -2.0 到 2.0 之间的数字。
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| bad | bool | false | No | 是否保存错误结果 |
+| good | bool | false | No | 是否保存正确结果 |
+| raw | bool | false | No | 是否保存原始数据 |
 
-更多参数细节可参考OpenAI API官方文档。
+### Evaluator 配置 (evaluator)
 
-### multi_turn_mode
+评估器相关配置：
 
-`Dingo` 支持多轮对话数据质检，如MT-Bench、MT-Bench++和MT-Bench101，其中包含多轮对话质检的解析模式。
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| rule_config | object | {} | Depends | 规则配置 |
+| llm_config | object | {} | Depends | LLM 配置 |
 
-| Parameter | Type |                Description                |
-|-----------|------|-------------------------------------------|
-| all       | str  | concat all turns in multi-turn dialogues. |
+#### EvaluatorRuleArgs 配置 (evaluator.rule_config.[rule_name])
 
-具体的使用方法，可以参考：
+规则配置：
+
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| threshold | float | null | No | 规则决策阈值 |
+| pattern | str | null | No | 匹配模式字符串 |
+| key_list | list | null | No | 匹配关键词列表 |
+| refer_path | list | null | No | 参考文件路径或小模型路径 |
+
+#### EvaluatorLLMArgs 配置 (evaluator.llm_config.[llm_name])
+
+LLM 配置：
+
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| model | str | null | No | 使用的模型名称 |
+| key | str | null | No | API 密钥 |
+| api_url | str | null | No | API URL |
+| parameters | object | null | No | LLM 调参配置 |
+
+##### LLM Parameters 配置
+
+LLM 调参配置：
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| temperature | number | 1 | 采样温度，0-2之间 |
+| top_p | number | 1 | 核心采样概率 |
+| max_tokens | number | 4000 | 最大生成token数 |
+| presence_penalty | number | 0 | 存在惩罚，-2.0到2.0之间 |
+| frequency_penalty | number | 0 | 频率惩罚，-2.0到2.0之间 |
+
+## 配置文件示例
+
+```json
+{
+  "task_name": "dingo",
+  "input_path": "test/data/test_local_json.json",
+  "output_path": "outputs/",
+  "log_level": "WARNING",
+  "use_browser": false,
+
+  "dataset": {
+    "source": "hugging_face",
+    "format": "json",
+    "field": {
+      "id": "",
+      "prompt": "",
+      "content": "",
+      "context": "",
+      "image": ""
+    },
+    "hf_config": {
+      "huggingface_split": "",
+      "huggingface_config_name": null
+    }
+  },
+
+  "executor": {
+    "eval_group": "",
+    "rule_list": [],
+    "prompt_list": [],
+    "start_index": 0,
+    "end_index": -1,
+    "max_workers": 1,
+    "batch_size": 1,
+    "multi_turn_mode": null,
+    "result_save": {
+      "bad": false,
+      "good": false,
+      "raw": false
+    }
+  },
+
+  "evaluator": {
+    "rule_config": {
+      "rule_name": {
+        "threshold": 0.5,
+        "pattern": ".*",
+        "key_list": ["key1", "key2"],
+        "refer_path": ["path/to/reference"]
+      }
+    },
+    "llm_config": {
+      "openai": {
+        "model": "gpt-3.5-turbo",
+        "key": "your-api-key",
+        "api_url": "https://api.openai.com/v1/chat/completions",
+        "parameters": {
+          "temperature": 1,
+          "top_p": 1,
+          "max_tokens": 4000,
+          "presence_penalty": 0,
+          "frequency_penalty": 0
+        }
+      }
+    }
+  }
+}
+```
+
+## 使用方式
+
+### CLI 方式
+```bash
+dingo --input config.json
+```
+
+### SDK 方式
+```python
+from dingo import InputArgs, run
+
+# 从文件加载配置
+config = InputArgs.parse_file("config.json")
+run(config)
+
+# 或从字典创建配置
+config_dict = {
+    "task_name": "my_task",
+    "input_path": "data.json",
+    # ... 其他配置
+}
+config = InputArgs(**config_dict)
+run(config)
+```
+
+## 多轮对话模式
+
+`Dingo` 支持多轮对话数据质检，如MT-Bench、MT-Bench++和MT-Bench101：
+
+| Mode | Description |
+|------|-------------|
+| all | 拼接多轮对话中的所有回合 |
+
+具体使用方法请参考相关示例文件:
 [sdk_mtbench101_rule_all.py](../examples/multi_turn_dialogues/sdk_mtbench101_rule_all.py)、[sdk_mtbench101_llm.py](../examples/multi_turn_dialogues/sdk_mtbench101_llm.py)、
 [sdk_mtbench_rule_all.py](../examples/multi_turn_dialogues/sdk_mtbench_rule_all.py)、[sdk_mtbench_llm.py](../examples/multi_turn_dialogues/sdk_mtbench_llm.py)。

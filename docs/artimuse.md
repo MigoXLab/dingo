@@ -10,9 +10,9 @@ RuleImageArtimuse 基于 ArtiMuse 在线服务对输入图片进行美学质量�
 
 本文档的测试图片均由 Google Gemini 2.5 Flash Image（社区常称 “nano‑banana”）按提示词生成，后经人工筛选整理并托管在 OpenXLab；完整清单见 [test/data/artimuse/test_artimuse_nano_banana.jsonl](../test/data/artimuse/test_artimuse_nano_banana.jsonl)。我们将这批样例汇总为迷你集合 nano_banana，覆盖人像、室内、产品、电商、插画等多种风格，便于快速复现。
 
-在仓库根目录运行 `python [examples/artimuse/artimuse.py](../examples/artimuse/artimuse.py)` 可完成评估；如设置 `output_path`，将在该目录生成带时间戳与短 ID 的子目录，包含 `summary.json` 与逐条明细。可用 `python -m dingo.run.vsl --input <输出目录>` 打开可视化页面。
+在仓库根目录运行 `python examples/artimuse/artimuse.py`（[examples/artimuse/artimuse.py](../examples/artimuse/artimuse.py)）可完成评估；如设置 `output_path`，将在该目录生成带时间戳与短 ID 的子目录，包含 `summary.json` 与逐条明细。可用 `python -m dingo.run.vsl --input <输出目录>` 打开可视化页面。
 
-判定基于 `data.score_overall` 与阈值 `threshold`：低于阈值为 BadImage，否则为 GoodImage；服务端 `data` 原样写入 `reason[0]` 便于溯源。结合 nano_banana 的样例，低分多见于贴纸或合成画面写实性不足、Logo/文字遮挡主体、风格迁移过强导致色彩与细节失真、截图噪声多而缺乏摄影要素、纯 Logo 缺少摄影主体、以及过度后期造成的不自然等情况；应尽量突出主体、控制曝光与清晰度、减少压缩与过重滤镜、移除干扰元素，并保持整体风格一致。
+我们的判定是基于 `data.score_overall` 与阈值 `threshold`的，如果低于阈值那么就是 BadImage，否则为 GoodImage；服务端 `data` 原样写入 `reason[0]` 便于溯源。并且，结合 nano_banana 的样例，低分多见于贴纸或合成画面写实性不足、Logo/文字遮挡主体、风格迁移过强导致色彩与细节失真、截图噪声多而缺乏摄影要素、纯 Logo 缺少摄影主体、以及过度后期造成的不自然等情况；应尽量突出主体、控制曝光与清晰度、减少压缩与过重滤镜、移除干扰元素，并保持整体风格一致。
 
 
 

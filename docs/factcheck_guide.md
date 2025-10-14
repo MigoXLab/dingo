@@ -221,7 +221,6 @@ dingo/
   │       └── prompt_factcheck.py      # 评估提示词
   └── examples/
       └── factcheck/
-          ├── factcheck_demo.py        # 单条评估示例
           └── dataset_factcheck_evaluation.py  # 数据集评估示例
 ```
 

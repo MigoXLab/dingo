@@ -312,6 +312,46 @@ class RuleImageArtimuse(BaseRule):
             )
 
 
+@Model.rule_register("QUALITY_BAD_IMG_LABEL_OVERLAP", [])
+class RuleImageLabelOverlap(BaseRule):
+    _metric_info = {
+        "category": "Rule-Based IMG Quality Metrics",
+        "quality_dimension": "IMG_LABEL_OVERLAP",
+        "metric_name": "RuleImageLabelOverlap",
+        "description": "",  # TODO: lindong input
+        "paper_title": "",
+        "paper_url": "",
+        "paper_authors": "",
+        "evaluation_results": ""
+    }
+
+    dynamic_config = EvaluatorRuleArgs()
+
+    @classmethod
+    def eval(cls, input_data: Data) -> ModelRes:
+        pass
+
+
+@Model.rule_register("QUALITY_BAD_IMG_LABEL_VISUALIZATION", [])
+class RuleImageLabelVisualization(BaseRule):
+    _metric_info = {
+        "category": "Rule-Based IMG Quality Metrics",
+        "quality_dimension": "IMG_LABEL_VISUALIZATION",
+        "metric_name": "RuleImageLabelVisualization",
+        "description": "",  # TODO: lindong input
+        "paper_title": "",
+        "paper_url": "",
+        "paper_authors": "",
+        "evaluation_results": ""
+    }
+
+    dynamic_config = EvaluatorRuleArgs()
+
+    @classmethod
+    def eval(cls, input_data: Data) -> ModelRes:
+        pass
+
+
 if __name__ == "__main__":
     data = Data(
         data_id='1',

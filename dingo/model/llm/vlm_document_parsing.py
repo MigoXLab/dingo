@@ -18,7 +18,7 @@ class VLMDocumentParsingQuality(BaseOpenAI):
     def build_messages(cls, input_data: Data) -> List:
         if isinstance(input_data.image[0], str):
             with open(input_data.image[0], "rb") as image_file:
-                base64_image  = base64.b64encode(image_file.read()).decode('utf-8')
+                base64_image = base64.b64encode(image_file.read()).decode('utf-8')
         else:
             base64_image = input_data.image[0]
 

@@ -434,9 +434,9 @@ result = executor.execute()
 
 ```
 @misc{dingo,
-  title={Dingo: A Comprehensive Data Quality Evaluation Tool for Large Models},
+  title={Dingo: A Comprehensive AI Data Quality Evaluation Tool for Large Models},
   author={Dingo Contributors},
-  howpublished={\url{https://github.com/DataEval/dingo}},
+  howpublished={\url{https://github.com/MigoXLab/dingo}},
   year={2024}
 }
 ```

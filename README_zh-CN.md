@@ -1,7 +1,18 @@
-<div align="center" xmlns="http://www.w3.org/1999/html">
+<!-- SEO 元信息和结构化数据 -->
+<div itemscope itemtype="https://schema.org/SoftwareApplication" align="center" xmlns="http://www.w3.org/1999/html">
+  <meta itemprop="name" content="Dingo: AI 数据质量评估工具">
+  <meta itemprop="description" content="全面的AI驱动数据质量评估平台，专为机器学习数据集、LLM训练数据验证、幻觉检测和RAG系统评估而设计">
+  <meta itemprop="applicationCategory" content="数据质量软件">
+  <meta itemprop="operatingSystem" content="跨平台">
+  <meta itemprop="programmingLanguage" content="Python">
+  <meta itemprop="url" content="https://github.com/MigoXLab/dingo">
+  <meta itemprop="downloadUrl" content="https://pypi.org/project/dingo-python/">
+  <meta itemprop="softwareVersion" content="latest">
+  <meta itemprop="license" content="Apache-2.0">
+
 <!-- logo -->
 <p align="center">
-  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;">
+  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;" alt="Dingo AI 数据质量评估工具 Logo">
 </p>
 
 <!-- badges -->
@@ -40,7 +51,7 @@
 </div>
 
 
-# 介绍
+# Dingo 介绍
 
 Dingo是一款数据质量评估工具，帮助你自动化检测数据集中的数据质量问题。Dingo提供了多种内置的规则和模型评估方法，同时也支持自定义评估方法。Dingo支持常用的文本数据集和多模态数据集，包括预训练数据集、微调数据集和评测数据集。此外，Dingo支持多种使用方式，包括本地CLI和SDK，便于集成到各种评测平台，如[OpenCompass](https://github.com/open-compass/opencompass)等。
 
@@ -57,7 +68,7 @@ Dingo是一款数据质量评估工具，帮助你自动化检测数据集中的
 pip install dingo-python
 ```
 
-## 2. 使用示例
+## 2. Dingo 使用示例
 
 ### 2.1 评估LLM对话数据
 

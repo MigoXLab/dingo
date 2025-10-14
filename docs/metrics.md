@@ -62,7 +62,7 @@ This document provides comprehensive information about all quality metrics used 
 | Type | Metric | Description | Paper Source | Evaluation Results |
 |------|--------|-------------|--------------|-------------------|
 | `QUALITY_BAD_EFFECTIVENESS` | RuleAudioDuration | Check whether the audio duration meets the standard | Internal Implementation | N/A |
-| `QUALITY_BAD_EFFECTIVENESS` | RuleAudio | Check whether the audio signal-to-noise ratio meets the standard | Internal Implementation | N/A |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleAudioSnrQuality | Check whether the audio signal-to-noise ratio meets the standard | Internal Implementation | N/A |
 
 ### Document Parsing
 

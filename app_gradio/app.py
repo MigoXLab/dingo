@@ -438,4 +438,4 @@ if __name__ == '__main__':
         )
 
     # 启动界面
-    demo.launch()
+    demo.launch(server_port=7861, share=True)

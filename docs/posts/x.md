@@ -57,3 +57,22 @@ Multi-language support + 1s response time
 📖 Try: https://deepwiki.com/MigoXLab/dingo
 ⭐ GitHub: https://github.com/MigoXLab/dingo
 #Documentation #AI
+
+---
+
+# 文案四 - Dingo × ArtiMuse Integration
+
+Ready to upgrade from "gut feeling" to "standardized selection"?
+
+🔗 Dingo: github.com/MigoXLab/dingo
+🔗 ArtiMuse: github.com/thunderbolt215/ArtiMuse
+
+Perfect for content QA, brand guidelines, or creative iteration!
+#AI #ImageGeneration #QualityAssurance
+
+## Standalone Tweet Option
+🚀 Built an automated image quality pipeline: nano banana generates → ArtiMuse evaluates (8 aesthetic dimensions) → Dingo orchestrates everything
+
+Result: 75% pass rate, detailed feedback on composition/lighting/originality
+
+Open source: github.com/MigoXLab/dingo

@@ -238,12 +238,30 @@ class LocalExecutor(ExecProto):
             # analyze result
             if tmp.error_status:
                 result_info.error_status = True
-                bad_type_list.append(tmp.type)
-                bad_name_list.append(tmp.type + "-" + tmp.name)
+                if isinstance(tmp.type, str) and isinstance(tmp.name, str):
+                    bad_type_list.append(tmp.type)
+                    bad_name_list.append(tmp.type + "-" + tmp.name)
+                elif isinstance(tmp.type, List) and isinstance(tmp.name, List):
+                    if len(tmp.type) != len(tmp.name):
+                        raise Exception(f'ModelRes.type is not the same length to ModelRes.name.\n type: {tmp.type} \n name: {tmp.name}')
+                    for i in range(len(tmp.type)):
+                        bad_type_list.append(tmp.type[i])
+                        bad_name_list.append(tmp.type[i] + "-" + tmp.name[i])
+                else:
+                    raise Exception('ModelRes.type and ModelRes.name are not str or List at the same time.')
                 bad_reason_list.extend(tmp.reason)
             else:
-                good_type_list.append(tmp.type)
-                good_name_list.append(tmp.type + "-" + tmp.name)
+                if isinstance(tmp.type, str) and isinstance(tmp.name, str):
+                    good_type_list.append(tmp.type)
+                    good_name_list.append(tmp.type + "-" + tmp.name)
+                elif isinstance(tmp.type, List) and isinstance(tmp.name, List):
+                    if len(tmp.type) != len(tmp.name):
+                        raise Exception(f'ModelRes.type is not the same length to ModelRes.name.\n type: {tmp.type} \n name: {tmp.name}')
+                    for i in range(len(tmp.type)):
+                        good_type_list.append(tmp.type[i])
+                        good_name_list.append(tmp.type[i] + "-" + tmp.name[i])
+                else:
+                    raise Exception('ModelRes.type and ModelRes.name are not str or List at the same time.')
                 good_reason_list.extend(tmp.reason)
         if result_info.error_status:
             result_info.type_list = list(set(bad_type_list))
@@ -271,12 +289,32 @@ class LocalExecutor(ExecProto):
             # analyze result
             if tmp.error_status:
                 result_info.error_status = True
-                bad_type_list.append(tmp.type)
-                bad_name_list.append(tmp.type + "-" + tmp.name)
+                if isinstance(tmp.type, str) and isinstance(tmp.name, str):
+                    bad_type_list.append(tmp.type)
+                    bad_name_list.append(tmp.type + "-" + tmp.name)
+                elif isinstance(tmp.type, List) and isinstance(tmp.name, List):
+                    if len(tmp.type) != len(tmp.name):
+                        raise Exception(
+                            f'ModelRes.type is not the same length to ModelRes.name.\n type: {tmp.type} \n name: {tmp.name}')
+                    for i in range(len(tmp.type)):
+                        bad_type_list.append(tmp.type[i])
+                        bad_name_list.append(tmp.type[i] + "-" + tmp.name[i])
+                else:
+                    raise Exception('ModelRes.type and ModelRes.name are not str or List at the same time.')
                 bad_reason_list.extend(tmp.reason)
             else:
-                good_type_list.append(tmp.type)
-                good_name_list.append(tmp.type + "-" + tmp.name)
+                if isinstance(tmp.type, str) and isinstance(tmp.name, str):
+                    good_type_list.append(tmp.type)
+                    good_name_list.append(tmp.type + "-" + tmp.name)
+                elif isinstance(tmp.type, List) and isinstance(tmp.name, List):
+                    if len(tmp.type) != len(tmp.name):
+                        raise Exception(
+                            f'ModelRes.type is not the same length to ModelRes.name.\n type: {tmp.type} \n name: {tmp.name}')
+                    for i in range(len(tmp.type)):
+                        good_type_list.append(tmp.type[i])
+                        good_name_list.append(tmp.type[i] + "-" + tmp.name[i])
+                else:
+                    raise Exception('ModelRes.type and ModelRes.name are not str or List at the same time.')
                 good_reason_list.extend(tmp.reason)
         if result_info.error_status:
             result_info.type_list = list(set(bad_type_list))

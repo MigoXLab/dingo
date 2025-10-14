@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 
 from dingo.config.input_args import EvaluatorRuleArgs
@@ -77,7 +79,7 @@ class RuleAudioDuration(BaseRule):
         "multi_lan_sr",
     ],
 )
-class RuleAudio(BaseRule):
+class RuleAudioSnrQuality(BaseRule):
     """check whether the audio signal-to-noise ratio meets the standard"""
 
     # Metadata for documentation generation
@@ -99,7 +101,7 @@ class RuleAudio(BaseRule):
         if not input_data.content:
             return res
         if isinstance(input_data.content, str):
-            with wave.open(input_data.content, 'r') as w:
+            with wave.open(str(Path(input_data.content)), 'r') as w:
                 frame_count = w.getnframes()
                 sample_rate = w.getframerate()
                 duration = frame_count / sample_rate

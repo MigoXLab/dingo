@@ -1,7 +1,18 @@
-<div align="center" xmlns="http://www.w3.org/1999/html">
+<!-- SEO メタ情報と構造化データ -->
+<div itemscope itemtype="https://schema.org/SoftwareApplication" align="center" xmlns="http://www.w3.org/1999/html">
+  <meta itemprop="name" content="Dingo: AI データ品質評価ツール">
+  <meta itemprop="description" content="機械学習データセット、LLM学習データ検証、幻覚検出、RAGシステム評価のための包括的なAI駆動データ品質評価プラットフォーム">
+  <meta itemprop="applicationCategory" content="データ品質ソフトウェア">
+  <meta itemprop="operatingSystem" content="クロスプラットフォーム">
+  <meta itemprop="programmingLanguage" content="Python">
+  <meta itemprop="url" content="https://github.com/MigoXLab/dingo">
+  <meta itemprop="downloadUrl" content="https://pypi.org/project/dingo-python/">
+  <meta itemprop="softwareVersion" content="latest">
+  <meta itemprop="license" content="Apache-2.0">
+
 <!-- logo -->
 <p align="center">
-  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;">
+  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;" alt="Dingo AI データ品質評価ツール ロゴ">
 </p>
 
 <!-- badges -->

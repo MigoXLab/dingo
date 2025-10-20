@@ -21,8 +21,8 @@ def dingo_demo(
 ):
     if not data_format:
         raise gr.Error('ValueError: data_format can not be empty, please input.')
-    if not column_content:
-        raise gr.Error('ValueError: column_content can not be empty, please input.')
+    # if not column_content:
+    #     raise gr.Error('ValueError: column_content can not be empty, please input.')
     if not rule_list and not prompt_list:
         raise gr.Error('ValueError: rule_list and prompt_list can not be empty at the same time.')
 
@@ -53,9 +53,7 @@ def dingo_demo(
             "dataset": {
                 "source": dataset_source,
                 "format": data_format,
-                "field": {
-                    "content": column_content
-                }
+                "field": {}
             },
             "executor": {
                 "rule_list": rule_list,
@@ -81,6 +79,8 @@ def dingo_demo(
             input_data['dataset']['field']['id'] = column_id
         if column_prompt:
             input_data['dataset']['field']['prompt'] = column_prompt
+        if column_content:
+            input_data['dataset']['field']['content'] = column_content
         if column_image:
             input_data['dataset']['field']['image'] = column_image
 
@@ -292,7 +292,7 @@ if __name__ == '__main__':
                     )
 
                     data_format = gr.Dropdown(
-                        ["jsonl", "json", "plaintext", "listjson"],
+                        ["jsonl", "json", "plaintext", "listjson","image"],
                         label="data_format"
                     )
                     with gr.Row():
@@ -369,7 +369,7 @@ if __name__ == '__main__':
                             visible=False
                         )
                         column_content = gr.Textbox(
-                            value="content",
+                            value="",
                             placeholder="Column name of content in the input file. If exists multiple levels, use '.' separate",
                             label="column_content",
                             visible=False

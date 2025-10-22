@@ -12,6 +12,7 @@ from dingo.model.rule.base import BaseRule
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["qa_standard_v1"])
 class RuleAbnormalChar(BaseRule):
     # consist of [RuleSpecialCharacter, RuleInvisibleChar]
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -40,6 +41,7 @@ class RuleAbnormalChar(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["qa_standard_v1"])
 class RuleAbnormalHtml(BaseRule):
     # consist of [RuleHtmlEntity, RuleHtmlTag]
+
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
@@ -67,6 +69,7 @@ class RuleAbnormalHtml(BaseRule):
 @Model.rule_register("QUALITY_BAD_FLUENCY", ["pdf_all"])
 class RuleAbnormalNumber(BaseRule):
     """check pdf content abnormal book page or index number."""
+
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
         "quality_dimension": "FLUENCY",
@@ -77,6 +80,7 @@ class RuleAbnormalNumber(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(pattern=r"\n{4}\d+\n{4}")
 
     @classmethod
@@ -95,6 +99,7 @@ class RuleAbnormalNumber(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["pretrain"])
 class RuleAlphaWords(BaseRule):
     """check whether the ratio of words that contain at least one alphabetic character > 0.6"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -106,17 +111,20 @@ class RuleAlphaWords(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=0.6)
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from nltk.tokenize import word_tokenize
+
         res = ModelRes()
         content = input_data.content
         words = word_tokenize(content)
         n_words = len(words)
         if n_words == 0:
             return res
+
         n_alpha_words = sum([any((c.isalpha() for c in w)) for w in words])
         ratio = n_alpha_words / n_words
         if ratio > cls.dynamic_config.threshold:
@@ -177,6 +185,7 @@ class RuleAudioDataFormat(BaseRule):
 @Model.rule_register("QUALITY_BAD_UNDERSTANDABILITY", ["pretrain"])
 class RuleCapitalWords(BaseRule):
     """check whether capital words ratio > 0.2"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -194,6 +203,7 @@ class RuleCapitalWords(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from nltk.tokenize import WordPunctTokenizer
+
         res = ModelRes()
         content = input_data.content
         words = WordPunctTokenizer().tokenize(content)
@@ -213,6 +223,7 @@ class RuleCapitalWords(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["pretrain"])
 class RuleCharNumber(BaseRule):
     """check whether the number of char > 100"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -224,6 +235,7 @@ class RuleCharNumber(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=100)
 
     @classmethod
@@ -246,6 +258,7 @@ class RuleCharNumber(BaseRule):
 @Model.rule_register("QUALITY_BAD_FLUENCY", ["pdf_all"])
 class RuleCharSplit(BaseRule):
     """check pdf content char split."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -257,6 +270,7 @@ class RuleCharSplit(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         pattern=r"(?:(?:[a-zA-Z]\s){5}[a-zA-Z])", threshold=3
     )
@@ -281,6 +295,7 @@ class RuleCharSplit(BaseRule):
 )
 class RuleColonEnd(BaseRule):
     """check whether the last char is ':'"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -292,6 +307,7 @@ class RuleColonEnd(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -331,6 +347,7 @@ class RuleColonEnd(BaseRule):
 )
 class RuleContentNull(BaseRule):
     """check whether content is null"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -342,6 +359,7 @@ class RuleContentNull(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -361,6 +379,7 @@ class RuleContentNull(BaseRule):
 )
 class RuleContentShort(BaseRule):
     """check whether content is too short"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -372,6 +391,7 @@ class RuleContentShort(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=20)
 
     @classmethod
@@ -401,6 +421,7 @@ class RuleContentShort(BaseRule):
 )
 class RuleContentShortMultiLan(BaseRule):
     """check whether content is too short."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -412,11 +433,13 @@ class RuleContentShortMultiLan(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=20)
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from nltk.tokenize import WordPunctTokenizer
+
         res = ModelRes()
         tk = WordPunctTokenizer()
         tokens = tk.tokenize(input_data.content)
@@ -432,6 +455,7 @@ class RuleContentShortMultiLan(BaseRule):
 @Model.rule_register("QUALITY_BAD_UNDERSTANDABILITY", [])
 class RuleCurlyBracket(BaseRule):
     """check whether the ratio of the number of {,} and the number of characters < 0.025"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -443,6 +467,7 @@ class RuleCurlyBracket(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=0.025)
 
     @classmethod
@@ -451,6 +476,7 @@ class RuleCurlyBracket(BaseRule):
         content = input_data.content
         if len(content) == 0:
             return res
+
         num = content.count("{") + content.count("}")
         ratio = num / len(content)
         if ratio > cls.dynamic_config.threshold:
@@ -485,6 +511,7 @@ class RuleCurlyBracket(BaseRule):
 )
 class RuleDocRepeat(BaseRule):
     """check whether content repeats"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -496,6 +523,7 @@ class RuleDocRepeat(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=80)
 
     @classmethod
@@ -514,92 +542,10 @@ class RuleDocRepeat(BaseRule):
         return res
 
 
-@Model.rule_register(
-    "QUALITY_BAD_SIMILARITY",
-    [
-        "default",
-        "pdf"
-    ],
-)
-class RuleDocFormulaRepeat(BaseRule):
-    """check whether Formula repeats"""
-
-    # Metadata for documentation generation
-    _metric_info = {
-        "category": "Rule-Based TEXT Quality Metrics",
-        "quality_dimension": "SIMILARITY",
-        "metric_name": "RuleDocFormulaRepeat",
-        "description": "Evaluates text for consecutive repeated content and multiple occurrences of special characters",
-        "paper_title": "RedPajama: an Open Dataset for Training Large Language Models",
-        "paper_url": "https://github.com/togethercomputer/RedPajama-Data",
-        "paper_authors": "Together Computer, 2023",
-        "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
-    }
-
-    dynamic_config = EvaluatorRuleArgs(threshold=20)  # 设置阈值为20
-
-    @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
-
-        # 提取所有公式
-        pattern = r'(?:\$\$(.*?)\$\$|\\\((.*?)\\\))'
-        matches = re.findall(pattern, input_data.content, re.DOTALL)
-        formulas = []
-        for match in matches:
-            formula = match[0] or match[1]  # 取非空的那个
-            formulas.append(formula.strip())
-        if not formulas:
-            return res
-        formula_content = "\n".join(formulas)
-        repeat_analysis = cls.analyze_repeats(formula_content)
-        # 如果总连续重复长度超过阈值，则标记为错误
-        if repeat_analysis['total_repeat_length'] >= cls.dynamic_config.threshold:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = [
-                f"Formula has too many consecutive repeated characters, "
-                f"total repeat length: {repeat_analysis['total_repeat_length']}, "
-                f"found {len(repeat_analysis['repeats'])} repeat patterns"
-            ]
-
-        return res
-
-    @classmethod
-    def analyze_repeats(cls, text):
-        """
-        分析文本中的连续重复模式
-        """
-        multi_char_pattern = r'(.{2,20}?)\1+'
-        multi_char_repeats = list(re.finditer(multi_char_pattern, text))
-
-        # 计算总重复长度
-        total_repeat_length = 0
-        repeats_info = []
-
-        for match in multi_char_repeats:
-            repeat_text = match.group(0)
-            pattern = match.group(1)
-            repeat_length = len(repeat_text)
-            total_repeat_length += repeat_length
-
-            repeats_info.append({
-                'text': repeat_text,
-                'pattern': pattern,
-                'length': repeat_length,
-                'type': 'single_char' if len(pattern) == 1 else 'multi_char'
-            })
-        return {
-            'total_repeat_length': total_repeat_length,
-            'repeats': repeats_info,
-            'multi_char_count': len(multi_char_repeats)
-        }
-
-
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["qa_standard_v1"])
 class RuleEnterAndSpace(BaseRule):
     # consist of [RuleEnterMore, RuleEnterRatioMore, RuleSpaceMore]
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -643,6 +589,7 @@ class RuleEnterAndSpace(BaseRule):
 )
 class RuleEnterMore(BaseRule):
     """check whether content has 8 consecutive carriage returns."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -654,6 +601,7 @@ class RuleEnterMore(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(key_list=[r"\n{8,}", r"\r\n{8,}"])
 
     @classmethod
@@ -690,6 +638,7 @@ class RuleEnterMore(BaseRule):
 )
 class RuleEnterRatioMore(BaseRule):
     """check whether the number of enter / the number of content > 25%"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -701,6 +650,7 @@ class RuleEnterRatioMore(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -709,6 +659,7 @@ class RuleEnterRatioMore(BaseRule):
         content = input_data.content
         if len(content) == 0:
             return res
+
         ratio = content.count("\n") / len(content)
         if ratio > 0.25:
             res.error_status = True
@@ -721,6 +672,7 @@ class RuleEnterRatioMore(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", ["multi_lan_ar"])
 class RuleHeadWordAr(BaseRule):
     """check whether ar content contains irrelevance tail source info."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -732,11 +684,13 @@ class RuleHeadWordAr(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
+
         res = ModelRes()
         keyword = get_xyz_head_word("ar")
         content_tail = input_data.content[-100:]
@@ -752,6 +706,7 @@ class RuleHeadWordAr(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", ["multi_lan_cs"])
 class RuleHeadWordCs(BaseRule):
     """check whether cs content contains irrelevance tail source info."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -763,11 +718,13 @@ class RuleHeadWordCs(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
+
         res = ModelRes()
         keyword = get_xyz_head_word("cs")
         content_tail = input_data.content[-100:]
@@ -783,6 +740,7 @@ class RuleHeadWordCs(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", ["multi_lan_hu"])
 class RuleHeadWordHu(BaseRule):
     """check whether hu content contains irrelevance tail source info."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -794,11 +752,13 @@ class RuleHeadWordHu(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
+
         res = ModelRes()
         keyword = get_xyz_head_word("hu")
         content_tail = input_data.content[-100:]
@@ -814,6 +774,7 @@ class RuleHeadWordHu(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", ["multi_lan_ko"])
 class RuleHeadWordKo(BaseRule):
     """check whether ko content contains irrelevance tail source info."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -825,11 +786,13 @@ class RuleHeadWordKo(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
+
         res = ModelRes()
         keyword = get_xyz_head_word("ko")
         content_tail = input_data.content[-100:]
@@ -845,6 +808,7 @@ class RuleHeadWordKo(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", ["multi_lan_ru"])
 class RuleHeadWordRu(BaseRule):
     """check whether ru content contains irrelevance tail source info."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -856,11 +820,13 @@ class RuleHeadWordRu(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
+
         res = ModelRes()
         keyword = get_xyz_head_word("ru")
         content_tail = input_data.content[-100:]
@@ -876,6 +842,7 @@ class RuleHeadWordRu(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", ["multi_lan_sr"])
 class RuleHeadWordSr(BaseRule):
     """check whether sr content contains irrelevance tail source info."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -887,11 +854,13 @@ class RuleHeadWordSr(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
+
         res = ModelRes()
         keyword = get_xyz_head_word("sr")
         content_tail = input_data.content[-100:]
@@ -907,6 +876,7 @@ class RuleHeadWordSr(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", ["multi_lan_th"])
 class RuleHeadWordTh(BaseRule):
     """check whether th content contains irrelevance tail source info."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -918,11 +888,13 @@ class RuleHeadWordTh(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
+
         res = ModelRes()
         keyword = get_xyz_head_word("th")
         content_tail = input_data.content[-100:]
@@ -938,6 +910,7 @@ class RuleHeadWordTh(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", ["multi_lan_vi"])
 class RuleHeadWordVi(BaseRule):
     """check whether vi content contains irrelevance tail source info."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -949,11 +922,13 @@ class RuleHeadWordVi(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
+
         res = ModelRes()
         keyword = get_xyz_head_word("vi")
         content_tail = input_data.content[-100:]
@@ -987,6 +962,7 @@ class RuleHeadWordVi(BaseRule):
 )
 class RuleHtmlEntity(BaseRule):
     """check whether content has html entity"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -998,6 +974,7 @@ class RuleHtmlEntity(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         key_list=[
             "nbsp",
@@ -1022,6 +999,7 @@ class RuleHtmlEntity(BaseRule):
         content = input_data.content
         if len(content) == 0:
             return res
+
         entities = cls.dynamic_config.key_list
         full_entities_1 = [f"&{entity}；" for entity in entities]
         full_entities_2 = [f"&{entity};" for entity in entities]
@@ -1037,6 +1015,7 @@ class RuleHtmlEntity(BaseRule):
         half_entities = half_entity_2 + half_entity_3
         # maked_entities = [f"{entity}" for entity in entities]
         all_entities = full_entities + half_entities
+
         error_entity = []
         num = 0
         for entity in all_entities:
@@ -1068,6 +1047,7 @@ class RuleHtmlEntity(BaseRule):
 )
 class RuleHtmlTag(BaseRule):
     """check whether content has image links or html tags."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1079,6 +1059,7 @@ class RuleHtmlTag(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         key_list=["<img", "<p>", "</p>", "<o:p", "</o:p>"]
     )
@@ -1089,6 +1070,7 @@ class RuleHtmlTag(BaseRule):
         content = input_data.content
         if len(content) == 0:
             return res
+
         matches = re.findall("|".join(cls.dynamic_config.key_list), content)
         num = len(matches)
         if num / len(content) >= 0.01:
@@ -1102,6 +1084,7 @@ class RuleHtmlTag(BaseRule):
 @Model.rule_register("QUALITY_BAD_SECURITY", ["default", "pretrain", "benchmark"])
 class RuleIDCard(BaseRule):
     """check if the content contains ID card."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1113,6 +1096,7 @@ class RuleIDCard(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         pattern=r"(身\s{0,10}份|id\s{0,10}number\s{0,10}|identification|identity|\s{0,10}ID\s{0,10}No\s{0,10}|id\s{0,10}card\s{0,10}|NRIC\s{0,10}number\s{0,10}|IC\s{0,10}number\s{0,10}|resident\s{0,10}registration\s{0,10}|I.D.\s{0,10}Number\s{0,10})"
     )
@@ -1120,6 +1104,7 @@ class RuleIDCard(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import Extractor
+
         res = ModelRes()
         match = re.search(cls.dynamic_config.pattern, input_data.content, re.I)
         if match:
@@ -1148,6 +1133,7 @@ class RuleIDCard(BaseRule):
 )
 class RuleInvisibleChar(BaseRule):
     """check whether content has invisible chars."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1159,6 +1145,7 @@ class RuleInvisibleChar(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         pattern=r"[\u2000-\u200F\u202F\u205F\u3000\uFEFF\u00A0\u2060-\u206F\uFEFF\xa0]"
     )
@@ -1169,6 +1156,7 @@ class RuleInvisibleChar(BaseRule):
         content = input_data.content
         if len(content) == 0:
             return res
+
         matches = re.findall(cls.dynamic_config.pattern, content)
         num = len(matches)
         if num / len(content) >= 0.01:
@@ -1224,6 +1212,7 @@ class RuleImageDataFormat(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["pdf_all"])
 class RuleLatexSpecialChar(BaseRule):
     """check pdf content latex abnormal char."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1235,6 +1224,7 @@ class RuleLatexSpecialChar(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(pattern=r"\$\$(.*?\!\!.*?)\$\$")
 
     @classmethod
@@ -1253,6 +1243,7 @@ class RuleLatexSpecialChar(BaseRule):
 @Model.rule_register("QUALITY_BAD_COMPLETENESS", ["pretrain", "benchmark"])
 class RuleLineEndWithEllipsis(BaseRule):
     """check whether the ratio of line ends with ellipsis < 0.3"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1264,11 +1255,13 @@ class RuleLineEndWithEllipsis(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=0.3, key_list=["...", "…"])
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import TextSlice, split_paragraphs
+
         res = ModelRes()
         raw_content = input_data.content
         raw_lines: Tuple[TextSlice] = split_paragraphs(
@@ -1277,6 +1270,7 @@ class RuleLineEndWithEllipsis(BaseRule):
         num_lines = len(raw_lines)
         if num_lines == 0:
             return res
+
         num_occurrences = sum(
             [
                 line.text.rstrip().endswith(tuple(cls.dynamic_config.key_list))
@@ -1295,6 +1289,7 @@ class RuleLineEndWithEllipsis(BaseRule):
 @Model.rule_register("QUALITY_BAD_COMPLETENESS", ["pretrain"])
 class RuleLineEndWithTerminal(BaseRule):
     """check whether the ratio of line ends with terminal punctuation mark > 0.6"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1306,6 +1301,7 @@ class RuleLineEndWithTerminal(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         threshold=0.6, key_list=[".", "!", "?", '"', '"']
     )
@@ -1313,6 +1309,7 @@ class RuleLineEndWithTerminal(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import TextSlice, split_paragraphs
+
         res = ModelRes()
         raw_content = input_data.content
         raw_lines: Tuple[TextSlice] = split_paragraphs(
@@ -1321,6 +1318,7 @@ class RuleLineEndWithTerminal(BaseRule):
         num_lines = len(raw_lines)
         if num_lines == 0:
             return res
+
         terminal_marks = [
             line.text.rstrip()[-1]
             for line in raw_lines
@@ -1344,6 +1342,7 @@ class RuleLineEndWithTerminal(BaseRule):
 @Model.rule_register("QUALITY_BAD_UNDERSTANDABILITY", ["sft", "pretrain", "benchmark"])
 class RuleLineStartWithBulletpoint(BaseRule):
     """check whether the ratio of line starts with bullet points < 0.9"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1355,6 +1354,7 @@ class RuleLineStartWithBulletpoint(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         threshold=0.9,
         key_list=[
@@ -1374,6 +1374,7 @@ class RuleLineStartWithBulletpoint(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import TextSlice, split_paragraphs
+
         res = ModelRes()
         raw_content = input_data.content
         raw_lines: Tuple[TextSlice] = split_paragraphs(
@@ -1382,6 +1383,7 @@ class RuleLineStartWithBulletpoint(BaseRule):
         num_lines = len(raw_lines)
         if num_lines == 0:
             return res
+
         num_occurrences = sum(
             [
                 line.text.lstrip().startswith(tuple(cls.dynamic_config.key_list))
@@ -1400,6 +1402,7 @@ class RuleLineStartWithBulletpoint(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["pretrain", "benchmark"])
 class RuleLineJavascriptCount(BaseRule):
     """check whether line with the word Javascript."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1411,11 +1414,13 @@ class RuleLineJavascriptCount(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=3)
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import TextSlice, normalize, split_paragraphs
+
         res = ModelRes()
         raw_content = input_data.content
         normalized_lines: Tuple[TextSlice] = split_paragraphs(
@@ -1424,6 +1429,7 @@ class RuleLineJavascriptCount(BaseRule):
         num_lines = len(normalized_lines)
         if num_lines == 0:
             return res
+
         num_occurrences = sum(["javascript" in line.text for line in normalized_lines])
         num_not_occur = num_lines - num_occurrences
         if num_not_occur < cls.dynamic_config.threshold and num_lines > 3:
@@ -1439,6 +1445,7 @@ class RuleLineJavascriptCount(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["pretrain", "benchmark"])
 class RuleLoremIpsum(BaseRule):
     """check whether the ratio of lorem ipsum < 3e-08"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1450,16 +1457,19 @@ class RuleLoremIpsum(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=3e-08)
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import normalize
+
         res = ModelRes()
         normalized_content = normalize(input_data.content)
         num_normalized_content = len(normalized_content)
         if num_normalized_content == 0:
             return res
+
         SEARCH_REGEX = re.compile(r"lorem ipsum", re.IGNORECASE)
         num_occurrences = len(SEARCH_REGEX.findall(normalized_content))
         ratio = num_occurrences / num_normalized_content
@@ -1474,6 +1484,7 @@ class RuleLoremIpsum(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["pretrain"])
 class RuleMeanWordLength(BaseRule):
     """check whether the mean length of word in [3, 10]"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1485,17 +1496,20 @@ class RuleMeanWordLength(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(key_list=["3", "10"])
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import normalize
+
         res = ModelRes()
         normalized_content = normalize(input_data.content)
         normalized_words = tuple(normalized_content.split())
         num_normalized_words = len(normalized_words)
         if num_normalized_words == 0:
             return res
+
         num_chars = float(sum(map(len, normalized_words)))
         mean_length = num_chars / num_normalized_words
         mean_length = round(mean_length, 2)
@@ -1574,6 +1588,7 @@ class RuleNlpDataFormat(BaseRule):
 )
 class RuleNoPunc(BaseRule):
     """check whether paragraph has no punctuation."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1583,7 +1598,7 @@ class RuleNoPunc(BaseRule):
         "paper_title": "RedPajama: an Open Dataset for Training Large Language Models",
         "paper_url": "https://github.com/togethercomputer/RedPajama-Data",
         "paper_authors": "Together Computer, 2023",
-        "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
+        "evaluation_results": ""
     }
 
     dynamic_config = EvaluatorRuleArgs(threshold=112)
@@ -1592,6 +1607,7 @@ class RuleNoPunc(BaseRule):
     def eval(cls, input_data: Data) -> ModelRes:
         res = ModelRes()
         content = input_data.content
+
         paragraphs = content.split("\n")
         longest_sentence = ""
         max_word_count = 0
@@ -1616,6 +1632,7 @@ class RuleNoPunc(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", [])
 class RulePatternSearch(BaseRule):
     """let user input pattern to search"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1627,6 +1644,7 @@ class RulePatternSearch(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(pattern="your pattern")
 
     @classmethod
@@ -1644,6 +1662,7 @@ class RulePatternSearch(BaseRule):
 @Model.rule_register("QUALITY_BAD_COMPLETENESS", ["pretrain"])
 class RuleSentenceNumber(BaseRule):
     """check whether the number of sentence in [3, 7500]"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1655,12 +1674,14 @@ class RuleSentenceNumber(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(key_list=["3", "7500"])
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         res = ModelRes()
         raw_content = input_data.content
+
         SENT_PATTERN = re.compile(r"\b[^.!?\n]+[.!?]*", flags=re.UNICODE)
         num_sentence = len(SENT_PATTERN.findall(raw_content))
         if num_sentence < int(cls.dynamic_config.key_list[0]) or num_sentence > int(
@@ -1733,6 +1754,7 @@ class RuleSftDataFormat(BaseRule):
 )
 class RuleSpaceMore(BaseRule):
     """check whether content has 500 spaces."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1744,6 +1766,7 @@ class RuleSpaceMore(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(pattern=" {500,}")
 
     @classmethod
@@ -1782,6 +1805,7 @@ class RuleSpaceMore(BaseRule):
 )
 class RuleSpecialCharacter(BaseRule):
     """check whether content has special characters."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1793,6 +1817,7 @@ class RuleSpecialCharacter(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         key_list=[
             r"u200e",
@@ -1810,6 +1835,7 @@ class RuleSpecialCharacter(BaseRule):
         content = input_data.content
         if len(content) == 0:
             return res
+
         matches = []
         num = 0
         for p in cls.dynamic_config.key_list:
@@ -1827,6 +1853,7 @@ class RuleSpecialCharacter(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["pretrain"])
 class RuleStopWord(BaseRule):
     """check whether the ratio of stop word > 0.06"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1838,6 +1865,7 @@ class RuleStopWord(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=0.06)
 
     @classmethod
@@ -1845,6 +1873,7 @@ class RuleStopWord(BaseRule):
         from nltk.tokenize import WordPunctTokenizer
 
         from dingo.model.rule.utils.util import get_stop_words
+
         res = ModelRes()
         raw_content = input_data.content
         raw_words = list(WordPunctTokenizer().tokenize(raw_content))
@@ -1852,6 +1881,7 @@ class RuleStopWord(BaseRule):
         num_raw_words = len(raw_words)
         if num_raw_words == 0:
             return res
+
         STOP_WORDS = get_stop_words("en")
         num_stop_words = len(list(filter(lambda word: word in STOP_WORDS, raw_words)))
         ratio = num_stop_words / num_raw_words
@@ -1866,6 +1896,7 @@ class RuleStopWord(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["pretrain", "benchmark"])
 class RuleSymbolWordRatio(BaseRule):
     """check whether the ratio of symbol and word is > 0.4"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1877,21 +1908,25 @@ class RuleSymbolWordRatio(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=0.4, key_list=["#", "...", "…"])
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from nltk.tokenize import WordPunctTokenizer
+
         res = ModelRes()
         raw_content = input_data.content
         raw_words = tuple(WordPunctTokenizer().tokenize(raw_content))
         num_raw_words = len(raw_words)
         if num_raw_words == 0:
             return res
+
         num_words = num_raw_words
         num_symbols = float(
             sum(raw_content.count(x) for x in cls.dynamic_config.key_list)
         )
+
         ratio = num_symbols / num_words
         if ratio > cls.dynamic_config.threshold:
             res.error_status = True
@@ -1904,6 +1939,7 @@ class RuleSymbolWordRatio(BaseRule):
 @Model.rule_register("QUALITY_BAD_UNDERSTANDABILITY", ["pretrain"])
 class RuleUniqueWords(BaseRule):
     """check whether the ratio of unique words > 0.1"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1915,17 +1951,20 @@ class RuleUniqueWords(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(threshold=0.1)
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import normalize
+
         res = ModelRes()
         normalized_content = normalize(input_data.content)
         normalized_words = tuple(normalized_content.split())
         num_normalized_words = len(normalized_words)
         if num_normalized_words == 0:
             return res
+
         num_words = num_normalized_words
         num_unique_words = len(set(normalized_words))
         ratio = num_unique_words / num_words
@@ -1942,6 +1981,7 @@ class RuleUniqueWords(BaseRule):
 @Model.rule_register("QUALITY_BAD_SECURITY", [])
 class RuleUnsafeWords(BaseRule):
     """check whether content contains unsafe words."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -1953,6 +1993,7 @@ class RuleUnsafeWords(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(refer_path=[])
 
     @classmethod
@@ -1960,11 +2001,13 @@ class RuleUnsafeWords(BaseRule):
         import ahocorasick
 
         from dingo.model.rule.utils.util import get_unsafe_words
+
         res = ModelRes()
         content = input_data.content
         key_list = cls.dynamic_config.key_list
         if key_list is None:
             key_list = get_unsafe_words(cls.dynamic_config.refer_path)
+
         A = ahocorasick.Automaton()
         for index, key in enumerate(key_list):
             A.add_word(key, (index, key))
@@ -1996,6 +2039,7 @@ class RuleUnsafeWords(BaseRule):
 )
 class RuleVedioDataFormat(BaseRule):
     """check whether the vedio data format is right"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -2004,11 +2048,13 @@ class RuleVedioDataFormat(BaseRule):
         "description": "Check whether the vedio data format is right",
         "evaluation_results": ""
     }
+
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         res = ModelRes()
+
         raw_data = input_data.raw_data
         key_list = ["id", "video", "text"]
         if all(key in raw_data for key in key_list):
@@ -2039,6 +2085,7 @@ class RuleVedioDataFormat(BaseRule):
 )
 class RuleOnlyUrl(BaseRule):
     """check whether content is only an url link."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -2050,6 +2097,7 @@ class RuleOnlyUrl(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         pattern=r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
     )
@@ -2073,6 +2121,7 @@ class RuleOnlyUrl(BaseRule):
 @Model.rule_register("QUALITY_BAD_RELEVANCE", [])
 class RuleWatermark(BaseRule):
     """check whether content has watermarks."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -2084,6 +2133,7 @@ class RuleWatermark(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(key_list=[])
 
     @classmethod
@@ -2101,6 +2151,7 @@ class RuleWatermark(BaseRule):
 @Model.rule_register("QUALITY_BAD_COMPLETENESS", ["pretrain"])
 class RuleWordNumber(BaseRule):
     """check whether the number of word in [20, 100000]"""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -2112,11 +2163,13 @@ class RuleWordNumber(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(key_list=["20", "100000"])
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         from dingo.model.rule.utils.util import normalize
+
         res = ModelRes()
         normalized_content = normalize(input_data.content)
         normalized_words = tuple(normalized_content.split())
@@ -2136,6 +2189,7 @@ class RuleWordNumber(BaseRule):
 @Model.rule_register("QUALITY_BAD_FLUENCY", ["pdf_all"])
 class RuleWordSplit(BaseRule):
     """check pdf word abnormal split such as "ca- se"."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -2147,6 +2201,7 @@ class RuleWordSplit(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(pattern=r"[A-Za-z]+-\s*$")
 
     @classmethod
@@ -2179,6 +2234,7 @@ class RuleWordSplit(BaseRule):
 )
 class RuleWordStuck(BaseRule):
     """check whether words are stuck."""
+
     # Metadata for documentation generation
     _metric_info = {
         "category": "Rule-Based TEXT Quality Metrics",
@@ -2190,6 +2246,7 @@ class RuleWordStuck(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
     dynamic_config = EvaluatorRuleArgs(
         key_list=[
             r"https?://[^\s]+|www.(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
@@ -2206,8 +2263,10 @@ class RuleWordStuck(BaseRule):
 
         from dingo.model.rule.utils.detect_lang import decide_language_by_str
         from dingo.model.rule.utils.util import is_sha256
+
         res = ModelRes()
         content = input_data.content
+
         for p in cls.dynamic_config.key_list:
             content = re.sub(p, "", content)
         word_list = [
@@ -2232,3 +2291,4 @@ class RuleWordStuck(BaseRule):
 if __name__ == "__main__":
     data = Data(data_id="", prompt="", content="\n \n \n \n hello \n \n ")
     tmp = RuleEnterAndSpace().eval(data)
+    print(tmp)

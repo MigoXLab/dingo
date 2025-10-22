@@ -50,7 +50,7 @@ This document provides comprehensive information about all quality metrics used 
 | `QUALITY_BAD_FLUENCY` | RuleAbnormalNumber, RuleCharSplit, RuleNoPunc, RuleWordSplit, RuleWordStuck | Checks PDF content for abnormal book page or index numbers that disrupt text flow; Checks PDF content for abnormal ch... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) |
 | `QUALITY_BAD_RELEVANCE` | RuleHeadWordAr, RuleHeadWordCs, RuleHeadWordHu, RuleHeadWordKo, RuleHeadWordRu, RuleHeadWordSr, RuleHeadWordTh, RuleHeadWordVi, RulePatternSearch, RuleWatermark | Checks whether Arabic content contains irrelevant tail source information; Checks whether Czech content contains irre... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) |
 | `QUALITY_BAD_SECURITY` | RuleIDCard, RuleUnsafeWords | Checks whether content contains ID card information; Checks whether content contains unsafe words | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) |
-| `QUALITY_BAD_SIMILARITY` | RuleDocRepeat, RuleDocFormulaRepeat | Evaluates text for consecutive repeated content and multiple occurrences of special characters; Evaluates text for co... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) |
+| `QUALITY_BAD_SIMILARITY` | RuleDocRepeat | Evaluates text for consecutive repeated content and multiple occurrences of special characters | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) |
 | `QUALITY_BAD_UNDERSTANDABILITY` | RuleCapitalWords, RuleCurlyBracket, RuleLineStartWithBulletpoint, RuleUniqueWords | Checks whether the ratio of capital words is above threshold, indicating poor readability; Checks whether the ratio o... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) |
 
 ### Rule-Based IMG Quality Metrics
@@ -59,8 +59,8 @@ This document provides comprehensive information about all quality metrics used 
 |------|--------|-------------|--------------|-------------------|
 | `QUALITY_BAD_IMG_ARTIMUSE` | RuleImageArtimuse | Evaluates image quality in the field of aesthetics using artimuse | Internal Implementation | N/A |
 | `QUALITY_BAD_IMG_EFFECTIVENESS` | RuleImageValid, RuleImageSizeValid, RuleImageQuality | Checks whether image is not all white or black, ensuring visual content validity; Checks whether image ratio of width... | Internal Implementation | N/A |
-| `QUALITY_BAD_IMG_LABEL_OVERLAP` | RuleImageLabelOverlap | Detects overlapping bounding boxes in image annotations, marks full/partial overlap and generates visualization images | Internal Implementation | N/A |
-| `QUALITY_BAD_IMG_LABEL_VISUALIZATION` | RuleImageLabelVisualization | Generates visualization images with bounding boxes and category labels, helping manual check of annotation accuracy | Internal Implementation | N/A |
+| `QUALITY_BAD_IMG_LABEL_OVERLAP` | RuleImageLabelOverlap |  | Internal Implementation | N/A |
+| `QUALITY_BAD_IMG_LABEL_VISUALIZATION` | RuleImageLabelVisualization |  | Internal Implementation | N/A |
 | `QUALITY_BAD_IMG_RELEVANCE` | RuleImageTextSimilarity | Evaluates semantic similarity between image and text content using CLIP model | [Learning Transferable Visual Representations with Natural Language Supervision](https://arxiv.org/abs/2103.00020) (Radford et al., 2021) | N/A |
 | `QUALITY_BAD_IMG_SIMILARITY` | RuleImageRepeat | Detects duplicate images using PHash and CNN methods to ensure data diversity | [ImageNet Classification with Deep Convolutional Neural Networks](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf) (Krizhevsky et al., 2012) | N/A |
 
@@ -85,7 +85,6 @@ This document provides comprehensive information about all quality metrics used 
 | Type | Metric | Description | Paper Source | Evaluation Results |
 |------|--------|-------------|--------------|-------------------|
 | `PromptDocumentParsingQuality` | PromptDocumentParsingQuality | Evaluate the quality of general document parsing | Internal Implementation | N/A |
-| `PromptMinerURecognizeQuality` | MinerURecognizeQuality | Evaluate the quality of mineru recognize | Internal Implementation | [📊 See Results](error_category and error_label) |
 
 ### Text Generation
 

@@ -39,7 +39,7 @@ This document provides comprehensive information about all quality metrics used 
 | Type | Metric | Description | Paper Source | Evaluation Results |
 |------|--------|-------------|--------------|-------------------|
 | `CLASSIFY_QR` | PromptClassifyQR | Identifies images as CAPTCHA, QR code, or normal images | Internal Implementation | N/A |
-| `IMAGE_RELEVANT` | PromptImageRelevant | Evaluates if an image matches reference image in terms of face count, feature details, and visual elements | Internal Implementation | N/A |
+| `IMAGE_RELEVANT` | PromptImageRelevant | Evaluates image consistency and relevance through comprehensive analysis of content, semantics, visual quality, and d... | Internal Implementation | N/A |
 
 ### Rule-Based TEXT Quality Metrics
 
@@ -71,6 +71,12 @@ This document provides comprehensive information about all quality metrics used 
 | `QUALITY_BAD_EFFECTIVENESS` | RuleAudioDuration | Check whether the audio duration meets the standard | Internal Implementation | N/A |
 | `QUALITY_BAD_EFFECTIVENESS` | RuleAudioSnrQuality | Check whether the audio signal-to-noise ratio meets the standard | Internal Implementation | N/A |
 
+### Layout Eval Metric
+
+| Type | Metric | Description | Paper Source | Evaluation Results |
+|------|--------|-------------|--------------|-------------------|
+| `PromptLayoutQuality` | PromptLayoutQuality | Evaluate the quality of layout detctection and conversion quality. | Internal Implementation | N/A |
+
 ### Meta Rater Evaluation Metrics
 
 | Type | Metric | Description | Paper Source | Evaluation Results |
@@ -86,6 +92,25 @@ This document provides comprehensive information about all quality metrics used 
 |------|--------|-------------|--------------|-------------------|
 | `PromptDocumentParsingQuality` | PromptDocumentParsingQuality | Evaluate the quality of general document parsing | Internal Implementation | N/A |
 | `PromptMinerURecognizeQuality` | MinerURecognizeQuality | Evaluate the quality of mineru recognize | Internal Implementation | [📊 See Results](error_category and error_label) |
+
+### Resume Quality Assessment Metrics
+
+| Type | Metric | Description | Paper Source | Evaluation Results |
+|------|--------|-------------|--------------|-------------------|
+| `RESUME_QUALITY_EN` | PromptResumeQualityEn | Comprehensive resume quality evaluation covering privacy, contact, format, structure, professionalism, date, and comp... | Internal Implementation | N/A |
+| `RESUME_QUALITY_ZH` | PromptResumeQualityZh | Comprehensive resume quality evaluation covering privacy, contact, format, structure, professionalism, date, and comp... | Internal Implementation | N/A |
+
+### Rule-Based RESUME Quality Metrics
+
+| Type | Metric | Description | Paper Source | Evaluation Results |
+|------|--------|-------------|--------------|-------------------|
+| `RESUME_QUALITY_BAD_COMPLETENESS` | RuleResumeEducationMissing, RuleResumeExperienceMissing | Checks if resume contains education background information; Checks if resume contains work experience information | Internal Implementation | N/A |
+| `RESUME_QUALITY_BAD_CONTACT` | RuleResumeEmailMissing, RuleResumePhoneMissing, RuleResumePhoneFormat | Checks if resume contains a valid email address; Checks if resume contains a valid phone number; Validates phone numb... | Internal Implementation | N/A |
+| `RESUME_QUALITY_BAD_DATE` | RuleResumeDateFormat | Detects inconsistent date format usage in resume | Internal Implementation | N/A |
+| `RESUME_QUALITY_BAD_FORMAT` | RuleResumeExcessiveWhitespace, RuleResumeMarkdown | Detects excessive consecutive spaces in resume; Detects common Markdown syntax errors in resume | Internal Implementation | N/A |
+| `RESUME_QUALITY_BAD_PRIVACY` | RuleResumeIDCard, RuleResumeDetailedAddress | Detects 18-digit Chinese ID card numbers in resume content; Detects detailed address patterns that may leak privacy | Internal Implementation | N/A |
+| `RESUME_QUALITY_BAD_PROFESSIONALISM` | RuleResumeEmoji, RuleResumeInformal | Detects emoji usage in resume which reduces professionalism; Detects informal or colloquial expressions in resume | Internal Implementation | N/A |
+| `RESUME_QUALITY_BAD_STRUCTURE` | RuleResumeNameMissing, RuleResumeSectionMissing | Checks if resume contains a name in the first 200 characters; Checks if resume contains required sections like educat... | Internal Implementation | N/A |
 
 ### Text Generation
 

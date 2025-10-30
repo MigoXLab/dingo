@@ -295,9 +295,9 @@ class RuleColonEnd(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, content: str) -> ModelRes:
         res = ModelRes()
-        content = input_data.content
+        # content = input_data.content
         if len(content) <= 0:
             return res
         if content[-1] == ":":

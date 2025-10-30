@@ -31,7 +31,8 @@ class DatasetFieldArgs(BaseModel):
 class DatasetArgs(BaseModel):
     source: str = 'hugging_face'
     format: str = 'json'
-    field: DatasetFieldArgs = DatasetFieldArgs()
+    # field: DatasetFieldArgs = DatasetFieldArgs()
+    fields: List[str] = []
     hf_config: DatasetHFConfigArgs = DatasetHFConfigArgs()
     s3_config: DatasetS3ConfigArgs = DatasetS3ConfigArgs()
 
@@ -40,13 +41,13 @@ class ExecutorResultSaveArgs(BaseModel):
     bad: bool = False
     good: bool = False
     all_labels: bool = False
-    raw: bool = False
+    # raw: bool = False
 
 
 class ExecutorArgs(BaseModel):
-    eval_group: str = ""
-    rule_list: List[str] = []
-    prompt_list: List[str] = []
+    # eval_group: str = ""
+    # rule_list: List[str] = []
+    # prompt_list: List[str] = []
     start_index: int = 0
     end_index: int = -1
     max_workers: int = 1
@@ -55,24 +56,36 @@ class ExecutorArgs(BaseModel):
     result_save: ExecutorResultSaveArgs = ExecutorResultSaveArgs()
 
 
-class EvaluatorRuleArgs(BaseModel):
-    threshold: Optional[float] = None
-    pattern: Optional[str] = None
-    key_list: Optional[List[str]] = None
-    refer_path: Optional[List[str]] = None
-    parameters: Optional[dict] = None
+# class EvaluatorRuleArgs(BaseModel):
+#     threshold: Optional[float] = None
+#     pattern: Optional[str] = None
+#     key_list: Optional[List[str]] = None
+#     refer_path: Optional[List[str]] = None
+#     parameters: Optional[dict] = None
+#
+#
+# class EvaluatorLLMArgs(BaseModel):
+#     model: Optional[str] = None
+#     key: Optional[str] = None
+#     api_url: Optional[str] = None
+#     parameters: Optional[dict] = None
 
 
-class EvaluatorLLMArgs(BaseModel):
-    model: Optional[str] = None
-    key: Optional[str] = None
-    api_url: Optional[str] = None
-    parameters: Optional[dict] = None
+class EvalConfigItem(BaseModel):
+    """Single evaluator configuration item"""
+    name: str
+    config: Optional[Dict] = None
 
 
-class EvaluatorArgs(BaseModel):
-    rule_config: Dict[str, EvaluatorRuleArgs] = {}
-    llm_config: Dict[str, EvaluatorLLMArgs] = {}
+class FieldEvalGroup(BaseModel):
+    """Evaluation group for specific fields"""
+    fields: List[str]
+    evals: List[EvalConfigItem]
+
+
+# class EvaluatorArgs(BaseModel):
+#     rule_config: Dict[str, EvaluatorRuleArgs] = {}
+#     llm_config: Dict[str, EvaluatorLLMArgs] = {}
 
 
 class InputArgs(BaseModel):
@@ -85,7 +98,7 @@ class InputArgs(BaseModel):
 
     dataset: DatasetArgs = DatasetArgs()
     executor: ExecutorArgs = ExecutorArgs()
-    evaluator: EvaluatorArgs = EvaluatorArgs()
+    evaluator: List[FieldEvalGroup]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -233,8 +233,6 @@ class PlainConverter(BaseConverter):
 class JsonLineConverter(BaseConverter):
     """Json line file converter."""
 
-    data_id = 0
-
     def __init__(self):
         super().__init__()
 
@@ -244,32 +242,11 @@ class JsonLineConverter(BaseConverter):
             j = raw
             if isinstance(raw, str):
                 j = json.loads(raw)
-            cls.data_id += 1
-            return Data(
-                **{
-                    "data_id": (
-                        cls.find_levels_data(j, input_args.dataset.field.id)
-                        if input_args.dataset.field.id != ""
-                        else str(cls.data_id)
-                    ),
-                    "prompt": (
-                        cls.find_levels_data(j, input_args.dataset.field.prompt)
-                        if input_args.dataset.field.prompt != ""
-                        else ""
-                    ),
-                    "content": (
-                        cls.find_levels_data(j, input_args.dataset.field.content)
-                        if input_args.dataset.field.content != ""
-                        else ""
-                    ),
-                    "context": (
-                        cls.find_levels_data(j, input_args.dataset.field.context)
-                        if input_args.dataset.field.context != ""
-                        else j.get("context", None)  # Fallback to 'context' key if column_context not specified
-                    ),
-                    "raw_data": j,
-                }
-            )
+            if input_args.dataset.fields:
+                data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
+            else:
+                data_dict = j
+            return Data(**data_dict)
 
         return _convert
 

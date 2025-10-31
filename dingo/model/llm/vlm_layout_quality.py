@@ -91,6 +91,24 @@ class VLMLayoutQuality(BaseOpenAI):
         return messages
 
     @classmethod
+    def send_messages(cls, messages: List):
+        if cls.dynamic_config.model:
+            model_name = cls.dynamic_config.model
+        else:
+            model_name = cls.client.models.list().data[0].id
+
+        params = cls.dynamic_config.parameters
+        cls.validate_config(params)
+
+        completions = cls.client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=0.1
+        )
+
+        return str(completions.choices[0].message.content)
+
+    @classmethod
     def process_response(cls, response: str) -> ModelRes:
         log.info(response)
 
@@ -107,11 +125,10 @@ class VLMLayoutQuality(BaseOpenAI):
 
                 for error in errors:
                     error_type = error.get("error_type", "")
-                    error_location = error.get("error_location", "")
 
-                    if error_type and error_location:
+                    if error_type:
                         types.append(error_type)
-                        names.append(error_location)
+                        names.append(error_type)
             except json.JSONDecodeError as e:
                 log.error(f"JSON解析错误: {e}")
 

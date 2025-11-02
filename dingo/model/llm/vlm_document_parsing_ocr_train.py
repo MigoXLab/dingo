@@ -38,9 +38,7 @@ class LLMMinerURecognizeTrainQuality(BaseOpenAI):
                 ]
             }
         ]
-        print("messages", messages)
         return messages
-
 
 
     @classmethod

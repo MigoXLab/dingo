@@ -24,8 +24,8 @@ if __name__ == '__main__':
             "llm_config": {
                 "LLMMinerURecognizeQuality": {
                     "model": "gemini-2.5-pro",
-                    "key": "sk-SWPLPHhvXOAT2LRHPTfZqbOb6pI2xhp3UDtwdLBdNUXlZ3l1",
-                    "api_url": "http://35.220.164.252:3888/v1"
+                    "key": "",
+                    "api_url": ""
                 }
             }
         }

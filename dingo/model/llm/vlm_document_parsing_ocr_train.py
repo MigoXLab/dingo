@@ -40,7 +40,6 @@ class LLMMinerURecognizeTrainQuality(BaseOpenAI):
         ]
         return messages
 
-
     @classmethod
     def process_response(cls, response: str) -> ModelRes:
         log.info(response)

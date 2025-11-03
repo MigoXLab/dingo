@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Dict, Any
 
 
 class Data(BaseModel):
@@ -9,3 +10,12 @@ class Data(BaseModel):
 
     class Config:
         extra = "allow"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将 Data 对象转换为字典
+
+        Returns:
+            Dict[str, Any]: 包含所有字段的字典
+        """
+        return self.dict()

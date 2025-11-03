@@ -12,7 +12,7 @@ from tqdm import tqdm
 from dingo.config import InputArgs
 from dingo.data import Dataset, DataSource, dataset_map, datasource_map
 from dingo.exec.base import ExecProto, Executor
-from dingo.io import Data, ResultInfo, SummaryModel
+from dingo.io import Data, EvalData, ResultInfo, SummaryModel
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
 from dingo.model.modelres import ModelRes
@@ -47,42 +47,28 @@ class LocalExecutor(ExecProto):
     def execute(self) -> SummaryModel:
         log.setLevel(self.input_args.log_level)
         create_time = time.strftime("%Y%m%d_%H%M%S", time.localtime())
-        Model.apply_config(self.input_args)
         input_path = self.input_args.input_path
         output_path = os.path.join(
             self.input_args.output_path, create_time + "_" + str(uuid.uuid1())[:8]
         )
+        if self.input_args.executor.result_save.bad:
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
 
-        log.debug(str(self.input_args.executor.eval_group))
-        for group_name in [self.input_args.executor.eval_group]:
-            if self.input_args.executor.result_save.bad:
-                if not os.path.exists(output_path):
-                    os.makedirs(output_path)
-            if self.input_args.evaluator.llm_config:
-                for llm_name in self.input_args.evaluator.llm_config:
-                    self.llm = Model.get_llm(llm_name)
-
-            self.summary = SummaryModel(
-                task_id=str(uuid.uuid1()),
-                task_name=self.input_args.task_name,
-                eval_group=group_name,
-                input_path=input_path,
-                output_path=output_path if self.input_args.executor.result_save.bad else "",
-                create_time=create_time,
-            )
-            self.evaluate()
-            self.summary = self.summarize(self.summary)
-            self.write_summary(self.summary.output_path, self.input_args, self.summary)
+        self.summary = SummaryModel(
+            task_id=str(uuid.uuid1()),
+            task_name=self.input_args.task_name,
+            input_path=input_path,
+            output_path=output_path if self.input_args.executor.result_save.bad else "",
+            create_time=create_time,
+        )
+        self.evaluate()
+        self.summary = self.summarize(self.summary)
+        self.write_summary(self.summary.output_path, self.input_args, self.summary)
 
         return self.summary
 
     def evaluate(self):
-        """
-        get score (main progres).
-        Args:
-            group (Any): _description_
-            group_type (str): _description_
-        """
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self.input_args.executor.max_workers
         ) as thread_executor, concurrent.futures.ProcessPoolExecutor(
@@ -96,6 +82,7 @@ class LocalExecutor(ExecProto):
             )
             pbar = tqdm(total=None, unit="items")
 
+            track_id = 0
             while True:
                 batch = list(itertools.islice(data_iter, self.input_args.executor.batch_size))
                 if not batch:
@@ -104,30 +91,34 @@ class LocalExecutor(ExecProto):
                 futures = []
                 futures_results = []
                 for data in batch:
-                    for group_type, group in Model.get_group(
-                            self.input_args.executor.eval_group
-                    ).items():
-                        if group_type == "rule":
+                    track_id += 1
+                    for f_e_g in self.input_args.evaluator:
+                        # print(f_e_g)
+                        rule_list = [eval for eval in f_e_g.evals if eval.name in Model.rule_name_map]
+                        prompt_list = [eval for eval in f_e_g.evals if eval.name in Model.prompt_name_map]
+
+                        if rule_list:
+                            e_d = EvalData(
+                                track_id = str(track_id),
+                                raw_data = data.to_dict(),
+                                eval_fields = f_e_g.fields,
+                                group_type = 'rule',
+                                group_list = rule_list
+                            )
                             if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
-                                futures += [
-                                    thread_executor.submit(
-                                        self.evaluate_single_data, group_type, group, data
-                                    )
-                                ]
+                                futures += [thread_executor.submit(self.evaluate_single_data, e_d)]
                             else:
-                                futures += [
-                                    process_executor.submit(
-                                        self.evaluate_single_data, group_type, group, data
-                                    )
-                                ]
-                        elif group_type == "prompt":
-                            futures += [
-                                thread_executor.submit(
-                                    self.evaluate_single_data, group_type, group, data
-                                )
-                            ]
-                        else:
-                            raise RuntimeError(f"Unsupported group type: {group_type}")
+                                futures += [process_executor.submit(self.evaluate_single_data, e_d)]
+
+                        if prompt_list:
+                            e_d = EvalData(
+                                track_id=str(track_id),
+                                raw_data=data.to_dict(),
+                                eval_fields=f_e_g.fields,
+                                group_type='prompt',
+                                group_list=rule_list
+                            )
+                            futures += [thread_executor.submit(self.evaluate_single_data, e_d)]
 
                 for future in concurrent.futures.as_completed(futures):
                     result_info = future.result()
@@ -166,23 +157,14 @@ class LocalExecutor(ExecProto):
             existing_item.name_list = list(set(existing_item.name_list + new_item.name_list))
             existing_item.reason_list = list(set(existing_item.reason_list + new_item.reason_list))
 
-            existing_item.raw_data = new_item.raw_data
+            # existing_item.raw_data = new_item.raw_data
         else:
             existing_list.append(new_item)
 
         return existing_list
 
-    def evaluate_single_data(self, group_type, group, data: Data):
-        # Ensure dynamic configs are applied in child processes as well
-        try:
-            Model.apply_config(self.input_args)
-        except Exception as e:
-            raise RuntimeError(f"Failed to apply config in child process: {e}")
-        result_info = ResultInfo(
-            data_id=data.data_id, prompt=data.prompt, content=data.content
-        )
-        if self.input_args.executor.result_save.raw:
-            result_info.raw_data = data.raw_data
+    def evaluate_single_data(self, eval_data: EvalData) -> ResultInfo:
+        result_info = ResultInfo(track_id=eval_data.track_id, raw_data=eval_data.raw_data)
         bad_type_list = []
         good_type_list = []
         bad_name_list = []
@@ -190,12 +172,12 @@ class LocalExecutor(ExecProto):
         bad_reason_list = []
         good_reason_list = []
         # for group_type, group in Model.get_group(group_name).items():
-        if group_type == "rule":
-            r_i = self.evaluate_rule(group, data)
-        elif group_type == "prompt":
-            r_i = self.evaluate_prompt(group, data)
+        if eval_data.group_type == "rule":
+            r_i = self.evaluate_rule(eval_data)
+        elif eval_data.group_type == "prompt":
+            r_i = self.evaluate_prompt(eval_data)
         else:
-            raise RuntimeError(f"Unsupported group type: {group_type}")
+            raise RuntimeError(f"Unsupported group type: {eval_data.group_type}")
         if r_i.error_status:
             result_info.error_status = True
             bad_type_list = bad_type_list + r_i.type_list
@@ -223,18 +205,24 @@ class LocalExecutor(ExecProto):
                     result_info.reason_list.append(reason)
         return result_info
 
-    def evaluate_rule(self, group: List[BaseRule], d: Data) -> ResultInfo:
-        result_info = ResultInfo(data_id=d.data_id, prompt=d.prompt, content=d.content)
-        log.debug("[RuleGroup]: " + str(group))
+    def evaluate_rule(self, eval_data: EvalData) -> ResultInfo:
+        result_info = ResultInfo(track_id = eval_data.track_id, raw_data=eval_data.raw_data)
+        log.debug("[RuleGroup]: " + str(eval_data.group_list))
         bad_type_list = []
         good_type_list = []
         bad_name_list = []
         good_name_list = []
         bad_reason_list = []
         good_reason_list = []
-        for r in group:
+        for e_c_i in eval_data.group_list:
+            # config rule
+            r = Model.rule_name_map.get(e_c_i.name)
+            Model.set_config_rule(r, e_c_i.config)
+
             # execute rule
-            tmp: ModelRes = r.eval(d)
+            group_input = (eval_data.raw_data[field] for field in eval_data.eval_fields)
+            tmp: ModelRes = r.eval(*group_input)
+
             # analyze result
             if tmp.error_status:
                 result_info.error_status = True
@@ -285,19 +273,24 @@ class LocalExecutor(ExecProto):
                 result_info.reason_list = good_reason_list
         return result_info
 
-    def evaluate_prompt(self, group: List[BasePrompt], d: Data) -> ResultInfo:
-        result_info = ResultInfo(data_id=d.data_id, prompt=d.prompt, content=d.content)
-        log.debug("[PromptGroup]: " + str(group))
+    def evaluate_prompt(self, eval_data: EvalData) -> ResultInfo:
+        result_info = ResultInfo(track_id = eval_data.track_id, raw_data=eval_data.raw_data)
+        log.debug("[PromptGroup]: " + str(eval_data.group_list))
         bad_type_list = []
         good_type_list = []
         bad_name_list = []
         good_name_list = []
         bad_reason_list = []
         good_reason_list = []
-        for p in group:
-            self.llm.set_prompt(p)
+        for e_c_i in eval_data.group_list:
+            # config prompt
+            p = Model.prompt_name_map.get(e_c_i.name)
+            Model.set_config_prompt(p, e_c_i.config)
+
             # execute prompt
-            tmp: ModelRes = self.llm.eval(d)
+            group_input = (eval_data.raw_data[field] for field in eval_data.eval_fields)
+            tmp: ModelRes = p.eval(*group_input)
+
             # analyze result
             if tmp.error_status:
                 result_info.error_status = True

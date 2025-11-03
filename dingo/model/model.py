@@ -6,6 +6,7 @@ from typing import Callable, Dict, List, Optional
 from pydantic import BaseModel
 
 from dingo.config import InputArgs
+from dingo.config.input_args import EvaluatorRuleArgs, EvaluatorLLMArgs
 from dingo.model.llm.base import BaseLLM
 from dingo.model.prompt.base import BasePrompt
 from dingo.model.rule.base import BaseRule
@@ -337,3 +338,24 @@ class Model:
                     log.debug(f'module {file.split(".")[0]} not imported because: \n{e}')
                     log.debug("=" * 73)
         cls.module_loaded = True
+
+    @classmethod
+    def set_config_rule(self, rule: BaseRule, rule_config: EvaluatorRuleArgs):
+        if not rule_config:
+            return
+        config_default = getattr(rule, 'dynamic_config')
+        for k, v in rule_config:
+            if v is not None:
+                setattr(config_default, k, v)
+        setattr(rule, 'dynamic_config', config_default)
+
+
+    @classmethod
+    def set_config_prompt(self, prompt: BasePrompt, prompt_config: EvaluatorLLMArgs):
+        if not prompt_config:
+            return
+        config_default = getattr(prompt, 'dynamic_config')
+        for k, v in prompt_config:
+            if v is not None:
+                setattr(config_default, k, v)
+        setattr(prompt, 'dynamic_config', config_default)

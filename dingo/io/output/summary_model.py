@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class SummaryModel(BaseModel):
     task_id: str = ''
     task_name: str = ''
-    eval_group: str = ''
+    # eval_group: str = ''
     input_path: str = ''
     output_path: str = ''
     create_time: str = ''
@@ -23,7 +23,7 @@ class SummaryModel(BaseModel):
         return {
             'task_id': self.task_id,
             'task_name': self.task_name,
-            'eval_group': self.eval_group,
+            # 'eval_group': self.eval_group,
             'input_path': self.input_path,
             'output_path': self.output_path,
             'create_time': self.create_time,

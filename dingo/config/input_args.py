@@ -41,7 +41,7 @@ class ExecutorResultSaveArgs(BaseModel):
     bad: bool = False
     good: bool = False
     all_labels: bool = False
-    # raw: bool = False
+    raw: bool = False
 
 
 class ExecutorArgs(BaseModel):
@@ -56,25 +56,25 @@ class ExecutorArgs(BaseModel):
     result_save: ExecutorResultSaveArgs = ExecutorResultSaveArgs()
 
 
-# class EvaluatorRuleArgs(BaseModel):
-#     threshold: Optional[float] = None
-#     pattern: Optional[str] = None
-#     key_list: Optional[List[str]] = None
-#     refer_path: Optional[List[str]] = None
-#     parameters: Optional[dict] = None
-#
-#
-# class EvaluatorLLMArgs(BaseModel):
-#     model: Optional[str] = None
-#     key: Optional[str] = None
-#     api_url: Optional[str] = None
-#     parameters: Optional[dict] = None
+class EvaluatorRuleArgs(BaseModel):
+    threshold: Optional[float] = None
+    pattern: Optional[str] = None
+    key_list: Optional[List[str]] = None
+    refer_path: Optional[List[str]] = None
+    parameters: Optional[dict] = None
+
+
+class EvaluatorLLMArgs(BaseModel):
+    model: Optional[str] = None
+    key: Optional[str] = None
+    api_url: Optional[str] = None
+    parameters: Optional[dict] = None
 
 
 class EvalConfigItem(BaseModel):
     """Single evaluator configuration item"""
     name: str
-    config: Optional[Dict] = None
+    config: Optional[EvaluatorRuleArgs | EvaluatorLLMArgs] = None
 
 
 class FieldEvalGroup(BaseModel):

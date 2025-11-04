@@ -1,9 +1,17 @@
 from dingo.model.model import Model
+from dingo.model.llm.base import BaseLLM
+from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.model.prompt.base import BasePrompt
+from dingo.model.llm.llm_text_quality_model_base import LLMTextQualityModelBase
+from dingo.io import Data
+from dingo.model.modelres import ModelRes
 
 
 @Model.prompt_register("QUALITY_BAD_SIMILARITY", [], ['LLMTextQualityModelBase'])
 class PromptRepeat(BasePrompt):
+    dynamic_config = EvaluatorLLMArgs()
+    senario: BaseLLM = LLMTextQualityModelBase
+
     content = """
     请判断一下文本是否存在重复问题。
     返回一个json，如{"score": 0, "reason": "xxx"}.
@@ -11,6 +19,12 @@ class PromptRepeat(BasePrompt):
     除了json不要有其他内容。
     以下是需要判断的文本：
     """
+
+    @classmethod
+    def eval(cls, data: Data) -> ModelRes:
+        cls.senario.dynamic_config = cls.dynamic_config
+        cls.senario.prompt = cls
+        return cls.senario.eval(data)
 
 
 @Model.prompt_register("QUALITY_BAD_EFFECTIVENESS", [], ['LLMTextQualityModelBase'])

@@ -17,9 +17,9 @@ from dingo.utils.exception import ConvertJsonError, ExceedMaxTokens
 class BaseOpenAI(BaseLLM):
     dynamic_config = EvaluatorLLMArgs()
 
-    @classmethod
-    def set_prompt(cls, prompt: BasePrompt):
-        cls.prompt = prompt
+    # @classmethod
+    # def set_prompt(cls, prompt: BasePrompt):
+    #     cls.prompt = prompt
 
     @classmethod
     def create_client(cls):

@@ -116,7 +116,7 @@ class LocalExecutor(ExecProto):
                                 raw_data=data.to_dict(),
                                 eval_fields=f_e_g.fields,
                                 group_type='prompt',
-                                group_list=rule_list
+                                group_list=prompt_list
                             )
                             futures += [thread_executor.submit(self.evaluate_single_data, e_d)]
 

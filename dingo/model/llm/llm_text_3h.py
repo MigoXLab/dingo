@@ -8,7 +8,7 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register("LLMText3H")
+# @Model.llm_register("LLMText3H")
 class LLMText3H(BaseOpenAI):
     @classmethod
     def build_messages(cls, input_data):

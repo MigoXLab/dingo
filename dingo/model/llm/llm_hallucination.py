@@ -5,7 +5,6 @@ from dingo.io import Data
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.modelres import ModelRes
-from dingo.model.prompt.prompt_hallucination import PromptHallucination
 from dingo.model.response.response_hallucination import HallucinationScoreReason, HallucinationVerdict, HallucinationVerdicts
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
@@ -22,9 +21,53 @@ class LLMHallucination(BaseOpenAI):
     2. Calculates hallucination score based on contradiction ratio
     3. Returns standardized ModelRes with error_status based on threshold
     """
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "SFT Data Assessment Metrics",
+        "metric_name": "PromptHallucination",
+        "description": "Evaluates whether the response contains factual contradictions or hallucinations against provided context information",
+        "paper_title": "TruthfulQA: Measuring How Models Mimic Human Falsehoods",
+        "paper_url": "https://arxiv.org/abs/2109.07958",
+        "paper_authors": "Lin et al., 2021",
+        "evaluation_results": ""
+    }
 
-    prompt = PromptHallucination
     threshold = 0.5  # Default threshold for hallucination detection
+    prompt = """
+    For each context in the provided contexts, please generate a list of JSON objects to indicate whether the given 'actual output' agrees with EACH context. The JSON will have 2 fields: 'verdict' and 'reason'.
+
+    The 'verdict' key should STRICTLY be either 'yes' or 'no', and states whether the given response agrees with the context.
+    The 'reason' is the reason for the verdict. When the answer is 'no', try to provide a correction in the reason.
+
+    **IMPORTANT**: Please make sure to only return in JSON format, with the 'verdicts' key as a list of JSON objects.
+
+    Example contexts: ["Einstein won the Nobel Prize for his discovery of the photoelectric effect.", "Einstein won the Nobel Prize in 1968."]
+    Example actual output: "Einstein won the Nobel Prize in 1969 for his discovery of the photoelectric effect."
+
+    Example:
+    {{
+        "verdicts": [
+            {{
+                "verdict": "yes",
+                "reason": "The actual output agrees with the provided context which states that Einstein won the Nobel Prize for his discovery of the photoelectric effect."
+            }},
+            {{
+                "verdict": "no",
+                "reason": "The actual output contradicts the provided context which states that Einstein won the Nobel Prize in 1968, not 1969."
+            }}
+        ]
+    }}
+
+    You should NOT incorporate any prior knowledge you have and take each context at face value. Since you are going to generate a verdict for each context, the number of 'verdicts' SHOULD BE STRICTLY EQUAL TO the number of contexts provided.
+    You should FORGIVE cases where the actual output is lacking in detail, you should ONLY provide a 'no' answer if IT IS A CONTRADICTION.
+
+    **Input Data:**
+    Question/Prompt: {}
+    Response: {}
+    Contexts: {}
+
+    Please evaluate the response against each context and return the verdicts in JSON format:
+    """
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
@@ -58,7 +101,7 @@ class LLMHallucination(BaseOpenAI):
         # Format contexts for display
         contexts_str = json.dumps(contexts, ensure_ascii=False, indent=2)
 
-        prompt_content = cls.prompt.content.format(question, response, contexts_str)
+        prompt_content = cls.prompt.format(question, response, contexts_str)
 
         messages = [{"role": "user", "content": prompt_content}]
         return messages

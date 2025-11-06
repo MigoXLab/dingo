@@ -7,7 +7,7 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register("LLMSecurity")
+# @Model.llm_register("LLMSecurity")
 class LLMSecurity(BaseOpenAI):
     @classmethod
     def process_response(cls, response: str) -> ModelRes:

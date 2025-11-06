@@ -231,8 +231,8 @@ class LocalExecutor(ExecProto):
             Model.set_config_rule(r, e_c_i.config)
 
             # execute rule
-            cut_data = {k:data.to_dict().get(v) for k, v in f_e_g.fields.items()}
-            tmp: ModelRes = r.eval(Data(**cut_data))
+            map_data = {k:data.to_dict().get(v) for k, v in f_e_g.fields.items()}
+            tmp: ModelRes = r.eval(Data(**map_data))
 
             # analyze result
             if tmp.error_status:
@@ -300,8 +300,8 @@ class LocalExecutor(ExecProto):
             Model.set_config_prompt(p, e_c_i.config)
 
             # execute prompt
-            cut_data = {k:data.to_dict().get(v) for k, v in f_e_g.fields.items()}
-            tmp: ModelRes = p.eval(Data(**cut_data))
+            map_data = {k:data.to_dict().get(v) for k, v in f_e_g.fields.items()}
+            tmp: ModelRes = p.eval(Data(**map_data))
 
             # analyze result
             if tmp.error_status:

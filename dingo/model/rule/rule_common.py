@@ -292,12 +292,13 @@ class RuleColonEnd(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+    eval_fileds = ['content']
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, content: str) -> ModelRes:
+    def eval(cls, input_data: Data) -> ModelRes:
         res = ModelRes()
-        # content = input_data.content
+        content = input_data.content
         if len(content) <= 0:
             return res
         if content[-1] == ":":

@@ -79,7 +79,7 @@ class EvalConfigItem(BaseModel):
 
 class FieldEvalGroup(BaseModel):
     """Evaluation group for specific fields"""
-    fields: List[str]
+    fields: dict
     evals: List[EvalConfigItem]
 
 

@@ -9,7 +9,6 @@ if __name__ == '__main__':
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "fields": ["content"]
         },
         "executor": {
             "result_save": {
@@ -19,7 +18,7 @@ if __name__ == '__main__':
         },
         "evaluator": [
             {
-                "fields": ["content"],
+                "fields": {"content": "content"},
                 "evals": [
                     {"name": "RuleColonEnd"}
                 ]

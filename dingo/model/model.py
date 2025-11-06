@@ -359,3 +359,13 @@ class Model:
             if v is not None:
                 setattr(config_default, k, v)
         setattr(prompt, 'dynamic_config', config_default)
+
+    @classmethod
+    def set_config_llm(self, llm: BaseLLM, llm_config: EvaluatorLLMArgs):
+        if not llm_config:
+            return
+        config_default = getattr(llm, 'dynamic_config')
+        for k, v in llm_config:
+            if v is not None:
+                setattr(config_default, k, v)
+        setattr(llm, 'dynamic_config', config_default)

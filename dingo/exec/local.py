@@ -293,11 +293,11 @@ class LocalExecutor(ExecProto):
         bad_reason_list = []
         good_reason_list = []
 
-        eval_list = [eval for eval in f_e_g.evals if eval.name in Model.prompt_name_map]
+        eval_list = [eval for eval in f_e_g.evals if eval.name in Model.llm_name_map]
         for e_c_i in eval_list:
             # config prompt
-            p = Model.prompt_name_map.get(e_c_i.name)
-            Model.set_config_prompt(p, e_c_i.config)
+            p = Model.llm_name_map.get(e_c_i.name)
+            Model.set_config_llm(p, e_c_i.config)
 
             # execute prompt
             map_data = {k:data.to_dict().get(v) for k, v in f_e_g.fields.items()}

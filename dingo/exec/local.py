@@ -12,7 +12,7 @@ from tqdm import tqdm
 from dingo.config import InputArgs
 from dingo.data import Dataset, DataSource, dataset_map, datasource_map
 from dingo.exec.base import ExecProto, Executor
-from dingo.io import Data, EvalData, ResultInfo, SummaryModel
+from dingo.io import Data, ResultInfo, SummaryModel
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
 from dingo.model.modelres import ModelRes

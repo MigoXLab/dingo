@@ -155,12 +155,7 @@ class LocalExecutor(ExecProto):
         bad_reason_list = []
         good_reason_list = []
         # for group_type, group in Model.get_group(group_name).items():
-        if eval_type == "rule":
-            r_i = self.evaluate_rule(data, field_eval_group)
-        elif eval_type == "prompt":
-            r_i = self.evaluate_prompt(data, field_eval_group)
-        else:
-            raise RuntimeError(f"Unsupported group type: {eval_type}")
+        r_i = self.evaluate_by_type(data, field_eval_group, eval_type)
         if r_i.error_status:
             result_info.error_status = True
             bad_type_list = bad_type_list + r_i.type_list
@@ -188,7 +183,18 @@ class LocalExecutor(ExecProto):
                     result_info.reason_list.append(reason)
         return result_info
 
-    def evaluate_rule(self, data: Data, f_e_g: EvalPipline) -> ResultInfo:
+    def evaluate_by_type(self, data: Data, f_e_g: EvalPipline, eval_type: str) -> ResultInfo:
+        """
+        Unified evaluation function for both rule and prompt evaluation types.
+        
+        Args:
+            data: Input data to evaluate
+            f_e_g: Evaluation pipeline configuration
+            eval_type: Type of evaluation ('rule' or 'prompt')
+            
+        Returns:
+            ResultInfo containing evaluation results
+        """
         result_info = ResultInfo()
         bad_type_list = []
         good_type_list = []
@@ -198,83 +204,25 @@ class LocalExecutor(ExecProto):
         good_reason_list = []
 
         map_data = {k: data.to_dict().get(v) for k, v in f_e_g.fields.items()}
-        eval_list = [eval for eval in f_e_g.evals if eval.name in Model.rule_name_map]
-        for e_c_i in eval_list:
-            # config rule
-            r = Model.rule_name_map.get(e_c_i.name)
-            Model.set_config_rule(r, e_c_i.config)
-
-            # execute rule
-            tmp: ModelRes = r.eval(Data(**map_data))
-
-            # analyze result
-            if tmp.error_status:
-                result_info.error_status = True
-                if isinstance(tmp.type, str) and isinstance(tmp.name, str):
-                    bad_type_list.append(tmp.type)
-                    bad_name_list.append(tmp.type + "-" + tmp.name)
-                elif isinstance(tmp.type, List) and isinstance(tmp.name, List):
-                    if len(tmp.type) != len(tmp.name):
-                        raise Exception(f'ModelRes.type is not the same length to ModelRes.name.\n type: {tmp.type} \n name: {tmp.name}')
-                    for i in range(len(tmp.type)):
-                        bad_type_list.append(tmp.type[i])
-                        bad_name_list.append(tmp.type[i] + "-" + tmp.name[i])
-                else:
-                    raise Exception('ModelRes.type and ModelRes.name are not str or List at the same time.')
-                bad_reason_list.extend(tmp.reason)
-            else:
-                if isinstance(tmp.type, str) and isinstance(tmp.name, str):
-                    good_type_list.append(tmp.type)
-                    good_name_list.append(tmp.type + "-" + tmp.name)
-                elif isinstance(tmp.type, List) and isinstance(tmp.name, List):
-                    if len(tmp.type) != len(tmp.name):
-                        raise Exception(f'ModelRes.type is not the same length to ModelRes.name.\n type: {tmp.type} \n name: {tmp.name}')
-                    for i in range(len(tmp.type)):
-                        good_type_list.append(tmp.type[i])
-                        good_name_list.append(tmp.type[i] + "-" + tmp.name[i])
-                else:
-                    raise Exception('ModelRes.type and ModelRes.name are not str or List at the same time.')
-                good_reason_list.extend(tmp.reason)
-
-        if self.input_args.executor.result_save.all_labels:
-            # Always include both good and bad results when they exist
-            # The final error_status is True if ANY evaluation failed
-            all_type_list = list(set(bad_type_list + good_type_list))
-            all_name_list = bad_name_list + good_name_list
-            all_reason_list = bad_reason_list + good_reason_list
-
-            result_info.type_list = all_type_list
-            result_info.name_list = all_name_list
-            result_info.reason_list = all_reason_list
+        
+        # Select appropriate name_map and config method based on eval_type
+        if eval_type == 'rule':
+            name_map = Model.rule_name_map
+            set_config = Model.set_config_rule
+        elif eval_type == 'prompt':
+            name_map = Model.llm_name_map
+            set_config = Model.set_config_llm
         else:
-            if result_info.error_status:
-                result_info.type_list = list(set(bad_type_list))
-                result_info.name_list = bad_name_list
-                result_info.reason_list = bad_reason_list
-            else:
-                result_info.type_list = list(set(good_type_list))
-                result_info.name_list = good_name_list
-                result_info.reason_list = good_reason_list
-        return result_info
-
-    def evaluate_prompt(self, data: Data, f_e_g: EvalPipline) -> ResultInfo:
-        result_info = ResultInfo()
-        bad_type_list = []
-        good_type_list = []
-        bad_name_list = []
-        good_name_list = []
-        bad_reason_list = []
-        good_reason_list = []
-
-        map_data = {k: data.to_dict().get(v) for k, v in f_e_g.fields.items()}
-        eval_list = [eval for eval in f_e_g.evals if eval.name in Model.llm_name_map]
+            raise ValueError(f"Unsupported eval_type: {eval_type}")
+        
+        eval_list = [eval for eval in f_e_g.evals if eval.name in name_map]
         for e_c_i in eval_list:
-            # config prompt
-            p = Model.llm_name_map.get(e_c_i.name)
-            Model.set_config_llm(p, e_c_i.config)
+            # Configure model
+            model = name_map.get(e_c_i.name)
+            set_config(model, e_c_i.config)
 
-            # execute prompt
-            tmp: ModelRes = p.eval(Data(**map_data))
+            # Execute evaluation
+            tmp: ModelRes = model.eval(Data(**map_data))
 
             # analyze result
             if tmp.error_status:

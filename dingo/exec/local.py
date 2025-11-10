@@ -94,33 +94,6 @@ class LocalExecutor(ExecProto):
                 for data in batch:
                     track_id += 1
                     for f_e_g in self.input_args.evaluator:
-                        # print(f_e_g)
-                        # rule_list = [eval for eval in f_e_g.evals if eval.name in Model.rule_name_map]
-                        # prompt_list = [eval for eval in f_e_g.evals if eval.name in Model.prompt_name_map]
-                        #
-                        # if rule_list:
-                        #     e_d = EvalData(
-                        #         track_id = str(track_id),
-                        #         raw_data = data.to_dict(),
-                        #         eval_fields = f_e_g.fields,
-                        #         group_type = 'rule',
-                        #         group_list = rule_list
-                        #     )
-                        #     if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
-                        #         futures += [thread_executor.submit(self.evaluate_single_data, e_d)]
-                        #     else:
-                        #         futures += [process_executor.submit(self.evaluate_single_data, e_d)]
-                        #
-                        # if prompt_list:
-                        #     e_d = EvalData(
-                        #         track_id=str(track_id),
-                        #         raw_data=data.to_dict(),
-                        #         eval_fields=f_e_g.fields,
-                        #         group_type='prompt',
-                        #         group_list=prompt_list
-                        #     )
-                        #     futures += [thread_executor.submit(self.evaluate_single_data, e_d)]
-
                         # rule
                         if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
                             futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), data, f_e_g, 'rule')]
@@ -224,6 +197,7 @@ class LocalExecutor(ExecProto):
         bad_reason_list = []
         good_reason_list = []
 
+        map_data = {k: data.to_dict().get(v) for k, v in f_e_g.fields.items()}
         eval_list = [eval for eval in f_e_g.evals if eval.name in Model.rule_name_map]
         for e_c_i in eval_list:
             # config rule
@@ -231,7 +205,6 @@ class LocalExecutor(ExecProto):
             Model.set_config_rule(r, e_c_i.config)
 
             # execute rule
-            map_data = {k:data.to_dict().get(v) for k, v in f_e_g.fields.items()}
             tmp: ModelRes = r.eval(Data(**map_data))
 
             # analyze result
@@ -293,6 +266,7 @@ class LocalExecutor(ExecProto):
         bad_reason_list = []
         good_reason_list = []
 
+        map_data = {k: data.to_dict().get(v) for k, v in f_e_g.fields.items()}
         eval_list = [eval for eval in f_e_g.evals if eval.name in Model.llm_name_map]
         for e_c_i in eval_list:
             # config prompt
@@ -300,7 +274,6 @@ class LocalExecutor(ExecProto):
             Model.set_config_llm(p, e_c_i.config)
 
             # execute prompt
-            map_data = {k:data.to_dict().get(v) for k, v in f_e_g.fields.items()}
             tmp: ModelRes = p.eval(Data(**map_data))
 
             # analyze result

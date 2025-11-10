@@ -19,7 +19,7 @@ from dingo.model.modelres import ModelRes
 from dingo.model.prompt.base import BasePrompt
 from dingo.model.rule.base import BaseRule
 from dingo.utils import log
-from dingo.config.input_args import FieldEvalGroup
+from dingo.config.input_args import EvalPipline
 
 
 @Executor.register("local")
@@ -173,7 +173,7 @@ class LocalExecutor(ExecProto):
 
         return existing_list
 
-    def evaluate_single_data(self, track_id: str, data: Data, field_eval_group: FieldEvalGroup, eval_type: str) -> ResultInfo:
+    def evaluate_single_data(self, track_id: str, data: Data, field_eval_group: EvalPipline, eval_type: str) -> ResultInfo:
         result_info = ResultInfo(track_id=track_id, raw_data=data.to_dict())
         bad_type_list = []
         good_type_list = []
@@ -215,7 +215,7 @@ class LocalExecutor(ExecProto):
                     result_info.reason_list.append(reason)
         return result_info
 
-    def evaluate_rule(self, data: Data, f_e_g: FieldEvalGroup) -> ResultInfo:
+    def evaluate_rule(self, data: Data, f_e_g: EvalPipline) -> ResultInfo:
         result_info = ResultInfo()
         bad_type_list = []
         good_type_list = []
@@ -284,7 +284,7 @@ class LocalExecutor(ExecProto):
                 result_info.reason_list = good_reason_list
         return result_info
 
-    def evaluate_prompt(self, data: Data, f_e_g: FieldEvalGroup) -> ResultInfo:
+    def evaluate_prompt(self, data: Data, f_e_g: EvalPipline) -> ResultInfo:
         result_info = ResultInfo()
         bad_type_list = []
         good_type_list = []

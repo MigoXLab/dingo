@@ -71,16 +71,16 @@ class EvaluatorLLMArgs(BaseModel):
     parameters: Optional[dict] = None
 
 
-class EvalConfigItem(BaseModel):
+class EvalPiplineConfig(BaseModel):
     """Single evaluator configuration item"""
     name: str
     config: Optional[EvaluatorRuleArgs | EvaluatorLLMArgs] = None
 
 
-class FieldEvalGroup(BaseModel):
+class EvalPipline(BaseModel):
     """Evaluation group for specific fields"""
     fields: dict
-    evals: List[EvalConfigItem]
+    evals: List[EvalPiplineConfig]
 
 
 # class EvaluatorArgs(BaseModel):
@@ -98,7 +98,7 @@ class InputArgs(BaseModel):
 
     dataset: DatasetArgs = DatasetArgs()
     executor: ExecutorArgs = ExecutorArgs()
-    evaluator: List[FieldEvalGroup]
+    evaluator: List[EvalPipline]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

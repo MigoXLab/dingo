@@ -108,10 +108,13 @@ class LocalExecutor(ExecProto):
                     futures_results = self.merge_result_info(futures_results, result_info)
 
                 for result_info in futures_results:
-                    for t in result_info.type_list:
-                        self.summary.type_ratio[t] += 1
-                    for n in result_info.name_list:
-                        self.summary.name_ratio[n] += 1
+                    # 统计 error_type 中的所有错误类型
+                    for error_key in result_info.error_type.keys():
+                        # 提取顶层类型（第一个点之前的部分）
+                        top_level_type = error_key.split('.')[0]
+                        self.summary.type_ratio[top_level_type] += 1
+                        # 统计完整的错误路径
+                        self.summary.name_ratio[error_key] += 1
                     if result_info.error_status:
                         self.summary.num_bad += 1
                     else:
@@ -150,12 +153,8 @@ class LocalExecutor(ExecProto):
             ResultInfo containing evaluation results
         """
         result_info = ResultInfo(track_id=track_id)
-        bad_type_list = []
-        good_type_list = []
-        bad_name_list = []
-        good_name_list = []
-        bad_reason_list = []
-        good_reason_list = []
+        bad_error_type = {}
+        good_error_type = {}
         
         # Select appropriate name_map and config method based on eval_type
         if eval_type == 'rule':
@@ -178,57 +177,42 @@ class LocalExecutor(ExecProto):
             # Execute evaluation
             tmp: ModelRes = model.eval(Data(**map_data))
 
-            # Analyze result
+            # Collect error_type from ModelRes
             if tmp.error_status:
                 result_info.error_status = True
-                if isinstance(tmp.type, str) and isinstance(tmp.name, str):
-                    bad_type_list.append(tmp.type)
-                    bad_name_list.append(tmp.type + "-" + tmp.name)
-                elif isinstance(tmp.type, List) and isinstance(tmp.name, List):
-                    if len(tmp.type) != len(tmp.name):
-                        raise Exception(
-                            f'ModelRes.type is not the same length to ModelRes.name.\n type: {tmp.type} \n name: {tmp.name}')
-                    for i in range(len(tmp.type)):
-                        bad_type_list.append(tmp.type[i])
-                        bad_name_list.append(tmp.type[i] + "-" + tmp.name[i])
-                else:
-                    raise Exception('ModelRes.type and ModelRes.name are not str or List at the same time.')
-                bad_reason_list.extend(tmp.reason)
+                # 合并 bad 的 error_type
+                for key, value in tmp.error_type.items():
+                    if key in bad_error_type:
+                        bad_error_type[key].extend(value)
+                    else:
+                        bad_error_type[key] = value.copy() if isinstance(value, list) else [value]
             else:
-                if isinstance(tmp.type, str) and isinstance(tmp.name, str):
-                    good_type_list.append(tmp.type)
-                    good_name_list.append(tmp.type + "-" + tmp.name)
-                elif isinstance(tmp.type, List) and isinstance(tmp.name, List):
-                    if len(tmp.type) != len(tmp.name):
-                        raise Exception(
-                            f'ModelRes.type is not the same length to ModelRes.name.\n type: {tmp.type} \n name: {tmp.name}')
-                    for i in range(len(tmp.type)):
-                        good_type_list.append(tmp.type[i])
-                        good_name_list.append(tmp.type[i] + "-" + tmp.name[i])
-                else:
-                    raise Exception('ModelRes.type and ModelRes.name are not str or List at the same time.')
-                good_reason_list.extend(tmp.reason)
+                # 合并 good 的 error_type
+                for key, value in tmp.error_type.items():
+                    if key in good_error_type:
+                        good_error_type[key].extend(value)
+                    else:
+                        good_error_type[key] = value.copy() if isinstance(value, list) else [value]
 
         # Set result_info fields based on all_labels configuration
         if self.input_args.executor.result_save.all_labels:
             # Always include both good and bad results when they exist
             # The final error_status is True if ANY evaluation failed
-            all_type_list = list(set(bad_type_list + good_type_list))
-            all_name_list = bad_name_list + good_name_list
-            all_reason_list = bad_reason_list + good_reason_list
-
-            result_info.type_list = all_type_list
-            result_info.name_list = all_name_list
-            result_info.reason_list = all_reason_list
+            # 合并 good 和 bad 的 error_type
+            all_error_type = {}
+            for key, value in bad_error_type.items():
+                all_error_type[key] = value
+            for key, value in good_error_type.items():
+                if key in all_error_type:
+                    all_error_type[key].extend(value)
+                else:
+                    all_error_type[key] = value
+            result_info.error_type = all_error_type
         else:
             if result_info.error_status:
-                result_info.type_list = list(set(bad_type_list))
-                result_info.name_list = bad_name_list
-                result_info.reason_list = bad_reason_list
+                result_info.error_type = bad_error_type
             else:
-                result_info.type_list = list(set(good_type_list))
-                result_info.name_list = good_name_list
-                result_info.reason_list = good_reason_list
+                result_info.error_type = good_error_type
         
         return result_info
 
@@ -238,9 +222,13 @@ class LocalExecutor(ExecProto):
         if existing_item:
             existing_item.error_status = existing_item.error_status or new_item.error_status
 
-            existing_item.type_list = list(set(existing_item.type_list + new_item.type_list))
-            existing_item.name_list = list(set(existing_item.name_list + new_item.name_list))
-            existing_item.reason_list = list(set(existing_item.reason_list + new_item.reason_list))
+            # 合并 error_type 字典
+            for key, value in new_item.error_type.items():
+                if key in existing_item.error_type:
+                    # 合并原因列表并去重
+                    existing_item.error_type[key] = list(set(existing_item.error_type[key] + value))
+                else:
+                    existing_item.error_type[key] = value
 
             # existing_item.raw_data = new_item.raw_data
         else:
@@ -276,13 +264,19 @@ class LocalExecutor(ExecProto):
         if not input_args.executor.result_save.good and not result_info.error_status:
             return
 
-        for new_name in result_info.name_list:
-            t = str(new_name).split("-")[0]
-            n = str(new_name).split("-")[1]
+        # 遍历 error_type 的键来组织文件结构
+        for error_key in result_info.error_type.keys():
+            # 从层级键中提取类型和名称
+            # 例如: "validity_errors.space_issues" -> type="validity_errors", name="space_issues"
+            parts = error_key.split(".", 1)
+            t = parts[0]
+            n = parts[1] if len(parts) > 1 else parts[0]
+            
             p_t = os.path.join(path, t)
             if not os.path.exists(p_t):
                 os.makedirs(p_t)
-            f_n = os.path.join(path, t, n) + ".jsonl"
+            # 将点替换为下划线作为文件名
+            f_n = os.path.join(path, t, n.replace(".", "_")) + ".jsonl"
             with open(f_n, "a", encoding="utf-8") as f:
                 if input_args.executor.result_save.raw:
                     str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)

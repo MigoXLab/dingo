@@ -93,15 +93,20 @@ class LocalExecutor(ExecProto):
                 futures_results = []
                 for data in batch:
                     track_id += 1
-                    for f_e_g in self.input_args.evaluator:
+                    r_i = ResultInfo(track_id = str(track_id), raw_data = data.to_dict())
+                    futures_results.append(r_i)
+
+                    for e_p in self.input_args.evaluator:
+                        map_data = {k: data.to_dict().get(v) for k, v in e_p.fields.items()}
+                        eval_list_rule = [eval for eval in e_p.evals if eval.name in Model.rule_name_map]
+                        eval_list_prompt = [eval for eval in e_p.evals if eval.name in Model.llm_name_map]
                         # rule
                         if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
-                            futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), data, f_e_g, 'rule')]
+                            futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), 'rule', map_data, eval_list_rule)]
                         else:
-                            futures += [process_executor.submit(self.evaluate_single_data, str(track_id), data, f_e_g, 'rule')]
-
+                            futures += [process_executor.submit(self.evaluate_single_data, str(track_id), 'rule', map_data, eval_list_rule)]
                         # prompt
-                        futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), data, f_e_g, 'prompt')]
+                        futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), 'prompt', map_data, eval_list_prompt)]
 
                 for future in concurrent.futures.as_completed(futures):
                     result_info = future.result()
@@ -146,8 +151,8 @@ class LocalExecutor(ExecProto):
 
         return existing_list
 
-    def evaluate_single_data(self, track_id: str, data: Data, field_eval_group: EvalPipline, eval_type: str) -> ResultInfo:
-        result_info = ResultInfo(track_id=track_id, raw_data=data.to_dict())
+    def evaluate_single_data(self, track_id: str, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
+        result_info = ResultInfo(track_id=track_id)
         bad_type_list = []
         good_type_list = []
         bad_name_list = []
@@ -155,7 +160,7 @@ class LocalExecutor(ExecProto):
         bad_reason_list = []
         good_reason_list = []
         # for group_type, group in Model.get_group(group_name).items():
-        r_i = self.evaluate_by_type(data, field_eval_group, eval_type)
+        r_i = self.evaluate_by_type(eval_type, map_data, eval_list)
         if r_i.error_status:
             result_info.error_status = True
             bad_type_list = bad_type_list + r_i.type_list
@@ -183,14 +188,14 @@ class LocalExecutor(ExecProto):
                     result_info.reason_list.append(reason)
         return result_info
 
-    def evaluate_by_type(self, data: Data, f_e_g: EvalPipline, eval_type: str) -> ResultInfo:
+    def evaluate_by_type(self, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
         """
         Unified evaluation function for both rule and prompt evaluation types.
         
         Args:
-            data: Input data to evaluate
-            f_e_g: Evaluation pipeline configuration
             eval_type: Type of evaluation ('rule' or 'prompt')
+            map_data: Mapped data fields
+            eval_list: List of evaluations to perform
             
         Returns:
             ResultInfo containing evaluation results
@@ -202,8 +207,6 @@ class LocalExecutor(ExecProto):
         good_name_list = []
         bad_reason_list = []
         good_reason_list = []
-
-        map_data = {k: data.to_dict().get(v) for k, v in f_e_g.fields.items()}
         
         # Select appropriate name_map and config method based on eval_type
         if eval_type == 'rule':
@@ -215,7 +218,6 @@ class LocalExecutor(ExecProto):
         else:
             raise ValueError(f"Unsupported eval_type: {eval_type}")
         
-        eval_list = [eval for eval in f_e_g.evals if eval.name in name_map]
         for e_c_i in eval_list:
             # Configure model
             model = name_map.get(e_c_i.name)

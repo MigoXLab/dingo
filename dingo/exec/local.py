@@ -63,13 +63,8 @@ class LocalExecutor(ExecProto):
             output_path=output_path if self.input_args.executor.result_save.bad else "",
             create_time=create_time,
         )
-        self.evaluate()
-        self.summary = self.summarize(self.summary)
-        self.write_summary(self.summary.output_path, self.input_args, self.summary)
 
-        return self.summary
-
-    def evaluate(self):
+        # Evaluate data
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self.input_args.executor.max_workers
         ) as thread_executor, concurrent.futures.ProcessPoolExecutor(
@@ -134,6 +129,12 @@ class LocalExecutor(ExecProto):
                 )
 
         log.debug("[Summary]: " + str(self.summary))
+
+        # Finalize summary
+        self.summary = self.summarize(self.summary)
+        self.write_summary(self.summary.output_path, self.input_args, self.summary)
+
+        return self.summary
 
     def merge_result_info(self, existing_list: List[ResultInfo], new_item: ResultInfo) -> List[ResultInfo]:
         existing_item = next((item for item in existing_list if item.track_id == new_item.track_id), None)

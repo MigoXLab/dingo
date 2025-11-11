@@ -152,47 +152,11 @@ class LocalExecutor(ExecProto):
         return existing_list
 
     def evaluate_single_data(self, track_id: str, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
-        result_info = ResultInfo(track_id=track_id)
-        bad_type_list = []
-        good_type_list = []
-        bad_name_list = []
-        good_name_list = []
-        bad_reason_list = []
-        good_reason_list = []
-        # for group_type, group in Model.get_group(group_name).items():
-        r_i = self.evaluate_by_type(eval_type, map_data, eval_list)
-        if r_i.error_status:
-            result_info.error_status = True
-            bad_type_list = bad_type_list + r_i.type_list
-            bad_name_list = bad_name_list + r_i.name_list
-            bad_reason_list = bad_reason_list + r_i.reason_list
-        else:
-            good_type_list = good_type_list + r_i.type_list
-            good_name_list = good_name_list + r_i.name_list
-            good_reason_list = good_reason_list + r_i.reason_list
-        if result_info.error_status:
-            result_info.type_list = list(set(bad_type_list))
-            for name in bad_name_list:
-                if name not in result_info.name_list:
-                    result_info.name_list.append(name)
-            for reason in bad_reason_list:
-                if reason and reason not in result_info.reason_list:
-                    result_info.reason_list.append(reason)
-        else:
-            result_info.type_list = list(set(good_type_list))
-            for name in good_name_list:
-                if name not in result_info.name_list:
-                    result_info.name_list.append(name)
-            for reason in good_reason_list:
-                if reason and reason not in result_info.reason_list:
-                    result_info.reason_list.append(reason)
-        return result_info
-
-    def evaluate_by_type(self, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
         """
         Unified evaluation function for both rule and prompt evaluation types.
         
         Args:
+            track_id: Tracking ID for the data item
             eval_type: Type of evaluation ('rule' or 'prompt')
             map_data: Mapped data fields
             eval_list: List of evaluations to perform
@@ -200,7 +164,7 @@ class LocalExecutor(ExecProto):
         Returns:
             ResultInfo containing evaluation results
         """
-        result_info = ResultInfo()
+        result_info = ResultInfo(track_id=track_id)
         bad_type_list = []
         good_type_list = []
         bad_name_list = []
@@ -226,7 +190,7 @@ class LocalExecutor(ExecProto):
             # Execute evaluation
             tmp: ModelRes = model.eval(Data(**map_data))
 
-            # analyze result
+            # Analyze result
             if tmp.error_status:
                 result_info.error_status = True
                 if isinstance(tmp.type, str) and isinstance(tmp.name, str):
@@ -257,6 +221,7 @@ class LocalExecutor(ExecProto):
                     raise Exception('ModelRes.type and ModelRes.name are not str or List at the same time.')
                 good_reason_list.extend(tmp.reason)
 
+        # Set result_info fields based on all_labels configuration
         if self.input_args.executor.result_save.all_labels:
             # Always include both good and bad results when they exist
             # The final error_status is True if ANY evaluation failed
@@ -276,6 +241,7 @@ class LocalExecutor(ExecProto):
                 result_info.type_list = list(set(good_type_list))
                 result_info.name_list = good_name_list
                 result_info.reason_list = good_reason_list
+        
         return result_info
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:

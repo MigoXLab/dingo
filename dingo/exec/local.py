@@ -136,22 +136,6 @@ class LocalExecutor(ExecProto):
 
         return self.summary
 
-    def merge_result_info(self, existing_list: List[ResultInfo], new_item: ResultInfo) -> List[ResultInfo]:
-        existing_item = next((item for item in existing_list if item.track_id == new_item.track_id), None)
-
-        if existing_item:
-            existing_item.error_status = existing_item.error_status or new_item.error_status
-
-            existing_item.type_list = list(set(existing_item.type_list + new_item.type_list))
-            existing_item.name_list = list(set(existing_item.name_list + new_item.name_list))
-            existing_item.reason_list = list(set(existing_item.reason_list + new_item.reason_list))
-
-            # existing_item.raw_data = new_item.raw_data
-        else:
-            existing_list.append(new_item)
-
-        return existing_list
-
     def evaluate_single_data(self, track_id: str, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
         """
         Unified evaluation function for both rule and prompt evaluation types.
@@ -247,6 +231,22 @@ class LocalExecutor(ExecProto):
                 result_info.reason_list = good_reason_list
         
         return result_info
+
+    def merge_result_info(self, existing_list: List[ResultInfo], new_item: ResultInfo) -> List[ResultInfo]:
+        existing_item = next((item for item in existing_list if item.track_id == new_item.track_id), None)
+
+        if existing_item:
+            existing_item.error_status = existing_item.error_status or new_item.error_status
+
+            existing_item.type_list = list(set(existing_item.type_list + new_item.type_list))
+            existing_item.name_list = list(set(existing_item.name_list + new_item.name_list))
+            existing_item.reason_list = list(set(existing_item.reason_list + new_item.reason_list))
+
+            # existing_item.raw_data = new_item.raw_data
+        else:
+            existing_list.append(new_item)
+
+        return existing_list
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:
         new_summary = copy.deepcopy(summary)

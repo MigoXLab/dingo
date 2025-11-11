@@ -184,8 +184,11 @@ class LocalExecutor(ExecProto):
             raise ValueError(f"Unsupported eval_type: {eval_type}")
         
         for e_c_i in eval_list:
-            # Configure model
-            model = name_map.get(e_c_i.name)
+            # Get model class and instantiate
+            model_cls = name_map.get(e_c_i.name)
+            model = model_cls()
+            
+            # Configure model instance
             set_config(model, e_c_i.config)
 
             # Execute evaluation

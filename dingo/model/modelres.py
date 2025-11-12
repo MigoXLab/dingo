@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class ModelRes(BaseModel):
     error_status: bool = False
-    error_type: Dict[str, List[str]] = {}
+    error_type: Dict[str, Any] = {}
 
     # Optional fields for enhanced functionality (e.g., hallucination detection)
     score: Optional[float] = None

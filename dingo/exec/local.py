@@ -186,16 +186,26 @@ class LocalExecutor(ExecProto):
                 # 合并 bad 的 error_type
                 for key, value in tmp.error_type.items():
                     if key in bad_error_type:
-                        bad_error_type[key].extend(value)
+                        # value 是字典，包含 metric 和 reason 两个列表
+                        bad_error_type[key]["metric"].extend(value.get("metric", []))
+                        bad_error_type[key]["reason"].extend(value.get("reason", []))
                     else:
-                        bad_error_type[key] = value.copy() if isinstance(value, list) else [value]
+                        bad_error_type[key] = {
+                            "metric": value.get("metric", []).copy(),
+                            "reason": value.get("reason", []).copy()
+                        }
             else:
                 # 合并 good 的 error_type
                 for key, value in tmp.error_type.items():
                     if key in good_error_type:
-                        good_error_type[key].extend(value)
+                        # value 是字典，包含 metric 和 reason 两个列表
+                        good_error_type[key]["metric"].extend(value.get("metric", []))
+                        good_error_type[key]["reason"].extend(value.get("reason", []))
                     else:
-                        good_error_type[key] = value.copy() if isinstance(value, list) else [value]
+                        good_error_type[key] = {
+                            "metric": value.get("metric", []).copy(),
+                            "reason": value.get("reason", []).copy()
+                        }
 
         # Set result_info fields based on all_labels configuration
         if self.input_args.executor.result_save.all_labels:
@@ -204,12 +214,20 @@ class LocalExecutor(ExecProto):
             # 合并 good 和 bad 的 error_type
             all_error_type = {}
             for key, value in bad_error_type.items():
-                all_error_type[key] = value
+                all_error_type[key] = {
+                    "metric": value.get("metric", []).copy(),
+                    "reason": value.get("reason", []).copy()
+                }
             for key, value in good_error_type.items():
                 if key in all_error_type:
-                    all_error_type[key].extend(value)
+                    # 合并 metric 和 reason 列表
+                    all_error_type[key]["metric"].extend(value.get("metric", []))
+                    all_error_type[key]["reason"].extend(value.get("reason", []))
                 else:
-                    all_error_type[key] = value
+                    all_error_type[key] = {
+                        "metric": value.get("metric", []).copy(),
+                        "reason": value.get("reason", []).copy()
+                    }
             result_info.error_type = all_error_type
         else:
             if result_info.error_status:
@@ -233,13 +251,25 @@ class LocalExecutor(ExecProto):
         if existing_item:
             existing_item.error_status = existing_item.error_status or new_item.error_status
 
-            # 合并 error_type 字典
-            for key, value in new_item.error_type.items():
-                if key in existing_item.error_type:
-                    # 合并第二层字典
-                    existing_item.error_type[key].update(value)
+            # 合并 error_type 字典（第一层是字段名，第二层是错误类型，第三层是 {metric: [], reason: []}）
+            for field_key, error_dict in new_item.error_type.items():
+                if field_key in existing_item.error_type:
+                    # 合并第二层字典中的每个错误类型
+                    for error_type_name, error_value in error_dict.items():
+                        if error_type_name in existing_item.error_type[field_key]:
+                            # 合并 metric 和 reason 列表
+                            existing_item.error_type[field_key][error_type_name]["metric"].extend(
+                                error_value.get("metric", [])
+                            )
+                            existing_item.error_type[field_key][error_type_name]["reason"].extend(
+                                error_value.get("reason", [])
+                            )
+                        else:
+                            # 直接赋值错误类型的字典
+                            existing_item.error_type[field_key][error_type_name] = error_value
                 else:
-                    existing_item.error_type[key] = value
+                    # 直接赋值整个字段的错误类型字典
+                    existing_item.error_type[field_key] = error_dict
 
             # existing_item.raw_data = new_item.raw_data
         else:

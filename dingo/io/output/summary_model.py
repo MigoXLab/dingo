@@ -1,4 +1,3 @@
-from collections import defaultdict
 from typing import Dict
 
 from pydantic import BaseModel, Field
@@ -16,8 +15,7 @@ class SummaryModel(BaseModel):
     num_good: int = 0
     num_bad: int = 0
     total: int = 0
-    type_ratio: Dict[str, int] = Field(default_factory=lambda: defaultdict(int))
-    name_ratio: Dict[str, int] = Field(default_factory=lambda: defaultdict(int))
+    type_ratio: Dict[str, Dict[str, int]] = {}
 
     def to_dict(self):
         return {
@@ -33,5 +31,4 @@ class SummaryModel(BaseModel):
             'num_bad': self.num_bad,
             'total': self.total,
             'type_ratio': self.type_ratio,
-            'name_ratio': self.name_ratio,
         }

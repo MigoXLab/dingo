@@ -97,24 +97,27 @@ class LocalExecutor(ExecProto):
                         eval_list_prompt = [eval for eval in e_p.evals if eval.name in Model.llm_name_map]
                         # rule
                         if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
-                            futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), 'rule', map_data, eval_list_rule)]
+                            futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields,  'rule', map_data, eval_list_rule)]
                         else:
-                            futures += [process_executor.submit(self.evaluate_single_data, str(track_id), 'rule', map_data, eval_list_rule)]
+                            futures += [process_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields, 'rule', map_data, eval_list_rule)]
                         # prompt
-                        futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), 'prompt', map_data, eval_list_prompt)]
+                        futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields, 'prompt', map_data, eval_list_prompt)]
 
                 for future in concurrent.futures.as_completed(futures):
                     result_info = future.result()
                     futures_results = self.merge_result_info(futures_results, result_info)
 
                 for result_info in futures_results:
-                    # 统计 error_type 中的所有错误类型
-                    for error_key in result_info.error_type.keys():
-                        # 提取顶层类型（第一个点之前的部分）
-                        top_level_type = error_key.split('.')[0]
-                        self.summary.type_ratio[top_level_type] += 1
-                        # 统计完整的错误路径
-                        self.summary.name_ratio[error_key] += 1
+                    # 统计error_type，第一层key是字段名组合，第二层key才是错误类型
+                    for field_key, error_dict in result_info.error_type.items():
+                        if field_key not in self.summary.type_ratio:
+                            self.summary.type_ratio[field_key] = {}
+                        for error_type_name in error_dict.keys():
+                            if error_type_name not in self.summary.type_ratio[field_key]:
+                                self.summary.type_ratio[field_key][error_type_name] = 1
+                            else:
+                                self.summary.type_ratio[field_key][error_type_name] += 1
+
                     if result_info.error_status:
                         self.summary.num_bad += 1
                     else:
@@ -139,7 +142,7 @@ class LocalExecutor(ExecProto):
 
         return self.summary
 
-    def evaluate_single_data(self, track_id: str, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
+    def evaluate_single_data(self, track_id: str, eval_fields: dict, eval_type: str,  map_data: dict, eval_list: list) -> ResultInfo:
         """
         Unified evaluation function for both rule and prompt evaluation types.
         
@@ -214,6 +217,14 @@ class LocalExecutor(ExecProto):
             else:
                 result_info.error_type = good_error_type
         
+        # add field
+        if result_info.error_type:
+            join_fields = ','.join(eval_fields.values())
+            new_error_type = {join_fields: {}}
+            for k,v in result_info.error_type.items():
+                new_error_type[join_fields][k] = v
+            result_info.error_type = new_error_type
+
         return result_info
 
     def merge_result_info(self, existing_list: List[ResultInfo], new_item: ResultInfo) -> List[ResultInfo]:
@@ -225,8 +236,8 @@ class LocalExecutor(ExecProto):
             # 合并 error_type 字典
             for key, value in new_item.error_type.items():
                 if key in existing_item.error_type:
-                    # 合并原因列表并去重
-                    existing_item.error_type[key] = list(set(existing_item.error_type[key] + value))
+                    # 合并第二层字典
+                    existing_item.error_type[key].update(value)
                 else:
                     existing_item.error_type[key] = value
 
@@ -241,16 +252,13 @@ class LocalExecutor(ExecProto):
         if new_summary.total == 0:
             return new_summary
         new_summary.score = round(new_summary.num_good / new_summary.total * 100, 2)
-        for t in new_summary.type_ratio:
-            new_summary.type_ratio[t] = round(
-                new_summary.type_ratio[t] / new_summary.total, 6
-            )
-        for n in new_summary.name_ratio:
-            new_summary.name_ratio[n] = round(
-                new_summary.name_ratio[n] / new_summary.total, 6
-            )
-        new_summary.type_ratio = dict(sorted(new_summary.type_ratio.items()))
-        new_summary.name_ratio = dict(sorted(new_summary.name_ratio.items()))
+
+        # type_ratio是两层结构：第一层是字段名，第二层是具体错误类型
+        for field_name in new_summary.type_ratio:
+            for error_type in new_summary.type_ratio[field_name]:
+                new_summary.type_ratio[field_name][error_type] = round(
+                    new_summary.type_ratio[field_name][error_type] / new_summary.total, 6
+                )
 
         new_summary.finish_time = time.strftime("%Y%m%d_%H%M%S", time.localtime())
         return new_summary
@@ -264,25 +272,38 @@ class LocalExecutor(ExecProto):
         if not input_args.executor.result_save.good and not result_info.error_status:
             return
 
-        # 遍历 error_type 的键来组织文件结构
-        for error_key in result_info.error_type.keys():
-            # 从层级键中提取类型和名称
-            # 例如: "validity_errors.space_issues" -> type="validity_errors", name="space_issues"
-            parts = error_key.split(".", 1)
-            t = parts[0]
-            n = parts[1] if len(parts) > 1 else parts[0]
+        # 遍历 error_type 的第一层（字段名组合）和第二层（错误类型）
+        for field_name, error_dict in result_info.error_type.items():
+            # 第一层：根据字段名创建文件夹
+            field_dir = os.path.join(path, field_name)
+            if not os.path.exists(field_dir):
+                os.makedirs(field_dir)
             
-            p_t = os.path.join(path, t)
-            if not os.path.exists(p_t):
-                os.makedirs(p_t)
-            # 将点替换为下划线作为文件名
-            f_n = os.path.join(path, t, n.replace(".", "_")) + ".jsonl"
-            with open(f_n, "a", encoding="utf-8") as f:
-                if input_args.executor.result_save.raw:
-                    str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)
+            # 第二层：遍历每个错误类型
+            for error_type_name in error_dict.keys():
+                # 按点分割错误类型名称，创建多层文件夹
+                # 例如: "validity_errors.space_issues" -> ["validity_errors", "space_issues"]
+                parts = error_type_name.split(".")
+                
+                # 除了最后一部分，其他部分都是文件夹
+                if len(parts) > 1:
+                    # 创建多层文件夹
+                    folder_path = os.path.join(field_dir, *parts[:-1])
+                    if not os.path.exists(folder_path):
+                        os.makedirs(folder_path)
+                    # 最后一部分作为文件名
+                    file_name = parts[-1] + ".jsonl"
+                    f_n = os.path.join(folder_path, file_name)
                 else:
-                    str_json = json.dumps(result_info.to_dict(), ensure_ascii=False)
-                f.write(str_json + "\n")
+                    # 没有点分割，直接在字段文件夹下创建文件
+                    f_n = os.path.join(field_dir, parts[0] + ".jsonl")
+                
+                with open(f_n, "a", encoding="utf-8") as f:
+                    if input_args.executor.result_save.raw:
+                        str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)
+                    else:
+                        str_json = json.dumps(result_info.to_dict(), ensure_ascii=False)
+                    f.write(str_json + "\n")
 
     def write_summary(self, path: str, input_args: InputArgs, summary: SummaryModel):
         if not input_args.executor.result_save.bad:

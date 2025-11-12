@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from pydantic import BaseModel
 
@@ -7,7 +7,7 @@ class ResultInfo(BaseModel):
     track_id: str = ''
     raw_data: Dict = {}
     error_status: bool = False
-    error_type: Dict[str, List[str]] = {}
+    error_type: Dict[str, Any] = {}
 
     def to_dict(self):
         return {

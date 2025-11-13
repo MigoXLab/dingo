@@ -3,11 +3,20 @@ from typing import Dict, List, Any
 from pydantic import BaseModel
 
 
+class ResTypeInfo(BaseModel):
+    metric: list[str] = []
+    reason: list[str] = []
+
+    def merge(self, other: 'ResTypeInfo') -> None:
+        self.metric.extend(other.metric)
+        self.reason.extend(other.reason)
+
+
 class ResultInfo(BaseModel):
     track_id: str = ''
     raw_data: Dict = {}
     error_status: bool = False
-    error_type: Dict[str, Any] = {}
+    error_type: Dict[str, Dict[str, ResTypeInfo]] = {}
 
     def to_dict(self):
         return {

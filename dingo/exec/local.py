@@ -186,62 +186,43 @@ class LocalExecutor(ExecProto):
                 # 合并 bad 的 error_type
                 for key, value in tmp.error_type.items():
                     if key in bad_error_type:
-                        # value 是字典，包含 metric 和 reason 两个列表
-                        bad_error_type[key]["metric"].extend(value.get("metric", []))
-                        bad_error_type[key]["reason"].extend(value.get("reason", []))
+                        bad_error_type[key].merge(value)
                     else:
-                        bad_error_type[key] = {
-                            "metric": value.get("metric", []).copy(),
-                            "reason": value.get("reason", []).copy()
-                        }
+                        bad_error_type[key] = value
             else:
                 # 合并 good 的 error_type
                 for key, value in tmp.error_type.items():
                     if key in good_error_type:
-                        # value 是字典，包含 metric 和 reason 两个列表
-                        good_error_type[key]["metric"].extend(value.get("metric", []))
-                        good_error_type[key]["reason"].extend(value.get("reason", []))
+                        good_error_type[key].merge(value)
                     else:
-                        good_error_type[key] = {
-                            "metric": value.get("metric", []).copy(),
-                            "reason": value.get("reason", []).copy()
-                        }
+                        good_error_type[key] = value
 
-        # Set result_info fields based on all_labels configuration
+        # Set result_info fields based on all_labels configuration and add field
+        join_fields = ','.join(eval_fields.values())
+        
         if self.input_args.executor.result_save.all_labels:
             # Always include both good and bad results when they exist
             # The final error_status is True if ANY evaluation failed
             # 合并 good 和 bad 的 error_type
             all_error_type = {}
             for key, value in bad_error_type.items():
-                all_error_type[key] = {
-                    "metric": value.get("metric", []).copy(),
-                    "reason": value.get("reason", []).copy()
-                }
+                all_error_type[key] = value
             for key, value in good_error_type.items():
                 if key in all_error_type:
-                    # 合并 metric 和 reason 列表
-                    all_error_type[key]["metric"].extend(value.get("metric", []))
-                    all_error_type[key]["reason"].extend(value.get("reason", []))
+                    all_error_type[key].merge(value)
                 else:
-                    all_error_type[key] = {
-                        "metric": value.get("metric", []).copy(),
-                        "reason": value.get("reason", []).copy()
-                    }
-            result_info.error_type = all_error_type
+                    all_error_type[key] = value
+            # add field
+            if all_error_type:
+                result_info.error_type = {join_fields: all_error_type}
         else:
+            # add field
             if result_info.error_status:
-                result_info.error_type = bad_error_type
+                if bad_error_type:
+                    result_info.error_type = {join_fields: bad_error_type}
             else:
-                result_info.error_type = good_error_type
-        
-        # add field
-        if result_info.error_type:
-            join_fields = ','.join(eval_fields.values())
-            new_error_type = {join_fields: {}}
-            for k,v in result_info.error_type.items():
-                new_error_type[join_fields][k] = v
-            result_info.error_type = new_error_type
+                if good_error_type:
+                    result_info.error_type = {join_fields: good_error_type}
 
         return result_info
 
@@ -252,24 +233,20 @@ class LocalExecutor(ExecProto):
             existing_item.error_status = existing_item.error_status or new_item.error_status
 
             # 合并 error_type 字典（第一层是字段名，第二层是错误类型，第三层是 {metric: [], reason: []}）
-            for field_key, error_dict in new_item.error_type.items():
-                if field_key in existing_item.error_type:
+            for key, value in new_item.error_type.items():
+                # 第一层是字段名，如果存在，则进行合并
+                if key in existing_item.error_type:
                     # 合并第二层字典中的每个错误类型
-                    for error_type_name, error_value in error_dict.items():
-                        if error_type_name in existing_item.error_type[field_key]:
-                            # 合并 metric 和 reason 列表
-                            existing_item.error_type[field_key][error_type_name]["metric"].extend(
-                                error_value.get("metric", [])
-                            )
-                            existing_item.error_type[field_key][error_type_name]["reason"].extend(
-                                error_value.get("reason", [])
-                            )
+                    for k, v in value.items():
+                        if k in existing_item.error_type[key]:
+                            existing_item.error_type[key][k].merge(v)
                         else:
                             # 直接赋值错误类型的字典
-                            existing_item.error_type[field_key][error_type_name] = error_value
+                            existing_item.error_type[key][k] = v
+                # 第一层是字段名，如果不存在，则直接赋值
                 else:
                     # 直接赋值整个字段的错误类型字典
-                    existing_item.error_type[field_key] = error_dict
+                    existing_item.error_type[key] = value
 
             # existing_item.raw_data = new_item.raw_data
         else:

@@ -60,9 +60,13 @@ class RuleAudioDuration(BaseRule):
 
         if snr_dB < 8:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["The audio signal-to-noise ratio is too low."]
+            # res.type = cls.metric_type
+            # res.name = cls.__name__
+            # res.reason = ["The audio signal-to-noise ratio is too low."]
+            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+                "metric": [cls.__name__],
+                "reason": ["The audio signal-to-noise ratio is too low."]
+            }}
         return res
 
 
@@ -108,9 +112,13 @@ class RuleAudioSnrQuality(BaseRule):
 
         if duration > 10:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["The audio duration is too long."]
+            # res.type = cls.metric_type
+            # res.name = cls.__name__
+            # res.reason = ["The audio duration is too long."]
+            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+                "metric": [cls.__name__],
+                "reason": ["The audio duration is too long."]
+            }}
         return res
 
 

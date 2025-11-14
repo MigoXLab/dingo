@@ -23,12 +23,12 @@ class LLMMetaRaterCleanliness(BaseOpenAI):
 
     This model evaluates text formatting, content appropriateness, and completeness,
     assessing whether text appears human-edited and free from noise on a 5-point scale.
-    
+
     Evaluation criteria:
     - Correct formatting: Human-edited appearance, no inappropriate characters
     - Appropriate content: No links, ads, or irrelevant text
     - Completeness: Natural, complete sentences with clear structure
-    
+
     Higher scores indicate cleaner, more well-formatted text.
     """
     # Metadata for documentation generation
@@ -152,4 +152,3 @@ Here is the text:
             }
 
         return result
-

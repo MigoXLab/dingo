@@ -5,8 +5,8 @@ from dingo.exec import Executor
 
 if __name__ == '__main__':
     OPENAI_MODEL = 'deepseek-chat'
-    OPENAI_URL = 'https://api.deepseek.com/v1'
-    OPENAI_KEY = os.getenv("OPENAI_KEY")
+    OPENAI_URL = 'http://10.140.54.48:29990/v1'
+    OPENAI_KEY = "EMPTY"
 
     input_data = {
         "input_path": "../../test/data/test_local_jsonl.jsonl",
@@ -24,7 +24,7 @@ if __name__ == '__main__':
             {
                 "fields": {"content": "content"},
                 "evals": [
-                    {"name": "LLMTextRepeat", "config": {"model": OPENAI_MODEL, "key": OPENAI_KEY, "api_url": OPENAI_URL}}
+                    {"name": "LLMTextRepeat", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL}}
                 ],
             }
         ]

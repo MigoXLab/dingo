@@ -10,6 +10,7 @@ from typing import Generator, List, Optional
 from tqdm import tqdm
 
 from dingo.config import InputArgs
+from dingo.config.input_args import EvalPipline
 from dingo.data import Dataset, DataSource, dataset_map, datasource_map
 from dingo.exec.base import ExecProto, Executor
 from dingo.io import Data, ResultInfo, SummaryModel
@@ -19,7 +20,6 @@ from dingo.model.modelres import ModelRes
 from dingo.model.prompt.base import BasePrompt
 from dingo.model.rule.base import BaseRule
 from dingo.utils import log
-from dingo.config.input_args import EvalPipline
 
 
 @Executor.register("local")
@@ -97,7 +97,7 @@ class LocalExecutor(ExecProto):
                         eval_list_prompt = [eval for eval in e_p.evals if eval.name in Model.llm_name_map]
                         # rule
                         if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
-                            futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields,  'rule', map_data, eval_list_rule)]
+                            futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields, 'rule', map_data, eval_list_rule)]
                         else:
                             futures += [process_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields, 'rule', map_data, eval_list_rule)]
                         # prompt
@@ -119,7 +119,7 @@ class LocalExecutor(ExecProto):
                             label_list = res_type_info.get('label', [])
                         else:
                             label_list = res_type_info.label
-                        
+
                         for error_type_name in label_list:
                             if error_type_name not in self.summary.type_ratio[field_key]:
                                 self.summary.type_ratio[field_key][error_type_name] = 1
@@ -150,23 +150,23 @@ class LocalExecutor(ExecProto):
 
         return self.summary
 
-    def evaluate_single_data(self, track_id: str, eval_fields: dict, eval_type: str,  map_data: dict, eval_list: list) -> ResultInfo:
+    def evaluate_single_data(self, track_id: str, eval_fields: dict, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
         """
         Unified evaluation function for both rule and prompt evaluation types.
-        
+
         Args:
             track_id: Tracking ID for the data item
             eval_type: Type of evaluation ('rule' or 'prompt')
             map_data: Mapped data fields
             eval_list: List of evaluations to perform
-            
+
         Returns:
             ResultInfo containing evaluation results
         """
         result_info = ResultInfo(track_id=track_id)
         bad_error_type = None
         good_error_type = None
-        
+
         # Select appropriate name_map and config method based on eval_type
         if eval_type == 'rule':
             name_map = Model.rule_name_map
@@ -176,12 +176,12 @@ class LocalExecutor(ExecProto):
             set_config = Model.set_config_llm
         else:
             raise ValueError(f"Unsupported eval_type: {eval_type}")
-        
+
         for e_c_i in eval_list:
             # Get model class and instantiate
             model_cls = name_map.get(e_c_i.name)
             model = model_cls()
-            
+
             # Configure model instance
             set_config(model, e_c_i.config)
 
@@ -205,7 +205,7 @@ class LocalExecutor(ExecProto):
 
         # Set result_info fields based on all_labels configuration and add field
         join_fields = ','.join(eval_fields.values())
-        
+
         if self.input_args.executor.result_save.all_labels:
             # Always include both good and bad results when they exist
             # The final error_status is True if ANY evaluation failed
@@ -284,7 +284,7 @@ class LocalExecutor(ExecProto):
             field_dir = os.path.join(path, field_name)
             if not os.path.exists(field_dir):
                 os.makedirs(field_dir)
-            
+
             # 从 ResTypeInfo.label 中获取错误类型列表
             if isinstance(res_type_info, dict):
                 label_list = res_type_info.get('label', [])
@@ -294,7 +294,7 @@ class LocalExecutor(ExecProto):
                 # 按点分割错误类型名称，创建多层文件夹
                 # 例如: "validity_errors.space_issues" -> ["validity_errors", "space_issues"]
                 parts = error_type_name.split(".")
-                
+
                 # 除了最后一部分，其他部分都是文件夹
                 if len(parts) > 1:
                     # 创建多层文件夹
@@ -307,7 +307,7 @@ class LocalExecutor(ExecProto):
                 else:
                     # 没有点分割，直接在字段文件夹下创建文件
                     f_n = os.path.join(field_dir, parts[0] + ".jsonl")
-                
+
                 with open(f_n, "a", encoding="utf-8") as f:
                     if input_args.executor.result_save.raw:
                         str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)

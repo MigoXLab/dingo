@@ -11,7 +11,6 @@ class BaseLLM:
     prompt: str | List = None
     dynamic_config: EvaluatorLLMArgs
 
-
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         raise NotImplementedError()

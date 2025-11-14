@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -12,7 +12,7 @@ class ResTypeInfo(BaseModel):
         self.label.extend(other.label)
         self.metric.extend(other.metric)
         self.reason.extend(other.reason)
-    
+
     def copy(self) -> 'ResTypeInfo':
         """创建当前 ResTypeInfo 的深拷贝"""
         return ResTypeInfo(

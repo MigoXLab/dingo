@@ -23,10 +23,10 @@ class LLMMetaRaterReadability(BaseOpenAI):
 
     This model evaluates the clarity and coherence of text using appropriate
     vocabulary and sentence structures on a 5-point scale.
-    
+
     Evaluation criteria:
     - Readability: Clarity and coherence, proper grammar and spelling
-    
+
     Higher scores indicate better readability.
     """
     # Metadata for documentation generation
@@ -143,4 +143,3 @@ Here is the text:
             }
 
         return result
-

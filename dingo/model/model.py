@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Optional
 from pydantic import BaseModel
 
 from dingo.config import InputArgs
-from dingo.config.input_args import EvaluatorRuleArgs, EvaluatorLLMArgs
+from dingo.config.input_args import EvaluatorLLMArgs, EvaluatorRuleArgs
 from dingo.model.llm.base import BaseLLM
 from dingo.model.prompt.base import BasePrompt
 from dingo.model.rule.base import BaseRule
@@ -348,7 +348,6 @@ class Model:
             if v is not None:
                 setattr(config_default, k, v)
         setattr(rule, 'dynamic_config', config_default)
-
 
     @classmethod
     def set_config_prompt(self, prompt: BasePrompt, prompt_config: EvaluatorLLMArgs):

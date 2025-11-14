@@ -23,10 +23,10 @@ class LLMMetaRaterReasoning(BaseOpenAI):
 
     This model evaluates the reasoning complexity and logical depth of text content,
     from simple logical judgments to complex multidimensional analysis on a 5-point scale.
-    
+
     Evaluation criteria:
     - Reasoning: Logical depth and complexity of argumentation
-    
+
     Higher scores indicate more complex and sophisticated reasoning.
     """
     # Metadata for documentation generation
@@ -143,4 +143,3 @@ Here is the text:
             }
 
         return result
-

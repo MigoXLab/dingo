@@ -27,4 +27,3 @@ Please return the results in the format: {"language": level, "percent": tagert l
 2. Sign a level for the text.
 4. Return the answer in JSON format.
     """
-

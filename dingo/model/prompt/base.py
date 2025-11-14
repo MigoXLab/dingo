@@ -1,9 +1,9 @@
 from typing import List, Optional
-from dingo.model.llm.base import BaseLLM
-from dingo.io import Data
-from dingo.model.modelres import ModelRes
-from dingo.config.input_args import EvaluatorLLMArgs
 
+from dingo.config.input_args import EvaluatorLLMArgs
+from dingo.io import Data
+from dingo.model.llm.base import BaseLLM
+from dingo.model.modelres import ModelRes
 
 
 class BasePrompt:

@@ -227,7 +227,7 @@ class LocalExecutor(ExecProto):
                 if bad_error_type:
                     result_info.error_type = {join_fields: bad_error_type}
             else:
-                if good_error_type:
+                if good_error_type and self.input_args.executor.result_save.good:
                     result_info.error_type = {join_fields: good_error_type}
 
         return result_info

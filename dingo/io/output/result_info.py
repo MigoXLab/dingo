@@ -1,22 +1,32 @@
 from typing import Dict, List, Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ResTypeInfo(BaseModel):
-    metric: list[str] = []
-    reason: list[str] = []
+    label: list = []
+    metric: list = []
+    reason: list = []
 
     def merge(self, other: 'ResTypeInfo') -> None:
+        self.label.extend(other.label)
         self.metric.extend(other.metric)
         self.reason.extend(other.reason)
+    
+    def copy(self) -> 'ResTypeInfo':
+        """创建当前 ResTypeInfo 的深拷贝"""
+        return ResTypeInfo(
+            label=self.label.copy(),
+            metric=self.metric.copy(),
+            reason=self.reason.copy()
+        )
 
 
 class ResultInfo(BaseModel):
     track_id: str = ''
     raw_data: Dict = {}
     error_status: bool = False
-    error_type: Dict[str, Dict[str, ResTypeInfo]] = {}
+    error_type: Dict[str, ResTypeInfo] = {}
 
     def to_dict(self):
         return {

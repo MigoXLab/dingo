@@ -108,11 +108,19 @@ class LocalExecutor(ExecProto):
                     futures_results = self.merge_result_info(futures_results, result_info)
 
                 for result_info in futures_results:
-                    # 统计error_type，第一层key是字段名组合，第二层key才是错误类型
-                    for field_key, error_dict in result_info.error_type.items():
+                    # 统计error_type，第一层key是字段名组合，第二层value是ResTypeInfo
+                    # 错误类型从ResTypeInfo.label中获取
+                    for field_key, res_type_info in result_info.error_type.items():
                         if field_key not in self.summary.type_ratio:
                             self.summary.type_ratio[field_key] = {}
-                        for error_type_name in error_dict.keys():
+                        # 遍历 ResTypeInfo.label 中的每个错误类型
+                        # 兼容 dict 和 ResTypeInfo 对象两种情况
+                        if isinstance(res_type_info, dict):
+                            label_list = res_type_info.get('label', [])
+                        else:
+                            label_list = res_type_info.label
+                        
+                        for error_type_name in label_list:
                             if error_type_name not in self.summary.type_ratio[field_key]:
                                 self.summary.type_ratio[field_key][error_type_name] = 1
                             else:
@@ -156,8 +164,8 @@ class LocalExecutor(ExecProto):
             ResultInfo containing evaluation results
         """
         result_info = ResultInfo(track_id=track_id)
-        bad_error_type = {}
-        good_error_type = {}
+        bad_error_type = None
+        good_error_type = None
         
         # Select appropriate name_map and config method based on eval_type
         if eval_type == 'rule':
@@ -183,19 +191,17 @@ class LocalExecutor(ExecProto):
             # Collect error_type from ModelRes
             if tmp.error_status:
                 result_info.error_status = True
-                # 合并 bad 的 error_type
-                for key, value in tmp.error_type.items():
-                    if key in bad_error_type:
-                        bad_error_type[key].merge(value)
-                    else:
-                        bad_error_type[key] = value
+                # 合并 bad 的 error_type (ModelRes.error_type 现在直接是 ResTypeInfo)
+                if bad_error_type:
+                    bad_error_type.merge(tmp.error_type)
+                else:
+                    bad_error_type = tmp.error_type.copy()
             else:
-                # 合并 good 的 error_type
-                for key, value in tmp.error_type.items():
-                    if key in good_error_type:
-                        good_error_type[key].merge(value)
-                    else:
-                        good_error_type[key] = value
+                # 合并 good 的 error_type (ModelRes.error_type 现在直接是 ResTypeInfo)
+                if good_error_type:
+                    good_error_type.merge(tmp.error_type)
+                else:
+                    good_error_type = tmp.error_type.copy()
 
         # Set result_info fields based on all_labels configuration and add field
         join_fields = ','.join(eval_fields.values())
@@ -203,20 +209,20 @@ class LocalExecutor(ExecProto):
         if self.input_args.executor.result_save.all_labels:
             # Always include both good and bad results when they exist
             # The final error_status is True if ANY evaluation failed
-            # 合并 good 和 bad 的 error_type
-            all_error_type = {}
-            for key, value in bad_error_type.items():
-                all_error_type[key] = value
-            for key, value in good_error_type.items():
-                if key in all_error_type:
-                    all_error_type[key].merge(value)
+            # 合并 good 和 bad 的 error_type (现在是 ResTypeInfo 对象)
+            all_error_type = None
+            if bad_error_type:
+                all_error_type = bad_error_type.copy()
+            if good_error_type:
+                if all_error_type:
+                    all_error_type.merge(good_error_type)
                 else:
-                    all_error_type[key] = value
-            # add field
+                    all_error_type = good_error_type.copy()
+            # add field (ResultInfo.error_type 现在是 Dict[str, ResTypeInfo])
             if all_error_type:
                 result_info.error_type = {join_fields: all_error_type}
         else:
-            # add field
+            # add field (ResultInfo.error_type 现在是 Dict[str, ResTypeInfo])
             if result_info.error_status:
                 if bad_error_type:
                     result_info.error_type = {join_fields: bad_error_type}
@@ -232,21 +238,14 @@ class LocalExecutor(ExecProto):
         if existing_item:
             existing_item.error_status = existing_item.error_status or new_item.error_status
 
-            # 合并 error_type 字典（第一层是字段名，第二层是错误类型，第三层是 {metric: [], reason: []}）
+            # 合并 error_type 字典（第一层是字段名，第二层直接是 ResTypeInfo）
             for key, value in new_item.error_type.items():
-                # 第一层是字段名，如果存在，则进行合并
+                # 第一层是字段名，如果存在，则合并 ResTypeInfo
                 if key in existing_item.error_type:
-                    # 合并第二层字典中的每个错误类型
-                    for k, v in value.items():
-                        if k in existing_item.error_type[key]:
-                            existing_item.error_type[key][k].merge(v)
-                        else:
-                            # 直接赋值错误类型的字典
-                            existing_item.error_type[key][k] = v
-                # 第一层是字段名，如果不存在，则直接赋值
+                    existing_item.error_type[key].merge(value)
+                # 第一层是字段名，如果不存在，则创建副本
                 else:
-                    # 直接赋值整个字段的错误类型字典
-                    existing_item.error_type[key] = value
+                    existing_item.error_type[key] = value.copy()
 
             # existing_item.raw_data = new_item.raw_data
         else:
@@ -279,15 +278,19 @@ class LocalExecutor(ExecProto):
         if not input_args.executor.result_save.good and not result_info.error_status:
             return
 
-        # 遍历 error_type 的第一层（字段名组合）和第二层（错误类型）
-        for field_name, error_dict in result_info.error_type.items():
+        # 遍历 error_type 的第一层（字段名组合），第二层直接是 ResTypeInfo
+        for field_name, res_type_info in result_info.error_type.items():
             # 第一层：根据字段名创建文件夹
             field_dir = os.path.join(path, field_name)
             if not os.path.exists(field_dir):
                 os.makedirs(field_dir)
             
-            # 第二层：遍历每个错误类型
-            for error_type_name in error_dict.keys():
+            # 从 ResTypeInfo.label 中获取错误类型列表
+            if isinstance(res_type_info, dict):
+                label_list = res_type_info.get('label', [])
+            else:
+                label_list = res_type_info.label
+            for error_type_name in label_list:
                 # 按点分割错误类型名称，创建多层文件夹
                 # 例如: "validity_errors.space_issues" -> ["validity_errors", "space_issues"]
                 parts = error_type_name.split(".")

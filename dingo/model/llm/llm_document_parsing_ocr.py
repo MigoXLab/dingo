@@ -126,8 +126,15 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
 
         result = ModelRes()
         result.error_status = False
-        result.type = types
-        result.name = names
-        result.reason = [json_str] if 'json_str' in locals() else [response]
+        # result.type = types
+        # result.name = names
+        # result.reason = [json_str] if 'json_str' in locals() else [response]
+
+        tmp_type = '.'.join(types)
+        tmp_name = '.'.join(names)
+        result.error_type = {f"{tmp_type}.{tmp_name}": {
+            "metric": [cls.__name__],
+            "reason": [json_str] if 'json_str' in locals() else [response]
+        }}
 
         return result

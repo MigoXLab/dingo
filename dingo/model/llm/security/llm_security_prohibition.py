@@ -1,5 +1,5 @@
 from dingo.model import Model
-from dingo.model.llm.llm_security import LLMSecurity
+from dingo.model.llm.security.llm_security import LLMSecurity
 
 
 @Model.llm_register("LLMSecurityProhibition")

@@ -64,14 +64,13 @@ class LLMClassifyTopic(BaseOpenAI):
 
         result = ModelRes()
         result.error_status = False
+        # result.type = cls.prompt.metric_type
+        # result.name = response_model.name
+        # result.reason = [response_model.reason]
 
-        # type
-        result.type = cls.prompt.metric_type
-
-        # name
-        result.name = response_model.name
-
-        # reason
-        result.reason = [response_model.reason]
+        result.error_type = {f"{cls.__name__}.{response_model.name}": {
+            "metric": [cls.__name__],
+            "reason": [response_model.reason]
+        }}
 
         return result

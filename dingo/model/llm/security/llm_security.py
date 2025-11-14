@@ -25,11 +25,17 @@ class LLMSecurity(BaseOpenAI):
             raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
         result = ModelRes()
+        tmp_reason = []
         for k, v in response_json.items():
             if v == "pos":
                 result.error_status = True
-                result.type = "Security"
-                result.name = cls.prompt.__name__
-                result.reason.append(k)
+                # result.type = "Security"
+                # result.name = cls.prompt.__name__
+                # result.reason.append(k)
+                tmp_reason.append(k)
 
+        result.error_type = {f"Security.{cls.__name__}": {
+            "metric": [cls.__name__],
+            "reason": tmp_reason
+        }}
         return result

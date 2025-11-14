@@ -139,17 +139,30 @@ class LLMHtmlExtractCompare(BaseOpenAI):
             result.error_status = True
 
         # type
+        # if response_model.score == 1:
+        #     result.type = "TOOL_ONE_BETTER"
+        # if response_model.score == 2:
+        #     result.type = "TOOL_TWO_BETTER"
+        # if response_model.score == 0:
+        #     result.type = "TOOL_EQUAL"
+        #
+        # # name
+        # result.name = response_model.name
+        #
+        # # reason
+        # result.reason = [json.dumps(response_json, ensure_ascii=False)]
+
+        tmp_type = ''
         if response_model.score == 1:
-            result.type = "TOOL_ONE_BETTER"
+            tmp_type = "TOOL_ONE_BETTER"
         if response_model.score == 2:
-            result.type = "TOOL_TWO_BETTER"
+            tmp_type = "TOOL_TWO_BETTER"
         if response_model.score == 0:
-            result.type = "TOOL_EQUAL"
+            tmp_type = "TOOL_EQUAL"
 
-        # name
-        result.name = response_model.name
-
-        # reason
-        result.reason = [json.dumps(response_json, ensure_ascii=False)]
+        result.error_type = {f"{tmp_type}.{response_model.name}": {
+            "metric": [cls.__name__],
+            "reason": [json.dumps(response_json, ensure_ascii=False)]
+        }}
 
         return result

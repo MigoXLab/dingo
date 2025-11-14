@@ -198,10 +198,17 @@ class LLMHtmlExtractCompareV2(BaseOpenAI):
         if not mapping:
             raise ValueError(f"无效的判断结果: {judgement}")
 
-        result.type = mapping["type"]
         result.error_status = mapping["error_status"]
-        result.name = f"Judgement_{judgement}"
-        result.reason = [structured_response.reason]
+        # result.type = mapping["type"]
+        # result.name = f"Judgement_{judgement}"
+        # result.reason = [structured_response.reason]
+
+        tmp_type = mapping["type"]
+        tmp_name = f"Judgement_{judgement}"
+        result.error_type = {f"{tmp_type}.{tmp_name}": {
+            "metric": [cls.__name__],
+            "reason": [structured_response.reason]
+        }}
 
         return result
 

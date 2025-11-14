@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class ResTypeInfo(BaseModel):
-    label: list = []
-    metric: list = []
+    label: list[str] = []
+    metric: list[str] = []
     reason: list = []
 
     def merge(self, other: 'ResTypeInfo') -> None:

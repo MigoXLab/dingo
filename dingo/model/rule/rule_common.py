@@ -125,16 +125,19 @@ class RuleAlphaWords(BaseRule):
         n_alpha_words = sum([any((c.isalpha() for c in w)) for w in words])
         ratio = n_alpha_words / n_words
         if ratio > cls.dynamic_config.threshold:
-            pass
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         else:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [
                     "The ratio of words that contain at least one alphabetic character is: "
                     + str(ratio)
                 ]
-            }}
+            }
         return res
 
 
@@ -172,13 +175,17 @@ class RuleAudioDataFormat(BaseRule):
         raw_data = input_data.raw_data
         key_list = ["id", "audio", "text"]
         if all(key in raw_data for key in key_list):
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
             return res
         else:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Audio Data format error"]
-            }}
+            }
         return res
 
 
@@ -212,10 +219,15 @@ class RuleCapitalWords(BaseRule):
         ratio = num_caps_words / num_words
         if ratio > cls.dynamic_config.threshold and num_words < 200:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["ratio: " + str(ratio)]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -246,10 +258,15 @@ class RuleCharNumber(BaseRule):
         num_char = len(text)
         if num_char < cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The number of char is: " + str(num_char)]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -279,10 +296,15 @@ class RuleCharSplit(BaseRule):
         count = len(matches)
         if count >= cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": matches
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -314,13 +336,15 @@ class RuleColonEnd(BaseRule):
             return res
         if content[-1] == ":":
             res.error_status = True
-            # res.type = cls.metric_type
-            # res.name = cls.__name__
-            # res.reason = [content[-100:]]
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [content[-100:]]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -366,10 +390,15 @@ class RuleContentNull(BaseRule):
         count = len(input_data.content.strip())
         if count == 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content is empty."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -397,10 +426,15 @@ class RuleContentShort(BaseRule):
         content = input_data.content.encode("utf-8")
         if len(content) <= cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content is too short."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -441,10 +475,15 @@ class RuleContentShortMultiLan(BaseRule):
         words = [word for word in tokens if word.isalpha()]
         if len(words) < cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content is too short."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -474,12 +513,17 @@ class RuleCurlyBracket(BaseRule):
         ratio = num / len(content)
         if ratio > cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [
                     "The ratio of curly bracket and characters is : " + str(ratio)
                 ]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -526,12 +570,17 @@ class RuleDocRepeat(BaseRule):
         repeat_score = base_rps_frac_chars_in_dupe_ngrams(6, input_data.content)
         if repeat_score >= cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [
                     "Repeatability of text is too high, with ratio： " + str(repeat_score)
                 ]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -577,14 +626,19 @@ class RuleDocFormulaRepeat(BaseRule):
         # 如果总连续重复长度超过阈值，则标记为错误
         if repeat_analysis['total_repeat_length'] >= cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [
                     f"Formula has too many consecutive repeated characters, "
                     f"total repeat length: {repeat_analysis['total_repeat_length']}, "
                     f"found {len(repeat_analysis['repeats'])} repeat patterns"
                 ]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
 
         return res
 
@@ -689,11 +743,15 @@ class RuleEnterMore(BaseRule):
             match = SEARCH_REGEX.search(content)
             if match:
                 res.error_status = True
-                res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+                res.error_type = {
+                    "label": [f"{cls.metric_type}.{cls.__name__}"],
                     "metric": [cls.__name__],
                     "reason": ["Content has 8 consecutive carriage returns."]
-                }}
+                }
                 return res
+        res.error_type = {
+            "label": ["QUALITY_GOOD"]
+        }
         return res
 
 
@@ -737,10 +795,15 @@ class RuleEnterRatioMore(BaseRule):
         ratio = content.count("\n") / len(content)
         if ratio > 0.25:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The number of enter / the number of content > 25%."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -769,10 +832,15 @@ class RuleHeadWordAr(BaseRule):
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content has irrelevance tail source info."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -801,10 +869,15 @@ class RuleHeadWordCs(BaseRule):
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content has irrelevance tail source info."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -833,10 +906,15 @@ class RuleHeadWordHu(BaseRule):
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content has irrelevance tail source info."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -865,10 +943,15 @@ class RuleHeadWordKo(BaseRule):
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content has irrelevance tail source info."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -897,10 +980,15 @@ class RuleHeadWordRu(BaseRule):
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content has irrelevance tail source info."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -929,10 +1017,15 @@ class RuleHeadWordSr(BaseRule):
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content has irrelevance tail source info."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -961,10 +1054,15 @@ class RuleHeadWordTh(BaseRule):
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content has irrelevance tail source info."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -993,10 +1091,15 @@ class RuleHeadWordVi(BaseRule):
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content has irrelevance tail source info."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1079,10 +1182,15 @@ class RuleHtmlEntity(BaseRule):
                 error_entity.append(entity)
         if num / len(content) >= 0.01:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [list(set(error_entity))]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1128,10 +1236,15 @@ class RuleHtmlTag(BaseRule):
         num = len(matches)
         if num / len(content) >= 0.01:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": list(set(matches))
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1162,10 +1275,15 @@ class RuleIDCard(BaseRule):
             person_id = Extractor().extract_id_card(input_data.content)
             if len(person_id) != 0:
                 res.error_status = True
-                res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+                res.error_type = {
+                    "label": [f"{cls.metric_type}.{cls.__name__}"],
                     "metric": [cls.__name__],
                     "reason": [str(person_id)]
-                }}
+                }
+                return res
+        res.error_type = {
+            "label": ["QUALITY_GOOD"]
+        }
         return res
 
 
@@ -1210,10 +1328,15 @@ class RuleInvisibleChar(BaseRule):
         num = len(matches)
         if num / len(content) >= 0.01:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [repr(s) for s in list(set(matches))]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1251,13 +1374,17 @@ class RuleImageDataFormat(BaseRule):
         raw_data = input_data.raw_data
         key_list = ["img_id", "image"]
         if all(key in raw_data for key in key_list):
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
             return res
         else:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Image Data format error"]
-            }}
+            }
         return res
 
 
@@ -1284,10 +1411,15 @@ class RuleLatexSpecialChar(BaseRule):
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [match.group(0).strip("\n")]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1327,10 +1459,15 @@ class RuleLineEndWithEllipsis(BaseRule):
         ratio = num_occurrences / num_lines
         if ratio > cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The ratio of lines end with ellipsis is: " + str(ratio)]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1377,10 +1514,15 @@ class RuleLineEndWithTerminal(BaseRule):
         ratio = num_occurrences / num_lines
         if ratio < cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": list(set(terminal_marks))
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1434,10 +1576,15 @@ class RuleLineStartWithBulletpoint(BaseRule):
         ratio = num_occurrences / num_lines
         if ratio > cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The ratio of lines start with bulletpoint is: " + str(ratio)]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1472,12 +1619,17 @@ class RuleLineJavascriptCount(BaseRule):
         num_not_occur = num_lines - num_occurrences
         if num_not_occur < cls.dynamic_config.threshold and num_lines > 3:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [
                     "The lines with the word Javascript is: " + str(num_occurrences)
                 ]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1510,10 +1662,15 @@ class RuleLoremIpsum(BaseRule):
         ratio = num_occurrences / num_normalized_content
         if ratio > cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The ratio of lorem ipsum is: " + str(ratio)]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1548,13 +1705,16 @@ class RuleMeanWordLength(BaseRule):
         if mean_length >= int(cls.dynamic_config.key_list[0]) and mean_length < int(
             cls.dynamic_config.key_list[1]
         ):
-            pass
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         else:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The mean length of word is: " + str(mean_length)]
-            }}
+            }
         return res
 
 
@@ -1592,13 +1752,17 @@ class RuleNlpDataFormat(BaseRule):
         raw_data = input_data.raw_data
         key_list = ["track_id", "content"]
         if all(key in raw_data for key in key_list):
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
             return res
         else:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["NLP Data format error"]
-            }}
+            }
         return res
 
 
@@ -1656,10 +1820,15 @@ class RuleNoPunc(BaseRule):
                     longest_sentence = sentence.strip()
         if int(max_word_count) > cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [longest_sentence]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1685,10 +1854,15 @@ class RulePatternSearch(BaseRule):
         matches = re.findall(cls.dynamic_config.pattern, input_data.content)
         if matches:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": matches
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1718,10 +1892,15 @@ class RuleSentenceNumber(BaseRule):
             cls.dynamic_config.key_list[1]
         ):
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The number of sentence is: " + str(num_sentence)]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1759,13 +1938,17 @@ class RuleSftDataFormat(BaseRule):
         raw_data = input_data.raw_data
         key_list = ["track_id", "type", "prompt", "completion"]
         if all(key in raw_data for key in key_list):
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
             return res
         else:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["SFT Data format error"]
-            }}
+            }
         return res
 
 
@@ -1808,10 +1991,15 @@ class RuleSpaceMore(BaseRule):
         match = SEARCH_REGEX.search(content)
         if match:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content has 500 spaces."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1873,10 +2061,15 @@ class RuleSpecialCharacter(BaseRule):
             matches = matches + m
         if num / len(content) >= 0.01:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": list(set(matches))
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1913,10 +2106,15 @@ class RuleStopWord(BaseRule):
         ratio = num_stop_words / num_raw_words
         if ratio < cls.dynamic_config.threshold or num_stop_words < 2:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The ratio of stop words is: " + str(ratio)]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1952,10 +2150,15 @@ class RuleSymbolWordRatio(BaseRule):
         ratio = num_symbols / num_words
         if ratio > cls.dynamic_config.threshold:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The ratio of symbol / word is: " + str(ratio)]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -1988,13 +2191,16 @@ class RuleUniqueWords(BaseRule):
         num_unique_words = len(set(normalized_words))
         ratio = num_unique_words / num_words
         if ratio > cls.dynamic_config.threshold:
-            pass
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         else:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The ratio of unique words is: " + str(ratio)]
-            }}
+            }
         return res
 
 
@@ -2043,10 +2249,15 @@ class RuleUnsafeWords(BaseRule):
 
         if matches:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [value for index, value in matches]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
     @classmethod
@@ -2094,13 +2305,17 @@ class RuleVedioDataFormat(BaseRule):
         raw_data = input_data.raw_data
         key_list = ["id", "video", "text"]
         if all(key in raw_data for key in key_list):
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
             return res
         else:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Vedio Data format error"]
-            }}
+            }
         return res
 
 
@@ -2148,10 +2363,15 @@ class RuleOnlyUrl(BaseRule):
         content_without_url = SEARCH_REGEX.sub("", content)
         if len(content_without_url.strip()) == 0:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Content is only an url link."]
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -2177,10 +2397,15 @@ class RuleWatermark(BaseRule):
         matches = re.findall("|".join(cls.dynamic_config.key_list), input_data.content)
         if matches:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": matches
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -2210,13 +2435,16 @@ class RuleWordNumber(BaseRule):
         if num_normalized_words >= int(
             cls.dynamic_config.key_list[0]
         ) and num_normalized_words < int(cls.dynamic_config.key_list[1]):
-            pass
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         else:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The number of word is: " + str(num_normalized_words)]
-            }}
+            }
         return res
 
 
@@ -2243,10 +2471,15 @@ class RuleWordSplit(BaseRule):
         match = re.findall(cls.dynamic_config.pattern, content)
         if match:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": match
-            }}
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -2310,11 +2543,15 @@ class RuleWordStuck(BaseRule):
                 cut = wordninja.split(longest_string)
                 if lan == "en" and len(cut) > 1:
                     res.error_status = True
-                    res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+                    res.error_type = {
+                        "label": [f"{cls.metric_type}.{cls.__name__}"],
                         "metric": [cls.__name__],
                         "reason": [str(longest_string)]
-                    }}
+                    }
                     return res
+        res.error_type = {
+            "label": ["QUALITY_GOOD"]
+        }
         return res
 
 

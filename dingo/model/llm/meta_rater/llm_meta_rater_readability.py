@@ -1,7 +1,7 @@
 """
-LLM models for Meta-rater Cleanliness dimension evaluation.
+LLM models for Meta-rater Readability dimension evaluation.
 
-This module contains LLM-based evaluators for assessing the cleanliness and formatting quality of text data.
+This module contains LLM-based evaluators for assessing the readability of text data.
 Based on the Meta-rater paper for data selection in LLM pre-training.
 """
 
@@ -16,26 +16,24 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('LLMMetaRaterCleanliness')
-class LLMMetaRaterCleanliness(BaseOpenAI):
+@Model.llm_register('LLMMetaRaterReadability')
+class LLMMetaRaterReadability(BaseOpenAI):
     """
-    LLM model for Meta-rater Cleanliness dimension evaluation.
+    LLM model for Meta-rater Readability dimension evaluation.
 
-    This model evaluates text formatting, content appropriateness, and completeness,
-    assessing whether text appears human-edited and free from noise on a 5-point scale.
+    This model evaluates the clarity and coherence of text using appropriate
+    vocabulary and sentence structures on a 5-point scale.
     
     Evaluation criteria:
-    - Correct formatting: Human-edited appearance, no inappropriate characters
-    - Appropriate content: No links, ads, or irrelevant text
-    - Completeness: Natural, complete sentences with clear structure
+    - Readability: Clarity and coherence, proper grammar and spelling
     
-    Higher scores indicate cleaner, more well-formatted text.
+    Higher scores indicate better readability.
     """
     # Metadata for documentation generation
     _metric_info = {
         "category": "Meta Rater Evaluation Metrics",
-        "metric_name": "PromptMetaRaterCleanliness",
-        "description": "Evaluates text formatting, content appropriateness, and completeness, assessing whether text appears human-edited and free from noise on a 5-point scale",
+        "metric_name": "PromptMetaRaterReadability",
+        "description": "Evaluates the clarity and coherence of text using appropriate vocabulary and sentence structures on a 5-point scale",
         "paper_title": "Meta-rater: A Multi-dimensional Data Selection Method for Pre-training Language Models",
         "paper_url": "https://arxiv.org/pdf/2504.14194",
         "paper_authors": "Zhuang et al., 2025",
@@ -46,21 +44,14 @@ class LLMMetaRaterCleanliness(BaseOpenAI):
 I am a data scientist interested in exploring data in the pre-training stage of large language models.
 
 # OBJECTIVE #
-You are an expert evaluator. Below is an extract from a text source such as a web page, book, academic paper, Github, Wikipedia, or StackExchange. Evaluate whether the page has a high CLEANLINESS using the additive 5-point scoring system described below.
+You are an expert evaluator. Below is an extract from a text source such as a web page, book, academic paper, Github, Wikipedia, or StackExchange. Evaluate whether the page has a high READABILITY using the additive 5-point scoring system described below.
 
 Points are accumulated based on the satisfaction of each criterion：
-A score of 1 indicates serious issues that affect fluency.
-A score of 2 indicates the text has obvious problems that affect fluency.
-A score of 3 means that the text has some problems but does not seriously affect reading fluency.
-A score of 4 indicates the text has minor problems but does not affect reading.
-A score of 5 means points means that the text is perfect on every criteria.
-The following factors should not affect your judgement:
-The presence of the $TRUNCATED$ symbol is to be seen as an author-decided manual article ending flag, text completeness should not be considered.
-High cleanliness is defined by the following four criteria, please score each of the four criteria on a 5-point scale:
-- Correct formatting: The text should appear to be edited by a human, rather than extracted by a machine, with no inappropriate characters.
-- Appropriate content: The text should not contain links, advertisements, or other irrelevant text that affects reading. The effective content of the text is long enough to extract a clear structure and theme.
-- Completeness Content: The body of the article consists of complete sentences written naturally by humans, rather than phrases and lists, containing opinions, facts or stories.
-However, if there is a $TRUNCATED$ symbol at the end, it should be considered as a manual article ending flag set by the author, and there is no need to consider completeness.
+- Add 1 point if the text is somewhat readable but contains significant issues with clarity or coherence. It might include complex vocabulary or sentence structures that require advanced reading skills, or it might have numerous grammar and spelling errors.
+- Add another point if the text is generally clear and coherent, but there are sections that are difficult to comprehend due to occasional grammar, spelling errors, or convoluted sentence structures.
+- Award a third point if the text is clear and coherent for the most part, using appropriate vocabulary and sentence structures that are easy to understand. Minor issues with grammar or spelling might still be present.
+- Grant a fourth point if the text is very clear and coherent, with very few or no errors in grammar and spelling. The text uses proper punctuation, vocabulary, and sentence structures that are easy to follow and understand.
+- Bestow a fifth point if the text is outstanding in its clarity and coherence. It uses language and sentence structures that are easy to comprehend, while also conveying ideas and nuances effectively. Minor errors in grammar, spelling, and punctuation are allowed, but they should not interfere with the overall understanding of the text.
 
 Here are three aspects that should NOT influence your judgement:
 (1) The specific language the text is written in
@@ -74,7 +65,7 @@ professional, objective, formal, and clear.
 # AUDIENCE #
 Data scientists and other professionals interested in data for large language models.
 # RESPONSE #
-Return the results in JSON format: {{"score": x, "type": "cleanliness", "correct_formatting": x, "appropriate_content": x, "completeness": x, "reason": "xxx"}}.
+Return the results in JSON format: {{"score": x, "reason": "xxx"}}.
 
 Here is the text:
 {content}"""
@@ -97,7 +88,7 @@ Here is the text:
     @classmethod
     def process_response(cls, response: str) -> ModelRes:
         """
-        Process the LLM response for Meta-rater Cleanliness evaluation.
+        Process the LLM response for Meta-rater Readability evaluation.
 
         Args:
             response: Raw response string from the LLM
@@ -135,19 +126,21 @@ Here is the text:
             # result.type = cls.prompt.metric_type
             # result.name = "HighQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.error_type = {f"{cls.__name__}.HighQuality": {
+            result.error_type = {
+                "label": [f"{cls.__name__}.HighQuality"],
                 "metric": [cls.__name__],
                 "reason": [f"Score: {score}/5. {reason}"]
-            }}
+            }
         else:
             result.error_status = True
             # result.type = cls.prompt.metric_type
             # result.name = "LowQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.error_type = {f"{cls.__name__}.LowQuality": {
+            result.error_type = {
+                "label": [f"{cls.__name__}.LowQuality"],
                 "metric": [cls.__name__],
                 "reason": [f"Score: {score}/5. {reason}"]
-            }}
+            }
 
         return result
 

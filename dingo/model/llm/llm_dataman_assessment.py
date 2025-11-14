@@ -137,9 +137,10 @@ Please output only the JSON format data shown above, without any additional cont
         # # Set reason to the detailed assessment
         # result.reason = [response_model.reason]
 
-        result.error_type = {f"{response_model.type}.{response_model.name}": {
+        result.error_type = {
+            "label": [f"{response_model.type}.{response_model.name}"],
             "metric": [cls.__name__],
             "reason": [response_model.reason]
-        }}
+        }
 
         return result

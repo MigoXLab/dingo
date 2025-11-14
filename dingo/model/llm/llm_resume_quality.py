@@ -116,10 +116,11 @@ class LLMResumeQuality(BaseOpenAI):
             # result.name = "ResumeQualityGood"
             # result.reason = [response_model.reason]
 
-            result.error_type = {"QUALITY_GOOD.ResumeQualityGood": {
+            result.error_type = {
+                "label": "QUALITY_GOOD.ResumeQualityGood",
                 "metric": [cls.__name__],
                 "reason": [response_model.reason]
-            }}
+            }
         else:
             # Resume has quality issues
             result.error_status = True
@@ -141,9 +142,10 @@ class LLMResumeQuality(BaseOpenAI):
 
             tmp_type = type_mapping.get(response_model.type, "RESUME_QUALITY_BAD")
             tmp_name = response_model.name
-            result.error_type = {f"{tmp_type}.{tmp_name}": {
+            result.error_type = {
+                "label": [f"{tmp_type}.{tmp_name}"],
                 "metric": [cls.__name__],
                 "reason": [response_model.reason]
-            }}
+            }
 
         return result

@@ -1,8 +1,7 @@
 """
-LLM models for Meta-rater PRRC dimensions evaluation.
+LLM models for Meta-rater Reasoning dimension evaluation.
 
-This module contains LLM-based evaluators for assessing the quality of text data
-across four dimensions: Professionalism, Readability, Reasoning, and Cleanliness.
+This module contains LLM-based evaluators for assessing the reasoning complexity of text data.
 Based on the Meta-rater paper for data selection in LLM pre-training.
 """
 
@@ -17,44 +16,42 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('LLMMetaRaterProfessionalism')
-class LLMMetaRaterProfessionalism(BaseOpenAI):
+@Model.llm_register('LLMMetaRaterReasoning')
+class LLMMetaRaterReasoning(BaseOpenAI):
     """
-    Unified LLM model for Meta-rater PRRC dimensions evaluation.
+    LLM model for Meta-rater Reasoning dimension evaluation.
 
-    This model provides a single interface for evaluating multiple aspects
-    of text quality based on the Meta-rater paper's PRRC framework:
-    - Professionalism: Degree of expertise required
-    - Readability: Clarity and coherence
-    - Reasoning: Logical depth and complexity
-    - Cleanliness: Formatting and content appropriateness
-
-    The specific evaluation type is determined by the prompt used.
+    This model evaluates the reasoning complexity and logical depth of text content,
+    from simple logical judgments to complex multidimensional analysis on a 5-point scale.
+    
+    Evaluation criteria:
+    - Reasoning: Logical depth and complexity of argumentation
+    
+    Higher scores indicate more complex and sophisticated reasoning.
     """
     # Metadata for documentation generation
     _metric_info = {
         "category": "Meta Rater Evaluation Metrics",
-        "metric_name": "PromptMetaRaterProfessionalism",
-        "description": "Evaluates the degree of expertise and prerequisite knowledge required to comprehend text on a 5-point scale",
+        "metric_name": "PromptMetaRaterReasoning",
+        "description": "Evaluates the reasoning complexity and logical depth of text content, from simple logical judgments to complex multidimensional analysis on a 5-point scale",
         "paper_title": "Meta-rater: A Multi-dimensional Data Selection Method for Pre-training Language Models",
         "paper_url": "https://arxiv.org/pdf/2504.14194",
         "paper_authors": "Zhuang et al., 2025",
         "evaluation_results": ""
     }
 
-    prompt = """
-# CONTEXT #
+    prompt = """# CONTEXT #
 I am a data scientist interested in exploring data in the pre-training stage of large language models.
 
 # OBJECTIVE #
-You are an expert evaluator. Below is an extract from a text source such as a web page, book, academic paper, Github, Wikipedia, or StackExchange. Evaluate the PROFESSIONALISM of the text, that is, the degree of expertise and prerequisite knowledge required to comprehend it, using the additive 5-point scoring system described below. Your evaluation should be based on the depth, accuracy, and accessibility of the content, without considering the writing style, grammar, spelling, or punctuation in your scoring.
+You are an expert evaluator. Below is an extract from a text source such as a web page, book, academic paper, Github, Wikipedia, or StackExchange. Evaluate whether the page has a high REASONING using the additive 5-point scoring system described below.
 
-Points are accumulated based on the satisfaction of each criterion:
-- Add 1 point if the text is relatively simple and requires minimal technical knowledge or expertise to understand. The text might include nursery rhymes, children's books, or other basic content that is accessible to a broad audience. The information provided is straightforward and does not delve into complex concepts or specialized topics.
-- Add another point if the text is somewhat more complex and might require a basic level of specialized knowledge to comprehend fully. Examples could include popular books, popular science articles, or novels. The content delves a little deeper into the subject matter, but it remains accessible to a reasonably broad audience.
-- Award a third point if the text falls in the middle of the spectrum, requiring some degree of expertise to understand but not being overly complex or specialized. The content might encompass more advanced books, detailed articles, or introductions to complex topics. It provides a decent level of depth and detail, but it does not require an extensive background in the subject matter to understand.
-- Grant a fourth point if the text is complicated and requires a significant level of expertise and technical knowledge. Examples might include academic papers, advanced textbooks, or detailed technical reports. The content is detailed and accurate, but it could be inaccessible to those without a strong background in the subject matter.
-- Bestow a fifth point if the text is extremely high in professionalism, requiring a high degree of subject matter expertise and prerequisite knowledge. The text is likely limited to those with advanced understanding or experience in the field, such as advanced academic papers, complex technical manuals, or patents. The content is deep, accurate, and insightful, but largely inaccessible to those without a significant background in the topic.
+Points are accumulated based on the satisfaction of each criterion：
+Add 1 point if the content contains preliminary elements of reasoning, possibly involving a single causal relationship or simple logical judgments, but lacks in-depth analysis (e.g., presenting a viewpoint without supporting evidence or detailed explanations).
+Add another point if the content demonstrates basic reasoning ability, incorporating some logical relationships that require the reader to engage in a certain level of thought. This may involve simple argumentative structures or examples, but the analysis remains superficial (e.g., providing a problem and a straightforward solution with some examples but lacking depth).
+Award a third point if the content exhibits a good level of reasoning complexity, involving multiple reasoning steps that require more complex thought from the reader. The reader should be able to identify several interrelated arguments and may include some depth of analysis (e.g., analyzing how different factors influence an outcome or comparing various viewpoints).
+Grant a fourth point if the content has a high level of reasoning complexity, including multi-layered logical reasoning and in-depth analysis. The reader needs to engage in complex thinking and can identify multiple interconnected arguments while conducting a comprehensive evaluation (e.g., analyzing multiple variables or assessing the pros and cons of different solutions).
+Bestow a fifth point if the content excels in reasoning complexity, demanding deep analysis and innovative thinking from the reader. The reasoning process is complex and multidimensional, involving interdisciplinary knowledge, requiring the reader to integrate various pieces of information to make comprehensive judgments (e.g., discussing complex mathematical models, designing optimization algorithms, or engaging in high-level strategic thinking).
 
 Here are three aspects that should NOT influence your judgement:
 (1) The specific language the text is written in
@@ -71,8 +68,7 @@ Data scientists and other professionals interested in data for large language mo
 Return the results in JSON format: {{"score": x, "reason": "xxx"}}.
 
 Here is the text:
-{content}
-"""
+{content}"""
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
@@ -92,7 +88,7 @@ Here is the text:
     @classmethod
     def process_response(cls, response: str) -> ModelRes:
         """
-        Process the LLM response for Meta-rater evaluation.
+        Process the LLM response for Meta-rater Reasoning evaluation.
 
         Args:
             response: Raw response string from the LLM
@@ -130,18 +126,21 @@ Here is the text:
             # result.type = cls.prompt.metric_type
             # result.name = "HighQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.error_type = {f"{cls.__name__}.HighQuality": {
+            result.error_type = {
+                "label": [f"{cls.__name__}.HighQuality"],
                 "metric": [cls.__name__],
                 "reason": [f"Score: {score}/5. {reason}"]
-            }}
+            }
         else:
             result.error_status = True
             # result.type = cls.prompt.metric_type
             # result.name = "LowQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.error_type = {f"{cls.__name__}.LowQuality": {
+            result.error_type = {
+                "label": [f"{cls.__name__}.LowQuality"],
                 "metric": [cls.__name__],
                 "reason": [f"Score: {score}/5. {reason}"]
-            }}
+            }
 
         return result
+

@@ -68,9 +68,10 @@ class LLMClassifyTopic(BaseOpenAI):
         # result.name = response_model.name
         # result.reason = [response_model.reason]
 
-        result.error_type = {f"{cls.__name__}.{response_model.name}": {
+        result.error_type = {
+            "label": [f"{cls.__name__}.{response_model.name}"],
             "metric": [cls.__name__],
             "reason": [response_model.reason]
-        }}
+        }
 
         return result

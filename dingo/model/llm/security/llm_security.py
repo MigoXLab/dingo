@@ -34,8 +34,9 @@ class LLMSecurity(BaseOpenAI):
                 # result.reason.append(k)
                 tmp_reason.append(k)
 
-        result.error_type = {f"Security.{cls.__name__}": {
+        result.error_type = {
+            "label": [f"Security.{cls.__name__}"],
             "metric": [cls.__name__],
             "reason": tmp_reason
-        }}
+        }
         return result

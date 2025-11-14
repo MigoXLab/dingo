@@ -205,10 +205,11 @@ class LLMHtmlExtractCompareV2(BaseOpenAI):
 
         tmp_type = mapping["type"]
         tmp_name = f"Judgement_{judgement}"
-        result.error_type = {f"{tmp_type}.{tmp_name}": {
+        result.error_type = {
+            "label": [f"{tmp_type}.{tmp_name}"],
             "metric": [cls.__name__],
             "reason": [structured_response.reason]
-        }}
+        }
 
         return result
 

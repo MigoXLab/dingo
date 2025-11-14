@@ -184,14 +184,11 @@ class LLMMathCompare(BaseOpenAI):
     def _create_no_formula_result(response_json: dict) -> ModelRes:
         result = ModelRes()
         result.error_status = False
-        # result.type = 'NO_FORMULA'
-        # result.name = 'math'
-        # result.reason = [json.dumps(response_json, ensure_ascii=False)]
-
-        result.error_type = {f"NO_FORMULA.math": {
+        result.error_type = {
+            "label": ["NO_FORMULA.math"],
             "metric": ["LLMMathCompare"],
             "reason": [json.dumps(response_json, ensure_ascii=False)]
-        }}
+        }
         return result
 
     @staticmethod
@@ -205,8 +202,9 @@ class LLMMathCompare(BaseOpenAI):
         # result.reason = [json.dumps(response_json, ensure_ascii=False)]
 
         tmp_type = {1: 'TOOL_ONE_BETTER', 2: 'TOOL_TWO_BETTER'}.get(score, 'TOOL_EQUAL')
-        result.error_type = {f"{tmp_type}.math": {
+        result.error_type = {
+            "label": [f"{tmp_type}.math"],
             "metric": ["LLMMathCompare"],
             "reason": [json.dumps(response_json, ensure_ascii=False)]
-        }}
+        }
         return result

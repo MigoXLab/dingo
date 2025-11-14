@@ -132,9 +132,10 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
 
         tmp_type = '.'.join(types)
         tmp_name = '.'.join(names)
-        result.error_type = {f"{tmp_type}.{tmp_name}": {
+        result.error_type = {
+            "label": [f"{tmp_type}.{tmp_name}"],
             "metric": [cls.__name__],
             "reason": [json_str] if 'json_str' in locals() else [response]
-        }}
+        }
 
         return result

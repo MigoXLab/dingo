@@ -1,7 +1,7 @@
 """
-LLM models for Meta-rater Reasoning dimension evaluation.
+LLM models for Meta-rater Cleanliness dimension evaluation.
 
-This module contains LLM-based evaluators for assessing the reasoning complexity of text data.
+This module contains LLM-based evaluators for assessing the cleanliness and formatting quality of text data.
 Based on the Meta-rater paper for data selection in LLM pre-training.
 """
 
@@ -16,24 +16,26 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
-@Model.llm_register('LLMMetaRaterReasoning')
-class LLMMetaRaterReasoning(BaseOpenAI):
+@Model.llm_register('LLMMetaRaterCleanliness')
+class LLMMetaRaterCleanliness(BaseOpenAI):
     """
-    LLM model for Meta-rater Reasoning dimension evaluation.
+    LLM model for Meta-rater Cleanliness dimension evaluation.
 
-    This model evaluates the reasoning complexity and logical depth of text content,
-    from simple logical judgments to complex multidimensional analysis on a 5-point scale.
+    This model evaluates text formatting, content appropriateness, and completeness,
+    assessing whether text appears human-edited and free from noise on a 5-point scale.
     
     Evaluation criteria:
-    - Reasoning: Logical depth and complexity of argumentation
+    - Correct formatting: Human-edited appearance, no inappropriate characters
+    - Appropriate content: No links, ads, or irrelevant text
+    - Completeness: Natural, complete sentences with clear structure
     
-    Higher scores indicate more complex and sophisticated reasoning.
+    Higher scores indicate cleaner, more well-formatted text.
     """
     # Metadata for documentation generation
     _metric_info = {
         "category": "Meta Rater Evaluation Metrics",
-        "metric_name": "PromptMetaRaterReasoning",
-        "description": "Evaluates the reasoning complexity and logical depth of text content, from simple logical judgments to complex multidimensional analysis on a 5-point scale",
+        "metric_name": "PromptMetaRaterCleanliness",
+        "description": "Evaluates text formatting, content appropriateness, and completeness, assessing whether text appears human-edited and free from noise on a 5-point scale",
         "paper_title": "Meta-rater: A Multi-dimensional Data Selection Method for Pre-training Language Models",
         "paper_url": "https://arxiv.org/pdf/2504.14194",
         "paper_authors": "Zhuang et al., 2025",
@@ -44,14 +46,21 @@ class LLMMetaRaterReasoning(BaseOpenAI):
 I am a data scientist interested in exploring data in the pre-training stage of large language models.
 
 # OBJECTIVE #
-You are an expert evaluator. Below is an extract from a text source such as a web page, book, academic paper, Github, Wikipedia, or StackExchange. Evaluate whether the page has a high REASONING using the additive 5-point scoring system described below.
+You are an expert evaluator. Below is an extract from a text source such as a web page, book, academic paper, Github, Wikipedia, or StackExchange. Evaluate whether the page has a high CLEANLINESS using the additive 5-point scoring system described below.
 
 Points are accumulated based on the satisfaction of each criterion：
-Add 1 point if the content contains preliminary elements of reasoning, possibly involving a single causal relationship or simple logical judgments, but lacks in-depth analysis (e.g., presenting a viewpoint without supporting evidence or detailed explanations).
-Add another point if the content demonstrates basic reasoning ability, incorporating some logical relationships that require the reader to engage in a certain level of thought. This may involve simple argumentative structures or examples, but the analysis remains superficial (e.g., providing a problem and a straightforward solution with some examples but lacking depth).
-Award a third point if the content exhibits a good level of reasoning complexity, involving multiple reasoning steps that require more complex thought from the reader. The reader should be able to identify several interrelated arguments and may include some depth of analysis (e.g., analyzing how different factors influence an outcome or comparing various viewpoints).
-Grant a fourth point if the content has a high level of reasoning complexity, including multi-layered logical reasoning and in-depth analysis. The reader needs to engage in complex thinking and can identify multiple interconnected arguments while conducting a comprehensive evaluation (e.g., analyzing multiple variables or assessing the pros and cons of different solutions).
-Bestow a fifth point if the content excels in reasoning complexity, demanding deep analysis and innovative thinking from the reader. The reasoning process is complex and multidimensional, involving interdisciplinary knowledge, requiring the reader to integrate various pieces of information to make comprehensive judgments (e.g., discussing complex mathematical models, designing optimization algorithms, or engaging in high-level strategic thinking).
+A score of 1 indicates serious issues that affect fluency.
+A score of 2 indicates the text has obvious problems that affect fluency.
+A score of 3 means that the text has some problems but does not seriously affect reading fluency.
+A score of 4 indicates the text has minor problems but does not affect reading.
+A score of 5 means points means that the text is perfect on every criteria.
+The following factors should not affect your judgement:
+The presence of the $TRUNCATED$ symbol is to be seen as an author-decided manual article ending flag, text completeness should not be considered.
+High cleanliness is defined by the following four criteria, please score each of the four criteria on a 5-point scale:
+- Correct formatting: The text should appear to be edited by a human, rather than extracted by a machine, with no inappropriate characters.
+- Appropriate content: The text should not contain links, advertisements, or other irrelevant text that affects reading. The effective content of the text is long enough to extract a clear structure and theme.
+- Completeness Content: The body of the article consists of complete sentences written naturally by humans, rather than phrases and lists, containing opinions, facts or stories.
+However, if there is a $TRUNCATED$ symbol at the end, it should be considered as a manual article ending flag set by the author, and there is no need to consider completeness.
 
 Here are three aspects that should NOT influence your judgement:
 (1) The specific language the text is written in
@@ -65,7 +74,7 @@ professional, objective, formal, and clear.
 # AUDIENCE #
 Data scientists and other professionals interested in data for large language models.
 # RESPONSE #
-Return the results in JSON format: {{"score": x, "reason": "xxx"}}.
+Return the results in JSON format: {{"score": x, "type": "cleanliness", "correct_formatting": x, "appropriate_content": x, "completeness": x, "reason": "xxx"}}.
 
 Here is the text:
 {content}"""
@@ -88,7 +97,7 @@ Here is the text:
     @classmethod
     def process_response(cls, response: str) -> ModelRes:
         """
-        Process the LLM response for Meta-rater Reasoning evaluation.
+        Process the LLM response for Meta-rater Cleanliness evaluation.
 
         Args:
             response: Raw response string from the LLM
@@ -126,19 +135,21 @@ Here is the text:
             # result.type = cls.prompt.metric_type
             # result.name = "HighQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.error_type = {f"{cls.__name__}.HighQuality": {
+            result.error_type = {
+                "label": [f"{cls.__name__}.HighQuality"],
                 "metric": [cls.__name__],
                 "reason": [f"Score: {score}/5. {reason}"]
-            }}
+            }
         else:
             result.error_status = True
             # result.type = cls.prompt.metric_type
             # result.name = "LowQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.error_type = {f"{cls.__name__}.LowQuality": {
+            result.error_type = {
+                "label": [f"{cls.__name__}.LowQuality"],
                 "metric": [cls.__name__],
                 "reason": [f"Score: {score}/5. {reason}"]
-            }}
+            }
 
         return result
 

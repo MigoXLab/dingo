@@ -123,9 +123,10 @@ class LLMLongVideoQa(BaseOpenAI):
         # result.name = "qa_pairs"
         # result.reason = [response]
 
-        result.error_type = {f"text.qa_pairs": {
+        result.error_type = {
+            "label": ["text.qa_pairs"],
             "metric": [cls.__name__],
             "reason": [response]
-        }}
+        }
 
         return result

@@ -41,12 +41,19 @@ class LLMText3H(BaseOpenAI):
 
         # error_status
         if response_model.score == 1:
-            result.reason = [response_model.reason] if response_model.reason else ["Response meets quality criteria"]
-            result.name = cls.prompt.__name__[8:].upper()
+            tmp_name = cls.prompt.__name__[8:].upper()
+            result.error_type = {
+                "label": [f"QUALITY_GOOD.{tmp_name}"],
+                "metric": [cls.__name__],
+                "reason": [response_model.reason] if response_model.reason else ["Response meets quality criteria"]
+            }
         else:
             result.error_status = True
-            result.type = "QUALITY_BAD"
-            result.reason = [response_model.reason] if response_model.reason else ["Response fails quality criteria"]
-            result.name = "NOT_" + cls.prompt.__name__[8:].upper()
+            tmp_name = "NOT_" + cls.prompt.__name__[8:].upper()
+            result.error_type = {
+                "label": [f"QUALITY_BAD.{tmp_name}"],
+                "metric": [cls.__name__],
+                "reason": [response_model.reason] if response_model.reason else ["Response fails quality criteria"]
+            }
 
         return result

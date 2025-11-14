@@ -160,9 +160,10 @@ class LLMHtmlExtractCompare(BaseOpenAI):
         if response_model.score == 0:
             tmp_type = "TOOL_EQUAL"
 
-        result.error_type = {f"{tmp_type}.{response_model.name}": {
+        result.error_type = {
+            "label": [f"{tmp_type}.{response_model.name}"],
             "metric": [cls.__name__],
             "reason": [json.dumps(response_json, ensure_ascii=False)]
-        }}
+        }
 
         return result

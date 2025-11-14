@@ -186,13 +186,11 @@ JSON 包含以下字段：
     def _create_no_code_result(response_json: dict) -> ModelRes:
         result = ModelRes()
         result.error_status = False
-        # result.type = 'NO_CODE'
-        # result.name = 'code'
-        # result.reason = [json.dumps(response_json, ensure_ascii=False)]
-        result.error_type = {"NO_CODE.code": {
+        result.error_type = {
+            "label": ["NO_CODE.code"],
             "metric": ["LLMCodeCompare"],
             "reason": [json.dumps(response_json, ensure_ascii=False)]
-        }}
+        }
 
         return result
 
@@ -202,13 +200,11 @@ JSON 包含以下字段：
         score = response_json.get('score', 0)
 
         result.error_status = score != 1
-        # result.type = {1: 'TOOL_ONE_BETTER', 2: 'TOOL_TWO_BETTER'}.get(score, 'TOOL_EQUAL')
-        # result.name = 'code'
-        # result.reason = [json.dumps(response_json, ensure_ascii=False)]
         tmp_type = {1: 'TOOL_ONE_BETTER', 2: 'TOOL_TWO_BETTER'}.get(score, 'TOOL_EQUAL')
-        result.error_type = {f"{tmp_type}.code": {
+        result.error_type = {
+            "label": [f"{tmp_type}.code"],
             "metric": ["LLMCodeCompare"],
             "reason": [json.dumps(response_json, ensure_ascii=False)]
-        }}
+        }
 
         return result

@@ -39,18 +39,20 @@ class LLMTextChaos(BaseOpenAI):
         # error_status
         if response_model.score == 1:
             # result.reason = [response_model.reason]
-            result.error_type = {f"QUALITY_GOOD.{cls.__name__}": {
+            result.error_type = {
+                "label": [f"QUALITY_GOOD.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [response_model.reason]
-            }}
+            }
         else:
             result.error_status = True
             # result.type = response_model.type
             # result.name = response_model.name
             # result.reason = [response_model.reason]
-            result.error_type = {f"{response_model.type}.{response_model.name}": {
+            result.error_type = {
+                "label": [f"{response_model.type}.{response_model.name}"],
                 "metric": [cls.__name__],
                 "reason": [response_model.reason]
-            }}
+            }
 
         return result

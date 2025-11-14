@@ -103,7 +103,7 @@ result.reason        # 推理过程: List[str]
 ```python
 import os
 from dingo.io import Data
-from dingo.model.llm.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
+from dingo.model.llm.compare.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
 
 # 初始化评估器
 evaluator = LLMHtmlExtractCompareV2()

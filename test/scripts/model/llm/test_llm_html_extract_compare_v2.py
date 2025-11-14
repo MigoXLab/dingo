@@ -11,12 +11,8 @@ LLMHtmlExtractCompareV2 核心测试
 pytest test/scripts/model/llm/test_llm_html_extract_compare_v2.py -v
 """
 
-from unittest.mock import Mock, patch
-
-import pytest
-
 from dingo.io import Data
-from dingo.model.llm.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
+from dingo.model.llm.compare.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
 from dingo.model.response.response_class import ResponseNameReason
 
 

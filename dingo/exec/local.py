@@ -92,7 +92,10 @@ class LocalExecutor(ExecProto):
                     futures_results.append(r_i)
 
                     for e_p in self.input_args.evaluator:
-                        map_data = {k: data.to_dict().get(v) for k, v in e_p.fields.items()}
+                        if e_p.fields:
+                            map_data = {k: data.to_dict().get(v) for k, v in e_p.fields.items()}
+                        else:
+                            map_data = data.to_dict()
                         eval_list_rule = [eval for eval in e_p.evals if eval.name in Model.rule_name_map]
                         eval_list_prompt = [eval for eval in e_p.evals if eval.name in Model.llm_name_map]
                         # rule

@@ -4,7 +4,11 @@
         "source": "local",
         "format": "plaintext"
     },
-    "executor": {
-        "eval_group": "default"
-    }
+    "evaluator": [
+        {
+            "evals": [
+                {"name": "RuleColonEnd"}
+            ]
+        }
+    ]
 }

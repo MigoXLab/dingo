@@ -79,8 +79,8 @@ class EvalPiplineConfig(BaseModel):
 
 class EvalPipline(BaseModel):
     """Evaluation group for specific fields"""
-    fields: dict
-    evals: List[EvalPiplineConfig]
+    fields: dict = {}
+    evals: List[EvalPiplineConfig] = []
 
 
 # class EvaluatorArgs(BaseModel):

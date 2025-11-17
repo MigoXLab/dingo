@@ -197,6 +197,9 @@ class PlainConverter(BaseConverter):
         def _convert(raw: Union[str, Dict]):
             if isinstance(raw, Dict):
                 raw = json.dumps(raw)
+            # 去除字符串末尾的换行符
+            if isinstance(raw, str):
+                raw = raw.rstrip('\n')
             data_dict = {"content": raw}
             return Data(**data_dict)
 

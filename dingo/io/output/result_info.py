@@ -9,8 +9,9 @@ class ResTypeInfo(BaseModel):
     reason: list = []
 
     def merge(self, other: 'ResTypeInfo') -> None:
-        self.label.extend(other.label)
-        self.metric.extend(other.metric)
+        # 合并并去重 label 和 metric
+        self.label = list(set(self.label + other.label))
+        self.metric = list(set(self.metric + other.metric))
         self.reason.extend(other.reason)
 
     def copy(self) -> 'ResTypeInfo':
@@ -20,6 +21,14 @@ class ResTypeInfo(BaseModel):
             metric=self.metric.copy(),
             reason=self.reason.copy()
         )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """将 ResTypeInfo 转换为字典"""
+        return {
+            'label': self.label,
+            'metric': self.metric,
+            'reason': self.reason
+        }
 
 
 class ResultInfo(BaseModel):
@@ -33,13 +42,13 @@ class ResultInfo(BaseModel):
             'track_id': self.track_id,
             'raw_data': self.raw_data,
             'error_status': self.error_status,
-            'error_type': self.error_type,
+            'error_type': {k: v.to_dict() for k,v in self.error_type.items()},
         }
 
     def to_raw_dict(self):
         dingo_result = {
             'error_status': self.error_status,
-            'error_type': self.error_type,
+            'error_type': {k: v.to_dict() for k,v in self.error_type.items()},
         }
         self.raw_data['dingo_result'] = dingo_result
         return self.raw_data

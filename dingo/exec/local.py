@@ -10,6 +10,7 @@ from typing import Generator, List, Optional
 from tqdm import tqdm
 
 from dingo.config import InputArgs
+from dingo.io.output.result_info import ResTypeInfo
 from dingo.config.input_args import EvalPipline
 from dingo.data import Dataset, DataSource, dataset_map, datasource_map
 from dingo.exec.base import ExecProto, Executor
@@ -190,17 +191,23 @@ class LocalExecutor(ExecProto):
 
             # Execute evaluation
             tmp: ModelRes = model.eval(Data(**map_data))
+            if isinstance(tmp.error_type, dict):
+                tmp.error_type = ResTypeInfo(**tmp.error_type)
 
             # Collect error_type from ModelRes
             if tmp.error_status:
                 result_info.error_status = True
                 # 合并 bad 的 error_type (ModelRes.error_type 现在直接是 ResTypeInfo)
+                if isinstance(bad_error_type, dict):
+                    bad_error_type = ResTypeInfo(**bad_error_type)
                 if bad_error_type:
                     bad_error_type.merge(tmp.error_type)
                 else:
                     bad_error_type = tmp.error_type.copy()
             else:
                 # 合并 good 的 error_type (ModelRes.error_type 现在直接是 ResTypeInfo)
+                if isinstance(good_error_type, dict):
+                    good_error_type = ResTypeInfo(**good_error_type)
                 if good_error_type:
                     good_error_type.merge(tmp.error_type)
                 else:
@@ -249,8 +256,6 @@ class LocalExecutor(ExecProto):
                 # 第一层是字段名，如果不存在，则创建副本
                 else:
                     existing_item.error_type[key] = value.copy()
-
-            # existing_item.raw_data = new_item.raw_data
         else:
             existing_list.append(new_item)
 

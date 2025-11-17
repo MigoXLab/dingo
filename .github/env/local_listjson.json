@@ -2,12 +2,14 @@
     "input_path": "test/data/test_local_listjson.json",
     "dataset": {
         "source": "local",
-        "format": "listjson",
-        "field": {
-            "content": "output"
-        }
+        "format": "listjson"
     },
-    "executor": {
-        "eval_group": "default"
-    }
+    "evaluator": [
+        {
+            "fields": {"content": "output"},
+            "evals": [
+                {"name": "RuleColonEnd"}
+            ]
+        }
+    ]
 }

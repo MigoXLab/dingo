@@ -2,12 +2,13 @@
     "input_path": "chupei/format-text",
     "dataset": {
         "source": "hugging_face",
-        "format": "plaintext",
-        "field": {
-            "content": "text"
-        }
+        "format": "plaintext"
     },
-    "executor": {
-        "eval_group": "default"
-    }
+    "evaluator": [
+        {
+            "evals": [
+                {"name": "RuleColonEnd"}
+            ]
+        }
+    ]
 }

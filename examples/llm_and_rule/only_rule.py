@@ -20,7 +20,8 @@ if __name__ == '__main__':
             {
                 "fields": {"content": "content"},
                 "evals": [
-                    {"name": "RuleColonEnd"}
+                    {"name": "RuleColonEnd"},
+                    {"name": "RuleSpecialCharacter"}
                 ]
             }
         ]

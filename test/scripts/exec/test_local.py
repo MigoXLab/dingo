@@ -56,7 +56,7 @@ class TestLocal:
 
     def test_all_labels_config(self):
         input_data = {
-            "input_path": "../../../test/data/test_local_jsonl.jsonl",
+            "input_path": "test/data/test_local_jsonl.jsonl",
             "dataset": {
                 "source": "local",
                 "format": "jsonl"

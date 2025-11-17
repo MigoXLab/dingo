@@ -7,6 +7,7 @@ from dingo.io import Data
 from dingo.model.model import Model
 from dingo.model.modelres import ModelRes
 from dingo.model.rule.base import BaseRule
+from dingo.io.output.result_info import ResTypeInfo
 
 
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["qa_standard_v1"])
@@ -29,13 +30,12 @@ class RuleAbnormalChar(BaseRule):
         res = ModelRes()
         for r in [RuleSpecialCharacter, RuleInvisibleChar]:
             tmp_res = r.eval(input_data)
+            # print(tmp_res)
             if tmp_res.error_status:
                 res.error_status = True
-                for k,v in tmp_res.error_type.items():
-                    if k in res.error_type:
-                        res.error_type[k].merge(v)
-                    else:
-                        res.error_type[k] = v
+                if isinstance(tmp_res.error_type, dict):
+                    tmp_res.error_type = ResTypeInfo(**tmp_res.error_type)
+                res.error_type.merge(tmp_res.error_type)
         return res
 
 
@@ -60,11 +60,9 @@ class RuleAbnormalHtml(BaseRule):
             tmp_res = r.eval(input_data)
             if tmp_res.error_status:
                 res.error_status = True
-                for k,v in tmp_res.error_type.items():
-                    if k in res.error_type:
-                        res.error_type[k].merge(v)
-                    else:
-                        res.error_type[k] = v
+                if isinstance(tmp_res.error_type, dict):
+                    tmp_res.error_type = ResTypeInfo(**tmp_res.error_type)
+                res.error_type.merge(tmp_res.error_type)
         return res
 
 
@@ -695,11 +693,9 @@ class RuleEnterAndSpace(BaseRule):
             tmp_res = r.eval(input_data)
             if tmp_res.error_status:
                 res.error_status = True
-                for k, v in tmp_res.error_type.items():
-                    if k in res.error_type:
-                        res.error_type[k].merge(v)
-                    else:
-                        res.error_type[k] = v
+                if isinstance(tmp_res.error_type, dict):
+                    tmp_res.error_type = ResTypeInfo(**tmp_res.error_type)
+                res.error_type.merge(tmp_res.error_type)
         return res
 
 
@@ -1702,9 +1698,7 @@ class RuleMeanWordLength(BaseRule):
         num_chars = float(sum(map(len, normalized_words)))
         mean_length = num_chars / num_normalized_words
         mean_length = round(mean_length, 2)
-        if mean_length >= int(cls.dynamic_config.key_list[0]) and mean_length < int(
-            cls.dynamic_config.key_list[1]
-        ):
+        if mean_length >= int(cls.dynamic_config.key_list[0]) and mean_length < int(cls.dynamic_config.key_list[1]):
             res.error_type = {
                 "label": ["QUALITY_GOOD"]
             }

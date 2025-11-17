@@ -180,7 +180,7 @@ class JsonConverter(BaseConverter):
                 if input_args.dataset.fields:
                     data_dict = {field: cls.find_levels_data(v, field) for field in input_args.dataset.fields}
                 else:
-                    data_dict = j
+                    data_dict = v
                 yield Data(**data_dict)
 
         return _convert

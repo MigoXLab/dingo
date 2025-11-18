@@ -1,8 +1,8 @@
 import pytest
 
 from dingo.io import Data
-from dingo.model.rule.rule_common import RuleDocFormulaRepeat, RuleUnsafeWords
 from dingo.io.output.result_info import ResTypeInfo
+from dingo.model.rule.rule_common import RuleDocFormulaRepeat, RuleUnsafeWords
 
 
 class TestRuleDocFormulaRepeat:

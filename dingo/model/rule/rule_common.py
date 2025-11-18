@@ -4,10 +4,10 @@ from typing import Tuple
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
+from dingo.io.output.result_info import ResTypeInfo
 from dingo.model.model import Model
 from dingo.model.modelres import ModelRes
 from dingo.model.rule.base import BaseRule
-from dingo.io.output.result_info import ResTypeInfo
 
 
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["qa_standard_v1"])

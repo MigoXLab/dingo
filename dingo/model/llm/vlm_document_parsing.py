@@ -198,8 +198,9 @@ class VLMDocumentParsingQuality(BaseOpenAI):
         response = response.replace("```json", "")
         response = response.replace("```", "")
 
-        types = []
-        names = []
+        # types = []
+        # names = []
+        tmp_types = []
 
         if response:
             try:
@@ -211,15 +212,18 @@ class VLMDocumentParsingQuality(BaseOpenAI):
                     error_label = error.get("error_label", "")
 
                     if error_category and error_label:
-                        types.append(error_category)
-                        names.append(error_label)
+                        # types.append(error_category)
+                        # names.append(error_label)
+                        tmp_types.append(f"{error_category}.{error_label}")
             except json.JSONDecodeError as e:
                 log.error(f"JSON解析错误: {e}")
 
         result = ModelRes()
-        result.error_status = False
-        result.type = types
-        result.name = names
-        result.reason = [response]
+        # result.error_status = False
+        # result.type = types
+        # result.name = names
+        # result.reason = [response]
+        result.error_type.label = tmp_types
+        result.error_type.reason = [response]
 
         return result

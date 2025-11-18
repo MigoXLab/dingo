@@ -225,7 +225,7 @@ class VLMLayoutQuality(BaseOpenAI):
         response = response.replace("```", "")
 
         types = []
-        names = []
+        # names = []
 
         if response:
             try:
@@ -237,14 +237,16 @@ class VLMLayoutQuality(BaseOpenAI):
 
                     if error_type:
                         types.append(error_type)
-                        names.append(error_type)
+                        # names.append(error_type)
             except json.JSONDecodeError as e:
                 log.error(f"JSON解析错误: {e}")
 
         result = ModelRes()
-        result.error_status = False
-        result.type = types
-        result.name = names
-        result.reason = [response]
+        # result.error_status = False
+        # result.type = types
+        # result.name = names
+        # result.reason = [response]
+        result.error_type.label = types
+        result.error_type.reason = [response]
 
         return result

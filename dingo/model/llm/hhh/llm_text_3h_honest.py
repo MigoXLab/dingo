@@ -1,5 +1,5 @@
 from dingo.model import Model
-from dingo.model.llm.llm_text_3h import LLMText3H
+from dingo.model.llm.hhh.llm_text_3h import LLMText3H
 
 
 @Model.llm_register("LLMText3HHonest")

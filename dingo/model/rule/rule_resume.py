@@ -34,9 +34,15 @@ class RuleResumeIDCard(BaseRule):
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found ID card number: " + match.group(0)[:6] + "****" + match.group(0)[-4:]]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found ID card number: " + match.group(0)[:6] + "****" + match.group(0)[-4:]]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -65,9 +71,15 @@ class RuleResumeDetailedAddress(BaseRule):
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found detailed address: " + match.group(0)]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found detailed address: " + match.group(0)]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -99,9 +111,15 @@ class RuleResumeEmailMissing(BaseRule):
         match = re.search(cls.dynamic_config.pattern, content)
         if not match:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Email address not found in resume"]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Email address not found in resume"]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -130,9 +148,15 @@ class RuleResumePhoneMissing(BaseRule):
         match = re.search(cls.dynamic_config.pattern, content)
         if not match:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Phone number not found in resume"]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Phone number not found in resume"]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -162,9 +186,15 @@ class RuleResumePhoneFormat(BaseRule):
         invalid_phones = [m for m in matches if not m.startswith(('13', '14', '15', '16', '17', '18', '19'))]
         if invalid_phones:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Invalid phone format: " + ", ".join(invalid_phones)]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Invalid phone format: " + ", ".join(invalid_phones)]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -196,9 +226,15 @@ class RuleResumeExcessiveWhitespace(BaseRule):
         matches = re.findall(cls.dynamic_config.pattern, content)
         if len(matches) >= cls.dynamic_config.threshold:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found " + str(len(matches)) + " instances of excessive whitespace"]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found " + str(len(matches)) + " instances of excessive whitespace"]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -227,9 +263,15 @@ class RuleResumeMarkdown(BaseRule):
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Markdown syntax error: " + match.group(0)]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Markdown syntax error: " + match.group(0)]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -262,9 +304,15 @@ class RuleResumeNameMissing(BaseRule):
         # Check if first section contains Chinese name pattern or heading
         if not re.search(r'(^#\s*.+|^.{2,4}$)', first_section, re.MULTILINE):
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Name or heading not found in the first section"]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Name or heading not found in the first section"]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -293,9 +341,15 @@ class RuleResumeSectionMissing(BaseRule):
         matches = re.findall(cls.dynamic_config.pattern, content, re.IGNORECASE)
         if len(matches) < cls.dynamic_config.threshold:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Required sections (education/experience) not found"]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Required sections (education/experience) not found"]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -327,9 +381,15 @@ class RuleResumeEmoji(BaseRule):
         matches = re.findall(cls.dynamic_config.pattern, content)
         if matches:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found " + str(len(matches)) + " emoji characters"]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found " + str(len(matches)) + " emoji characters"]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -358,9 +418,15 @@ class RuleResumeInformal(BaseRule):
         matches = re.findall(cls.dynamic_config.pattern, content)
         if matches:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found informal language: " + ", ".join(set(matches))]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found informal language: " + ", ".join(set(matches))]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -394,9 +460,19 @@ class RuleResumeDateFormat(BaseRule):
             separators = set([re.search(r'[-./年]', m).group(0) for m in matches])
             if len(separators) > 1:
                 res.error_status = True
-                res.type = cls.metric_type
-                res.name = cls.__name__
-                res.reason = ["Inconsistent date formats found: " + ", ".join(matches[:3])]
+                res.error_type = {
+                    "label": [f"{cls.metric_type}.{cls.__name__}"],
+                    "metric": [cls.__name__],
+                    "reason": ["Inconsistent date formats found: " + ", ".join(matches[:3])]
+                }
+            else:
+                res.error_type = {
+                    "label": ["QUALITY_GOOD"]
+                }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -428,9 +504,15 @@ class RuleResumeEducationMissing(BaseRule):
         match = re.search(cls.dynamic_config.pattern, content, re.IGNORECASE)
         if not match:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Education section not found in resume"]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Education section not found in resume"]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -459,7 +541,13 @@ class RuleResumeExperienceMissing(BaseRule):
         match = re.search(cls.dynamic_config.pattern, content, re.IGNORECASE)
         if not match:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Work experience section not found in resume"]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Work experience section not found in resume"]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res

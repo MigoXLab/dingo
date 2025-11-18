@@ -2,13 +2,14 @@
     "input_path": "chupei/format-json",
     "dataset": {
         "source": "hugging_face",
-        "format": "json",
-        "field": {
-            "prompt": "origin_prompt",
-            "content": "prediction"
-        }
+        "format": "json"
     },
-    "executor": {
-        "eval_group": "default"
-    }
+    "evaluator": [
+        {
+            "fields": {"prompt": "origin_prompt", "content": "prediction"},
+            "evals": [
+                {"name": "RuleColonEnd"}
+            ]
+        }
+    ]
 }

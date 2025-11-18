@@ -17,9 +17,9 @@ from dingo.utils.exception import ConvertJsonError, ExceedMaxTokens
 class BaseOpenAI(BaseLLM):
     dynamic_config = EvaluatorLLMArgs()
 
-    @classmethod
-    def set_prompt(cls, prompt: BasePrompt):
-        cls.prompt = prompt
+    # @classmethod
+    # def set_prompt(cls, prompt: BasePrompt):
+    #     cls.prompt = prompt
 
     @classmethod
     def create_client(cls):
@@ -37,7 +37,7 @@ class BaseOpenAI(BaseLLM):
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
         messages = [
-            {"role": "user", "content": cls.prompt.content + input_data.content}
+            {"role": "user", "content": cls.prompt + input_data.content}
         ]
         return messages
 
@@ -131,12 +131,18 @@ class BaseOpenAI(BaseLLM):
         result = ModelRes()
         # error_status
         if response_model.score == 1:
-            result.reason = [response_model.reason]
+            result.error_type = {
+                "label": ["QUALITY_GOOD"],
+                "metric": [cls.__name__],
+                "reason": [response_model.reason]
+            }
         else:
             result.error_status = True
-            result.type = cls.prompt.metric_type
-            result.name = cls.prompt.__name__
-            result.reason = [response_model.reason]
+            result.error_type = {
+                "label": [f"QUALITY_BAD.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": [response_model.reason]
+            }
 
         return result
 
@@ -153,7 +159,8 @@ class BaseOpenAI(BaseLLM):
         while attempts < 3:
             try:
                 response = cls.send_messages(messages)
-                return cls.process_response(response)
+                res: ModelRes = cls.process_response(response)
+                return res
             except (ValidationError, ExceedMaxTokens, ConvertJsonError) as e:
                 except_msg = str(e)
                 except_name = e.__class__.__name__
@@ -164,6 +171,11 @@ class BaseOpenAI(BaseLLM):
                 except_msg = str(e)
                 except_name = e.__class__.__name__
 
-        return ModelRes(
-            error_status=True, type="QUALITY_BAD", name=except_name, reason=[except_msg]
-        )
+        res = ModelRes()
+        res.error_status = True
+        res.error_type = {
+            "label": [f"QUALITY_BAD.{except_name}"],
+            "metric": [cls.__name__],
+            "reason": [except_msg]
+        }
+        return res

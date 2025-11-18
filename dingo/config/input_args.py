@@ -31,7 +31,8 @@ class DatasetFieldArgs(BaseModel):
 class DatasetArgs(BaseModel):
     source: str = 'hugging_face'
     format: str = 'json'
-    field: DatasetFieldArgs = DatasetFieldArgs()
+    # field: DatasetFieldArgs = DatasetFieldArgs()
+    fields: List[str] = []
     hf_config: DatasetHFConfigArgs = DatasetHFConfigArgs()
     s3_config: DatasetS3ConfigArgs = DatasetS3ConfigArgs()
 
@@ -44,9 +45,9 @@ class ExecutorResultSaveArgs(BaseModel):
 
 
 class ExecutorArgs(BaseModel):
-    eval_group: str = ""
-    rule_list: List[str] = []
-    prompt_list: List[str] = []
+    # eval_group: str = ""
+    # rule_list: List[str] = []
+    # prompt_list: List[str] = []
     start_index: int = 0
     end_index: int = -1
     max_workers: int = 1
@@ -70,9 +71,21 @@ class EvaluatorLLMArgs(BaseModel):
     parameters: Optional[dict] = None
 
 
-class EvaluatorArgs(BaseModel):
-    rule_config: Dict[str, EvaluatorRuleArgs] = {}
-    llm_config: Dict[str, EvaluatorLLMArgs] = {}
+class EvalPiplineConfig(BaseModel):
+    """Single evaluator configuration item"""
+    name: str
+    config: Optional[EvaluatorRuleArgs | EvaluatorLLMArgs] = None
+
+
+class EvalPipline(BaseModel):
+    """Evaluation group for specific fields"""
+    fields: dict = {}
+    evals: List[EvalPiplineConfig] = []
+
+
+# class EvaluatorArgs(BaseModel):
+#     rule_config: Dict[str, EvaluatorRuleArgs] = {}
+#     llm_config: Dict[str, EvaluatorLLMArgs] = {}
 
 
 class InputArgs(BaseModel):
@@ -85,7 +98,7 @@ class InputArgs(BaseModel):
 
     dataset: DatasetArgs = DatasetArgs()
     executor: ExecutorArgs = ExecutorArgs()
-    evaluator: EvaluatorArgs = EvaluatorArgs()
+    evaluator: List[EvalPipline]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

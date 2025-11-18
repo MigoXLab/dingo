@@ -1,24 +1,16 @@
 {
     "input_path": "test/data/test_local_json.json",
-    "log_level": "DEBUG",
     "dataset": {
         "source": "local",
-        "format": "json",
-        "field": {
-            "content": "prediction"
-        }
+        "format": "json"
     },
-    "executor": {
-        "rule_list": ["RuleSpecialCharacter", "RuleWatermark"]
-    },
-    "evaluator": {
-        "rule_config": {
-            "RuleSpecialCharacter": {
-                "pattern": "[�^□]|\\{\\/U\\}"
-            },
-            "RuleWatermark": {
-                "key_list": ["谢邀", "Architecture of dingo"]
-            }
+    "evaluator": [
+        {
+            "fields": {"content": "prediction"},
+            "evals": [
+                {"name": "RuleSpecialCharacter", "config": {"pattern": "[�^□]|\\{\\/U\\}"}},
+                {"name": "RuleWatermark", "config": {"key_list": ["谢邀", "Architecture of dingo"]}}
+            ]
         }
-    }
+    ]
 }

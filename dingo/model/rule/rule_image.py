@@ -46,9 +46,15 @@ class RuleImageValid(BaseRule):
         img_np = np.asarray(img_new)
         if np.all(img_np == (255, 255, 255)) or np.all(img_np == (0, 0, 0)):
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Image is not valid: all white or black"]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Image is not valid: all white or black"]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -81,12 +87,18 @@ class RuleImageSizeValid(BaseRule):
         aspect_ratio = width / height
         if aspect_ratio > 4 or aspect_ratio < 0.25:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = [
-                "Image size is not valid, the ratio of width to height: "
-                + str(aspect_ratio)
-            ]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": [
+                    "Image size is not valid, the ratio of width to height: "
+                    + str(aspect_ratio)
+                ]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -126,9 +138,15 @@ class RuleImageQuality(BaseRule):
         score = score_fr.item()
         if score < cls.dynamic_config.threshold:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Image quality is not satisfied, ratio: " + str(score)]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Image quality is not satisfied, ratio: " + str(score)]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -178,14 +196,18 @@ class RuleImageRepeat(BaseRule):
         )
         if common_duplicates:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = [
-                f"{image} -> {duplicates_cnn[image]}" for image in common_duplicates
-            ]
-            res.reason.append(
-                {"duplicate_ratio": len(common_duplicates) / len(os.listdir(image_dir))}
-            )
+            tmp_reason = [f"{image} -> {duplicates_cnn[image]}" for image in common_duplicates]
+            tmp_reason.append({"duplicate_ratio": len(common_duplicates) / len(os.listdir(image_dir))})
+
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": tmp_reason
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -237,11 +259,15 @@ class RuleImageTextSimilarity(BaseRule):
         average_score = sum(scores) / len(scores)
         if average_score < cls.dynamic_config.threshold:
             res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = [
-                "Image quality is not satisfied, ratio: " + str(average_score)
-            ]
+            res.error_type = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Image quality is not satisfied, ratio: " + str(average_score)]
+            }
+        else:
+            res.error_type = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -302,19 +328,29 @@ class RuleImageArtimuse(BaseRule):
                     break
                 time.sleep(5)
 
-            return ModelRes(
-                error_status=True if status_data['score_overall'] < cls.dynamic_config.threshold else False,
-                type="Artimuse_Succeeded",
-                name="BadImage" if status_data['score_overall'] < cls.dynamic_config.threshold else "GoodImage",
-                reason=[json.dumps(status_data, ensure_ascii=False)],
-            )
+            res = ModelRes()
+            res.error_status = True if status_data['score_overall'] < cls.dynamic_config.threshold else False
+            tmp = "BadImage" if status_data['score_overall'] < cls.dynamic_config.threshold else "GoodImage"
+            if res.error_status:
+                res.error_type = {
+                    "label": [f"Artimuse_Succeeded.{tmp}"],
+                    "metric": [cls.__name__],
+                    "reason": [json.dumps(status_data, ensure_ascii=False)]
+                }
+            else:
+                res.error_type = {
+                    "label": ["QUALITY_GOOD"]
+                }
+            return res
         except Exception as e:
-            return ModelRes(
-                error_status=False,
-                type="Artimuse_Fail",
-                name="Exception",
-                reason=[str(e)],
-            )
+            res = ModelRes()
+            res.error_status = False
+            res.error_type = {
+                "label": ["Artimuse_Fail.Exception"],
+                "metric": [cls.__name__],
+                "reason": [str(e)]
+            }
+            return res
 
 
 @Model.rule_register("QUALITY_BAD_IMG_LABEL_OVERLAP", [])

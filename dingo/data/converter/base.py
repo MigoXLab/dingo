@@ -177,26 +177,11 @@ class JsonConverter(BaseConverter):
             if isinstance(raw, str):
                 j = json.loads(raw)
             for k, v in j.items():
-                yield Data(
-                    **{
-                        "data_id": (
-                            cls.find_levels_data(v, input_args.dataset.field.id)
-                            if input_args.dataset.field.id != ""
-                            else str(k)
-                        ),
-                        "prompt": (
-                            cls.find_levels_data(v, input_args.dataset.field.prompt)
-                            if input_args.dataset.field.prompt != ""
-                            else ""
-                        ),
-                        "content": (
-                            cls.find_levels_data(v, input_args.dataset.field.content)
-                            if input_args.dataset.field.content != ""
-                            else ""
-                        ),
-                        "raw_data": v,
-                    }
-                )
+                if input_args.dataset.fields:
+                    data_dict = {field: cls.find_levels_data(v, field) for field in input_args.dataset.fields}
+                else:
+                    data_dict = v
+                yield Data(**data_dict)
 
         return _convert
 
@@ -204,9 +189,6 @@ class JsonConverter(BaseConverter):
 @BaseConverter.register("plaintext")
 class PlainConverter(BaseConverter):
     """Plain text file converter."""
-
-    data_id = 0
-
     def __init__(self):
         super().__init__()
 
@@ -215,16 +197,11 @@ class PlainConverter(BaseConverter):
         def _convert(raw: Union[str, Dict]):
             if isinstance(raw, Dict):
                 raw = json.dumps(raw)
-            data = Data(
-                **{
-                    "data_id": str(cls.data_id),
-                    "prompt": "",
-                    "content": raw,
-                    "raw_data": {"content": raw},
-                }
-            )
-            cls.data_id += 1
-            return data
+            # 去除字符串末尾的换行符
+            if isinstance(raw, str):
+                raw = raw.rstrip('\n')
+            data_dict = {"content": raw}
+            return Data(**data_dict)
 
         return _convert
 
@@ -232,8 +209,6 @@ class PlainConverter(BaseConverter):
 @BaseConverter.register("jsonl")
 class JsonLineConverter(BaseConverter):
     """Json line file converter."""
-
-    data_id = 0
 
     def __init__(self):
         super().__init__()
@@ -244,32 +219,11 @@ class JsonLineConverter(BaseConverter):
             j = raw
             if isinstance(raw, str):
                 j = json.loads(raw)
-            cls.data_id += 1
-            return Data(
-                **{
-                    "data_id": (
-                        cls.find_levels_data(j, input_args.dataset.field.id)
-                        if input_args.dataset.field.id != ""
-                        else str(cls.data_id)
-                    ),
-                    "prompt": (
-                        cls.find_levels_data(j, input_args.dataset.field.prompt)
-                        if input_args.dataset.field.prompt != ""
-                        else ""
-                    ),
-                    "content": (
-                        cls.find_levels_data(j, input_args.dataset.field.content)
-                        if input_args.dataset.field.content != ""
-                        else ""
-                    ),
-                    "context": (
-                        cls.find_levels_data(j, input_args.dataset.field.context)
-                        if input_args.dataset.field.context != ""
-                        else j.get("context", None)  # Fallback to 'context' key if column_context not specified
-                    ),
-                    "raw_data": j,
-                }
-            )
+            if input_args.dataset.fields:
+                data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
+            else:
+                data_dict = j
+            return Data(**data_dict)
 
         return _convert
 
@@ -277,8 +231,6 @@ class JsonLineConverter(BaseConverter):
 @BaseConverter.register("listjson")
 class ListJsonConverter(BaseConverter):
     """List json file converter."""
-
-    data_id = 0
 
     def __init__(self):
         super().__init__()
@@ -290,27 +242,11 @@ class ListJsonConverter(BaseConverter):
             if isinstance(raw, str):
                 l_j = json.loads(raw)
             for j in l_j:
-                yield Data(
-                    **{
-                        "data_id": (
-                            cls.find_levels_data(j, input_args.dataset.field.id)
-                            if input_args.dataset.field.id != ""
-                            else str(cls.data_id)
-                        ),
-                        "prompt": (
-                            cls.find_levels_data(j, input_args.dataset.field.prompt)
-                            if input_args.dataset.field.prompt != ""
-                            else ""
-                        ),
-                        "content": (
-                            cls.find_levels_data(j, input_args.dataset.field.content)
-                            if input_args.dataset.field.content != ""
-                            else ""
-                        ),
-                        "raw_data": j,
-                    }
-                )
-                cls.data_id += 1
+                if input_args.dataset.fields:
+                    data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
+                else:
+                    data_dict = j
+                yield Data(**data_dict)
 
         return _convert
 
@@ -318,8 +254,6 @@ class ListJsonConverter(BaseConverter):
 @BaseConverter.register("image")
 class ImageConverter(BaseConverter):
     """Image converter."""
-
-    data_id = 0
 
     def __init__(self):
         super().__init__()
@@ -330,30 +264,11 @@ class ImageConverter(BaseConverter):
             j = raw
             if isinstance(raw, str):
                 j = json.loads(raw)
-            cls.data_id += 1
-            return Data(
-                **{
-                    "data_id": (
-                        cls.find_levels_data(j, input_args.dataset.field.id)
-                        if input_args.dataset.field.id != ""
-                        else str(cls.data_id)
-                    ),
-                    "prompt": (
-                        cls.find_levels_data(j, input_args.dataset.field.prompt)
-                        if input_args.dataset.field.prompt != ""
-                        else ""
-                    ),
-                    "content": (
-                        cls.find_levels_data(j, input_args.dataset.field.content)
-                        if input_args.dataset.field.content != ""
-                        else ""
-                    ),
-                    "image": cls.find_levels_image(j, input_args.dataset.field.image)
-                    if input_args.dataset.field.image != ""
-                    else "",
-                    "raw_data": j,
-                }
-            )
+            if input_args.dataset.fields:
+                data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
+            else:
+                data_dict = j
+            return Data(**data_dict)
 
         return _convert
 

@@ -1,13 +1,13 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from dingo.io.output.result_info import ResTypeInfo
 
 
 class ModelRes(BaseModel):
     error_status: bool = False
-    type: str | List[str] = "QUALITY_GOOD"
-    name: str | List[str] = "Data"
-    reason: List[str] = []
+    error_type: ResTypeInfo = ResTypeInfo()
 
     # Optional fields for enhanced functionality (e.g., hallucination detection)
     score: Optional[float] = None

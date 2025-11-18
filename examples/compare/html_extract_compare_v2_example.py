@@ -16,7 +16,7 @@ python examples/compare/html_extract_compare_v2_example.py
 import os
 
 from dingo.io import Data
-from dingo.model.llm.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
+from dingo.model.llm.compare.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
 
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = 'https://api.deepseek.com/v1'

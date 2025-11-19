@@ -16,3 +16,9 @@ class ModelRes(BaseModel):
     class Config:
         # Allow extra attributes to be set dynamically
         extra = "allow"
+
+    def __setattr__(self, name, value):
+        # 在赋值时拦截 error_type 字段
+        if name == 'error_type' and isinstance(value, dict):
+            value = ResTypeInfo(**value)
+        super().__setattr__(name, value)

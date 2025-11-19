@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from dingo.config import InputArgs
 from dingo.config.input_args import EvaluatorLLMArgs, EvaluatorRuleArgs
 from dingo.model.llm.base import BaseLLM
-from dingo.model.prompt.base import BasePrompt
 from dingo.model.rule.base import BaseRule
 from dingo.utils import log
 
@@ -24,40 +23,25 @@ class Model:
 
     # group
     rule_groups = {}  # such as: {'default': [<class.RuleAlphaWords>]}
-    prompt_groups = {}
 
     # metric map
     rule_metric_type_map = {}   # such as: {'QUALITY_INEFFECTIVENESS': [<class.RuleAlphaWords>]}
-    prompt_metric_type_map = {}  # such as: {'QUALITY_INEFFECTIVENESS': [<class.QaRepeat>]}
 
     # other map
-    scenario_prompt_map = {}
     rule_name_map = {}  # such as: {'RuleAlphaWords': <class.RuleAlphaWords>}
-    prompt_name_map = {}
     llm_name_map = {}
 
     def __init__(self):
         return
 
     @classmethod
-    def get_scenario_prompt_map(cls):
-        return cls.scenario_prompt_map
-
-    @classmethod
-    def get_prompt_by_scenario(cls, sn: str) -> List:
-        return cls.scenario_prompt_map[sn]
-
-    @classmethod
     def get_group(cls, group_name) -> Dict[str, List]:
         res = {}
-        if group_name not in Model.rule_groups and group_name not in Model.prompt_groups:
+        if group_name not in Model.rule_groups:
             raise KeyError('no such group: ' + group_name)
         if group_name in Model.rule_groups:
             log.debug(f"[Load rule group {group_name}]")
             res['rule'] = Model.rule_groups[group_name]
-        if group_name in Model.prompt_groups:
-            log.debug(f"[Load prompt group {group_name}]")
-            res['prompt'] = Model.prompt_groups[group_name]
         return res
 
     @classmethod
@@ -217,30 +201,6 @@ class Model:
 
         return decorator
 
-    @classmethod
-    def prompt_register(cls, metric_type: str, group: List[str], scenario: List[str] = []) -> Callable:
-        def decorator(root_class):
-            # group
-            for group_name in group:
-                if group_name not in cls.prompt_groups:
-                    cls.prompt_groups[group_name] = []
-                cls.prompt_groups[group_name].append(root_class)
-            for sn in scenario:
-                if sn not in cls.scenario_prompt_map:
-                    cls.scenario_prompt_map[sn] = []
-                cls.scenario_prompt_map[sn].append(root_class)
-            cls.prompt_name_map[root_class.__name__] = root_class
-            root_class.group = group
-
-            # metric_type
-            if metric_type not in cls.prompt_metric_type_map:
-                cls.prompt_metric_type_map[metric_type] = []
-            cls.prompt_metric_type_map[metric_type].append(root_class)
-            root_class.metric_type = metric_type
-
-            return root_class
-
-        return decorator
 
     @classmethod
     def apply_config_rule(cls):
@@ -276,15 +236,6 @@ class Model:
                     raise KeyError(f"{rule_name} not in Model.rule_name_map, there are {str(Model.rule_name_map.keys())}")
                 Model.rule_groups[eg].append(Model.rule_name_map[rule_name])
 
-    @classmethod
-    def apply_config_prompt_list(cls):
-        if cls.input_args.executor.prompt_list:
-            eg = cls.input_args.executor.eval_group
-            Model.prompt_groups[eg] = []
-            for prompt_name in cls.input_args.executor.prompt_list:
-                if prompt_name not in Model.prompt_name_map:
-                    raise KeyError(f"{prompt_name} not in Model.prompt_name_map, there are {str(Model.prompt_name_map.keys())}")
-                Model.prompt_groups[eg].append(Model.prompt_name_map[prompt_name])
 
     @classmethod
     def apply_config(cls, input_args: InputArgs):
@@ -292,7 +243,6 @@ class Model:
         cls.apply_config_rule()
         cls.apply_config_llm()
         cls.apply_config_rule_list()
-        cls.apply_config_prompt_list()
 
     @classmethod
     def apply_config_for_spark_driver(cls, input_args: InputArgs):
@@ -300,7 +250,6 @@ class Model:
         cls.apply_config_rule()
         cls.apply_config_llm()
         cls.apply_config_rule_list()
-        cls.apply_config_prompt_list()
 
     @classmethod
     def load_model(cls):
@@ -313,15 +262,6 @@ class Model:
             if os.path.isfile(path) and file.endswith('.py') and not file == '__init__.py':
                 try:
                     importlib.import_module('dingo.model.rule.' + file.split('.')[0])
-                except ModuleNotFoundError as e:
-                    log.debug(e)
-
-        # rule auto register
-        for file in os.listdir(os.path.join(this_module_directory, 'prompt')):
-            path = os.path.join(this_module_directory, 'prompt', file)
-            if os.path.isfile(path) and file.endswith('.py') and not file == '__init__.py':
-                try:
-                    importlib.import_module('dingo.model.prompt.' + file.split('.')[0])
                 except ModuleNotFoundError as e:
                     log.debug(e)
 
@@ -349,15 +289,6 @@ class Model:
                 setattr(config_default, k, v)
         setattr(rule, 'dynamic_config', config_default)
 
-    @classmethod
-    def set_config_prompt(self, prompt: BasePrompt, prompt_config: EvaluatorLLMArgs):
-        if not prompt_config:
-            return
-        config_default = getattr(prompt, 'dynamic_config')
-        for k, v in prompt_config:
-            if v is not None:
-                setattr(config_default, k, v)
-        setattr(prompt, 'dynamic_config', config_default)
 
     @classmethod
     def set_config_llm(self, llm: BaseLLM, llm_config: EvaluatorLLMArgs):

@@ -485,7 +485,7 @@ class RuleImageLabelOverlap(BaseRule):
                 res.error_type = {
                     "label": ["LabelOverlap_Fail.OverlapDetected"],
                     "metric": [cls.__name__],
-                    "reason": [f"id:{data_id} - 检测到标注框重叠：完全重叠对数={len(full_overlap_pairs)}，部分重叠对数={len(partial_overlap_pairs)}"]
+                    "reason": [f"id:{data_id} - 重叠检测：完全重叠={len(full_overlap_pairs)}，部分重叠={len(partial_overlap_pairs)}"]
                 }
             else:
                 # 不符合阈值重叠：正常状态
@@ -514,17 +514,7 @@ class RuleImageLabelOverlap(BaseRule):
                 logging.warning(f"可视化生成失败：{str(e)}")
                 vis_path = None
 
-            # 8. 整理结果
-            final_result = {
-                "id": data_id,
-                "has_overlap": has_overlap,
-                "overlap_stats": {
-                    "full_overlap_pairs": len(full_overlap_pairs),
-                    "partial_overlap_pairs": len(partial_overlap_pairs),
-                    "total_boxes": len(bboxes)
-                },
-                "visualization_path": vis_path
-            }
+            # 8. 整理结果（结果已通过error_status和error_type返回）
 
         except Exception as global_e:
             res = ModelRes()
@@ -739,23 +729,8 @@ class RuleImageLabelVisualization(BaseRule):
                 return res
 
             # --------------------------
-            # 5. 整理结果
+            # 5. 整理结果（结果已通过error_status返回）
             # --------------------------
-
-            # 统计标注数量
-            total_label_count = count_total_labels(layout_dets)
-
-            # 构造最终结果
-            final_result = {
-                "id": data_id,
-                "visualization_status": "success",
-                "original_image_path": image_path,
-                "visualization_path": vis_path,
-                "label_stats": {
-                    "total_labels": total_label_count,
-                    "top_level_labels": len(layout_dets)  # 顶层标注数（不含子元素）
-                }
-            }
 
             res.error_status = False
 

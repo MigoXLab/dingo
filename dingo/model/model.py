@@ -201,7 +201,6 @@ class Model:
 
         return decorator
 
-
     @classmethod
     def apply_config_rule(cls):
         if cls.input_args.evaluator.rule_config:
@@ -235,7 +234,6 @@ class Model:
                 if rule_name not in Model.rule_name_map:
                     raise KeyError(f"{rule_name} not in Model.rule_name_map, there are {str(Model.rule_name_map.keys())}")
                 Model.rule_groups[eg].append(Model.rule_name_map[rule_name])
-
 
     @classmethod
     def apply_config(cls, input_args: InputArgs):
@@ -288,7 +286,6 @@ class Model:
             if v is not None:
                 setattr(config_default, k, v)
         setattr(rule, 'dynamic_config', config_default)
-
 
     @classmethod
     def set_config_llm(self, llm: BaseLLM, llm_config: EvaluatorLLMArgs):

@@ -13,7 +13,7 @@ from dingo.io import Data, ResultInfo, SummaryModel
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
 from dingo.model.modelres import ModelRes
-from dingo.model.prompt.base import BasePrompt
+# from dingo.model.prompt.base import BasePrompt
 from dingo.model.rule.base import BaseRule
 
 
@@ -246,7 +246,7 @@ class SparkExecutor(ExecProto):
         return result_info
 
     def evaluate_prompt(
-        self, group: List[BasePrompt], data: Data, llm: BaseLLM
+        self, group: List, data: Data, llm: BaseLLM
     ) -> ResultInfo:
         """Evaluate data against a group of prompts using LLM."""
         if llm is None:

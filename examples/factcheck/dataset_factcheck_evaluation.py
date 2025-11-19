@@ -44,7 +44,7 @@ def evaluate_factuality_jsonl_dataset():
         },
         "evaluator": [
             {
-                "fields": {"prompt": "question", "content": "content"}, # 注意这里使用 question 作为 prompt 字段
+                "fields": {"prompt": "question", "content": "content"},  # 注意这里使用 question 作为 prompt 字段
                 "evals": [
                     {"name": "LLMFactCheckPublic", "config": {"model": OPENAI_MODEL, "key": OPENAI_KEY, "api_url": OPENAI_URL}},
                 ]

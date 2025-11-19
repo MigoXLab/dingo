@@ -18,6 +18,7 @@ common_config = {
     "api_url": OPENAI_URL,
 }
 
+
 @Model.llm_register('LlmTextQualityRegister')
 class LlmTextQualityRegister(BaseOpenAI):
     prompt = """

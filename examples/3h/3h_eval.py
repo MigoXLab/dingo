@@ -14,7 +14,6 @@ if __name__ == '__main__':
         "api_url": OPENAI_URL,
     }
 
-
     input_data = {
         "input_path": str(Path("test/data/test_3h_jsonl.jsonl")),
         "dataset": {

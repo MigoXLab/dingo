@@ -15,7 +15,6 @@ from dingo.exec import Executor
 from dingo.io import Data
 # Force import factuality evaluation modules
 from dingo.model.llm.llm_factcheck_public import LLMFactCheckPublic
-from dingo.model.prompt.prompt_factcheck import PromptFactCheck
 
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = 'https://api.deepseek.com/v1'

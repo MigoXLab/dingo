@@ -391,24 +391,44 @@ class RuleImageLabelOverlap(BaseRule):
                 try:
                     annotations = json.loads(content)
                 except json.JSONDecodeError as e:
-                    res.error_status = True
-                    res.reason = [f"content解析失败：{str(e)}，前50字符：{content[:50]}..."]
+                    res = ModelRes()
+                    res.error_status = False
+                    res.error_type = {
+                        "label": ["LabelOverlap_Fail.ParseError"],
+                        "metric": [cls.__name__],
+                        "reason": [f"content解析失败：{str(e)}，前50字符：{content[:50]}..."]
+                    }
                     return res
             elif isinstance(content, dict):
                 annotations = content
             else:
-                res.error_status = True
-                res.reason = [f"content类型错误：需dict/str，实际是{type(content).__name__}"]
+                res = ModelRes()
+                res.error_status = False
+                res.error_type = {
+                    "label": ["LabelOverlap_Fail.InvalidContentType"],
+                    "metric": [cls.__name__],
+                    "reason": [f"content类型错误：需dict/str，实际是{type(content).__name__}"]
+                }
                 return res
 
             # 4. 验证数据有效性
             if not annotations:
-                res.error_status = True
-                res.reason = [f"id:{data_id} - annotations为空"]
+                res = ModelRes()
+                res.error_status = False
+                res.error_type = {
+                    "label": ["LabelOverlap_Fail.EmptyAnnotations"],
+                    "metric": [cls.__name__],
+                    "reason": [f"id:{data_id} - annotations为空"]
+                }
                 return res
             if not image_path or not os.path.exists(image_path):
-                res.error_status = True
-                res.reason = [f"id:{data_id} - 图片路径无效：{image_path}"]
+                res = ModelRes()
+                res.error_status = False
+                res.error_type = {
+                    "label": ["LabelOverlap_Fail.InvalidImagePath"],
+                    "metric": [cls.__name__],
+                    "reason": [f"id:{data_id} - 图片路径无效：{image_path}"]
+                }
                 return res
 
             # 5. 提取边界框并计算重叠
@@ -458,15 +478,18 @@ class RuleImageLabelOverlap(BaseRule):
             else:
                 new_annotations = annotations
 
-            # 6. 动态设置 res.name 和 res.type
+            # 6. 根据重叠状态设置错误信息
             if has_overlap:
-                # 符合阈值重叠：使用原名称和类型
-                res.name = cls.__name__  # "RuleImageLabelOverlap"
-                res.type = cls._metric_info["quality_dimension"]  # "IMG_LABEL_OVERLAP"
+                # 符合阈值重叠：标记为错误状态
+                res.error_status = True
+                res.error_type = {
+                    "label": ["LabelOverlap_Fail.OverlapDetected"],
+                    "metric": [cls.__name__],
+                    "reason": [f"id:{data_id} - 检测到标注框重叠：完全重叠对数={len(full_overlap_pairs)}，部分重叠对数={len(partial_overlap_pairs)}"]
+                }
             else:
-                # 不符合阈值重叠
-                res.name = "GOOD_IMG_LABEL"  # 自定义非重叠名称
-                res.type = "NO_LABEL_OVERLAP"  # 自定义非重叠类型
+                # 不符合阈值重叠：正常状态
+                res.error_status = False
 
             # 7. 生成可视化标注框重叠图片
             output_dir = Path(cls.dynamic_config.refer_path[0])
@@ -503,15 +526,14 @@ class RuleImageLabelOverlap(BaseRule):
                 "visualization_path": vis_path
             }
 
-            res.error_status = has_overlap  # 重叠图像标记为错误状态（可选）
-            res.reason = [json.dumps(final_result, ensure_ascii=False)]
-
         except Exception as global_e:
+            res = ModelRes()
             res.error_status = False
-            res.reason = [f"全局处理错误：{str(global_e)}，id:{input_data.data_id}"]
-            # 异常情况仍使用原类型，便于排查
-            res.name = cls.__name__
-            res.type = cls._metric_info["quality_dimension"]
+            res.error_type = {
+                "label": ["LabelOverlap_Fail.GlobalError"],
+                "metric": [cls.__name__],
+                "reason": [f"全局处理错误：{str(global_e)}，id:{input_data.data_id}"]
+            }
 
         return res
 
@@ -620,10 +642,13 @@ class RuleImageLabelVisualization(BaseRule):
 
             # 验证图片路径有效性
             if not image_path or not os.path.exists(image_path):
-                res.error_status = True
-                res.reason = [f"id:{data_id} - 图片路径无效/不存在：{image_path}"]
-                res.name = "NO_IMG_DATA"
-                res.type = "NO_IMG_LABEL_VISUALIZATION"
+                res = ModelRes()
+                res.error_status = False
+                res.error_type = {
+                    "label": ["LabelVisualization_Fail.InvalidImagePath"],
+                    "metric": [cls.__name__],
+                    "reason": [f"id:{data_id} - 图片路径无效/不存在：{image_path}"]
+                }
                 return res
 
             # 解析标注内容
@@ -631,33 +656,42 @@ class RuleImageLabelVisualization(BaseRule):
                 try:
                     annotations = json.loads(content)
                 except json.JSONDecodeError as e:
-                    res.error_status = True
-                    res.reason = [f"id:{data_id} - 标注解析失败：{str(e)}，前50字符：{content[:50]}..."]
-                    res.name = "NO_LABEL_DATA"
-                    res.type = "NO_IMG_LABEL_VISUALIZATION"
+                    res = ModelRes()
+                    res.error_status = False
+                    res.error_type = {
+                        "label": ["LabelVisualization_Fail.ParseError"],
+                        "metric": [cls.__name__],
+                        "reason": [f"id:{data_id} - 标注解析失败：{str(e)}，前50字符：{content[:50]}..."]
+                    }
                     return res
             elif isinstance(content, dict):
                 annotations = content
             else:
-                res.error_status = True
-                res.reason = [f"id:{data_id} - 标注类型错误：需dict/str，实际{type(content).__name__}"]
-                res.name = "NO_LABEL_DATA"
-                res.type = "NO_IMG_LABEL_VISUALIZATION"
+                res = ModelRes()
+                res.error_status = False
+                res.error_type = {
+                    "label": ["LabelVisualization_Fail.InvalidAnnotationType"],
+                    "metric": [cls.__name__],
+                    "reason": [f"id:{data_id} - 标注类型错误：需dict/str，实际{type(content).__name__}"]
+                }
                 return res
 
             # 提取布局标注（适配"layout_dets"字段）
             layout_dets = annotations.get("layout_dets", [])
             if not layout_dets:
                 # 无标注数据时的处理
-                res.name = "NO_LABEL_DATA"
-                res.type = "NO_IMG_LABEL_VISUALIZATION"
+                res = ModelRes()
                 res.error_status = False
-                res.reason = [json.dumps({
-                    "id": data_id,
-                    "message": "无布局标注数据（layout_dets为空）",
-                    "visualization_path": None,
-                    "label_stats": {"total_labels": 0}
-                }, ensure_ascii=False)]
+                res.error_type = {
+                    "label": ["LabelVisualization_Fail.EmptyLayoutData"],
+                    "metric": [cls.__name__],
+                    "reason": [json.dumps({
+                        "id": data_id,
+                        "message": "无布局标注数据（layout_dets为空）",
+                        "visualization_path": None,
+                        "label_stats": {"total_labels": 0}
+                    }, ensure_ascii=False)]
+                }
                 return res
 
             # --------------------------
@@ -695,16 +729,18 @@ class RuleImageLabelVisualization(BaseRule):
             try:
                 img.save(vis_path)
             except Exception as e:
-                res.error_status = True
-                res.reason = [f"id:{data_id} - 保存图像失败：{str(e)}"]
+                res = ModelRes()
+                res.error_status = False
+                res.error_type = {
+                    "label": ["LabelVisualization_Fail.SaveImageError"],
+                    "metric": [cls.__name__],
+                    "reason": [f"id:{data_id} - 保存图像失败：{str(e)}"]
+                }
                 return res
 
             # --------------------------
-            # 5. 整理结果与设置类型
+            # 5. 整理结果
             # --------------------------
-            # 动态设置结果名称和类型（有标注时使用规则默认值）
-            res.name = cls.__name__
-            res.type = cls._metric_info["quality_dimension"]
 
             # 统计标注数量
             total_label_count = count_total_labels(layout_dets)
@@ -722,14 +758,16 @@ class RuleImageLabelVisualization(BaseRule):
             }
 
             res.error_status = False
-            res.reason = [json.dumps(final_result, ensure_ascii=False)]
 
         except Exception as global_e:
             # 全局异常处理
-            res.error_status = True
-            res.reason = [f"id:{data_id} - 可视化处理全局错误：{str(global_e)}"]
-            res.name = cls.__name__
-            res.type = "IMG_LABEL_VISUALIZATION_ERROR"
+            res = ModelRes()
+            res.error_status = False
+            res.error_type = {
+                "label": ["LabelVisualization_Fail.GlobalError"],
+                "metric": [cls.__name__],
+                "reason": [f"id:{data_id} - 可视化处理全局错误：{str(global_e)}"]
+            }
 
         return res
 

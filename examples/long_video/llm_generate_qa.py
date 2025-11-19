@@ -7,26 +7,21 @@ if __name__ == '__main__':
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "id": "video_id",
-                "content": "summary"
-            }
         },
         "executor": {
-            "prompt_list": ["PromptLongVideoQa"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMLongVideoQa": {
-                    "key": "",
-                    "api_url": "",
-                }
+        "evaluator": [
+            {
+                "fields": {"id": "video_id", "content": "summary"},
+                "evals": [
+                    {"name": "LLMLongVideoQa", "config": {"key": "", "api_url": ""}}
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

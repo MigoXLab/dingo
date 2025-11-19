@@ -7,26 +7,22 @@ def classify_topic():
         "input_path": "../../test/data/test_sft_jsonl.jsonl",
         "dataset": {
             "source": "local",
-            "format": "jsonl",
-            "field": {
-                "content": "question"
-            }
+            "format": "jsonl"
         },
         "executor": {
-            "prompt_list": ["PromptClassifyTopic"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMClassifyTopic": {
-                    "key": "",
-                    "api_url": "",
-                }
+        "evaluator": [
+            {
+                "fields": {"content": "question"},
+                "evals": [
+                    {"name": "LLMClassifyTopic", "config": {"key": "", "api_url": ""}}
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

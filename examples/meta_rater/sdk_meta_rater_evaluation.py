@@ -7,25 +7,24 @@ if __name__ == '__main__':
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "content": "content"
-            }
         },
         "executor": {
-            "prompt_list": ["PromptMetaRaterProfessionalism"],  # options: "PromptMetaRaterReadability", "PromptMetaRaterReasoning", "PromptMetaRaterCleanliness"
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMMetaRaterEvaluation": {
-                    "key": "",
-                    "api_url": ""
-                }
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "LLMMetaRaterEvaluation", "config": {"key": "", "api_url": ""}},
+                    {"name": "PromptMetaRaterReadability", "config": {"key": "", "api_url": ""}},
+                    {"name": "PromptMetaRaterReasoning", "config": {"key": "", "api_url": ""}},
+                    {"name": "PromptMetaRaterCleanliness", "config": {"key": "", "api_url": ""}},
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

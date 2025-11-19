@@ -7,27 +7,21 @@ if __name__ == '__main__':
         "dataset": {
             "source": "local",
             "format": "image",
-            "field": {
-                "id": "id",
-                "content": "content",
-                "image": "img"
-            }
         },
         "executor": {
-            "prompt_list": ["PromptDocumentParsingQuality"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "VLMDocumentParsingQuality": {
-                    "key": "",
-                    "api_url": "",
-                }
+        "evaluator": [
+            {
+                "fields": {"id": "id", "content": "content", "image": "img"},
+                "evals": [
+                    {"name": "VLMDocumentParsingQuality", "config": {"key": "", "api_url": ""}},
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

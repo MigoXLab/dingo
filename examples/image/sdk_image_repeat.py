@@ -8,17 +8,21 @@ def image_repeat():
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "content": "content"
-            }
         },
         "executor": {
-            "rule_list": ["RuleImageRepeat"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        }
+        },
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "RuleImageRepeat"}
+                ]
+            }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

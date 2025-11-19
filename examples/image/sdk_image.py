@@ -8,18 +8,23 @@ def image():
         "dataset": {
             "source": "local",
             "format": "image",
-            "field": {
-                "id": "id",
-                "image": "img"
-            }
         },
         "executor": {
-            "rule_list": ["RuleImageValid", "RuleImageSizeValid", "RuleImageQuality"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        }
+        },
+        "evaluator": [
+            {
+                "fields": {"id": "id", "image": "img"},
+                "evals": [
+                    {"name": "RuleImageValid"},
+                    {"name": "RuleImageSizeValid"},
+                    {"name": "RuleImageQuality"},
+                ]
+            }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

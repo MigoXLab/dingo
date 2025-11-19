@@ -36,27 +36,21 @@ def evaluate_factuality_jsonl_dataset():
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "prompt": "question",  # 注意这里使用 question 作为 prompt 字段
-                "content": "content"
-            }
         },
         "executor": {
-            "eval_group": "factuality",  # 使用 factuality 评估组
             "result_save": {
                 "bad": True,  # 保存不实信息
                 "good": True  # 保存真实信息
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMFactCheckPublic": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {"prompt": "question", "content": "content"}, # 注意这里使用 question 作为 prompt 字段
+                "evals": [
+                    {"name": "LLMFactCheckPublic", "config": {"model": OPENAI_MODEL, "key": OPENAI_KEY, "api_url": OPENAI_URL}},
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)

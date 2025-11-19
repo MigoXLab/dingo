@@ -8,19 +8,21 @@ def image_label_overlap():
         "dataset": {
             "source": "local",
             "format": "image",
-            "field": {
-                "id": "id",
-                "content": "content",
-                "image": "img"
-            }
         },
         "executor": {
-            "rule_list": ["RuleImageLabelOverlap"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        }
+        },
+        "evaluator": [
+            {
+                "fields": {"id": "id", "content": "content", "image": "img"},
+                "evals": [
+                    {"name": "RuleImageLabelOverlap"}
+                ]
+            }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

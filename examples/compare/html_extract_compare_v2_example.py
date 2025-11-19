@@ -137,10 +137,11 @@ def run_comparison(data: Data, description: str):
     result = evaluator.eval(data)
 
     # 打印结果
-    print(f"评估结果类型: {result.type}")
-    print(f"判断名称: {result.name}")
+    # print(f"评估结果类型: {result.type}")
+    # print(f"判断名称: {result.name}")
     print(f"是否存在问题: {result.error_status}")
-    print(f"\n推理过程:\n{result.reason[0]}")
+    print(f"评估结果类型: {result.error_type.label}")
+    print(f"\n推理过程:\n{result.error_type.reason[0]}")
     print(f"\n{'=' * 60}\n")
 
 

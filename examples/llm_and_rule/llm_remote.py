@@ -7,25 +7,21 @@ if __name__ == '__main__':
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "content": "content"
-            }
         },
         "executor": {
-            "prompt_list": ["PromptRepeat"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMTextQualityPromptBase": {
-                    "key": "enter your key, such as:EMPTY",
-                    "api_url": "enter your local llm api url, such as:http://127.0.0.1:8080/v1",
-                }
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "LLMTextRepeat", "config": {"model": "deepseek-chat", "key": "", "api_url": "https://api.deepseek.com/v1"}}
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

@@ -6,13 +6,8 @@ input_data = {
     'dataset': {
         'source': 'local',
         'format': 'jsonl',
-        'field': {
-            'id': 'id',
-            'content': 'clean_html'
-        }
     },
     'executor': {
-        'prompt_list': ['PromptCodeCompare'],
         'batch_size': 10,
         'max_workers': 10,
         'result_save': {
@@ -21,15 +16,14 @@ input_data = {
             'raw': True
         }
     },
-    'evaluator': {
-        'llm_config': {
-            'LLMCodeCompare': {
-                "key": "",
-                "api_url": "",
-                'temperature': 0
-            }
+    "evaluator": [
+        {
+            "fields": {'id': 'id', 'content': 'clean_html'},
+            "evals": [
+                {"name": "LLMCodeCompare", "config": {"key": "", "api_url": "", 'temperature': 0}}
+            ]
         }
-    }
+    ]
 }
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map['local'](input_args)

@@ -7,13 +7,14 @@ def huggingface_plaintext():
         "input_path": "chupei/format-text",
         "dataset": {
             "format": "plaintext",
-            "field": {
-                "content": "text"
-            }
         },
-        "executor": {
-            "eval_group": "sft"
-        }
+        "evaluator": [
+            {
+                "evals": [
+                    {"name": "RuleColonEnd"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -27,14 +28,15 @@ def huggingface_json():
         "input_path": "chupei/format-json",
         "dataset": {
             "format": "json",
-            "field": {
-                "prompt": "origin_prompt",
-                "content": "prediction"
-            }
         },
-        "executor": {
-            "eval_group": "sft",
-        }
+        "evaluator": [
+            {
+                "fields": {"prompt": "origin_prompt", "content": "prediction"},
+                "evals": [
+                    {"name": "RuleColonEnd"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -48,13 +50,15 @@ def huggingface_jsonl():
         "input_path": "chupei/format-jsonl",
         "dataset": {
             "format": "jsonl",
-            "field": {
-                "content": "content"
-            }
         },
-        "executor": {
-            "eval_group": "sft",
-        }
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "RuleColonEnd"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -68,14 +72,15 @@ def huggingface_listjson():
         "input_path": "chupei/format-listjson",
         "dataset": {
             "format": "listjson",
-            "field": {
-                "prompt": "instruction",
-                "content": "output"
-            }
         },
-        "executor": {
-            "eval_group": "sft",
-        }
+        "evaluator": [
+            {
+                "fields": {"prompt": "instruction", "content": "output"},
+                "evals": [
+                    {"name": "RuleColonEnd"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)

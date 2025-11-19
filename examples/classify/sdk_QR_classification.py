@@ -8,26 +8,21 @@ def classify_QR():
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "id": "id",
-                "content": "content"
-            }
         },
         "executor": {
-            "prompt_list": ["PromptClassifyQR"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMClassifyQR": {
-                    "key": "",
-                    "api_url": "",
-                }
+        "evaluator": [
+            {
+                "fields": {"id": "id", "content": "content"},
+                "evals": [
+                    {"name": "LLMClassifyQR", "config": {"key": "", "api_url": ""}}
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

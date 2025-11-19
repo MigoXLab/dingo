@@ -8,13 +8,15 @@ def local_plaintext():
         "dataset": {
             "source": "local",
             "format": "plaintext",
-            "field": {
-                "content": "content"
-            }
         },
-        "executor": {
-            "eval_group": "sft",
-        }
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "RuleColonEnd"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -29,13 +31,15 @@ def local_json():
         "dataset": {
             "source": "local",
             "format": "json",
-            "field": {
-                "content": "prediction"
-            }
         },
-        "executor": {
-            "eval_group": "sft",
-        }
+        "evaluator": [
+            {
+                "fields": {"content": "prediction"},
+                "evals": [
+                    {"name": "RuleColonEnd"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -50,13 +54,15 @@ def local_jsonl():
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "content": "content"
-            }
         },
-        "executor": {
-            "eval_group": "sft",
-        }
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "RuleColonEnd"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -71,13 +77,15 @@ def local_listjson():
         "dataset": {
             "source": "local",
             "format": "listjson",
-            "field": {
-                "content": "output"
-            }
         },
-        "executor": {
-            "eval_group": "sft",
-        }
+        "evaluator": [
+            {
+                "fields": {"content": "output"},
+                "evals": [
+                    {"name": "RuleColonEnd"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)

@@ -384,7 +384,6 @@ class RuleImageLabelOverlap(BaseRule):
             # 2. 解析输入数据
             content = input_data.content
             image_path = input_data.image[0] if (input_data.image and len(input_data.image) > 0) else None
-            data_id = input_data.data_id
 
             # 3. 解析标注内容
             if isinstance(content, str):
@@ -418,7 +417,7 @@ class RuleImageLabelOverlap(BaseRule):
                 res.error_type = {
                     "label": ["LabelOverlap_Fail.EmptyAnnotations"],
                     "metric": [cls.__name__],
-                    "reason": [f"id:{data_id} - annotations为空"]
+                    "reason": ["annotations为空"]
                 }
                 return res
             if not image_path or not os.path.exists(image_path):
@@ -427,7 +426,7 @@ class RuleImageLabelOverlap(BaseRule):
                 res.error_type = {
                     "label": ["LabelOverlap_Fail.InvalidImagePath"],
                     "metric": [cls.__name__],
-                    "reason": [f"id:{data_id} - 图片路径无效：{image_path}"]
+                    "reason": [f"图片路径无效：{image_path}"]
                 }
                 return res
 
@@ -483,35 +482,79 @@ class RuleImageLabelOverlap(BaseRule):
                 # 符合阈值重叠：标记为错误状态
                 res.error_status = True
                 res.error_type = {
-                    "label": ["LabelOverlap_Fail.OverlapDetected"],
+                    "label": ["LabelOverlap_Fail.RuleImageLabelOverlap"],
                     "metric": [cls.__name__],
-                    "reason": [f"id:{data_id} - 重叠检测：完全重叠={len(full_overlap_pairs)}，部分重叠={len(partial_overlap_pairs)}"]
+                    "reason": [f"重叠检测：完全重叠={len(full_overlap_pairs)}，部分重叠={len(partial_overlap_pairs)}"]
                 }
             else:
                 # 不符合阈值重叠：正常状态
                 res.error_status = False
 
             # 7. 生成可视化标注框重叠图片
-            output_dir = Path(cls.dynamic_config.refer_path[0])
-            output_dir.mkdir(parents=True, exist_ok=True)
-            vis_path = str(output_dir / f"overlap_{data_id}.png")
-
+            vis_path = None  # 初始化vis_path变量
             try:
+                # 获取基础路径并确保是绝对路径
+                base_path = cls.dynamic_config.refer_path[0]
+
+                # 调试信息
+                logging.info(f"原始base_path: {base_path}")
+
+                # 处理相对路径
+                if not os.path.isabs(base_path):
+                    # 获取当前文件的目录作为基准路径
+                    current_file_dir = os.path.dirname(os.path.abspath(__file__))
+                    base_path = os.path.join(current_file_dir, base_path)
+                    logging.info(f"转换后base_path: {base_path}")
+
+                # 规范化路径
+                base_path = os.path.normpath(base_path)
+                output_dir = Path(base_path)
+
+                # 确保目录存在且有写入权限
+                output_dir.mkdir(parents=True, exist_ok=True)
+
+                # 测试目录权限
+                test_file = output_dir / "test_permission.txt"
+                try:
+                    test_file.write_text("test")
+                    test_file.unlink()  # 删除测试文件
+                    logging.info(f"目录权限检查通过: {output_dir}")
+                except Exception as perm_error:
+                    logging.error(f"目录无写入权限: {output_dir}, 错误: {perm_error}")
+                    # 尝试使用临时目录
+                    import tempfile
+                    output_dir = Path(tempfile.gettempdir()) / "overlap_visual"
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    logging.info(f"切换到临时目录: {output_dir}")
+
+                vis_path = str(output_dir / "overlap.png")
+
+                logging.info(f"最终输出目录: {output_dir}")
+                logging.info(f"开始保存图像到: {vis_path}")
+
+                # 生成可视化图像
                 img = Image.open(image_path).convert("RGB")
                 draw = ImageDraw.Draw(img)
+
+                # 绘制边界框
                 for idx, box in enumerate(bboxes):
                     x, y, w, h = box["x"], box["y"], box["width"], box["height"]
                     if idx in full_overlap_ids:
-                        color = (255, 0, 0)
+                        color = (255, 0, 0)  # 红色 - 完全重叠
                     elif idx in partial_overlap_ids:
-                        color = (255, 255, 0)
+                        color = (255, 255, 0)  # 黄色 - 部分重叠
                     else:
-                        color = (0, 255, 0)
+                        color = (0, 255, 0)  # 绿色 - 无重叠
+
                     draw.rectangle([(x, y), (x + w, y + h)], outline=color, width=3)
                     draw.text((x, max(0, y - 15)), f"Box {idx}", fill=color, font=ImageFont.load_default())
+
+                # 保存图像
                 img.save(vis_path)
+                logging.info(f"图像保存成功: {vis_path}")
+
             except Exception as e:
-                logging.warning(f"可视化生成失败：{str(e)}")
+                logging.error(f"可视化生成失败：{str(e)}，详细错误信息:", exc_info=True)
                 vis_path = None
 
             # 8. 整理结果（结果已通过error_status和error_type返回）
@@ -522,7 +565,7 @@ class RuleImageLabelOverlap(BaseRule):
             res.error_type = {
                 "label": ["LabelOverlap_Fail.GlobalError"],
                 "metric": [cls.__name__],
-                "reason": [f"全局处理错误：{str(global_e)}，id:{input_data.data_id}"]
+                "reason": [f"全局处理错误：{str(global_e)}"]
             }
 
         return res
@@ -628,7 +671,6 @@ class RuleImageLabelVisualization(BaseRule):
             # 提取核心数据
             content = input_data.content  # 标注数据（str或dict）
             image_path = input_data.image[0] if (input_data.image and len(input_data.image) > 0) else None
-            data_id = input_data.data_id
 
             # 验证图片路径有效性
             if not image_path or not os.path.exists(image_path):
@@ -637,7 +679,7 @@ class RuleImageLabelVisualization(BaseRule):
                 res.error_type = {
                     "label": ["LabelVisualization_Fail.InvalidImagePath"],
                     "metric": [cls.__name__],
-                    "reason": [f"id:{data_id} - 图片路径无效/不存在：{image_path}"]
+                    "reason": [f"图片路径无效/不存在：{image_path}"]
                 }
                 return res
 
@@ -651,7 +693,7 @@ class RuleImageLabelVisualization(BaseRule):
                     res.error_type = {
                         "label": ["LabelVisualization_Fail.ParseError"],
                         "metric": [cls.__name__],
-                        "reason": [f"id:{data_id} - 标注解析失败：{str(e)}，前50字符：{content[:50]}..."]
+                        "reason": [f"标注解析失败：{str(e)}，前50字符：{content[:50]}..."]
                     }
                     return res
             elif isinstance(content, dict):
@@ -662,7 +704,7 @@ class RuleImageLabelVisualization(BaseRule):
                 res.error_type = {
                     "label": ["LabelVisualization_Fail.InvalidAnnotationType"],
                     "metric": [cls.__name__],
-                    "reason": [f"id:{data_id} - 标注类型错误：需dict/str，实际{type(content).__name__}"]
+                    "reason": [f"标注类型错误：需dict/str，实际{type(content).__name__}"]
                 }
                 return res
 
@@ -676,7 +718,6 @@ class RuleImageLabelVisualization(BaseRule):
                     "label": ["LabelVisualization_Fail.EmptyLayoutData"],
                     "metric": [cls.__name__],
                     "reason": [json.dumps({
-                        "id": data_id,
                         "message": "无布局标注数据（layout_dets为空）",
                         "visualization_path": None,
                         "label_stats": {"total_labels": 0}
@@ -708,12 +749,22 @@ class RuleImageLabelVisualization(BaseRule):
             draw_bboxes(draw, layout_dets, color_map, font)
 
             # 准备输出路径
-            output_dir = Path(cls.dynamic_config.refer_path[0])
-            output_dir.mkdir(parents=True, exist_ok=True)
-            # 生成带数据ID的文件名（避免重复）
-            img_basename = Path(image_path).name
-            vis_filename = f"visual_{data_id}_{img_basename}"
-            vis_path = str(output_dir / vis_filename)
+            try:
+                output_dir = Path(cls.dynamic_config.refer_path[0]).resolve()
+                output_dir.mkdir(parents=True, exist_ok=True)
+                # 生成文件名
+                img_basename = Path(image_path).name
+                vis_filename = f"visual_{img_basename}"
+                vis_path = str(output_dir / vis_filename)
+            except Exception as path_error:
+                logging.warning(f"输出目录处理失败：{str(path_error)}，将使用临时目录")
+                # 回退到临时目录
+                import tempfile
+                output_dir = Path(tempfile.gettempdir()) / "dingo_visualization"
+                output_dir.mkdir(parents=True, exist_ok=True)
+                img_basename = Path(image_path).name
+                vis_filename = f"visual_{img_basename}"
+                vis_path = str(output_dir / vis_filename)
 
             # 保存图像
             try:
@@ -724,7 +775,7 @@ class RuleImageLabelVisualization(BaseRule):
                 res.error_type = {
                     "label": ["LabelVisualization_Fail.SaveImageError"],
                     "metric": [cls.__name__],
-                    "reason": [f"id:{data_id} - 保存图像失败：{str(e)}"]
+                    "reason": [f"保存图像失败：{str(e)}"]
                 }
                 return res
 
@@ -741,7 +792,7 @@ class RuleImageLabelVisualization(BaseRule):
             res.error_type = {
                 "label": ["LabelVisualization_Fail.GlobalError"],
                 "metric": [cls.__name__],
-                "reason": [f"id:{data_id} - 可视化处理全局错误：{str(global_e)}"]
+                "reason": [f"可视化处理全局错误：{str(global_e)}"]
             }
 
         return res

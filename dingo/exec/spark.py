@@ -31,8 +31,8 @@ class SparkExecutor(ExecProto):
         spark_conf: SparkConf = None,
     ):
         # Evaluation parameters
-        self.llm: Optional[BaseLLM] = None
-        self.group: Optional[Dict] = None
+        # self.llm: Optional[BaseLLM] = None
+        # self.group: Optional[Dict] = None
         self.summary: Optional[SummaryModel] = None
         self.bad_info_list: Optional[RDD] = None
         self.good_info_list: Optional[RDD] = None
@@ -82,14 +82,6 @@ class SparkExecutor(ExecProto):
         """Main execution method for Spark evaluation."""
         create_time = time.strftime("%Y%m%d_%H%M%S", time.localtime())
 
-        # Initialize models and configuration
-        Model.apply_config(self.input_args)
-        self.group = Model.get_group(self.input_args.executor.eval_group)
-
-        if self.input_args.evaluator.llm_config:
-            for llm_name in self.input_args.evaluator.llm_config:
-                self.llm = Model.get_llm(llm_name)
-
         print("============= Init PySpark =============")
         spark, sc = self.initialize_spark()
         self._sc = sc
@@ -100,16 +92,9 @@ class SparkExecutor(ExecProto):
             data_rdd = self.load_data()
             total = data_rdd.count()
 
-            # Apply configuration for Spark driver
-            Model.apply_config_for_spark_driver(self.input_args)
-
-            # Broadcast necessary objects to workers
-            broadcast_group = sc.broadcast(self.group)
-            broadcast_llm = sc.broadcast(self.llm) if self.llm else None
-
             # Evaluate data
             data_info_list = data_rdd.map(
-                lambda x: self.evaluate_item(x, broadcast_group, broadcast_llm)
+                lambda x: self.evaluate(x)
             ).persist()  # Cache the evaluated data for multiple uses
 
             # Filter and count bad/good items
@@ -125,7 +110,7 @@ class SparkExecutor(ExecProto):
             self.summary = SummaryModel(
                 task_id=str(uuid.uuid1()),
                 task_name=self.input_args.task_name,
-                eval_group=self.input_args.executor.eval_group,
+                # eval_group=self.input_args.executor.eval_group,
                 input_path=self.input_args.input_path if not self.spark_rdd else "",
                 output_path="",
                 create_time=create_time,
@@ -146,147 +131,84 @@ class SparkExecutor(ExecProto):
             else:
                 self.spark_session = spark
 
-    def evaluate(self):
-        pass
-
-    def evaluate_item(
-        self, data_rdd_item, broadcast_group, broadcast_llm
-    ) -> Dict[str, Any]:
+    def evaluate(self, data_rdd_item) -> Dict[str, Any]:
         """Evaluate a single data item using broadcast variables."""
         data: Data = data_rdd_item
-        result_info = ResultInfo(
-            data_id=data.data_id, prompt=data.prompt, content=data.content
-        )
+        result_info = ResultInfo(raw_data = data.to_dict())
 
-        if self.input_args.executor.result_save.raw:
-            result_info.raw_data = data.raw_data
-
-        group = broadcast_group.value
-        llm = broadcast_llm.value if broadcast_llm else None
-
-        bad_type_list = []
-        good_type_list = []
-        bad_name_list = []
-        good_name_list = []
-        bad_reason_list = []
-        good_reason_list = []
-
-        for group_type, group_items in group.items():
-            if group_type == "rule":
-                r_i = self.evaluate_rule(group_items, data)
-            elif group_type == "prompt":
-                r_i = self.evaluate_prompt(group_items, data, llm)
+        for e_p in self.input_args.evaluator:
+            if e_p.fields:
+                map_data = {k: data.to_dict().get(v) for k, v in e_p.fields.items()}
             else:
-                raise RuntimeError(f"Unsupported group type: {group_type}")
+                map_data = data.to_dict()
+            eval_list_rule = [eval for eval in e_p.evals if eval.name in Model.rule_name_map]
+            eval_list_llm = [eval for eval in e_p.evals if eval.name in Model.llm_name_map]
+            for eval_type in ["rule", "llm"]:
+                if eval_type == 'rule':
+                    r_i: ResultInfo = self.evaluate_item(e_p.fields, eval_type, map_data, eval_list_rule)
+                elif eval_type == 'llm':
+                    r_i: ResultInfo = self.evaluate_item(e_p.fields, eval_type, map_data, eval_list_llm)
+                else:
+                    raise ValueError(f"Error eval_type: {eval_type}")
 
             if r_i.error_status:
                 result_info.error_status = True
-                bad_type_list.extend(r_i.type_list)
-                bad_name_list.extend(r_i.name_list)
-                bad_reason_list.extend(r_i.reason_list)
-            else:
-                good_type_list.extend(r_i.type_list)
-                good_name_list.extend(r_i.name_list)
-                good_reason_list.extend(r_i.reason_list)
-
-        # Process results
-        target_list = bad_type_list if result_info.error_status else good_type_list
-        result_info.type_list = list(set(target_list))
-
-        target_names = bad_name_list if result_info.error_status else good_name_list
-        result_info.name_list = list(
-            dict.fromkeys(target_names)
-        )  # Preserve order while removing duplicates
-
-        target_reasons = (
-            bad_reason_list if result_info.error_status else good_reason_list
-        )
-        result_info.reason_list = [
-            r for r in target_reasons if r
-        ]  # Filter out None/empty reasons
+            for k,v in r_i.error_type.items():
+                if k not in result_info.error_type:
+                    result_info.error_type[k] = v
+                else:
+                    result_info.error_type[k].merge(v)
 
         return result_info.to_dict()
 
-    def evaluate_rule(self, group: List[BaseRule], data: Data) -> ResultInfo:
-        """Evaluate data against a group of rules."""
-        result_info = ResultInfo(
-            data_id=data.data_id, prompt=data.prompt, content=data.content
-        )
+    def evaluate_item(self, eval_fields: dict, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
+        result_info = ResultInfo()
+        bad_error_type = None
+        good_error_type = None
 
-        bad_type_list = []
-        good_type_list = []
-        bad_name_list = []
-        good_name_list = []
-        bad_reason_list = []
-        good_reason_list = []
-
-        for rule in group:
-            res: ModelRes = rule.eval(data)
-
-            if res.error_status:
-                result_info.error_status = True
-                bad_type_list.append(res.type)
-                bad_name_list.append(f"{res.type}-{res.name}")
-                bad_reason_list.extend(res.reason)
+        for e_c_i in eval_list:
+            if eval_type == 'rule':
+                model = Model.rule_name_map.get(e_c_i.name)
+                Model.set_config_rule(model, e_c_i.config)
+            elif eval_type == 'llm':
+                model = Model.llm_name_map.get(e_c_i.name)
+                Model.set_config_llm(model, e_c_i.config)
             else:
-                good_type_list.append(res.type)
-                good_name_list.append(f"{res.type}-{res.name}")
-                good_reason_list.extend(res.reason)
-
-        # Set results
-        target_list = bad_type_list if result_info.error_status else good_type_list
-        result_info.type_list = list(set(target_list))
-        result_info.name_list = (
-            bad_name_list if result_info.error_status else good_name_list
-        )
-        result_info.reason_list = (
-            bad_reason_list if result_info.error_status else good_reason_list
-        )
-
-        return result_info
-
-    def evaluate_prompt(
-        self, group: List, data: Data, llm: BaseLLM
-    ) -> ResultInfo:
-        """Evaluate data against a group of prompts using LLM."""
-        if llm is None:
-            raise ValueError("LLM is required for prompt evaluation")
-
-        result_info = ResultInfo(
-            data_id=data.data_id, prompt=data.prompt, content=data.content
-        )
-
-        bad_type_list = []
-        good_type_list = []
-        bad_name_list = []
-        good_name_list = []
-        bad_reason_list = []
-        good_reason_list = []
-
-        for prompt in group:
-            llm.set_prompt(prompt)
-            res: ModelRes = llm.eval(data)
-
-            if res.error_status:
+                raise ValueError(f"Error eval_type: {eval_type}")
+            tmp: ModelRes = model.eval(Data(**map_data))
+            # Collect error_type from ModelRes
+            if tmp.error_status:
                 result_info.error_status = True
-                bad_type_list.append(res.type)
-                bad_name_list.append(f"{res.type}-{res.name}")
-                bad_reason_list.extend(res.reason)
+                if bad_error_type:
+                    bad_error_type.merge(tmp.error_type)
+                else:
+                    bad_error_type = tmp.error_type.copy()
             else:
-                good_type_list.append(res.type)
-                good_name_list.append(f"{res.type}-{res.name}")
-                good_reason_list.extend(res.reason)
+                if good_error_type:
+                    good_error_type.merge(tmp.error_type)
+                else:
+                    good_error_type = tmp.error_type.copy()
 
-        # Set results
-        target_list = bad_type_list if result_info.error_status else good_type_list
-        result_info.type_list = list(set(target_list))
-        result_info.name_list = (
-            bad_name_list if result_info.error_status else good_name_list
-        )
-        result_info.reason_list = (
-            bad_reason_list if result_info.error_status else good_reason_list
-        )
-
+        # Set result_info fields based on all_labels configuration and add field
+        join_fields = ','.join(eval_fields.values())
+        if self.input_args.executor.result_save.all_labels:
+            all_error_type = None
+            if bad_error_type:
+                all_error_type = bad_error_type.copy()
+            if good_error_type:
+                if all_error_type:
+                    all_error_type.merge(good_error_type)
+                else:
+                    all_error_type = good_error_type.copy()
+            if all_error_type:
+                result_info.error_type = {join_fields: all_error_type}
+        else:
+            if result_info.error_status:
+                if bad_error_type:
+                    result_info.error_type = {join_fields: bad_error_type}
+            else:
+                if good_error_type and self.input_args.executor.result_save.good:
+                    result_info.error_type = {join_fields: good_error_type}
         return result_info
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:

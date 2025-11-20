@@ -25,7 +25,6 @@ class FactCheckResult:
     supporting_evidence: List[Evidence]
 
 
-@Model.prompt_register(metric_type="QUALITY_BAD_FACTUALITY", group=["factuality"])
 @Model.llm_register("LLMFactCheckPublic")
 class LLMFactCheckPublic(BaseOpenAI):
     """公开事实性评估器 - 基于 GPT-5 System Card 的两阶段评估"""

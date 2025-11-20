@@ -203,10 +203,10 @@ appear to be making claims about the topic rather than the model's internal know
             claims = cls._extract_claims(input_data.prompt, input_data.content)
             if not claims:
                 return ModelRes(
-                    score=0.0,
-                    threshold=cls.threshold,
+                    # score=0.0,
+                    # threshold=cls.threshold,
                     reason=["No factual claims found"],
-                    raw_resp={"claims": [], "results": []}
+                    # raw_resp={"claims": [], "results": []}
                 )
 
             # 2. 分批验证
@@ -221,24 +221,26 @@ appear to be making claims about the topic rather than the model's internal know
 
             # 4. 设置评估结果
             result = ModelRes(
-                score=metrics["factual_ratio"],
-                threshold=cls.threshold,
+                # score=metrics["factual_ratio"],
+                # threshold=cls.threshold,
                 reason=[cls._format_reason(metrics)],
-                raw_resp={
-                    "claims": claims,
-                    "results": all_results,
-                    "metrics": metrics
-                }
+                # raw_resp={
+                #     "claims": claims,
+                #     "results": all_results,
+                #     "metrics": metrics
+                # }
             )
 
             # 5. 根据分数设置状态
             if metrics["factual_ratio"] < cls.threshold:
                 result.error_status = True
-                result.type = "QUALITY_BAD_FACTUALITY"
-                result.name = "FACTUALITY_CHECK_FAILED"
+                # result.type = "QUALITY_BAD_FACTUALITY"
+                # result.name = "FACTUALITY_CHECK_FAILED"
+                result.error_type.label = ["QUALITY_BAD_FACTUALITY.FACTUALITY_CHECK_FAILED"]
             else:
-                result.type = "QUALITY_GOOD"
-                result.name = "FACTUALITY_CHECK_PASSED"
+                # result.type = "QUALITY_GOOD"
+                # result.name = "FACTUALITY_CHECK_PASSED"
+                result.error_type.label = ["QUALITY_GOOD.FACTUALITY_CHECK_PASSED"]
 
             return result
 

@@ -95,7 +95,7 @@ class SparkExecutor(ExecProto):
             data_info_list = data_rdd.map(
                 lambda x: self.evaluate(x)
             ).persist()  # Cache the evaluated data for multiple uses
-            
+
             # Save data_info_list as instance variable for summarize method
             self.data_info_list = data_info_list
 
@@ -217,37 +217,37 @@ class SparkExecutor(ExecProto):
     def summarize(self, summary: SummaryModel) -> SummaryModel:
         """
         Summarize evaluation results and calculate type_ratio.
-        
+
         统计所有评估结果中每个字段下每个 label 的出现次数，
         然后除以总数得到比例，填充到 summary.type_ratio 中。
         """
         new_summary = copy.deepcopy(summary)
         if new_summary.total == 0:
             return new_summary
-        
+
         # 使用 Spark 聚合操作统计 error_type
         # data_info_list 的每个元素是 Dict，包含 error_type 字段
         def aggregate_error_types(acc, item):
             """聚合单个 item 的 error_type 到累加器中"""
             error_type_dict = item.get('error_type', {})
-            
+
             # 遍历第一层：字段名
             for field_key, res_type_info_dict in error_type_dict.items():
                 if field_key not in acc:
                     acc[field_key] = {}
-                
+
                 # 从 ResTypeInfo 的 label 列表中获取错误类型
                 label_list = res_type_info_dict.get('label', []) if isinstance(res_type_info_dict, dict) else res_type_info_dict.label
-                
+
                 # 统计每个 label 的出现次数
                 for label in label_list:
                     if label not in acc[field_key]:
                         acc[field_key][label] = 1
                     else:
                         acc[field_key][label] += 1
-            
+
             return acc
-        
+
         def merge_error_types(acc1, acc2):
             """合并两个累加器"""
             for field_key, label_dict in acc2.items():
@@ -260,7 +260,7 @@ class SparkExecutor(ExecProto):
                         else:
                             acc1[field_key][label] += count
             return acc1
-        
+
         # 使用 aggregate 聚合所有 error_type
         # data_info_list 在 execute 中已经被 persist() 并保存为实例变量
         if hasattr(self, 'data_info_list') and self.data_info_list:
@@ -271,7 +271,7 @@ class SparkExecutor(ExecProto):
             )
         else:
             type_ratio_counts = {}
-        
+
         # 将计数转换为比例
         new_summary.type_ratio = {}
         for field_name in type_ratio_counts:
@@ -280,10 +280,9 @@ class SparkExecutor(ExecProto):
                 new_summary.type_ratio[field_name][error_type] = round(
                     type_ratio_counts[field_name][error_type] / new_summary.total, 6
                 )
-        
+
         new_summary.finish_time = time.strftime("%Y%m%d_%H%M%S", time.localtime())
         return new_summary
-
 
     def get_summary(self):
         return self.summary
@@ -303,4 +302,3 @@ class SparkExecutor(ExecProto):
             RDD: 包含所有 good 数据的 RDD，每条数据是 ResultInfo 的字典形式
         """
         return self.good_info_list
-

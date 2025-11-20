@@ -31,9 +31,8 @@ class SparkExecutor(ExecProto):
         spark_conf: SparkConf = None,
     ):
         # Evaluation parameters
-        # self.llm: Optional[BaseLLM] = None
-        # self.group: Optional[Dict] = None
         self.summary: Optional[SummaryModel] = None
+        self.data_info_list: Optional[RDD] = None
         self.bad_info_list: Optional[RDD] = None
         self.good_info_list: Optional[RDD] = None
 
@@ -96,16 +95,20 @@ class SparkExecutor(ExecProto):
             data_info_list = data_rdd.map(
                 lambda x: self.evaluate(x)
             ).persist()  # Cache the evaluated data for multiple uses
+            
+            # Save data_info_list as instance variable for summarize method
+            self.data_info_list = data_info_list
 
             # Filter and count bad/good items
             self.bad_info_list = data_info_list.filter(lambda x: x["error_status"])
-            num_bad = self.bad_info_list.count()
 
             if self.input_args.executor.result_save.good:
                 self.good_info_list = data_info_list.filter(
                     lambda x: not x["error_status"]
                 )
 
+            num_bad = self.bad_info_list.count()
+            num_good = total - num_bad
             # Create summary
             self.summary = SummaryModel(
                 task_id=str(uuid.uuid1()),
@@ -115,7 +118,7 @@ class SparkExecutor(ExecProto):
                 output_path="",
                 create_time=create_time,
                 score=round((total - num_bad) / total * 100, 2) if total > 0 else 0,
-                num_good=total - num_bad,
+                num_good=num_good,
                 num_bad=num_bad,
                 total=total,
             )
@@ -212,75 +215,92 @@ class SparkExecutor(ExecProto):
         return result_info
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:
-        """Generate summary statistics from bad info list."""
-
-        def collect_ratio(data_info_list, key_name: str, total_count: int):
-            data_info_counts = (
-                data_info_list.flatMap(lambda x: [(t, 1) for t in x[key_name]])
-                .reduceByKey(lambda a, b: a + b)
-                .collectAsMap()
-            )
-            return {k: round(v / total_count, 6) for k, v in data_info_counts.items()}
-
-        new_summary = copy.deepcopy(self.summary)
-        if not self.bad_info_list and not self.good_info_list:
+        """
+        Summarize evaluation results and calculate type_ratio.
+        
+        统计所有评估结果中每个字段下每个 label 的出现次数，
+        然后除以总数得到比例，填充到 summary.type_ratio 中。
+        """
+        new_summary = copy.deepcopy(summary)
+        if new_summary.total == 0:
             return new_summary
-        if not self.bad_info_list and self.good_info_list:
-            if not self.input_args.executor.result_save.good:
-                return new_summary
-
-        new_summary.type_ratio = collect_ratio(
-            self.bad_info_list, "type_list", new_summary.total
-        )
-        new_summary.name_ratio = collect_ratio(
-            self.bad_info_list, "name_list", new_summary.total
-        )
-
-        if self.input_args.executor.result_save.good:
-            type_ratio_correct = collect_ratio(
-                self.good_info_list, "type_list", new_summary.total
+        
+        # 使用 Spark 聚合操作统计 error_type
+        # data_info_list 的每个元素是 Dict，包含 error_type 字段
+        def aggregate_error_types(acc, item):
+            """聚合单个 item 的 error_type 到累加器中"""
+            error_type_dict = item.get('error_type', {})
+            
+            # 遍历第一层：字段名
+            for field_key, res_type_info_dict in error_type_dict.items():
+                if field_key not in acc:
+                    acc[field_key] = {}
+                
+                # 从 ResTypeInfo 的 label 列表中获取错误类型
+                label_list = res_type_info_dict.get('label', []) if isinstance(res_type_info_dict, dict) else res_type_info_dict.label
+                
+                # 统计每个 label 的出现次数
+                for label in label_list:
+                    if label not in acc[field_key]:
+                        acc[field_key][label] = 1
+                    else:
+                        acc[field_key][label] += 1
+            
+            return acc
+        
+        def merge_error_types(acc1, acc2):
+            """合并两个累加器"""
+            for field_key, label_dict in acc2.items():
+                if field_key not in acc1:
+                    acc1[field_key] = label_dict.copy()
+                else:
+                    for label, count in label_dict.items():
+                        if label not in acc1[field_key]:
+                            acc1[field_key][label] = count
+                        else:
+                            acc1[field_key][label] += count
+            return acc1
+        
+        # 使用 aggregate 聚合所有 error_type
+        # data_info_list 在 execute 中已经被 persist() 并保存为实例变量
+        if hasattr(self, 'data_info_list') and self.data_info_list:
+            type_ratio_counts = self.data_info_list.aggregate(
+                {},  # 初始累加器
+                aggregate_error_types,  # 聚合单个元素
+                merge_error_types  # 合并累加器
             )
-            name_ratio_correct = collect_ratio(
-                self.good_info_list, "name_list", new_summary.total
-            )
-            new_summary.type_ratio.update(type_ratio_correct)
-            new_summary.name_ratio.update(name_ratio_correct)
-
-        new_summary.type_ratio = dict(sorted(new_summary.type_ratio.items()))
-        new_summary.name_ratio = dict(sorted(new_summary.name_ratio.items()))
-
+        else:
+            type_ratio_counts = {}
+        
+        # 将计数转换为比例
+        new_summary.type_ratio = {}
+        for field_name in type_ratio_counts:
+            new_summary.type_ratio[field_name] = {}
+            for error_type in type_ratio_counts[field_name]:
+                new_summary.type_ratio[field_name][error_type] = round(
+                    type_ratio_counts[field_name][error_type] / new_summary.total, 6
+                )
+        
         new_summary.finish_time = time.strftime("%Y%m%d_%H%M%S", time.localtime())
         return new_summary
+
 
     def get_summary(self):
         return self.summary
 
     def get_bad_info_list(self):
-        if self.input_args.executor.result_save.raw:
-            return self.bad_info_list.map(
-                lambda x: {
-                    **x["raw_data"],
-                    "dingo_result": {
-                        "error_status": x["error_status"],
-                        "type_list": x["type_list"],
-                        "name_list": x["name_list"],
-                        "reason_list": x["reason_list"],
-                    },
-                }
-            )
+        """
+        获取所有 error_status 为 True 的数据列表
+        Returns:
+            RDD: 包含所有 bad 数据的 RDD，每条数据是 ResultInfo 的字典形式
+        """
         return self.bad_info_list
 
     def get_good_info_list(self):
-        if self.input_args.executor.result_save.raw:
-            return self.good_info_list.map(
-                lambda x: {
-                    **x["raw_data"],
-                    "dingo_result": {
-                        "error_status": x["error_status"],
-                        "type_list": x["type_list"],
-                        "name_list": x["name_list"],
-                        "reason_list": x["reason_list"],
-                    },
-                }
-            )
+        """
+        获取所有 error_status 为 False 的数据列表
+        Returns:
+            RDD: 包含所有 good 数据的 RDD，每条数据是 ResultInfo 的字典形式
+        """
         return self.good_info_list
+

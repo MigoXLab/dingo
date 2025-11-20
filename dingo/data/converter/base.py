@@ -47,42 +47,42 @@ class BaseConverter(ConverterProto):
         return res if isinstance(res, List) else [res]
 
 
-@BaseConverter.register("chatml-jsonl")
-class ChatMLConvertor(BaseConverter):
-    """Ddm chatml file converter."""
-
-    def __init__(self):
-        super().__init__()
-
-    @classmethod
-    def convertor(cls, input_args: InputArgs) -> Callable:
-        def _convert(raw: Union[str, Dict]):
-            j = raw
-            if isinstance(raw, str):
-                j = json.loads(raw)
-
-            dialogs: list = j["dialogs"]
-            prompt = ""
-            content = ""
-
-            for i in dialogs[:-1]:
-                prompt += f"{i['role']:}\n\n"
-                prompt += f"{i['content']}\n\n"
-
-            if len(dialogs) > 1:
-                prompt += dialogs[-1]["role"]
-                content += dialogs[-1]["content"]
-
-            return Data(
-                **{
-                    "data_id": j["_id"],
-                    "prompt": prompt,
-                    "content": content,
-                    "raw_data": j,
-                }
-            )
-
-        return _convert
+# @BaseConverter.register("chatml-jsonl")
+# class ChatMLConvertor(BaseConverter):
+#     """Ddm chatml file converter."""
+#
+#     def __init__(self):
+#         super().__init__()
+#
+#     @classmethod
+#     def convertor(cls, input_args: InputArgs) -> Callable:
+#         def _convert(raw: Union[str, Dict]):
+#             j = raw
+#             if isinstance(raw, str):
+#                 j = json.loads(raw)
+#
+#             dialogs: list = j["dialogs"]
+#             prompt = ""
+#             content = ""
+#
+#             for i in dialogs[:-1]:
+#                 prompt += f"{i['role']:}\n\n"
+#                 prompt += f"{i['content']}\n\n"
+#
+#             if len(dialogs) > 1:
+#                 prompt += dialogs[-1]["role"]
+#                 content += dialogs[-1]["content"]
+#
+#             return Data(
+#                 **{
+#                     "data_id": j["_id"],
+#                     "prompt": prompt,
+#                     "content": content,
+#                     "raw_data": j,
+#                 }
+#             )
+#
+#         return _convert
 
 
 @BaseConverter.register("multi_turn_dialog")
@@ -273,44 +273,44 @@ class ImageConverter(BaseConverter):
         return _convert
 
 
-@BaseConverter.register("s3_image")
-class S3ImageConverter(BaseConverter):
-    """S3 Image converter."""
-
-    data_id = 0
-
-    def __init__(self):
-        super().__init__()
-
-    @classmethod
-    def convertor(cls, input_args: InputArgs) -> Callable:
-        def _convert(raw: Union[str, Dict]):
-            j = raw
-            if isinstance(raw, str):
-                j = json.loads(raw)
-            cls.data_id += 1
-            return Data(
-                **{
-                    "data_id": (
-                        cls.find_levels_data(j, input_args.dataset.field.id)
-                        if input_args.dataset.field.id != ""
-                        else str(cls.data_id)
-                    ),
-                    "prompt": (
-                        cls.find_levels_data(j, input_args.dataset.field.prompt)
-                        if input_args.dataset.field.prompt != ""
-                        else ""
-                    ),
-                    "content": (
-                        cls.find_levels_data(j, input_args.dataset.field.content)
-                        if input_args.dataset.field.content != ""
-                        else ""
-                    ),
-                    "image": find_s3_image(j, input_args)
-                    if input_args.dataset.field.image != ""
-                    else "",
-                    "raw_data": j,
-                }
-            )
-
-        return _convert
+# @BaseConverter.register("s3_image")
+# class S3ImageConverter(BaseConverter):
+#     """S3 Image converter."""
+#
+#     data_id = 0
+#
+#     def __init__(self):
+#         super().__init__()
+#
+#     @classmethod
+#     def convertor(cls, input_args: InputArgs) -> Callable:
+#         def _convert(raw: Union[str, Dict]):
+#             j = raw
+#             if isinstance(raw, str):
+#                 j = json.loads(raw)
+#             cls.data_id += 1
+#             return Data(
+#                 **{
+#                     "data_id": (
+#                         cls.find_levels_data(j, input_args.dataset.field.id)
+#                         if input_args.dataset.field.id != ""
+#                         else str(cls.data_id)
+#                     ),
+#                     "prompt": (
+#                         cls.find_levels_data(j, input_args.dataset.field.prompt)
+#                         if input_args.dataset.field.prompt != ""
+#                         else ""
+#                     ),
+#                     "content": (
+#                         cls.find_levels_data(j, input_args.dataset.field.content)
+#                         if input_args.dataset.field.content != ""
+#                         else ""
+#                     ),
+#                     "image": find_s3_image(j, input_args)
+#                     if input_args.dataset.field.image != ""
+#                     else "",
+#                     "raw_data": j,
+#                 }
+#             )
+#
+#         return _convert

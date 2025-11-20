@@ -147,19 +147,21 @@ class LLMHallucination(BaseOpenAI):
         # Set error_status based on threshold
         if score > cls.threshold:
             result.error_status = True
-            result.type = "QUALITY_BAD_HALLUCINATION"
-            result.name = "HALLUCINATION_DETECTED"
+            # result.type = "QUALITY_BAD_HALLUCINATION"
+            # result.name = "HALLUCINATION_DETECTED"
+            result.error_type.label = ['QUALITY_BAD_HALLUCINATION.HALLUCINATION_DETECTED']
         else:
-            result.type = "QUALITY_GOOD"
-            result.name = "NO_HALLUCINATION"
+            # result.type = "QUALITY_GOOD"
+            # result.name = "NO_HALLUCINATION"
+            result.error_type.label = ['QUALITY_GOOD.NO_HALLUCINATION']
 
         result.reason = [reason]
 
         # Store additional metadata
-        result.score = score
-        result.verdict_details = [
-            f"{v.verdict}: {v.reason}" for v in verdicts
-        ]
+        # result.score = score
+        # result.verdict_details = [
+        #     f"{v.verdict}: {v.reason}" for v in verdicts
+        # ]
 
         log.info(f"Hallucination score: {score:.3f}, threshold: {cls.threshold}")
 
@@ -226,9 +228,13 @@ class LLMHallucination(BaseOpenAI):
         if not hasattr(input_data, 'context') or not input_data.context:
             return ModelRes(
                 error_status=True,
-                type="QUALITY_BAD",
-                name="MISSING_CONTEXT",
-                reason=["Context is required for hallucination detection but was not provided"]
+                # type="QUALITY_BAD",
+                # name="MISSING_CONTEXT",
+                # reason=["Context is required for hallucination detection but was not provided"]
+                error_type = {
+                    "label": ["QUALITY_BAD.MISSING_CONTEXT"],
+                    "reason": ["Context is required for hallucination detection but was not provided"]
+                }
             )
 
         # Call parent eval method

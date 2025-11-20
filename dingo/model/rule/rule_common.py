@@ -88,10 +88,11 @@ class RuleAbnormalNumber(BaseRule):
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
             res.error_status = True
-            res.error_type = {f"{cls.metric_type}.{cls.__name__}": {
+            res.error_type = {
+                "label": f"{cls.metric_type}.{cls.__name__}",
                 "metric": [cls.__name__],
                 "reason": [match.group(0).strip("\n")]
-            }}
+            }
         return res
 
 

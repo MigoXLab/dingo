@@ -8,7 +8,6 @@ from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io import Data
 from dingo.model.llm.base import BaseLLM
 from dingo.model.modelres import ModelRes
-from dingo.model.prompt.base import BasePrompt
 from dingo.model.response.response_class import ResponseScoreReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError, ExceedMaxTokens

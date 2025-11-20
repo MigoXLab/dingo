@@ -119,7 +119,8 @@ class TestConvertResult:
         structured = ResponseNameReason(name="A", reason="工具A更完整")
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
-        assert result.type == "TOOL_ONE_BETTER"
+        # assert result.type == "TOOL_ONE_BETTER"
+        assert "TOOL_ONE_BETTER" in result.error_type.label
         assert result.error_status is False
 
     def test_convert_b_to_equal(self):
@@ -127,7 +128,8 @@ class TestConvertResult:
         structured = ResponseNameReason(name="B", reason="两者相同")
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
-        assert result.type == "TOOL_EQUAL"
+        # assert result.type == "TOOL_EQUAL"
+        assert "TOOL_EQUAL" in result.error_type.label
         assert result.error_status is False
 
     def test_convert_c_to_tool_two_better(self):
@@ -135,7 +137,8 @@ class TestConvertResult:
         structured = ResponseNameReason(name="C", reason="工具B更完整")
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
-        assert result.type == "TOOL_TWO_BETTER"
+        # assert result.type == "TOOL_TWO_BETTER"
+        assert "TOOL_TWO_BETTER" in result.error_type.label
         assert result.error_status is True
 
 
@@ -147,7 +150,8 @@ class TestCompleteFlow:
         response = "分析...\n<Judgement>A</Judgement>"
         result = LLMHtmlExtractCompareV2.process_response(response)
 
-        assert result.type == "TOOL_ONE_BETTER"
+        # assert result.type == "TOOL_ONE_BETTER"
+        assert "TOOL_ONE_BETTER" in result.error_type.label
         assert result.error_status is False
 
     def test_process_response_b(self):
@@ -155,7 +159,8 @@ class TestCompleteFlow:
         response = "判断：B"
         result = LLMHtmlExtractCompareV2.process_response(response)
 
-        assert result.type == "TOOL_EQUAL"
+        # assert result.type == "TOOL_EQUAL"
+        assert "TOOL_EQUAL" in result.error_type.label
         assert result.error_status is False
 
     def test_process_response_c(self):
@@ -163,5 +168,6 @@ class TestCompleteFlow:
         response = "<Judgement>C</Judgement>"
         result = LLMHtmlExtractCompareV2.process_response(response)
 
-        assert result.type == "TOOL_TWO_BETTER"
+        # assert result.type == "TOOL_TWO_BETTER"
+        assert "TOOL_TWO_BETTER" in result.error_type.label
         assert result.error_status is True

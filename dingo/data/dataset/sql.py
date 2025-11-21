@@ -87,4 +87,3 @@ class SqlDataset(Dataset):
             A SqlDataSource instance
         """
         return self._source
-

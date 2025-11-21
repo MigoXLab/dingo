@@ -187,7 +187,7 @@ for data in dataset.get_data():
 
 ```python
 sql_query = """
-    SELECT 
+    SELECT
         t1.id,
         t1.prompt,
         t1.content,
@@ -208,7 +208,7 @@ sql_query = """
 
 ```python
 sql_query = """
-    SELECT 
+    SELECT
         id,
         question AS prompt,
         answer AS content,
@@ -290,7 +290,7 @@ pip install pymysql          # MySQL
 
 ### 问题3: 连接超时
 
-**解决**: 
+**解决**:
 - 检查数据库服务是否运行
 - 检查网络连接和防火墙设置
 - 验证主机地址和端口号
@@ -309,6 +309,5 @@ pip install pymysql          # MySQL
 ## 更多资源
 
 - [SQLAlchemy 文档](https://docs.sqlalchemy.org/)
-- [Dingo 文档](../README.md)
-- [配置说明](./config.md)
-
+- [Dingo 文档](../../README.md)
+- [配置说明](../config.md)

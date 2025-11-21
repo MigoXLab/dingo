@@ -97,14 +97,14 @@ class LocalExecutor(ExecProto):
                         else:
                             map_data = data.to_dict()
                         eval_list_rule = [eval for eval in e_p.evals if eval.name in Model.rule_name_map]
-                        eval_list_prompt = [eval for eval in e_p.evals if eval.name in Model.llm_name_map]
+                        eval_list_llm = [eval for eval in e_p.evals if eval.name in Model.llm_name_map]
                         # rule
                         if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
                             futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields, 'rule', map_data, eval_list_rule)]
                         else:
                             futures += [process_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields, 'rule', map_data, eval_list_rule)]
-                        # prompt
-                        futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields, 'prompt', map_data, eval_list_prompt)]
+                        # llm
+                        futures += [thread_executor.submit(self.evaluate_single_data, str(track_id), e_p.fields, 'llm', map_data, eval_list_llm)]
 
                 for future in concurrent.futures.as_completed(futures):
                     result_info = future.result()
@@ -155,11 +155,11 @@ class LocalExecutor(ExecProto):
 
     def evaluate_single_data(self, track_id: str, eval_fields: dict, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
         """
-        Unified evaluation function for both rule and prompt evaluation types.
+        Unified evaluation function for both rule and llm evaluation types.
 
         Args:
             track_id: Tracking ID for the data item
-            eval_type: Type of evaluation ('rule' or 'prompt')
+            eval_type: Type of evaluation ('rule' or 'llm')
             map_data: Mapped data fields
             eval_list: List of evaluations to perform
 
@@ -170,23 +170,18 @@ class LocalExecutor(ExecProto):
         bad_error_type = None
         good_error_type = None
 
-        # Select appropriate name_map and config method based on eval_type
-        if eval_type == 'rule':
-            name_map = Model.rule_name_map
-            set_config = Model.set_config_rule
-        elif eval_type == 'prompt':
-            name_map = Model.llm_name_map
-            set_config = Model.set_config_llm
-        else:
-            raise ValueError(f"Unsupported eval_type: {eval_type}")
-
         for e_c_i in eval_list:
             # Get model class and instantiate
-            model_cls = name_map.get(e_c_i.name)
-            model = model_cls()
-
-            # Configure model instance
-            set_config(model, e_c_i.config)
+            if eval_type == 'rule':
+                model_cls = Model.rule_name_map.get(e_c_i.name)
+                model = model_cls()  # 实例化类为对象，避免多线程配置覆盖
+                Model.set_config_rule(model, e_c_i.config)
+            elif eval_type == 'llm':
+                model_cls = Model.llm_name_map.get(e_c_i.name)
+                model = model_cls()  # 实例化类为对象，避免多线程配置覆盖
+                Model.set_config_llm(model, e_c_i.config)
+            else:
+                raise ValueError(f"Error eval_type: {eval_type}")
 
             # Execute evaluation
             tmp: ModelRes = model.eval(Data(**map_data))

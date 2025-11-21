@@ -13,7 +13,7 @@ from dingo.utils.exception import ConvertJsonError
 
 @Model.llm_register("LLMHtmlExtractCompareEn")
 class LLMHtmlExtractCompareEn(BaseOpenAI):
-    prompt = """
+    prompt = r"""
     You are a professional HTML content extraction evaluator, skilled in analyzing the conversion quality between HTML code and Markdown text. I will provide three pieces of content:
 
     1. **Original HTML Code**: The complete HTML structure of the webpage.
@@ -37,7 +37,7 @@ class LLMHtmlExtractCompareEn(BaseOpenAI):
 
     **Markdown Element Statistics:**
     - Code blocks: ```...``` or indented code
-    - Formulas: $ ... $ $$ ... $$ \(...\) \[...\]
+    - Formulas: $...$ $$...$$ \(...\) \[...\]
     - Tables: |...| format
     - Images: ![](...) format
     - Lists: -, *, 1. markers

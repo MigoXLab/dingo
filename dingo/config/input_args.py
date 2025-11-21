@@ -20,6 +20,16 @@ class DatasetS3ConfigArgs(BaseModel):
     s3_addressing_style: str = "path"
 
 
+class DatasetSqlArgs(BaseModel):
+    dialect: str = ''
+    driver: str = ''
+    username: str = ''
+    password: str = ''
+    host: str = ''
+    port: str = ''
+    database: str = ''
+
+
 class DatasetFieldArgs(BaseModel):
     id: str = ''
     prompt: str = ''
@@ -35,6 +45,7 @@ class DatasetArgs(BaseModel):
     fields: List[str] = []
     hf_config: DatasetHFConfigArgs = DatasetHFConfigArgs()
     s3_config: DatasetS3ConfigArgs = DatasetS3ConfigArgs()
+    sql_config: DatasetSqlArgs = DatasetSqlArgs()
 
 
 class ExecutorResultSaveArgs(BaseModel):

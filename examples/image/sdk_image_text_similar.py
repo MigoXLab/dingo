@@ -8,19 +8,21 @@ def image_text_similar():
         "dataset": {
             "source": "local",
             "format": "image",
-            "field": {
-                "id": "id",
-                "content": "content",
-                "image": "img"
-            }
         },
         "executor": {
-            "rule_list": ["RuleImageTextSimilarity"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        }
+        },
+        "evaluator": [
+            {
+                "fields": {"id": "id", "content": "content", "image": "img"},
+                "evals": [
+                    {"name": "RuleImageTextSimilarity"}
+                ]
+            }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

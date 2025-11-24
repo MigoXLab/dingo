@@ -8,7 +8,7 @@ Multi_Lan Dataset aims to evaluate the ability of Dingo's built-in prompt to min
 | data_id      | A unique identifier for each data entry, without special significance; users can modify it according to their needs.      |
 | content      | The text content awaiting quality inspection.                   |
 | language     | The language of the content.                           |
-| error_status | Data status: True indicates low-quality data, False indicates high-quality data.|
+| eval_status | Data status: True indicates low-quality data, False indicates high-quality data.|
 | type_list    | Types of problems found in low-quality data; this field is an empty list for normal data.       |
 | name_list    | Names of issues found in low-quality data; this field is an empty list for normal data.       |
 | reason_list  | Descriptions of problems found in low-quality data; this field is an empty list for normal data.       |

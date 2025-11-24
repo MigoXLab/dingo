@@ -7,25 +7,21 @@ if __name__ == '__main__':
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "content": "content"
-            }
         },
         "executor": {
-            "prompt_list": ["PromptPolitics"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMSecurityPolitics": {
-                    "key": "",
-                    "api_url": "",
-                }
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "LLMSecurityPolitics", "config": {"key": "", "api_url": ""}}
+                ],
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

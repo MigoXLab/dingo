@@ -33,7 +33,7 @@ python examples/rag/sdk_rag_eval.py
 import os
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
-from dingo.model.llm.llm_rag_faithfulness import LLMRAGFaithfulness
+from dingo.model.llm.rag.llm_rag_faithfulness import LLMRAGFaithfulness
 
 # 配置LLM
 LLMRAGFaithfulness.dynamic_config = EvaluatorLLMArgs(
@@ -438,7 +438,7 @@ config = InputArgs(**{
 
 ```python
 from dingo.io.input import Data
-from dingo.model.llm.llm_rag_faithfulness import LLMRAGFaithfulness
+from dingo.model.llm.rag.llm_rag_faithfulness import LLMRAGFaithfulness
 
 # 答案包含上下文中没有的信息
 data = Data(
@@ -456,7 +456,7 @@ print(f"理由: {result.reason[0]}")
 ### 场景2: 评估检索质量 (Context Precision)
 
 ```python
-from dingo.model.llm.llm_rag_context_precision import LLMRAGContextPrecision
+from dingo.model.llm.rag.llm_rag_context_precision import LLMRAGContextPrecision
 
 # 检索到的上下文质量参差不齐
 data = Data(
@@ -476,7 +476,7 @@ result = LLMRAGContextPrecision.eval(data)
 ### 场景3: 发现遗漏信息 (Context Recall)
 
 ```python
-from dingo.model.llm.llm_rag_context_recall import LLMRAGContextRecall
+from dingo.model.llm.rag.llm_rag_context_recall import LLMRAGContextRecall
 
 # 检索遗漏了重要信息
 data = Data(
@@ -492,7 +492,7 @@ result = LLMRAGContextRecall.eval(data)
 ### 场景4: 检测答案跑题 (Answer Relevancy)
 
 ```python
-from dingo.model.llm.llm_rag_answer_relevancy import LLMRAGAnswerRelevancy
+from dingo.model.llm.rag.llm_rag_answer_relevancy import LLMRAGAnswerRelevancy
 
 # 答案包含大量无关信息
 data = Data(
@@ -507,7 +507,7 @@ result = LLMRAGAnswerRelevancy.eval(data)
 ### 场景5: 检测噪声上下文 (Context Relevancy)
 
 ```python
-from dingo.model.llm.llm_rag_context_relevancy import LLMRAGContextRelevancy
+from dingo.model.llm.rag.llm_rag_context_relevancy import LLMRAGContextRelevancy
 
 # 检索包含大量噪声
 data = Data(

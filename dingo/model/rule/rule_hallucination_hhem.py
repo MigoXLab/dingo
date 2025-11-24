@@ -89,10 +89,15 @@ class RuleHallucinationHHEM(BaseRule):
             else:
                 # No context available - cannot evaluate
                 result = ModelRes()
-                result.error_status = True
-                result.type = cls.metric_type
-                result.name = "MISSING_CONTEXT"
-                result.reason = ["Context is required for HHEM hallucination detection but was not provided"]
+                result.eval_status = True
+                # result.type = cls.metric_type
+                # result.name = "MISSING_CONTEXT"
+                # result.reason = ["Context is required for HHEM hallucination detection but was not provided"]
+                result.eval_details = {
+                    "label": [f"{cls.metric_type}.MISSING_CONTEXT"],
+                    "metric": [cls.__name__],
+                    "reason": ["Context is required for HHEM hallucination detection but was not provided"]
+                }
                 return result
         else:
             contexts = input_data.context
@@ -135,13 +140,14 @@ class RuleHallucinationHHEM(BaseRule):
 
             # Create result
             result = ModelRes()
-            result.score = avg_hallucination_score
+            # result.score = avg_hallucination_score
 
             # Determine if hallucination detected based on threshold
             if avg_hallucination_score > cls.dynamic_config.threshold:
-                result.error_status = True
-                result.type = cls.metric_type
-                result.name = "HALLUCINATION_DETECTED"
+                result.eval_status = True
+                # result.type = cls.metric_type
+                # result.name = "HALLUCINATION_DETECTED"
+                result.eval_details.label = [f"{cls.metric_type}.HALLUCINATION_DETECTED"]
 
                 # Generate detailed analysis
                 analysis_parts = [
@@ -183,11 +189,13 @@ class RuleHallucinationHHEM(BaseRule):
                     "💡 模型信息: 使用 Vectara HHEM-2.1-Open (本地推理)"
                 ])
 
-                result.reason = ["\n".join(analysis_parts)]
+                # result.reason = ["\n".join(analysis_parts)]
+                result.eval_details.reason = ["\n".join(analysis_parts)]
             else:
-                result.error_status = False
-                result.type = "QUALITY_GOOD"
-                result.name = "NO_HALLUCINATION"
+                result.eval_status = False
+                # result.type = "QUALITY_GOOD"
+                # result.name = "NO_HALLUCINATION"
+                result.eval_details.label = ['QUALITY_GOOD.NO_HALLUCINATION']
 
                 # Generate analysis for non-hallucination case
                 analysis = (
@@ -197,17 +205,23 @@ class RuleHallucinationHHEM(BaseRule):
                     f"🎉 结论: 未检测到幻觉，回答与上下文基本一致\n"
                     f"💡 模型信息: 使用 Vectara HHEM-2.1-Open (本地推理)"
                 )
-                result.reason = [analysis]
+                # result.reason = [analysis]
+                result.eval_details.reason = [analysis]
 
             return result
 
         except Exception as e:
             # Handle model inference errors
             result = ModelRes()
-            result.error_status = True
-            result.type = cls.metric_type
-            result.name = "HHEM_ERROR"
-            result.reason = [f"HHEM model inference failed: {str(e)}"]
+            result.eval_status = True
+            # result.type = cls.metric_type
+            # result.name = "HHEM_ERROR"
+            # result.reason = [f"HHEM model inference failed: {str(e)}"]
+            result.eval_details = {
+                "label": [f"{cls.metric_type}.HHEM_ERROR"],
+                "metric": [cls.__name__],
+                "reason": [f"HHEM model inference failed: {str(e)}"]
+            }
             return result
 
     @classmethod
@@ -221,11 +235,11 @@ class RuleHallucinationHHEM(BaseRule):
         result = cls.eval(input_data)
 
         return {
-            "overall_score": getattr(result, 'score', 0.0),
-            "is_hallucinated": result.error_status,
+            # "overall_score": getattr(result, 'score', 0.0),
+            "is_hallucinated": result.eval_status,
             "threshold": cls.dynamic_config.threshold,
-            "assessment_type": result.type,
-            "assessment_name": result.name,
+            # "assessment_type": result.type,
+            # "assessment_name": result.name,
             "analysis": result.reason[0] if result.reason else "",
             "model_info": "HHEM-2.1-Open (Vectara)"
         }

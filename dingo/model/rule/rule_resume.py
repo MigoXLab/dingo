@@ -33,10 +33,16 @@ class RuleResumeIDCard(BaseRule):
         content = input_data.content
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found ID card number: " + match.group(0)[:6] + "****" + match.group(0)[-4:]]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found ID card number: " + match.group(0)[:6] + "****" + match.group(0)[-4:]]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -64,10 +70,16 @@ class RuleResumeDetailedAddress(BaseRule):
         content = input_data.content
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found detailed address: " + match.group(0)]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found detailed address: " + match.group(0)]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -98,10 +110,16 @@ class RuleResumeEmailMissing(BaseRule):
         content = input_data.content
         match = re.search(cls.dynamic_config.pattern, content)
         if not match:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Email address not found in resume"]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Email address not found in resume"]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -129,10 +147,16 @@ class RuleResumePhoneMissing(BaseRule):
         content = input_data.content
         match = re.search(cls.dynamic_config.pattern, content)
         if not match:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Phone number not found in resume"]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Phone number not found in resume"]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -161,10 +185,16 @@ class RuleResumePhoneFormat(BaseRule):
         matches = re.findall(cls.dynamic_config.pattern, content)
         invalid_phones = [m for m in matches if not m.startswith(('13', '14', '15', '16', '17', '18', '19'))]
         if invalid_phones:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Invalid phone format: " + ", ".join(invalid_phones)]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Invalid phone format: " + ", ".join(invalid_phones)]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -195,10 +225,16 @@ class RuleResumeExcessiveWhitespace(BaseRule):
         content = input_data.content
         matches = re.findall(cls.dynamic_config.pattern, content)
         if len(matches) >= cls.dynamic_config.threshold:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found " + str(len(matches)) + " instances of excessive whitespace"]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found " + str(len(matches)) + " instances of excessive whitespace"]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -226,10 +262,16 @@ class RuleResumeMarkdown(BaseRule):
         content = input_data.content
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Markdown syntax error: " + match.group(0)]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Markdown syntax error: " + match.group(0)]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -261,10 +303,16 @@ class RuleResumeNameMissing(BaseRule):
         first_section = content[:200]
         # Check if first section contains Chinese name pattern or heading
         if not re.search(r'(^#\s*.+|^.{2,4}$)', first_section, re.MULTILINE):
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Name or heading not found in the first section"]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Name or heading not found in the first section"]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -292,10 +340,16 @@ class RuleResumeSectionMissing(BaseRule):
         content = input_data.content.lower()
         matches = re.findall(cls.dynamic_config.pattern, content, re.IGNORECASE)
         if len(matches) < cls.dynamic_config.threshold:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Required sections (education/experience) not found"]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Required sections (education/experience) not found"]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -326,10 +380,16 @@ class RuleResumeEmoji(BaseRule):
         content = input_data.content
         matches = re.findall(cls.dynamic_config.pattern, content)
         if matches:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found " + str(len(matches)) + " emoji characters"]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found " + str(len(matches)) + " emoji characters"]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -357,10 +417,16 @@ class RuleResumeInformal(BaseRule):
         content = input_data.content
         matches = re.findall(cls.dynamic_config.pattern, content)
         if matches:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Found informal language: " + ", ".join(set(matches))]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Found informal language: " + ", ".join(set(matches))]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -393,10 +459,20 @@ class RuleResumeDateFormat(BaseRule):
         if matches:
             separators = set([re.search(r'[-./年]', m).group(0) for m in matches])
             if len(separators) > 1:
-                res.error_status = True
-                res.type = cls.metric_type
-                res.name = cls.__name__
-                res.reason = ["Inconsistent date formats found: " + ", ".join(matches[:3])]
+                res.eval_status = True
+                res.eval_details = {
+                    "label": [f"{cls.metric_type}.{cls.__name__}"],
+                    "metric": [cls.__name__],
+                    "reason": ["Inconsistent date formats found: " + ", ".join(matches[:3])]
+                }
+            else:
+                res.eval_details = {
+                    "label": ["QUALITY_GOOD"]
+                }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -427,10 +503,16 @@ class RuleResumeEducationMissing(BaseRule):
         content = input_data.content.lower()
         match = re.search(cls.dynamic_config.pattern, content, re.IGNORECASE)
         if not match:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Education section not found in resume"]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Education section not found in resume"]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res
 
 
@@ -458,8 +540,14 @@ class RuleResumeExperienceMissing(BaseRule):
         content = input_data.content.lower()
         match = re.search(cls.dynamic_config.pattern, content, re.IGNORECASE)
         if not match:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = ["Work experience section not found in resume"]
+            res.eval_status = True
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": ["Work experience section not found in resume"]
+            }
+        else:
+            res.eval_details = {
+                "label": ["QUALITY_GOOD"]
+            }
         return res

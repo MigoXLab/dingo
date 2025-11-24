@@ -9,29 +9,21 @@ def image_relevant():
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "id": "id",
-                "prompt": "url_1",
-                "content": "url_2"
-            }
         },
         "executor": {
-            "prompt_list": ["PromptImageRelevant"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                # IMPORTANT: VLMImageRelevant requires a vision-language model (VLM)
-                "VLMImageRelevant": {
-                    "model": "",  # e.g. qwen3-vl, gpt-4o, doubao-seed-vision
-                    "key": "",
-                    "api_url": "",
-                }
+        "evaluator": [
+            {
+                "fields": {"id": "id", "prompt": "url_1", "content": "url_2"},
+                "evals": [
+                    {"name": "VLMImageRelevant", "config": {"model": "", "key": "", "api_url": ""}},
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

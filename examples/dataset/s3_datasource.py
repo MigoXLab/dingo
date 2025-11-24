@@ -25,9 +25,6 @@ if __name__ == '__main__':
         "dataset": {
             "source": "s3",  # 使用 S3 数据源
             "format": "jsonl",  # 支持 "jsonl" 或 "plaintext"
-            "field": {
-                "content": "content"  # 从 JSON 中提取的字段名
-            },
             # S3 连接配置
             "s3_config": {
                 "s3_ak": S3_ACCESS_KEY,
@@ -40,12 +37,19 @@ if __name__ == '__main__':
 
         # 执行器配置
         "executor": {
-            "rule_list": ["RuleColonEnd"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        }
+        },
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "RuleColonEnd"}
+                ]
+            }
+        ]
 
         # # 评估器配置
         # "evaluator": {

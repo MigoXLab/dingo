@@ -11,11 +11,11 @@ import os
 
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
-from dingo.model.llm.llm_rag_answer_relevancy import LLMRAGAnswerRelevancy
-from dingo.model.llm.llm_rag_context_precision import LLMRAGContextPrecision
-from dingo.model.llm.llm_rag_context_recall import LLMRAGContextRecall
-from dingo.model.llm.llm_rag_context_relevancy import LLMRAGContextRelevancy
-from dingo.model.llm.llm_rag_faithfulness import LLMRAGFaithfulness
+from dingo.model.llm.rag.llm_rag_answer_relevancy import LLMRAGAnswerRelevancy
+from dingo.model.llm.rag.llm_rag_context_precision import LLMRAGContextPrecision
+from dingo.model.llm.rag.llm_rag_context_recall import LLMRAGContextRecall
+from dingo.model.llm.rag.llm_rag_context_relevancy import LLMRAGContextRelevancy
+from dingo.model.llm.rag.llm_rag_faithfulness import LLMRAGFaithfulness
 
 # 配置（从环境变量读取，或直接设置）
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")

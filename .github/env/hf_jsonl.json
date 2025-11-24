@@ -2,12 +2,14 @@
     "input_path": "chupei/format-jsonl",
     "dataset": {
         "source": "hugging_face",
-        "format": "jsonl",
-        "field": {
-            "content": "content"
-        }
+        "format": "jsonl"
     },
-    "executor": {
-        "eval_group": "default"
-    }
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleColonEnd"}
+            ]
+        }
+    ]
 }

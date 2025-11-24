@@ -11,12 +11,8 @@ LLMHtmlExtractCompareV2 核心测试
 pytest test/scripts/model/llm/test_llm_html_extract_compare_v2.py -v
 """
 
-from unittest.mock import Mock, patch
-
-import pytest
-
 from dingo.io import Data
-from dingo.model.llm.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
+from dingo.model.llm.compare.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
 from dingo.model.response.response_class import ResponseNameReason
 
 
@@ -123,24 +119,27 @@ class TestConvertResult:
         structured = ResponseNameReason(name="A", reason="工具A更完整")
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
-        assert result.type == "TOOL_ONE_BETTER"
-        assert result.error_status is False
+        # assert result.type == "TOOL_ONE_BETTER"
+        assert "TOOL_ONE_BETTER" in result.eval_details.label
+        assert result.eval_status is False
 
     def test_convert_b_to_equal(self):
         """B -> TOOL_EQUAL"""
         structured = ResponseNameReason(name="B", reason="两者相同")
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
-        assert result.type == "TOOL_EQUAL"
-        assert result.error_status is False
+        # assert result.type == "TOOL_EQUAL"
+        assert "TOOL_EQUAL" in result.eval_details.label
+        assert result.eval_status is False
 
     def test_convert_c_to_tool_two_better(self):
         """C -> TOOL_TWO_BETTER"""
         structured = ResponseNameReason(name="C", reason="工具B更完整")
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
-        assert result.type == "TOOL_TWO_BETTER"
-        assert result.error_status is True
+        # assert result.type == "TOOL_TWO_BETTER"
+        assert "TOOL_TWO_BETTER" in result.eval_details.label
+        assert result.eval_status is True
 
 
 class TestCompleteFlow:
@@ -151,21 +150,24 @@ class TestCompleteFlow:
         response = "分析...\n<Judgement>A</Judgement>"
         result = LLMHtmlExtractCompareV2.process_response(response)
 
-        assert result.type == "TOOL_ONE_BETTER"
-        assert result.error_status is False
+        # assert result.type == "TOOL_ONE_BETTER"
+        assert "TOOL_ONE_BETTER" in result.eval_details.label
+        assert result.eval_status is False
 
     def test_process_response_b(self):
         """测试完整流程B"""
         response = "判断：B"
         result = LLMHtmlExtractCompareV2.process_response(response)
 
-        assert result.type == "TOOL_EQUAL"
-        assert result.error_status is False
+        # assert result.type == "TOOL_EQUAL"
+        assert "TOOL_EQUAL" in result.eval_details.label
+        assert result.eval_status is False
 
     def test_process_response_c(self):
         """测试完整流程C"""
         response = "<Judgement>C</Judgement>"
         result = LLMHtmlExtractCompareV2.process_response(response)
 
-        assert result.type == "TOOL_TWO_BETTER"
-        assert result.error_status is True
+        # assert result.type == "TOOL_TWO_BETTER"
+        assert "TOOL_TWO_BETTER" in result.eval_details.label
+        assert result.eval_status is True

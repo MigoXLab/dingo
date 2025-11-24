@@ -7,19 +7,23 @@ if __name__ == '__main__':
         "dataset": {
             "source": "local",
             "format": "multi_turn_dialog",
-            "field": {
-                "id": "id",
-                "content": "history"  # the column name of multi-turn dialogues, e.g.: history, dialogues
-            }
         },
         "executor": {
-            "eval_group": "qa_standard_v1",
             "result_save": {
                 "bad": True,
                 "good": True
             },
             "multi_turn_mode": "all"
-        }
+        },
+        "evaluator": [
+            {
+                "fields": {"id": "id", "content": "history"},
+                "evals": [
+                    {"name": "RuleEnterAndSpace"},
+                    {"name": "RuleAbnormalChar"}
+                ]
+            }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

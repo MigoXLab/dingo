@@ -1,4 +1,3 @@
-from collections import defaultdict
 from typing import Dict
 
 from pydantic import BaseModel, Field
@@ -7,7 +6,7 @@ from pydantic import BaseModel, Field
 class SummaryModel(BaseModel):
     task_id: str = ''
     task_name: str = ''
-    eval_group: str = ''
+    # eval_group: str = ''
     input_path: str = ''
     output_path: str = ''
     create_time: str = ''
@@ -16,14 +15,13 @@ class SummaryModel(BaseModel):
     num_good: int = 0
     num_bad: int = 0
     total: int = 0
-    type_ratio: Dict[str, int] = Field(default_factory=lambda: defaultdict(int))
-    name_ratio: Dict[str, int] = Field(default_factory=lambda: defaultdict(int))
+    type_ratio: Dict[str, Dict[str, int]] = {}
 
     def to_dict(self):
         return {
             'task_id': self.task_id,
             'task_name': self.task_name,
-            'eval_group': self.eval_group,
+            # 'eval_group': self.eval_group,
             'input_path': self.input_path,
             'output_path': self.output_path,
             'create_time': self.create_time,
@@ -33,5 +31,4 @@ class SummaryModel(BaseModel):
             'num_bad': self.num_bad,
             'total': self.total,
             'type_ratio': self.type_ratio,
-            'name_ratio': self.name_ratio,
         }

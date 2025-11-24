@@ -31,27 +31,15 @@ def evaluate_hallucination_jsonl_dataset():
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "prompt": "prompt",
-                "content": "content",
-                "context": "context",
-            }
         },
-        "executor": {
-            "prompt_list": ["PromptHallucination"],
-            "result_save": {
-                "bad": True
+        "evaluator": [
+            {
+                "fields": {"prompt": "prompt", "content": "content", "context": "context"},
+                "evals": [
+                    {"name": "LLMHallucination", "config": {"model": "deepseek-chat", "key": "", "api_url": "https://api.deepseek.com/v1"}},
+                ]
             }
-        },
-        "evaluator": {
-            "llm_config": {
-                "LLMHallucination": {
-                    "model": "deepseek-chat",
-                    "key": "Your API Key",
-                    "api_url": "https://api.deepseek.com/v1"
-                }
-            }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -79,26 +67,21 @@ def evaluate_hallucination_with_hhem_rule():
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "prompt": "prompt",
-                "content": "content",
-                "context": "context",
-            }
         },
         "executor": {
-            "rule_list": ["RuleHallucinationHHEM"],  # Use HHEM rule instead of LLM
             "result_save": {
                 "bad": True,
                 "good": True  # Also save good examples for comparison
             }
         },
-        "evaluator": {
-            "rule_config": {
-                "RuleHallucinationHHEM": {
-                    "threshold": 0.8  # Default threshold (0.0-1.0, higher = more strict)
-                }
+        "evaluator": [
+            {
+                "fields": {"prompt": "prompt", "content": "content", "context": "context"},
+                "evals": [
+                    {"name": "RuleHallucinationHHEM", "config": {"threshold": 0.8}}
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -120,34 +103,22 @@ def evaluate_combined_llm_and_hhem():
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "prompt": "prompt",
-                "content": "content",
-                "context": "context",
-            }
         },
         "executor": {
-            "rule_list": ["RuleHallucinationHHEM"],  # Local HHEM rule
-            "prompt_list": ["PromptHallucination"],   # LLM-based evaluation
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "rule_config": {
-                "RuleHallucinationHHEM": {
-                    "threshold": 0.5  # HHEM threshold
-                }
-            },
-            "llm_config": {
-                "LLMHallucination": {
-                    "model": "deepseek-chat",
-                    "key": "Your API Key",
-                    "api_url": "https://api.deepseek.com/v1"
-                }
+        "evaluator": [
+            {
+                "fields": {"prompt": "prompt", "content": "content", "context": "context"},
+                "evals": [
+                    {"name": "LLMHallucination", "config": {"model": "deepseek-chat", "key": "", "api_url": "https://api.deepseek.com/v1"}},
+                    {"name": "RuleHallucinationHHEM", "config": {"threshold": 0.5}}
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)

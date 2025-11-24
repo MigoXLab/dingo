@@ -17,11 +17,11 @@ from unittest.mock import patch
 import pytest
 
 from dingo.io import Data
-from dingo.model.llm.llm_rag_answer_relevancy import LLMRAGAnswerRelevancy
-from dingo.model.llm.llm_rag_context_precision import LLMRAGContextPrecision
-from dingo.model.llm.llm_rag_context_recall import LLMRAGContextRecall
-from dingo.model.llm.llm_rag_context_relevancy import LLMRAGContextRelevancy
-from dingo.model.llm.llm_rag_faithfulness import LLMRAGFaithfulness
+from dingo.model.llm.rag.llm_rag_answer_relevancy import LLMRAGAnswerRelevancy
+from dingo.model.llm.rag.llm_rag_context_precision import LLMRAGContextPrecision
+from dingo.model.llm.rag.llm_rag_context_recall import LLMRAGContextRecall
+from dingo.model.llm.rag.llm_rag_context_relevancy import LLMRAGContextRelevancy
+from dingo.model.llm.rag.llm_rag_faithfulness import LLMRAGFaithfulness
 
 
 class TestFaithfulness:

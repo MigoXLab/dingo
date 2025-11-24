@@ -13,27 +13,22 @@ if __name__ == '__main__':
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "content": "content"
-            }
         },
         "executor": {
-            "rule_list": ["RuleColonEnd"],
-            "prompt_list": ["PromptRepeat"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMTextQualityPromptBase": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "RuleColonEnd"},
+                    {"name": "LLMTextRepeat", "config": {"model": OPENAI_MODEL, "key": OPENAI_KEY, "api_url": OPENAI_URL}}
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

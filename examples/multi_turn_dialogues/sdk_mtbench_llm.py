@@ -7,16 +7,11 @@ if __name__ == '__main__':
         "dataset": {
             "source": "hugging_face",
             "format": "multi_turn_dialog",
-            "field": {
-                "id": "question_id",
-                "content": "conversation_a"
-            },
             "hf_config": {
                 "huggingface_split": "human"
             }
         },
         "executor": {
-            "prompt_list": ["PromptTextQualityV3"],
             "result_save": {
                 "bad": True,
                 "good": True
@@ -24,14 +19,14 @@ if __name__ == '__main__':
             "end_index": 5,
             "multi_turn_mode": "all"
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMTextQualityModelBase": {
-                    "key": "",
-                    "api_url": "",
-                }
+        "evaluator": [
+            {
+                "fields": {"id": "question_id", "content": "conversation_a"},
+                "evals": [
+                    {"name": "LLMTextQualityV3", "config": {"key": "", "api_url": ""}}
+                ],
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

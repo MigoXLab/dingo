@@ -17,10 +17,15 @@ class CommonPatternDemo(BaseRule):
         res = ModelRes()
         matches = re.findall(cls.dynamic_config.pattern, input_data.content)
         if matches:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
-            res.reason = matches
+            res.eval_status = True
+            # res.type = cls.metric_type
+            # res.name = cls.__name__
+            # res.reason = matches
+            res.eval_details = {
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": matches
+            }
         return res
 
 
@@ -33,13 +38,15 @@ if __name__ == '__main__':
         "dataset": {
             "source": "local",
             "format": "json",
-            "field": {
-                "content": "prediction"
-            }
         },
-        "executor": {
-            "rule_list": ['CommonPatternDemo']
-        }
+        "evaluator": [
+            {
+                "fields": {"content": "prediction"},
+                "evals": [
+                    {"name": "CommonPatternDemo"},
+                ]
+            }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

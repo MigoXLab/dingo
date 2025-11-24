@@ -35,8 +35,8 @@ class HuggingFaceDataset(Dataset):
         self._ds: datasets.Dataset = source.load()
         self._targets = "text"
         if source.input_args.dataset.format == "plaintext":
-            if source.input_args.dataset.field.content != "":
-                self._targets = source.input_args.dataset.field.content
+            # if source.input_args.dataset.fields != []:
+            #     self._targets = source.input_args.dataset.fields[0]
             if self._targets is not None and self._targets not in self._ds.column_names:
                 raise RuntimeError(
                     f"The specified Hugging Face dataset does not contain the specified targets column"

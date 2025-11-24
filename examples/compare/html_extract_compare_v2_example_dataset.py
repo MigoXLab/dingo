@@ -31,6 +31,11 @@ from dingo.exec.base import Executor
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = os.getenv("OPENAI_BASE_URL")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+common_config = {
+    "model": OPENAI_MODEL,
+    "key": OPENAI_KEY,
+    "api_url": OPENAI_URL,
+}
 
 
 def evaluate_html_extract_compare_dataset():
@@ -56,36 +61,24 @@ def evaluate_html_extract_compare_dataset():
         "dataset": {
             "source": "local",  # 本地数据源
             "format": "jsonl",  # JSONL 格式
-            "field": {
-                "id": "track_id",  # data_id 字段映射
-                "prompt": "content",  # prompt 字段映射
-                "content": "magic_md",  # content 字段映射
-                # language 会自动放入 raw_data
-            }
         },
-
         # 执行器配置
         "executor": {
-            "prompt_list": ["PromptHtmlExtractCompareV2"],  # ← 使用 Prompt 类的注册名称
-            "max_workers": 10,  # 并发数
-            "batch_size": 10,  # 批次大小
+            "max_workers": 4,  # 并发数
+            "batch_size": 1,  # 批次大小
             "result_save": {
-                "bad": True,  # 保存工具B更好的样本（error_status=True）
-                "good": True,  # 保存工具A更好或相同的样本
-                "raw": True  # 保存原始数据
+                "bad": True,  # 保存工具B更好的样本（eval_status=True）
+                "good": True  # 保存工具A更好或相同的样本
             }
         },
-
-        # 评估器配置
-        "evaluator": {
-            "llm_config": {
-                "LLMHtmlExtractCompareV2": {    # ← 使用 LLM 类的注册名称
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {"id": "data_id", "prompt": "content", "content": "magic_md"},
+                "evals": [
+                    {"name": "LLMHtmlExtractCompareV2", "config": common_config},
+                ]
             }
-        }
+        ]
     }
 
     # 创建 InputArgs 并执行
@@ -100,19 +93,19 @@ def evaluate_html_extract_compare_dataset():
     print("评估完成！")
     print("=" * 60)
     print(f"任务名称: {result.task_name}")
-    print(f"评估组: {result.eval_group}")
+    # print(f"评估组: {result.eval_group}")
     print(f"总样本数: {result.total}")
     print(f"工具B更好的样本数: {result.num_bad} ")
     print(f"工具A更好或相同: {result.num_good} ")
     print(f"\n输出路径: {result.output_path}")
 
-    # 打印详细统计
-    if hasattr(result, 'type_count') and result.type_count:
-        print("\n详细统计:")
-        for eval_type, count in result.type_count.items():
-            print(f"  - {eval_type}: {count}")
-
-    print("=" * 60)
+    # # 打印详细统计
+    # if hasattr(result, 'type_count') and result.type_count:
+    #     print("\n详细统计:")
+    #     for eval_type, count in result.type_count.items():
+    #         print(f"  - {eval_type}: {count}")
+    #
+    # print("=" * 60)
 
     return result
 

@@ -62,14 +62,24 @@ class BaseLmdeployApiClient(BaseLLM):
         response_model = ResponseScoreReason(**response_json)
 
         result = ModelRes()
-        # error_status
+        # eval_status
         if response_model.score == 1:
-            result.reason = [response_model.reason]
+            # result.reason = [response_model.reason]
+            result.eval_details = {
+                "label": ["QUALITY_GOOD"],
+                "metric": [cls.__name__],
+                "reason": [response_model.reason]
+            }
         else:
-            result.error_status = True
-            result.type = cls.prompt.metric_type
-            result.name = cls.prompt.__name__
-            result.reason = [response_model.reason]
+            result.eval_status = True
+            # result.type = cls.prompt.metric_type
+            # result.name = cls.prompt.__name__
+            # result.reason = [response_model.reason]
+            result.eval_details = {
+                "label": [f"QUALITY_BAD.{cls.__name__}"],
+                "metric": [cls.__name__],
+                "reason": [response_model.reason]
+            }
 
         return result
 
@@ -97,6 +107,11 @@ class BaseLmdeployApiClient(BaseLLM):
                 except_msg = str(e)
                 except_name = e.__class__.__name__
 
-        return ModelRes(
-            error_status=True, type="QUALITY_BAD", name=except_name, reason=[except_msg]
-        )
+        res = ModelRes()
+        res.eval_status = True
+        res.eval_details = {
+            "label": [f"QUALITY_BAD.{except_name}"],
+            "metric": [cls.__name__],
+            "reason": [except_msg]
+        }
+        return res

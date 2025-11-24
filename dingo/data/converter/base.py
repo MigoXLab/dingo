@@ -177,10 +177,11 @@ class JsonConverter(BaseConverter):
             if isinstance(raw, str):
                 j = json.loads(raw)
             for k, v in j.items():
-                if input_args.dataset.fields:
-                    data_dict = {field: cls.find_levels_data(v, field) for field in input_args.dataset.fields}
-                else:
-                    data_dict = v
+                # if input_args.dataset.fields:
+                #     data_dict = {field: cls.find_levels_data(v, field) for field in input_args.dataset.fields}
+                # else:
+                #     data_dict = v
+                data_dict = v
                 yield Data(**data_dict)
 
         return _convert
@@ -219,10 +220,11 @@ class JsonLineConverter(BaseConverter):
             j = raw
             if isinstance(raw, str):
                 j = json.loads(raw)
-            if input_args.dataset.fields:
-                data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
-            else:
-                data_dict = j
+            # if input_args.dataset.fields:
+            #     data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
+            # else:
+            #     data_dict = j
+            data_dict = j
             return Data(**data_dict)
 
         return _convert
@@ -242,10 +244,11 @@ class ListJsonConverter(BaseConverter):
             if isinstance(raw, str):
                 l_j = json.loads(raw)
             for j in l_j:
-                if input_args.dataset.fields:
-                    data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
-                else:
-                    data_dict = j
+                # if input_args.dataset.fields:
+                #     data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
+                # else:
+                #     data_dict = j
+                data_dict = j
                 yield Data(**data_dict)
 
         return _convert
@@ -264,10 +267,11 @@ class ImageConverter(BaseConverter):
             j = raw
             if isinstance(raw, str):
                 j = json.loads(raw)
-            if input_args.dataset.fields:
-                data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
-            else:
-                data_dict = j
+            # if input_args.dataset.fields:
+            #     data_dict = {field: cls.find_levels_data(j, field) for field in input_args.dataset.fields}
+            # else:
+            #     data_dict = j
+            data_dict = j
             return Data(**data_dict)
 
         return _convert

@@ -100,11 +100,11 @@ class SparkExecutor(ExecProto):
             self.data_info_list = data_info_list
 
             # Filter and count bad/good items
-            self.bad_info_list = data_info_list.filter(lambda x: x["error_status"])
+            self.bad_info_list = data_info_list.filter(lambda x: x["eval_status"])
 
             if self.input_args.executor.result_save.good:
                 self.good_info_list = data_info_list.filter(
-                    lambda x: not x["error_status"]
+                    lambda x: not x["eval_status"]
                 )
 
             num_bad = self.bad_info_list.count()
@@ -154,20 +154,20 @@ class SparkExecutor(ExecProto):
                 else:
                     raise ValueError(f"Error eval_type: {eval_type}")
 
-            if r_i.error_status:
-                result_info.error_status = True
-            for k,v in r_i.error_type.items():
-                if k not in result_info.error_type:
-                    result_info.error_type[k] = v
+            if r_i.eval_status:
+                result_info.eval_status = True
+            for k,v in r_i.eval_details.items():
+                if k not in result_info.eval_details:
+                    result_info.eval_details[k] = v
                 else:
-                    result_info.error_type[k].merge(v)
+                    result_info.eval_details[k].merge(v)
 
         return result_info.to_dict()
 
     def evaluate_item(self, eval_fields: dict, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
         result_info = ResultInfo()
-        bad_error_type = None
-        good_error_type = None
+        bad_eval_details = None
+        good_eval_details = None
 
         for e_c_i in eval_list:
             if eval_type == 'rule':
@@ -179,39 +179,39 @@ class SparkExecutor(ExecProto):
             else:
                 raise ValueError(f"Error eval_type: {eval_type}")
             tmp: ModelRes = model.eval(Data(**map_data))
-            # Collect error_type from ModelRes
-            if tmp.error_status:
-                result_info.error_status = True
-                if bad_error_type:
-                    bad_error_type.merge(tmp.error_type)
+            # Collect eval_details from ModelRes
+            if tmp.eval_status:
+                result_info.eval_status = True
+                if bad_eval_details:
+                    bad_eval_details.merge(tmp.eval_details)
                 else:
-                    bad_error_type = tmp.error_type.copy()
+                    bad_eval_details = tmp.eval_details.copy()
             else:
-                if good_error_type:
-                    good_error_type.merge(tmp.error_type)
+                if good_eval_details:
+                    good_eval_details.merge(tmp.eval_details)
                 else:
-                    good_error_type = tmp.error_type.copy()
+                    good_eval_details = tmp.eval_details.copy()
 
         # Set result_info fields based on all_labels configuration and add field
         join_fields = ','.join(eval_fields.values())
         if self.input_args.executor.result_save.all_labels:
-            all_error_type = None
-            if bad_error_type:
-                all_error_type = bad_error_type.copy()
-            if good_error_type:
-                if all_error_type:
-                    all_error_type.merge(good_error_type)
+            all_eval_details = None
+            if bad_eval_details:
+                all_eval_details = bad_eval_details.copy()
+            if good_eval_details:
+                if all_eval_details:
+                    all_eval_details.merge(good_eval_details)
                 else:
-                    all_error_type = good_error_type.copy()
-            if all_error_type:
-                result_info.error_type = {join_fields: all_error_type}
+                    all_eval_details = good_eval_details.copy()
+            if all_eval_details:
+                result_info.eval_details = {join_fields: all_eval_details}
         else:
-            if result_info.error_status:
-                if bad_error_type:
-                    result_info.error_type = {join_fields: bad_error_type}
+            if result_info.eval_status:
+                if bad_eval_details:
+                    result_info.eval_details = {join_fields: bad_eval_details}
             else:
-                if good_error_type and self.input_args.executor.result_save.good:
-                    result_info.error_type = {join_fields: good_error_type}
+                if good_eval_details and self.input_args.executor.result_save.good:
+                    result_info.eval_details = {join_fields: good_eval_details}
         return result_info
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:
@@ -225,14 +225,14 @@ class SparkExecutor(ExecProto):
         if new_summary.total == 0:
             return new_summary
 
-        # 使用 Spark 聚合操作统计 error_type
-        # data_info_list 的每个元素是 Dict，包含 error_type 字段
-        def aggregate_error_types(acc, item):
-            """聚合单个 item 的 error_type 到累加器中"""
-            error_type_dict = item.get('error_type', {})
+        # 使用 Spark 聚合操作统计 eval_details
+        # data_info_list 的每个元素是 Dict，包含 eval_details 字段
+        def aggregate_eval_detailss(acc, item):
+            """聚合单个 item 的 eval_details 到累加器中"""
+            eval_details_dict = item.get('eval_details', {})
 
             # 遍历第一层：字段名
-            for field_key, res_type_info_dict in error_type_dict.items():
+            for field_key, res_type_info_dict in eval_details_dict.items():
                 if field_key not in acc:
                     acc[field_key] = {}
 
@@ -248,7 +248,7 @@ class SparkExecutor(ExecProto):
 
             return acc
 
-        def merge_error_types(acc1, acc2):
+        def merge_eval_detailss(acc1, acc2):
             """合并两个累加器"""
             for field_key, label_dict in acc2.items():
                 if field_key not in acc1:
@@ -261,13 +261,13 @@ class SparkExecutor(ExecProto):
                             acc1[field_key][label] += count
             return acc1
 
-        # 使用 aggregate 聚合所有 error_type
+        # 使用 aggregate 聚合所有 eval_details
         # data_info_list 在 execute 中已经被 persist() 并保存为实例变量
         if hasattr(self, 'data_info_list') and self.data_info_list:
             type_ratio_counts = self.data_info_list.aggregate(
                 {},  # 初始累加器
-                aggregate_error_types,  # 聚合单个元素
-                merge_error_types  # 合并累加器
+                aggregate_eval_detailss,  # 聚合单个元素
+                merge_eval_detailss  # 合并累加器
             )
         else:
             type_ratio_counts = {}
@@ -276,9 +276,9 @@ class SparkExecutor(ExecProto):
         new_summary.type_ratio = {}
         for field_name in type_ratio_counts:
             new_summary.type_ratio[field_name] = {}
-            for error_type in type_ratio_counts[field_name]:
-                new_summary.type_ratio[field_name][error_type] = round(
-                    type_ratio_counts[field_name][error_type] / new_summary.total, 6
+            for eval_details in type_ratio_counts[field_name]:
+                new_summary.type_ratio[field_name][eval_details] = round(
+                    type_ratio_counts[field_name][eval_details] / new_summary.total, 6
                 )
 
         new_summary.finish_time = time.strftime("%Y%m%d_%H%M%S", time.localtime())
@@ -289,7 +289,7 @@ class SparkExecutor(ExecProto):
 
     def get_bad_info_list(self):
         """
-        获取所有 error_status 为 True 的数据列表
+        获取所有 eval_status 为 True 的数据列表
         Returns:
             RDD: 包含所有 bad 数据的 RDD，每条数据是 ResultInfo 的字典形式
         """
@@ -297,7 +297,7 @@ class SparkExecutor(ExecProto):
 
     def get_good_info_list(self):
         """
-        获取所有 error_status 为 False 的数据列表
+        获取所有 eval_status 为 False 的数据列表
         Returns:
             RDD: 包含所有 good 数据的 RDD，每条数据是 ResultInfo 的字典形式
         """

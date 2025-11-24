@@ -185,8 +185,8 @@ JSON 包含以下字段：
     @staticmethod
     def _create_no_code_result(response_json: dict) -> ModelRes:
         result = ModelRes()
-        result.error_status = False
-        result.error_type = {
+        result.eval_status = False
+        result.eval_details = {
             "label": ["NO_CODE.code"],
             "metric": ["LLMCodeCompare"],
             "reason": [json.dumps(response_json, ensure_ascii=False)]
@@ -199,9 +199,9 @@ JSON 包含以下字段：
         result = ModelRes()
         score = response_json.get('score', 0)
 
-        result.error_status = score != 1
+        result.eval_status = score != 1
         tmp_type = {1: 'TOOL_ONE_BETTER', 2: 'TOOL_TWO_BETTER'}.get(score, 'TOOL_EQUAL')
-        result.error_type = {
+        result.eval_details = {
             "label": [f"{tmp_type}.code"],
             "metric": ["LLMCodeCompare"],
             "reason": [json.dumps(response_json, ensure_ascii=False)]

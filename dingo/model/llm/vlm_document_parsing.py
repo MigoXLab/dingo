@@ -219,11 +219,11 @@ class VLMDocumentParsingQuality(BaseOpenAI):
                 log.error(f"JSON解析错误: {e}")
 
         result = ModelRes()
-        # result.error_status = False
+        # result.eval_status = False
         # result.type = types
         # result.name = names
         # result.reason = [response]
-        result.error_type.label = tmp_types
-        result.error_type.reason = [response]
+        result.eval_details.label = tmp_types
+        result.eval_details.reason = [response]
 
         return result

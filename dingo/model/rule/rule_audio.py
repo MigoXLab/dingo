@@ -51,8 +51,8 @@ class RuleAudioDuration(BaseRule):
         noise_power = np.sum(Pxx_noise)
 
         if noise_power == 0:
-            res.error_status = True
-            res.error_type = {
+            res.eval_status = True
+            res.eval_details = {
                 "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The audio power is zero. Cannot calculate SNR."]
@@ -61,14 +61,14 @@ class RuleAudioDuration(BaseRule):
         snr_dB = round(10 * np.log10(signal_power / noise_power), 2)
 
         if snr_dB < 8:
-            res.error_status = True
-            res.error_type = {
+            res.eval_status = True
+            res.eval_details = {
                 "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The audio signal-to-noise ratio is too low."]
             }
         else:
-            res.error_type = {
+            res.eval_details = {
                 "label": ["QUALITY_GOOD"]
             }
         return res
@@ -115,14 +115,14 @@ class RuleAudioSnrQuality(BaseRule):
                 duration = frame_count / sample_rate
 
         if duration > 10:
-            res.error_status = True
-            res.error_type = {
+            res.eval_status = True
+            res.eval_details = {
                 "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["The audio duration is too long."]
             }
         else:
-            res.error_type = {
+            res.eval_details = {
                 "label": ["QUALITY_GOOD"]
             }
         return res

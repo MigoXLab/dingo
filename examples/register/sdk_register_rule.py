@@ -17,11 +17,11 @@ class CommonPatternDemo(BaseRule):
         res = ModelRes()
         matches = re.findall(cls.dynamic_config.pattern, input_data.content)
         if matches:
-            res.error_status = True
+            res.eval_status = True
             # res.type = cls.metric_type
             # res.name = cls.__name__
             # res.reason = matches
-            res.error_type = {
+            res.eval_details = {
                 "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": matches

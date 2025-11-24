@@ -70,8 +70,8 @@ class LLMPerspective(BaseLLM):
 
                 if is_good:
                     res = ModelRes()
-                    res.error_status = False
-                    res.error_type = {
+                    res.eval_status = False
+                    res.eval_details = {
                         "label": ["QUALITY_GOOD.PERSPECTIVE"],
                         "metric": [cls.__name__],
                         "reason": []
@@ -79,14 +79,14 @@ class LLMPerspective(BaseLLM):
                     return res
                 else:
                     # return ModelRes(
-                    #     error_status=True,
+                    #     eval_status=True,
                     #     type="QUALITY_BAD",
                     #     name="PERSPECTIVE",
                     #     reason=error_list,
                     # )
                     res = ModelRes()
-                    res.error_status = True
-                    res.error_type = {
+                    res.eval_status = True
+                    res.eval_details = {
                         "label": ["QUALITY_BAD.PERSPECTIVE"],
                         "metric": [cls.__name__],
                         "reason": error_list
@@ -98,12 +98,12 @@ class LLMPerspective(BaseLLM):
                 except_msg = str(e)
 
         # return ModelRes(
-        #     error_status=True, type="QUALITY_BAD", name="API_LOSS", reason=[except_msg]
+        #     eval_status=True, type="QUALITY_BAD", name="API_LOSS", reason=[except_msg]
         # )
 
         res = ModelRes()
-        res.error_status = True
-        res.error_type = {
+        res.eval_status = True
+        res.eval_details = {
             "label": ["QUALITY_BAD.API_LOSS"],
             "metric": [cls.__name__],
             "reason": [except_msg]

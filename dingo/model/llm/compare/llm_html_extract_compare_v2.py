@@ -249,9 +249,9 @@ C. Text A 包含的核心信息内容少于 Text B
         将结构化响应转换为 ModelRes 对象
 
         映射规则：
-        - A -> TOOL_ONE_BETTER (工具A更好，error_status=False)
-        - B -> TOOL_EQUAL (两者相同，error_status=False)
-        - C -> TOOL_TWO_BETTER (工具B更好，error_status=True)
+        - A -> TOOL_ONE_BETTER (工具A更好，eval_status=False)
+        - B -> TOOL_EQUAL (两者相同，eval_status=False)
+        - C -> TOOL_TWO_BETTER (工具B更好，eval_status=True)
 
         Args:
             structured_response: 结构化响应对象，name 字段存储判断结果 (A/B/C)
@@ -268,17 +268,17 @@ C. Text A 包含的核心信息内容少于 Text B
         judgement_mapping = {
             "A": {
                 "type": "TOOL_ONE_BETTER",
-                "error_status": False,  # 工具A更好，正常
+                "eval_status": False,  # 工具A更好，正常
                 "description": "工具A提取的信息更完整"
             },
             "B": {
                 "type": "TOOL_EQUAL",
-                "error_status": False,  # 两者相同，正常
+                "eval_status": False,  # 两者相同，正常
                 "description": "两个工具提取的信息量相同"
             },
             "C": {
                 "type": "TOOL_TWO_BETTER",
-                "error_status": True,  # 工具B更好，标记为问题
+                "eval_status": True,  # 工具B更好，标记为问题
                 "description": "工具B提取的信息更完整"
             }
         }
@@ -287,14 +287,14 @@ C. Text A 包含的核心信息内容少于 Text B
         if not mapping:
             raise ValueError(f"无效的判断结果: {judgement}")
 
-        result.error_status = mapping["error_status"]
+        result.eval_status = mapping["eval_status"]
         # result.type = mapping["type"]
         # result.name = f"Judgement_{judgement}"
         # result.reason = [structured_response.reason]
 
         tmp_type = mapping["type"]
         tmp_name = f"Judgement_{judgement}"
-        result.error_type = {
+        result.eval_details = {
             "label": [f"{tmp_type}.{tmp_name}"],
             "metric": [cls.__name__],
             "reason": [structured_response.reason]

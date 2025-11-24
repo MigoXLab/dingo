@@ -122,11 +122,11 @@ Please output only the JSON format data shown above, without any additional cont
         response_model = ResponseScoreTypeNameReason(**response_json)
 
         result = ModelRes()
-        # Set error_status based on score (1 = good quality, 0 = low quality)
+        # Set eval_status based on score (1 = good quality, 0 = low quality)
         if response_model.score == 1:
-            result.error_status = False
+            result.eval_status = False
         else:
-            result.error_status = True
+            result.eval_status = True
 
         # # Set type to the domain classification
         # result.type = response_model.type
@@ -137,7 +137,7 @@ Please output only the JSON format data shown above, without any additional cont
         # # Set reason to the detailed assessment
         # result.reason = [response_model.reason]
 
-        result.error_type = {
+        result.eval_details = {
             "label": [f"{response_model.type}.{response_model.name}"],
             "metric": [cls.__name__],
             "reason": [response_model.reason]

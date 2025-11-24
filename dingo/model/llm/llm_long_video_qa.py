@@ -118,12 +118,12 @@ class LLMLongVideoQa(BaseOpenAI):
     def process_response(cls, response: str) -> ModelRes:
         log.info(response)
         result = ModelRes()
-        result.error_status = False
+        result.eval_status = False
         # result.type = "text"
         # result.name = "qa_pairs"
         # result.reason = [response]
 
-        result.error_type = {
+        result.eval_details = {
             "label": ["text.qa_pairs"],
             "metric": [cls.__name__],
             "reason": [response]

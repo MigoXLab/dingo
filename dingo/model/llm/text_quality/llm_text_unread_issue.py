@@ -58,20 +58,20 @@ class LLMTextUnreadIssue(BaseOpenAI):
         response_model = ResponseScoreTypeNameReason(**response_json)
 
         result = ModelRes()
-        # error_status
+        # eval_status
         if response_model.score == 1:
             # result.reason = [response_model.reason]
-            result.error_type = {
+            result.eval_details = {
                 "label": ["QUALITY_GOOD"],
                 "metric": [cls.__name__],
                 "reason": [response_model.reason]
             }
         else:
-            result.error_status = True
+            result.eval_status = True
             # result.type = response_model.type
             # result.name = response_model.name
             # result.reason = [response_model.reason]
-            result.error_type = {
+            result.eval_details = {
                 "label": [f"{response_model.type}.{response_model.name}"],
                 "metric": [cls.__name__],
                 "reason": [response_model.reason]

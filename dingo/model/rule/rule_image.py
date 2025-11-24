@@ -45,14 +45,14 @@ class RuleImageValid(BaseRule):
         img_new = img.convert("RGB")
         img_np = np.asarray(img_new)
         if np.all(img_np == (255, 255, 255)) or np.all(img_np == (0, 0, 0)):
-            res.error_status = True
-            res.error_type = {
+            res.eval_status = True
+            res.eval_details = {
                 "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Image is not valid: all white or black"]
             }
         else:
-            res.error_type = {
+            res.eval_details = {
                 "label": ["QUALITY_GOOD"]
             }
         return res
@@ -86,8 +86,8 @@ class RuleImageSizeValid(BaseRule):
         width, height = img.size
         aspect_ratio = width / height
         if aspect_ratio > 4 or aspect_ratio < 0.25:
-            res.error_status = True
-            res.error_type = {
+            res.eval_status = True
+            res.eval_details = {
                 "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [
@@ -96,7 +96,7 @@ class RuleImageSizeValid(BaseRule):
                 ]
             }
         else:
-            res.error_type = {
+            res.eval_details = {
                 "label": ["QUALITY_GOOD"]
             }
         return res
@@ -137,14 +137,14 @@ class RuleImageQuality(BaseRule):
         score_fr = iqa_metric(img)
         score = score_fr.item()
         if score < cls.dynamic_config.threshold:
-            res.error_status = True
-            res.error_type = {
+            res.eval_status = True
+            res.eval_details = {
                 "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Image quality is not satisfied, ratio: " + str(score)]
             }
         else:
-            res.error_type = {
+            res.eval_details = {
                 "label": ["QUALITY_GOOD"]
             }
         return res
@@ -195,17 +195,17 @@ class RuleImageRepeat(BaseRule):
             set(duplicates_cnn.keys())
         )
         if common_duplicates:
-            res.error_status = True
+            res.eval_status = True
             tmp_reason = [f"{image} -> {duplicates_cnn[image]}" for image in common_duplicates]
             tmp_reason.append({"duplicate_ratio": len(common_duplicates) / len(os.listdir(image_dir))})
 
-            res.error_type = {
+            res.eval_details = {
                 "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": tmp_reason
             }
         else:
-            res.error_type = {
+            res.eval_details = {
                 "label": ["QUALITY_GOOD"]
             }
         return res
@@ -258,14 +258,14 @@ class RuleImageTextSimilarity(BaseRule):
             scores.append(sim_score[0][0])
         average_score = sum(scores) / len(scores)
         if average_score < cls.dynamic_config.threshold:
-            res.error_status = True
-            res.error_type = {
+            res.eval_status = True
+            res.eval_details = {
                 "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": ["Image quality is not satisfied, ratio: " + str(average_score)]
             }
         else:
-            res.error_type = {
+            res.eval_details = {
                 "label": ["QUALITY_GOOD"]
             }
         return res
@@ -329,23 +329,23 @@ class RuleImageArtimuse(BaseRule):
                 time.sleep(5)
 
             res = ModelRes()
-            res.error_status = True if status_data['score_overall'] < cls.dynamic_config.threshold else False
+            res.eval_status = True if status_data['score_overall'] < cls.dynamic_config.threshold else False
             tmp = "BadImage" if status_data['score_overall'] < cls.dynamic_config.threshold else "GoodImage"
-            if res.error_status:
-                res.error_type = {
+            if res.eval_status:
+                res.eval_details = {
                     "label": [f"Artimuse_Succeeded.{tmp}"],
                     "metric": [cls.__name__],
                     "reason": [json.dumps(status_data, ensure_ascii=False)]
                 }
             else:
-                res.error_type = {
+                res.eval_details = {
                     "label": ["QUALITY_GOOD"]
                 }
             return res
         except Exception as e:
             res = ModelRes()
-            res.error_status = False
-            res.error_type = {
+            res.eval_status = False
+            res.eval_details = {
                 "label": ["Artimuse_Fail.Exception"],
                 "metric": [cls.__name__],
                 "reason": [str(e)]
@@ -391,8 +391,8 @@ class RuleImageLabelOverlap(BaseRule):
                     annotations = json.loads(content)
                 except json.JSONDecodeError as e:
                     res = ModelRes()
-                    res.error_status = False
-                    res.error_type = {
+                    res.eval_status = False
+                    res.eval_details = {
                         "label": ["LabelOverlap_Fail.ParseError"],
                         "metric": [cls.__name__],
                         "reason": [f"content解析失败：{str(e)}，前50字符：{content[:50]}..."]
@@ -402,8 +402,8 @@ class RuleImageLabelOverlap(BaseRule):
                 annotations = content
             else:
                 res = ModelRes()
-                res.error_status = False
-                res.error_type = {
+                res.eval_status = False
+                res.eval_details = {
                     "label": ["LabelOverlap_Fail.InvalidContentType"],
                     "metric": [cls.__name__],
                     "reason": [f"content类型错误：需dict/str，实际是{type(content).__name__}"]
@@ -413,8 +413,8 @@ class RuleImageLabelOverlap(BaseRule):
             # 4. 验证数据有效性
             if not annotations:
                 res = ModelRes()
-                res.error_status = False
-                res.error_type = {
+                res.eval_status = False
+                res.eval_details = {
                     "label": ["LabelOverlap_Fail.EmptyAnnotations"],
                     "metric": [cls.__name__],
                     "reason": ["annotations为空"]
@@ -422,8 +422,8 @@ class RuleImageLabelOverlap(BaseRule):
                 return res
             if not image_path or not os.path.exists(image_path):
                 res = ModelRes()
-                res.error_status = False
-                res.error_type = {
+                res.eval_status = False
+                res.eval_details = {
                     "label": ["LabelOverlap_Fail.InvalidImagePath"],
                     "metric": [cls.__name__],
                     "reason": [f"图片路径无效：{image_path}"]
@@ -480,15 +480,15 @@ class RuleImageLabelOverlap(BaseRule):
             # 6. 根据重叠状态设置错误信息
             if has_overlap:
                 # 符合阈值重叠：标记为错误状态
-                res.error_status = True
-                res.error_type = {
+                res.eval_status = True
+                res.eval_details = {
                     "label": ["LabelOverlap_Fail.RuleImageLabelOverlap"],
                     "metric": [cls.__name__],
                     "reason": [f"重叠检测：完全重叠={len(full_overlap_pairs)}，部分重叠={len(partial_overlap_pairs)}"]
                 }
             else:
                 # 不符合阈值重叠：正常状态
-                res.error_status = False
+                res.eval_status = False
 
             # 7. 生成可视化标注框重叠图片
             vis_path = None  # 初始化vis_path变量
@@ -557,12 +557,12 @@ class RuleImageLabelOverlap(BaseRule):
                 logging.error(f"可视化生成失败：{str(e)}，详细错误信息:", exc_info=True)
                 vis_path = None
 
-            # 8. 整理结果（结果已通过error_status和error_type返回）
+            # 8. 整理结果（结果已通过eval_status和eval_details返回）
 
         except Exception as global_e:
             res = ModelRes()
-            res.error_status = False
-            res.error_type = {
+            res.eval_status = False
+            res.eval_details = {
                 "label": ["LabelOverlap_Fail.GlobalError"],
                 "metric": [cls.__name__],
                 "reason": [f"全局处理错误：{str(global_e)}"]
@@ -675,8 +675,8 @@ class RuleImageLabelVisualization(BaseRule):
             # 验证图片路径有效性
             if not image_path or not os.path.exists(image_path):
                 res = ModelRes()
-                res.error_status = False
-                res.error_type = {
+                res.eval_status = False
+                res.eval_details = {
                     "label": ["LabelVisualization_Fail.InvalidImagePath"],
                     "metric": [cls.__name__],
                     "reason": [f"图片路径无效/不存在：{image_path}"]
@@ -689,8 +689,8 @@ class RuleImageLabelVisualization(BaseRule):
                     annotations = json.loads(content)
                 except json.JSONDecodeError as e:
                     res = ModelRes()
-                    res.error_status = False
-                    res.error_type = {
+                    res.eval_status = False
+                    res.eval_details = {
                         "label": ["LabelVisualization_Fail.ParseError"],
                         "metric": [cls.__name__],
                         "reason": [f"标注解析失败：{str(e)}，前50字符：{content[:50]}..."]
@@ -700,8 +700,8 @@ class RuleImageLabelVisualization(BaseRule):
                 annotations = content
             else:
                 res = ModelRes()
-                res.error_status = False
-                res.error_type = {
+                res.eval_status = False
+                res.eval_details = {
                     "label": ["LabelVisualization_Fail.InvalidAnnotationType"],
                     "metric": [cls.__name__],
                     "reason": [f"标注类型错误：需dict/str，实际{type(content).__name__}"]
@@ -713,8 +713,8 @@ class RuleImageLabelVisualization(BaseRule):
             if not layout_dets:
                 # 无标注数据时的处理
                 res = ModelRes()
-                res.error_status = False
-                res.error_type = {
+                res.eval_status = False
+                res.eval_details = {
                     "label": ["LabelVisualization_Fail.EmptyLayoutData"],
                     "metric": [cls.__name__],
                     "reason": [json.dumps({
@@ -771,8 +771,8 @@ class RuleImageLabelVisualization(BaseRule):
                 img.save(vis_path)
             except Exception as e:
                 res = ModelRes()
-                res.error_status = False
-                res.error_type = {
+                res.eval_status = False
+                res.eval_details = {
                     "label": ["LabelVisualization_Fail.SaveImageError"],
                     "metric": [cls.__name__],
                     "reason": [f"保存图像失败：{str(e)}"]
@@ -780,16 +780,16 @@ class RuleImageLabelVisualization(BaseRule):
                 return res
 
             # --------------------------
-            # 5. 整理结果（结果已通过error_status返回）
+            # 5. 整理结果（结果已通过eval_status返回）
             # --------------------------
 
-            res.error_status = False
+            res.eval_status = False
 
         except Exception as global_e:
             # 全局异常处理
             res = ModelRes()
-            res.error_status = False
-            res.error_type = {
+            res.eval_status = False
+            res.eval_details = {
                 "label": ["LabelVisualization_Fail.GlobalError"],
                 "metric": [cls.__name__],
                 "reason": [f"可视化处理全局错误：{str(global_e)}"]

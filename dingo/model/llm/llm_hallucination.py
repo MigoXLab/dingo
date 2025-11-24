@@ -19,7 +19,7 @@ class LLMHallucination(BaseOpenAI):
     This implementation adapts DeepEval's verdict-based approach to Dingo's architecture:
     1. Generates verdicts for each context against the actual output
     2. Calculates hallucination score based on contradiction ratio
-    3. Returns standardized ModelRes with error_status based on threshold
+    3. Returns standardized ModelRes with eval_status based on threshold
     """
     # Metadata for documentation generation
     _metric_info = {
@@ -113,7 +113,7 @@ class LLMHallucination(BaseOpenAI):
         Follows DeepEval's approach:
         1. Parse verdicts from LLM response
         2. Calculate hallucination score = (num_contradictions / total_verdicts)
-        3. Set error_status based on threshold
+        3. Set eval_status based on threshold
         """
         log.info(f"Raw LLM response: {response}")
 
@@ -144,16 +144,16 @@ class LLMHallucination(BaseOpenAI):
 
         result = ModelRes()
 
-        # Set error_status based on threshold
+        # Set eval_status based on threshold
         if score > cls.threshold:
-            result.error_status = True
+            result.eval_status = True
             # result.type = "QUALITY_BAD_HALLUCINATION"
             # result.name = "HALLUCINATION_DETECTED"
-            result.error_type.label = ['QUALITY_BAD_HALLUCINATION.HALLUCINATION_DETECTED']
+            result.eval_details.label = ['QUALITY_BAD_HALLUCINATION.HALLUCINATION_DETECTED']
         else:
             # result.type = "QUALITY_GOOD"
             # result.name = "NO_HALLUCINATION"
-            result.error_type.label = ['QUALITY_GOOD.NO_HALLUCINATION']
+            result.eval_details.label = ['QUALITY_GOOD.NO_HALLUCINATION']
 
         result.reason = [reason]
 
@@ -227,11 +227,11 @@ class LLMHallucination(BaseOpenAI):
         # Validate that context is provided
         if not hasattr(input_data, 'context') or not input_data.context:
             return ModelRes(
-                error_status=True,
+                eval_status=True,
                 # type="QUALITY_BAD",
                 # name="MISSING_CONTEXT",
                 # reason=["Context is required for hallucination detection but was not provided"]
-                error_type = {
+                eval_details = {
                     "label": ["QUALITY_BAD.MISSING_CONTEXT"],
                     "reason": ["Context is required for hallucination detection but was not provided"]
                 }

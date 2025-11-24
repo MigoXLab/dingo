@@ -183,8 +183,8 @@ class LLMTableCompare(BaseOpenAI):
     @staticmethod
     def _create_no_table_result(response_json: dict) -> ModelRes:
         result = ModelRes()
-        result.error_status = False
-        result.error_type = {
+        result.eval_status = False
+        result.eval_details = {
             "label": ["NO_TABLE.table"],
             "metric": ["LLMTableCompare"],
             "reason": [json.dumps(response_json, ensure_ascii=False)]
@@ -196,12 +196,12 @@ class LLMTableCompare(BaseOpenAI):
         result = ModelRes()
         score = response_json.get('score', 0)
 
-        result.error_status = score != 1
+        result.eval_status = score != 1
         # result.type = {1: 'TOOL_ONE_BETTER', 2: 'TOOL_TWO_BETTER'}.get(score, 'TOOL_EQUAL')
         # result.name = 'table'
         # result.reason = [json.dumps(response_json, ensure_ascii=False)]
         tmp_type = {1: 'TOOL_ONE_BETTER', 2: 'TOOL_TWO_BETTER'}.get(score, 'TOOL_EQUAL')
-        result.error_type = {
+        result.eval_details = {
             "label": [f"{tmp_type}.table"],
             "metric": ["LLMMathCompare"],
             "reason": [json.dumps(response_json, ensure_ascii=False)]

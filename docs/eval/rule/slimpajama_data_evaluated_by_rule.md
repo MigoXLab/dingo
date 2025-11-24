@@ -8,7 +8,7 @@ This dataset aims to evaluate the accuracy of the built-in rules in dingo. There
 | data_id      | Data ID, without special meaning, can be modified according to user needs     |
 | content      | Data to be tested                                                             |
 | language     | Language type                                                                 |
-| error_status | Data status, True for negative examples, False for positive examples          |
+| eval_status | Data status, True for negative examples, False for positive examples          |
 | type_list    | Negative example types for negative data, empty list for positive data        |
 | name_list    | Negative example names for negative data, empty list for positive data        |
 | reason_list  | Negative example descriptions for negative data, empty list for positive data |

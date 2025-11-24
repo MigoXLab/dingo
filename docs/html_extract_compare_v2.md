@@ -84,13 +84,13 @@ data = Data(
 # result 是 ModelRes 对象，包含以下字段：
 result.type          # 判断类型: "TOOL_ONE_BETTER" / "TOOL_EQUAL" / "TOOL_TWO_BETTER"
 result.name          # 判断名称: "Judgement_A" / "Judgement_B" / "Judgement_C"
-result.error_status  # 错误状态: False (A/B) 或 True (C)
+result.eval_status  # 错误状态: False (A/B) 或 True (C)
 result.reason        # 推理过程: List[str]
 ```
 
 ### 结果映射
 
-| 判断结果 | `result.type` | `result.name` | `result.error_status` | 含义 |
+| 判断结果 | `result.type` | `result.name` | `result.eval_status` | 含义 |
 |----------|---------------|---------------|----------------------|------|
 | A | TOOL_ONE_BETTER | Judgement_A | False | 工具A提取的信息更完整 |
 | B | TOOL_EQUAL | Judgement_B | False | 两个工具提取的信息量相同 |

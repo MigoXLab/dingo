@@ -13,8 +13,8 @@ class TestLocal:
             raw_data = {
                 "content": "�I am 8 years old. ^I love apple because:",
             },
-            error_status = True,
-            error_type = {
+            eval_status = True,
+            eval_details = {
                 "content": {
                     "label": ["QUALITY_BAD_EFFECTIVENESS-RuleColonEnd"],
                     "metric": ["RuleColonEnd"],
@@ -27,8 +27,8 @@ class TestLocal:
             raw_data = {
                 "content": "�I am 8 years old. ^I love apple because:",
             },
-            error_status = True,
-            error_type = {
+            eval_status = True,
+            eval_details = {
                 "content": {
                     "label": ["QUALITY_BAD_EFFECTIVENESS-PromptContentChaos"],
                     "metric": ["PromptContentChaos"],
@@ -46,13 +46,13 @@ class TestLocal:
         new_existing_list = localexecutor.merge_result_info(existing_list, new_item1)
         new_existing_list = localexecutor.merge_result_info(new_existing_list, new_item2)
         assert len(new_existing_list) == 1
-        assert len(new_existing_list[0].error_type.get('content').label) == 2
-        assert len(new_existing_list[0].error_type.get('content').metric) == 2
-        assert len(new_existing_list[0].error_type.get('content').reason) == 2
-        assert "QUALITY_BAD_EFFECTIVENESS-RuleColonEnd" in new_existing_list[0].error_type.get('content').label
-        assert "QUALITY_BAD_EFFECTIVENESS-PromptContentChaos" in new_existing_list[0].error_type.get('content').label
-        assert "�I am 8 years old. ^I love apple because:" in new_existing_list[0].error_type.get('content').reason
-        assert "文本中包含不可见字符或乱码（如�和^），可能影响阅读理解。" in new_existing_list[0].error_type.get('content').reason
+        assert len(new_existing_list[0].eval_details.get('content').label) == 2
+        assert len(new_existing_list[0].eval_details.get('content').metric) == 2
+        assert len(new_existing_list[0].eval_details.get('content').reason) == 2
+        assert "QUALITY_BAD_EFFECTIVENESS-RuleColonEnd" in new_existing_list[0].eval_details.get('content').label
+        assert "QUALITY_BAD_EFFECTIVENESS-PromptContentChaos" in new_existing_list[0].eval_details.get('content').label
+        assert "�I am 8 years old. ^I love apple because:" in new_existing_list[0].eval_details.get('content').reason
+        assert "文本中包含不可见字符或乱码（如�和^），可能影响阅读理解。" in new_existing_list[0].eval_details.get('content').reason
 
     def test_all_labels_config(self):
         input_data = {

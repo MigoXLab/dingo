@@ -82,7 +82,7 @@ input_data = {
 # result 是 ModelRes 对象，包含以下字段：
 result.type          # 错误问题一级标签: prompt中定义错误类别
 result.name          # 错误描述: 错误列别对应的详细错描述
-result.error_status  # 错误状态: False 或 True
+result.eval_status  # 错误状态: False 或 True
 result.reason        # 评估原因: List[str]
 ```
 

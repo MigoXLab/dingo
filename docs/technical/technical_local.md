@@ -68,7 +68,7 @@
 ##### 6. 结果查询
 
 - `get_info_list(high_quality: bool) -> list`
-  - 读取输出目录下所有结果，按 error_status 区分高/低质量数据。
+  - 读取输出目录下所有结果，按 eval_status 区分高/低质量数据。
 
 - `get_bad_info_list()`, `get_good_info_list()`
   - 分别获取低质量/高质量数据列表。

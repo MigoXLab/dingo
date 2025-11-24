@@ -1,10 +1,6 @@
-import json
-import os
-import time
-import uuid
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 
 class DatasetHFConfigArgs(BaseModel):
@@ -49,7 +45,7 @@ class DatasetArgs(BaseModel):
 
 
 class ExecutorResultSaveArgs(BaseModel):
-    bad: bool = False
+    bad: bool = True
     good: bool = False
     all_labels: bool = False
     raw: bool = False

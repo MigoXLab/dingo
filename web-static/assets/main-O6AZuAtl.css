@@ -171,7 +171,7 @@ body {
   --tw-contain-style:  ;
 }
 
-/* ! tailwindcss v3.4.13 | MIT License | https://tailwindcss.com */
+/* ! tailwindcss v3.4.18 | MIT License | https://tailwindcss.com */
 
 /*
 1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
@@ -566,7 +566,7 @@ video {
 
 /* Make elements with the HTML hidden attribute stay hidden by default */
 
-[hidden] {
+[hidden]:where(:not([hidden="until-found"])) {
   display: none;
 }
 
@@ -1029,17 +1029,17 @@ video {
 
 .bg-\[\#EBECF0\] {
   --tw-bg-opacity: 1;
-  background-color: rgb(235 236 240 / var(--tw-bg-opacity));
+  background-color: rgb(235 236 240 / var(--tw-bg-opacity, 1));
 }
 
 .bg-\[\#F4F5F9\] {
   --tw-bg-opacity: 1;
-  background-color: rgb(244 245 249 / var(--tw-bg-opacity));
+  background-color: rgb(244 245 249 / var(--tw-bg-opacity, 1));
 }
 
 .bg-\[\#fff\] {
   --tw-bg-opacity: 1;
-  background-color: rgb(255 255 255 / var(--tw-bg-opacity));
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
 
 .bg-blue\/\[0\.05\] {
@@ -1193,22 +1193,22 @@ video {
 
 .\!text-\[\#0D53DE\] {
   --tw-text-opacity: 1 !important;
-  color: rgb(13 83 222 / var(--tw-text-opacity)) !important;
+  color: rgb(13 83 222 / var(--tw-text-opacity, 1)) !important;
 }
 
 .text-\[\#00B365\] {
   --tw-text-opacity: 1;
-  color: rgb(0 179 101 / var(--tw-text-opacity));
+  color: rgb(0 179 101 / var(--tw-text-opacity, 1));
 }
 
 .text-\[\#0D53DE\] {
   --tw-text-opacity: 1;
-  color: rgb(13 83 222 / var(--tw-text-opacity));
+  color: rgb(13 83 222 / var(--tw-text-opacity, 1));
 }
 
 .text-\[\#121316\] {
   --tw-text-opacity: 1;
-  color: rgb(18 19 22 / var(--tw-text-opacity));
+  color: rgb(18 19 22 / var(--tw-text-opacity, 1));
 }
 
 .text-\[\#121316\]\/\[0\.35\] {
@@ -1225,27 +1225,27 @@ video {
 
 .text-\[\#2951F2\] {
   --tw-text-opacity: 1;
-  color: rgb(41 81 242 / var(--tw-text-opacity));
+  color: rgb(41 81 242 / var(--tw-text-opacity, 1));
 }
 
 .text-\[\#3477EB\] {
   --tw-text-opacity: 1;
-  color: rgb(52 119 235 / var(--tw-text-opacity));
+  color: rgb(52 119 235 / var(--tw-text-opacity, 1));
 }
 
 .text-\[\#3F4043\] {
   --tw-text-opacity: 1;
-  color: rgb(63 64 67 / var(--tw-text-opacity));
+  color: rgb(63 64 67 / var(--tw-text-opacity, 1));
 }
 
 .text-\[\#F5483B\] {
   --tw-text-opacity: 1;
-  color: rgb(245 72 59 / var(--tw-text-opacity));
+  color: rgb(245 72 59 / var(--tw-text-opacity, 1));
 }
 
 .text-black-1 {
   --tw-text-opacity: 1;
-  color: rgb(18 19 22 / var(--tw-text-opacity));
+  color: rgb(18 19 22 / var(--tw-text-opacity, 1));
 }
 
 .text-black-1\/\[0\.8\] {
@@ -1254,17 +1254,17 @@ video {
 
 .text-blue {
   --tw-text-opacity: 1;
-  color: rgb(13 83 222 / var(--tw-text-opacity));
+  color: rgb(13 83 222 / var(--tw-text-opacity, 1));
 }
 
 .text-gray {
   --tw-text-opacity: 1;
-  color: rgb(244 245 249 / var(--tw-text-opacity));
+  color: rgb(244 245 249 / var(--tw-text-opacity, 1));
 }
 
 .text-gray-2 {
   --tw-text-opacity: 1;
-  color: rgb(70 74 83 / var(--tw-text-opacity));
+  color: rgb(70 74 83 / var(--tw-text-opacity, 1));
 }
 
 .opacity-0 {
@@ -1467,8 +1467,7 @@ body #root {
   align-items: center;
   border-radius: 22px;
   background-color: #202127;
-  -webkit-backdrop-filter: blur(24px);
-          backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
 }
 
 .versions li {
@@ -1506,17 +1505,17 @@ body #root {
 
 .hover\:bg-\[\#F9F9F9\]:hover {
   --tw-bg-opacity: 1;
-  background-color: rgb(249 249 249 / var(--tw-bg-opacity));
+  background-color: rgb(249 249 249 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:text-\[\#0D53DE\]:hover {
   --tw-text-opacity: 1;
-  color: rgb(13 83 222 / var(--tw-text-opacity));
+  color: rgb(13 83 222 / var(--tw-text-opacity, 1));
 }
 
 .hover\:text-blue:hover {
   --tw-text-opacity: 1;
-  color: rgb(13 83 222 / var(--tw-text-opacity));
+  color: rgb(13 83 222 / var(--tw-text-opacity, 1));
 }
 
 .group:hover .group-hover\:opacity-100 {

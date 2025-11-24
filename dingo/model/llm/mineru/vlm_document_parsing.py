@@ -9,8 +9,8 @@ from dingo.model.modelres import ModelRes
 from dingo.utils import log
 
 
-@Model.llm_register("VLMDocumentParsingQuality")
-class VLMDocumentParsingQuality(BaseOpenAI):
+@Model.llm_register("VLMDocumentParsing")
+class VLMDocumentParsing(BaseOpenAI):
     prompt = r"""
             *角色*
         你是一名严谨细致的文档转换质量评估助手。

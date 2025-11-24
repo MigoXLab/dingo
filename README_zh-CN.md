@@ -233,6 +233,10 @@ input_data = {
 
 📖 **[查看幻觉检测指南 →](docs/hallucination_guide.md)**
 
+有关RAG评估指标的完整指导，包括忠实度、上下文精度、答案相关性、上下文召回和上下文相关性：
+
+📖 **[查看RAG评估指标指南 →](docs/rag_evaluation_metrics_zh.md)**
+
 ### 事实性评估
 
 有关使用Dingo两阶段事实性评估系统的详细指导：
@@ -427,6 +431,7 @@ result = executor.execute()
 - [RedPajama-Data](https://github.com/togethercomputer/RedPajama-Data)
 - [mlflow](https://github.com/mlflow/mlflow)
 - [deepeval](https://github.com/confident-ai/deepeval)
+- [ragas](https://github.com/explodinggradients/ragas)
 
 # 贡献
 

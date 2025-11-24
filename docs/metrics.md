@@ -40,6 +40,7 @@ This document provides comprehensive information about all quality metrics used 
 |------|--------|-------------|--------------|-------------------|
 | `CLASSIFY_QR` | PromptClassifyQR | Identifies images as CAPTCHA, QR code, or normal images | Internal Implementation | N/A |
 | `IMAGE_RELEVANT` | PromptImageRelevant | Evaluates image consistency and relevance through comprehensive analysis of content, semantics, visual quality, and d... | Internal Implementation | N/A |
+| `VLM_OCR_UNDERSTANDING` | PromptVLMOCRUnderstanding | 评估多模态模型对图片中文字内容的识别和理解能力，使用DeepSeek-OCR作为Ground Truth | [DeepSeek-OCR: Contexts Optical Compression](https://github.com/deepseek-ai/DeepSeek-OCR) | [📊 See Results](通过对比VLM输出与OCR ground truth，识别文字遗漏、错误、幻觉等问题) |
 
 ### Rule-Based TEXT Quality Metrics
 
@@ -92,6 +93,17 @@ This document provides comprehensive information about all quality metrics used 
 |------|--------|-------------|--------------|-------------------|
 | `PromptDocumentParsingQuality` | PromptDocumentParsingQuality | Evaluate the quality of general document parsing | Internal Implementation | N/A |
 | `PromptMinerURecognizeQuality` | MinerURecognizeQuality | Evaluate the quality of mineru recognize | Internal Implementation | [📊 See Results](error_category and error_label) |
+| `PromptMinerURecognizeTrainQuality` | MinerURecognizeTrainQuality | Evaluate the quality of mineru recognize | Internal Implementation | [📊 See Results](error_category and error_label) |
+
+### RAG Evaluation Metrics
+
+| Type | Metric | Description | Paper Source | Evaluation Results |
+|------|--------|-------------|--------------|-------------------|
+| `QUALITY_BAD_ANSWER_RELEVANCY` | PromptRAGAnswerRelevancy | 评估答案是否直接回答问题，检测无关和冗余信息 | [RAGAS: Automated Evaluation of Retrieval Augmented Generation](https://arxiv.org/abs/2309.15217) | N/A |
+| `QUALITY_BAD_CONTEXT_PRECISION` | PromptRAGContextPrecision | 评估检索上下文的精确度，包括相关性和排序质量 | [RAGAS: Automated Evaluation of Retrieval Augmented Generation](https://arxiv.org/abs/2309.15217) | N/A |
+| `QUALITY_BAD_CONTEXT_RECALL` | PromptRAGContextRecall | 评估检索上下文的完整性，判断上下文是否能支持答案中的所有陈述 | [RAGAS: Automated Evaluation of Retrieval Augmented Generation](https://arxiv.org/abs/2309.15217) | N/A |
+| `QUALITY_BAD_CONTEXT_RELEVANCY` | PromptRAGContextRelevancy | 评估检索上下文与问题的相关性，检测噪声信息 | [RAGAS: Automated Evaluation of Retrieval Augmented Generation](https://arxiv.org/abs/2309.15217) | N/A |
+| `QUALITY_BAD_FAITHFULNESS` | PromptRAGFaithfulness | 评估生成答案是否忠实于给定上下文，检测幻觉和编造信息 | [RAGAS: Automated Evaluation of Retrieval Augmented Generation](https://arxiv.org/abs/2309.15217) | N/A |
 
 ### Resume Quality Assessment Metrics
 

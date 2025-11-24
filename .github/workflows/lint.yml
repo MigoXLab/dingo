@@ -15,7 +15,37 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - name: Run pre-commit
+
+      - name: Install pre-commit
+        run: pip install pre-commit==3.8.0
+
+      - name: Run pre-commit (auto-fix)
+        id: pre_commit_auto_fix
         run: |
-          pip install pre-commit==3.8.0
+          # 运行 pre-commit，允许自动修复，不因修复而失败
+          pre-commit run --all-files || true
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "📝 Files were modified by pre-commit auto-fix"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✅ No auto-fix changes"
+          fi
+
+      - name: Commit auto-fix changes
+        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'push'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git commit -m "🎨 Auto-format code with pre-commit"
+          git push
+
+      - name: Run pre-commit (final check)
+        run: |
+          # 再次运行 pre-commit，这次如果有错误就真的失败
           pre-commit run --all-files

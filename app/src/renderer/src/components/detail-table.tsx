@@ -146,7 +146,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
             render: (text, record) => {
                 return (
                     <HighlightText
-                        text={text.slice(0, 10000) || '-'}
+                        text={text?.slice?.(0, 10000) || '-'}
                         highlight={record.reason_list}
                         showHighlight={showHighlight}
                     />

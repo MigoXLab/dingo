@@ -428,6 +428,7 @@ result = executor.execute()
 - [RedPajama-Data](https://github.com/togethercomputer/RedPajama-Data)
 - [mlflow](https://github.com/mlflow/mlflow)
 - [deepeval](https://github.com/confident-ai/deepeval)
+- [ragas](https://github.com/explodinggradients/ragas)
 
 # 貢献
 

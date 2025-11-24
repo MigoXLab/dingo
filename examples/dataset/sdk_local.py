@@ -1,10 +1,12 @@
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
 
 def local_plaintext():
     input_data = {
-        "input_path": "../../test/data/test_local_plaintext.txt",
+        "input_path": str(Path("test/data/test_local_plaintext.txt")),
         "dataset": {
             "source": "local",
             "format": "plaintext",
@@ -27,7 +29,7 @@ def local_plaintext():
 
 def local_json():
     input_data = {
-        "input_path": "../../test/data/test_local_json.json",
+        "input_path": str(Path("test/data/test_local_json.json")),
         "dataset": {
             "source": "local",
             "format": "json",
@@ -50,7 +52,7 @@ def local_json():
 
 def local_jsonl():
     input_data = {
-        "input_path": "../../test/data/test_local_jsonl.jsonl",
+        "input_path": str(Path("test/data/test_local_jsonl.jsonl")),
         "dataset": {
             "source": "local",
             "format": "jsonl",
@@ -73,7 +75,7 @@ def local_jsonl():
 
 def local_listjson():
     input_data = {
-        "input_path": "../../test/data/test_local_listjson.json",
+        "input_path": str(Path("test/data/test_local_listjson.json")),
         "dataset": {
             "source": "local",
             "format": "listjson",

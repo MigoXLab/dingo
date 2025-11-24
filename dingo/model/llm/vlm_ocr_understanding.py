@@ -182,4 +182,4 @@ class VLMOCRUnderstanding(BaseOpenAI):
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
-        pass  #TODO
+        pass  # TODO

@@ -42,7 +42,7 @@ class DatasetArgs(BaseModel):
     source: str = 'hugging_face'
     format: str = 'json'
     # field: DatasetFieldArgs = DatasetFieldArgs()
-    fields: List[str] = []
+    # fields: List[str] = []
     hf_config: DatasetHFConfigArgs = DatasetHFConfigArgs()
     s3_config: DatasetS3ConfigArgs = DatasetS3ConfigArgs()
     sql_config: DatasetSqlArgs = DatasetSqlArgs()

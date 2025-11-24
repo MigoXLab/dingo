@@ -34,21 +34,21 @@ class ResTypeInfo(BaseModel):
 class ResultInfo(BaseModel):
     track_id: str = ''
     raw_data: Dict = {}
-    error_status: bool = False
-    error_type: Dict[str, ResTypeInfo] = {}
+    eval_status: bool = False
+    eval_details: Dict[str, ResTypeInfo] = {}
 
     def to_dict(self):
         return {
             'track_id': self.track_id,
             'raw_data': self.raw_data,
-            'error_status': self.error_status,
-            'error_type': {k: v.to_dict() for k,v in self.error_type.items()},
+            'eval_status': self.eval_status,
+            'eval_details': {k: v.to_dict() for k,v in self.eval_details.items()},
         }
 
     def to_raw_dict(self):
         dingo_result = {
-            'error_status': self.error_status,
-            'error_type': {k: v.to_dict() for k,v in self.error_type.items()},
+            'eval_status': self.eval_status,
+            'eval_details': {k: v.to_dict() for k,v in self.eval_details.items()},
         }
         self.raw_data['dingo_result'] = dingo_result
         return self.raw_data

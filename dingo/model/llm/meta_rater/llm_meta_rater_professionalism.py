@@ -126,21 +126,21 @@ Here is the text:
         # We normalize this to binary classification for compatibility
         # Scores >= 3 are considered "good quality", < 3 are "low quality"
         if score >= 3:
-            result.error_status = False
+            result.eval_status = False
             # result.type = cls.prompt.metric_type
             # result.name = "HighQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.error_type = {
+            result.eval_details = {
                 "label": [f"{cls.__name__}.HighQuality"],
                 "metric": [cls.__name__],
                 "reason": [f"Score: {score}/5. {reason}"]
             }
         else:
-            result.error_status = True
+            result.eval_status = True
             # result.type = cls.prompt.metric_type
             # result.name = "LowQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.error_type = {
+            result.eval_details = {
                 "label": [f"{cls.__name__}.LowQuality"],
                 "metric": [cls.__name__],
                 "reason": [f"Score: {score}/5. {reason}"]

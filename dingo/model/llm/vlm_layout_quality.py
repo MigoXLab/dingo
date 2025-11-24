@@ -78,25 +78,25 @@ class VLMLayoutQuality(BaseOpenAI):
             "errors": [
                 {
                     "error_id": 1,
-                    "error_type": "边界框不准错误",
+                    "eval_details": "边界框不准错误",
                     "error_location": "元素1的边界框过小，未能完整包含其文本内容'第一章：系统概述'的全部，文字的下半部分被截断。",
                     "suggestion": "应调整边界框，确保其紧密包裹整个文本区域。"
                 },
                 {
                     "error_id": 2,
-                    "error_type": "元素类别错误",
+                    "eval_details": "元素类别错误",
                     "error_location": "元素1在图片上显示为大号、加粗、居中的文本'第一章：系统概述'，这是一个典型的章节标题，但被错误地标记为'text'。",
                     "suggestion": "应将label修正为'title'"
                 },
                 {
                     "error_id": 3,
-                    "error_type": "其他错误",
+                    "eval_details": "其他错误",
                     "error_location": "这是一个合并错误。元素10将一个独立的图标题'图3：用户增长曲线'和其下方的图片本身错误地合并到了同一个边界框中。",
                     "suggestion": "应将此元素拆分为两个独立的元素：一个label为'figure_caption'的标题元素，和一个label为'figure'的图片元素。"
                 },
                 {
                     "error_id": 4,
-                    "error_type": "检测遗漏错误",
+                    "eval_details": "检测遗漏错误",
                     "error_location": "页面上有两处明显的检测遗漏：1. 页面右上角的页眉 '财务报表' 未被检测。 2. 页面右下角的页脚 '2021年度报告 307' 未被检测。",
                     "suggestion": "应为页眉和页脚分别添加新的边界框，并将其类别分别标记为 'header' 和 'footer'。"
                 }
@@ -105,7 +105,7 @@ class VLMLayoutQuality(BaseOpenAI):
         ```
 
         *   `error_id`: (Int)错误问题的编号，从1开始计数，以此类推。
-        *   `error_type`: (String) 从上述【错误类型定义】中选择一个。
+        *   `eval_details`: (String) 从上述【错误类型定义】中选择一个。
         *   `error_location`: (String) 对错误位置的详细、客观的文字描述，**请结合图片上的视觉特征进行说明**。
         *   `suggestion`: (String) 针对该错误提出的具体、可操作的修改建议。
 
@@ -233,20 +233,20 @@ class VLMLayoutQuality(BaseOpenAI):
                 errors = result_data.get("errors", [])
 
                 for error in errors:
-                    error_type = error.get("error_type", "")
+                    eval_details = error.get("eval_details", "")
 
-                    if error_type:
-                        types.append(error_type)
-                        # names.append(error_type)
+                    if eval_details:
+                        types.append(eval_details)
+                        # names.append(eval_details)
             except json.JSONDecodeError as e:
                 log.error(f"JSON解析错误: {e}")
 
         result = ModelRes()
-        # result.error_status = False
+        # result.eval_status = False
         # result.type = types
         # result.name = names
         # result.reason = [response]
-        result.error_type.label = types
-        result.error_type.reason = [response]
+        result.eval_details.label = types
+        result.eval_details.reason = [response]
 
         return result

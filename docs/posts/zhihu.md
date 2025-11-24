@@ -95,7 +95,7 @@ def monitor_rag_response(question, generated_answer, retrieved_docs):
 
     result = RuleHallucinationHHEM.eval(data)  # 本地、快速、免费
 
-    if result.error_status:
+    if result.eval_status:
         logger.warning(f"检测到幻觉: {result.reason[0]}")
         # 触发人工审核或回答重生成
 ```
@@ -124,7 +124,7 @@ class RAGWithHallucinationDetection:
         result = self.detector.eval(data)
 
         # 4. 根据检测结果返回
-        if result.error_status:
+        if result.eval_status:
             return {"answer": None, "warning": "检测到潜在幻觉，请人工审核"}
         else:
             return {"answer": generated_answer, "confidence": "high"}

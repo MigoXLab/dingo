@@ -8,7 +8,7 @@ This dataset aims to evaluate the accuracy of the built-in prompt words in dingo
 | data_id      | Data ID, without special meaning, users can modify it according to their own needs |
 | content      | Data to be tested                                                                  |
 | language     | Language type                                                                      |
-| error_status | Data status, True for negative examples, False for positive examples               |
+| eval_status | Data status, True for negative examples, False for positive examples               |
 | type_list    | Negative types for negative examples, empty list for positive examples             |
 | name_list    | Negative names for negative examples, empty list for positive examples             |
 | reason_list  | Negative introductions for negative examples, empty list for positive examples     |

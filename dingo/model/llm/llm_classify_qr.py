@@ -61,12 +61,12 @@ class LLMClassifyQR(BaseOpenAI):
         response_model = ResponseNameReason(**response_json)
 
         result = ModelRes()
-        result.error_status = False
+        result.eval_status = False
         # result.type = cls.prompt.metric_type
         # result.name = response_model.name
         # result.reason = [response_model.reason]
 
-        result.error_type = {
+        result.eval_details = {
             "label": [f"{cls.__name__}.{response_model.name}"],
             "metric": [cls.__name__],
             "reason": [response_model.reason]

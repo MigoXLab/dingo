@@ -232,20 +232,20 @@ appear to be making claims about the topic rather than the model's internal know
 
             # 5. 根据分数设置状态
             if metrics["factual_ratio"] < cls.threshold:
-                result.error_status = True
+                result.eval_status = True
                 # result.type = "QUALITY_BAD_FACTUALITY"
                 # result.name = "FACTUALITY_CHECK_FAILED"
-                result.error_type.label = ["QUALITY_BAD_FACTUALITY.FACTUALITY_CHECK_FAILED"]
+                result.eval_details.label = ["QUALITY_BAD_FACTUALITY.FACTUALITY_CHECK_FAILED"]
             else:
                 # result.type = "QUALITY_GOOD"
                 # result.name = "FACTUALITY_CHECK_PASSED"
-                result.error_type.label = ["QUALITY_GOOD.FACTUALITY_CHECK_PASSED"]
+                result.eval_details.label = ["QUALITY_GOOD.FACTUALITY_CHECK_PASSED"]
 
             return result
 
         except Exception as e:
             return ModelRes(
-                error_status=True,
+                eval_status=True,
                 type="QUALITY_BAD_FACTUALITY",
                 name="FACTUALITY_CHECK_ERROR",
                 # score=0.0,

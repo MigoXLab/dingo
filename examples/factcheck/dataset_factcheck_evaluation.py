@@ -92,7 +92,7 @@ def evaluate_single_data_example():
     result = evaluator.eval(test_data)
 
     print("\n=== Evaluation Result ===")
-    print(f"Error Status: {result.error_status}")
+    print(f"Error Status: {result.eval_status}")
     print(f"Type: {result.type}")
     print(f"Name: {result.name}")
     print(f"Reason: {result.reason}")

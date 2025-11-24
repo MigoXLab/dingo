@@ -67,7 +67,7 @@ def evaluate_html_extract_compare_dataset():
             "max_workers": 4,  # 并发数
             "batch_size": 1,  # 批次大小
             "result_save": {
-                "bad": True,  # 保存工具B更好的样本（error_status=True）
+                "bad": True,  # 保存工具B更好的样本（eval_status=True）
                 "good": True  # 保存工具A更好或相同的样本
             }
         },

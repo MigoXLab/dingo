@@ -108,7 +108,7 @@ class LLMHtmlExtractCompareEn(BaseOpenAI):
         result = ModelRes()
         # status
         if response_model.score != 1:
-            result.error_status = True
+            result.eval_status = True
 
         # type
         # if response_model.score == 1:
@@ -132,7 +132,7 @@ class LLMHtmlExtractCompareEn(BaseOpenAI):
         if response_model.score == 0:
             tmp_type = "TOOL_EQUAL"
 
-        result.error_type = {
+        result.eval_details = {
             "label": [f"{tmp_type}.{response_model.name}"],
             "metric": [cls.__name__],
             "reason": [json.dumps(response_json, ensure_ascii=False)]

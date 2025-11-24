@@ -125,14 +125,14 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
             log.error("未找到JSON内容")
 
         result = ModelRes()
-        result.error_status = False
+        result.eval_status = False
         # result.type = types
         # result.name = names
         # result.reason = [json_str] if 'json_str' in locals() else [response]
 
         tmp_type = '.'.join(types)
         tmp_name = '.'.join(names)
-        result.error_type = {
+        result.eval_details = {
             "label": [f"{tmp_type}.{tmp_name}"],
             "metric": [cls.__name__],
             "reason": [json_str] if 'json_str' in locals() else [response]

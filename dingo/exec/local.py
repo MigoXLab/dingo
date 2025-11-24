@@ -111,9 +111,9 @@ class LocalExecutor(ExecProto):
                     futures_results = self.merge_result_info(futures_results, result_info)
 
                 for result_info in futures_results:
-                    # 统计error_type，第一层key是字段名组合，第二层value是ResTypeInfo
+                    # 统计eval_details，第一层key是字段名组合，第二层value是ResTypeInfo
                     # 错误类型从ResTypeInfo.label中获取
-                    for field_key, res_type_info in result_info.error_type.items():
+                    for field_key, res_type_info in result_info.eval_details.items():
                         if field_key not in self.summary.type_ratio:
                             self.summary.type_ratio[field_key] = {}
                         # 遍历 ResTypeInfo.label 中的每个错误类型
@@ -123,13 +123,13 @@ class LocalExecutor(ExecProto):
                         else:
                             label_list = res_type_info.label
 
-                        for error_type_name in label_list:
-                            if error_type_name not in self.summary.type_ratio[field_key]:
-                                self.summary.type_ratio[field_key][error_type_name] = 1
+                        for eval_details_name in label_list:
+                            if eval_details_name not in self.summary.type_ratio[field_key]:
+                                self.summary.type_ratio[field_key][eval_details_name] = 1
                             else:
-                                self.summary.type_ratio[field_key][error_type_name] += 1
+                                self.summary.type_ratio[field_key][eval_details_name] += 1
 
-                    if result_info.error_status:
+                    if result_info.eval_status:
                         self.summary.num_bad += 1
                     else:
                         self.summary.num_good += 1
@@ -167,8 +167,8 @@ class LocalExecutor(ExecProto):
             ResultInfo containing evaluation results
         """
         result_info = ResultInfo(track_id=track_id)
-        bad_error_type = None
-        good_error_type = None
+        bad_eval_details = None
+        good_eval_details = None
 
         for e_c_i in eval_list:
             # Get model class and instantiate
@@ -185,54 +185,54 @@ class LocalExecutor(ExecProto):
 
             # Execute evaluation
             tmp: ModelRes = model.eval(Data(**map_data))
-            if isinstance(tmp.error_type, dict):
-                tmp.error_type = ResTypeInfo(**tmp.error_type)
+            if isinstance(tmp.eval_details, dict):
+                tmp.eval_details = ResTypeInfo(**tmp.eval_details)
 
-            # Collect error_type from ModelRes
-            if tmp.error_status:
-                result_info.error_status = True
-                # 合并 bad 的 error_type (ModelRes.error_type 现在直接是 ResTypeInfo)
-                if isinstance(bad_error_type, dict):
-                    bad_error_type = ResTypeInfo(**bad_error_type)
-                if bad_error_type:
-                    bad_error_type.merge(tmp.error_type)
+            # Collect eval_details from ModelRes
+            if tmp.eval_status:
+                result_info.eval_status = True
+                # 合并 bad 的 eval_details (ModelRes.eval_details 现在直接是 ResTypeInfo)
+                if isinstance(bad_eval_details, dict):
+                    bad_eval_details = ResTypeInfo(**bad_eval_details)
+                if bad_eval_details:
+                    bad_eval_details.merge(tmp.eval_details)
                 else:
-                    bad_error_type = tmp.error_type.copy()
+                    bad_eval_details = tmp.eval_details.copy()
             else:
-                # 合并 good 的 error_type (ModelRes.error_type 现在直接是 ResTypeInfo)
-                if isinstance(good_error_type, dict):
-                    good_error_type = ResTypeInfo(**good_error_type)
-                if good_error_type:
-                    good_error_type.merge(tmp.error_type)
+                # 合并 good 的 eval_details (ModelRes.eval_details 现在直接是 ResTypeInfo)
+                if isinstance(good_eval_details, dict):
+                    good_eval_details = ResTypeInfo(**good_eval_details)
+                if good_eval_details:
+                    good_eval_details.merge(tmp.eval_details)
                 else:
-                    good_error_type = tmp.error_type.copy()
+                    good_eval_details = tmp.eval_details.copy()
 
         # Set result_info fields based on all_labels configuration and add field
         join_fields = ','.join(eval_fields.values())
 
         if self.input_args.executor.result_save.all_labels:
             # Always include both good and bad results when they exist
-            # The final error_status is True if ANY evaluation failed
-            # 合并 good 和 bad 的 error_type (现在是 ResTypeInfo 对象)
-            all_error_type = None
-            if bad_error_type:
-                all_error_type = bad_error_type.copy()
-            if good_error_type:
-                if all_error_type:
-                    all_error_type.merge(good_error_type)
+            # The final eval_status is True if ANY evaluation failed
+            # 合并 good 和 bad 的 eval_details (现在是 ResTypeInfo 对象)
+            all_eval_details = None
+            if bad_eval_details:
+                all_eval_details = bad_eval_details.copy()
+            if good_eval_details:
+                if all_eval_details:
+                    all_eval_details.merge(good_eval_details)
                 else:
-                    all_error_type = good_error_type.copy()
-            # add field (ResultInfo.error_type 现在是 Dict[str, ResTypeInfo])
-            if all_error_type:
-                result_info.error_type = {join_fields: all_error_type}
+                    all_eval_details = good_eval_details.copy()
+            # add field (ResultInfo.eval_details 现在是 Dict[str, ResTypeInfo])
+            if all_eval_details:
+                result_info.eval_details = {join_fields: all_eval_details}
         else:
-            # add field (ResultInfo.error_type 现在是 Dict[str, ResTypeInfo])
-            if result_info.error_status:
-                if bad_error_type:
-                    result_info.error_type = {join_fields: bad_error_type}
+            # add field (ResultInfo.eval_details 现在是 Dict[str, ResTypeInfo])
+            if result_info.eval_status:
+                if bad_eval_details:
+                    result_info.eval_details = {join_fields: bad_eval_details}
             else:
-                if good_error_type and self.input_args.executor.result_save.good:
-                    result_info.error_type = {join_fields: good_error_type}
+                if good_eval_details and self.input_args.executor.result_save.good:
+                    result_info.eval_details = {join_fields: good_eval_details}
 
         return result_info
 
@@ -240,16 +240,16 @@ class LocalExecutor(ExecProto):
         existing_item = next((item for item in existing_list if item.track_id == new_item.track_id), None)
 
         if existing_item:
-            existing_item.error_status = existing_item.error_status or new_item.error_status
+            existing_item.eval_status = existing_item.eval_status or new_item.eval_status
 
-            # 合并 error_type 字典（第一层是字段名，第二层直接是 ResTypeInfo）
-            for key, value in new_item.error_type.items():
+            # 合并 eval_details 字典（第一层是字段名，第二层直接是 ResTypeInfo）
+            for key, value in new_item.eval_details.items():
                 # 第一层是字段名，如果存在，则合并 ResTypeInfo
-                if key in existing_item.error_type:
-                    existing_item.error_type[key].merge(value)
+                if key in existing_item.eval_details:
+                    existing_item.eval_details[key].merge(value)
                 # 第一层是字段名，如果不存在，则创建副本
                 else:
-                    existing_item.error_type[key] = value.copy()
+                    existing_item.eval_details[key] = value.copy()
         else:
             existing_list.append(new_item)
 
@@ -263,9 +263,9 @@ class LocalExecutor(ExecProto):
 
         # type_ratio是两层结构：第一层是字段名，第二层是具体错误类型
         for field_name in new_summary.type_ratio:
-            for error_type in new_summary.type_ratio[field_name]:
-                new_summary.type_ratio[field_name][error_type] = round(
-                    new_summary.type_ratio[field_name][error_type] / new_summary.total, 6
+            for eval_details in new_summary.type_ratio[field_name]:
+                new_summary.type_ratio[field_name][eval_details] = round(
+                    new_summary.type_ratio[field_name][eval_details] / new_summary.total, 6
                 )
 
         new_summary.finish_time = time.strftime("%Y%m%d_%H%M%S", time.localtime())
@@ -277,11 +277,11 @@ class LocalExecutor(ExecProto):
         if not input_args.executor.result_save.bad:
             return
 
-        if not input_args.executor.result_save.good and not result_info.error_status:
+        if not input_args.executor.result_save.good and not result_info.eval_status:
             return
 
-        # 遍历 error_type 的第一层（字段名组合），第二层直接是 ResTypeInfo
-        for field_name, res_type_info in result_info.error_type.items():
+        # 遍历 eval_details 的第一层（字段名组合），第二层直接是 ResTypeInfo
+        for field_name, res_type_info in result_info.eval_details.items():
             # 第一层：根据字段名创建文件夹
             field_dir = os.path.join(path, field_name)
             if not os.path.exists(field_dir):
@@ -292,10 +292,10 @@ class LocalExecutor(ExecProto):
                 label_list = res_type_info.get('label', [])
             else:
                 label_list = res_type_info.label
-            for error_type_name in label_list:
+            for eval_details_name in label_list:
                 # 按点分割错误类型名称，创建多层文件夹
                 # 例如: "validity_errors.space_issues" -> ["validity_errors", "space_issues"]
-                parts = error_type_name.split(".")
+                parts = eval_details_name.split(".")
 
                 # 除了最后一部分，其他部分都是文件夹
                 if len(parts) > 1:
@@ -345,12 +345,12 @@ class LocalExecutor(ExecProto):
                         data = json.loads(line.strip())
 
                         if save_raw:
-                            error_status = data['dingo_result']['error_status']
+                            eval_status = data['dingo_result']['eval_status']
                         else:
-                            error_status = data['error_status']
-                        if high_quality and not error_status:
+                            eval_status = data['eval_status']
+                        if high_quality and not eval_status:
                             info_list.append(data)
-                        if not high_quality and error_status:
+                        if not high_quality and eval_status:
                             info_list.append(data)
 
         return info_list

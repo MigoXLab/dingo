@@ -120,8 +120,8 @@ class TestConvertResult:
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
         # assert result.type == "TOOL_ONE_BETTER"
-        assert "TOOL_ONE_BETTER" in result.error_type.label
-        assert result.error_status is False
+        assert "TOOL_ONE_BETTER" in result.eval_details.label
+        assert result.eval_status is False
 
     def test_convert_b_to_equal(self):
         """B -> TOOL_EQUAL"""
@@ -129,8 +129,8 @@ class TestConvertResult:
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
         # assert result.type == "TOOL_EQUAL"
-        assert "TOOL_EQUAL" in result.error_type.label
-        assert result.error_status is False
+        assert "TOOL_EQUAL" in result.eval_details.label
+        assert result.eval_status is False
 
     def test_convert_c_to_tool_two_better(self):
         """C -> TOOL_TWO_BETTER"""
@@ -138,8 +138,8 @@ class TestConvertResult:
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
         # assert result.type == "TOOL_TWO_BETTER"
-        assert "TOOL_TWO_BETTER" in result.error_type.label
-        assert result.error_status is True
+        assert "TOOL_TWO_BETTER" in result.eval_details.label
+        assert result.eval_status is True
 
 
 class TestCompleteFlow:
@@ -151,8 +151,8 @@ class TestCompleteFlow:
         result = LLMHtmlExtractCompareV2.process_response(response)
 
         # assert result.type == "TOOL_ONE_BETTER"
-        assert "TOOL_ONE_BETTER" in result.error_type.label
-        assert result.error_status is False
+        assert "TOOL_ONE_BETTER" in result.eval_details.label
+        assert result.eval_status is False
 
     def test_process_response_b(self):
         """测试完整流程B"""
@@ -160,8 +160,8 @@ class TestCompleteFlow:
         result = LLMHtmlExtractCompareV2.process_response(response)
 
         # assert result.type == "TOOL_EQUAL"
-        assert "TOOL_EQUAL" in result.error_type.label
-        assert result.error_status is False
+        assert "TOOL_EQUAL" in result.eval_details.label
+        assert result.eval_status is False
 
     def test_process_response_c(self):
         """测试完整流程C"""
@@ -169,5 +169,5 @@ class TestCompleteFlow:
         result = LLMHtmlExtractCompareV2.process_response(response)
 
         # assert result.type == "TOOL_TWO_BETTER"
-        assert "TOOL_TWO_BETTER" in result.error_type.label
-        assert result.error_status is True
+        assert "TOOL_TWO_BETTER" in result.eval_details.label
+        assert result.eval_status is True

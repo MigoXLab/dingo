@@ -21,7 +21,7 @@
 - 无特定配置参数，使用默认配置即可
 
 **评估结果**：
-- `error_status`：布尔值，表示图像是否无效
+- `eval_status`：布尔值，表示图像是否无效
 - `reason`：详细错误信息，如"Image is not valid: all white or black"
 
 **支持的图像格式**：
@@ -40,7 +40,7 @@
 - 默认有效宽高比范围为0.25-4（即图像不能过于狭长或过短过宽）
 
 **评估结果**：
-- `error_status`：布尔值，表示图像尺寸是否无效
+- `eval_status`：布尔值，表示图像尺寸是否无效
 - `reason`：详细错误信息，包含具体的宽高比值
 
 ### 2.3 RuleImageQuality - 图像清晰度质量评估
@@ -51,7 +51,7 @@
 - `threshold`：质量评分阈值（默认5.5），低于此值的图像被标记为低质量
 
 **评估结果**：
-- `error_status`：布尔值，表示图像质量是否不满足要求
+- `eval_status`：布尔值，表示图像质量是否不满足要求
 - `reason`：详细错误信息，包含具体的质量评分（1-10分）
 
 ### 2.4 RuleImageRepeat - 重复图像检测
@@ -63,7 +63,7 @@
 - 需通过content字段提供图像目录路径
 
 **评估结果**：
-- `error_status`：布尔值，表示是否存在重复图像
+- `eval_status`：布尔值，表示是否存在重复图像
 - `reason`：包含重复图像对的列表和重复率
 
 ### 2.5 RuleImageTextSimilarity - 图像文本语义相似度评估
@@ -75,7 +75,7 @@
 - `refer_path`：可选，CLIP模型路径，如未指定将自动下载
 
 **评估结果**：
-- `error_status`：布尔值，表示图像与文本相似度是否不足
+- `eval_status`：布尔值，表示图像与文本相似度是否不足
 - `reason`：详细错误信息，包含具体的相似度得分
 
 ## 3. 文件结构
@@ -338,13 +338,13 @@ if __name__ == '__main__':
     {
       "id": "001",
       "img": "/path/to/corrupt.jpg",
-      "error_type": "RuleImageValid",
+      "eval_details": "RuleImageValid",
       "error_message": "无法打开图像文件"
     },
     {
       "id": "002",
       "img": "/path/to/small.jpg",
-      "error_type": "RuleImageSizeValid",
+      "eval_details": "RuleImageSizeValid",
       "width": 50,
       "height": 50,
       "min_width": 100,
@@ -353,7 +353,7 @@ if __name__ == '__main__':
     {
       "id": "003",
       "img": "/path/to/blur.jpg",
-      "error_type": "RuleImageQuality",
+      "eval_details": "RuleImageQuality",
       "quality_score": 8.5,
       "threshold": 7.0
     },
@@ -361,7 +361,7 @@ if __name__ == '__main__':
       "id": "004",
       "content": "一只狗在跑步",
       "img": "/path/to/cat.jpg",
-      "error_type": "RuleImageTextSimilarity",
+      "eval_details": "RuleImageTextSimilarity",
       "similarity_score": 0.12,
       "threshold": 0.17
     }
@@ -438,7 +438,7 @@ if __name__ == '__main__':
 ModelRes(
     name="RuleImageValid",
     type="QUALITY_BAD_IMG_EFFECTIVENESS",
-    error_status=True/False,  # 是否为无效图像
+    eval_status=True/False,  # 是否为无效图像
     reason=["Image is not valid: all white or black"]  # 错误原因
 )
 ```
@@ -448,7 +448,7 @@ ModelRes(
 ModelRes(
     name="RuleImageSizeValid",
     type="QUALITY_BAD_IMG_EFFECTIVENESS",
-    error_status=True/False,  # 图像尺寸是否无效
+    eval_status=True/False,  # 图像尺寸是否无效
     reason=["Image size is not valid, the ratio of width to height: 比值"]  # 错误原因
 )
 ```
@@ -458,7 +458,7 @@ ModelRes(
 ModelRes(
     name="RuleImageQuality",
     type="QUALITY_BAD_IMG_EFFECTIVENESS",
-    error_status=True/False,  # 图像质量是否不满足要求
+    eval_status=True/False,  # 图像质量是否不满足要求
     reason=["Image quality is not satisfied, ratio: 评分值"]  # 错误原因
 )
 ```
@@ -468,7 +468,7 @@ ModelRes(
 ModelRes(
     name="RuleImageRepeat",
     type="QUALITY_BAD_IMG_SIMILARITY",
-    error_status=True/False,  # 是否存在重复图像
+    eval_status=True/False,  # 是否存在重复图像
     reason=["图像1 -> [重复图像列表]", ..., {"duplicate_ratio": 重复率}]
 )
 ```
@@ -478,7 +478,7 @@ ModelRes(
 ModelRes(
     name="RuleImageTextSimilarity",
     type="QUALITY_BAD_IMG_RELEVANCE",
-    error_status=True/False,  # 图像与文本相似度是否不足
+    eval_status=True/False,  # 图像与文本相似度是否不足
     reason=["Image quality is not satisfied, ratio: 相似度值"]  # 错误原因
 )
 ```

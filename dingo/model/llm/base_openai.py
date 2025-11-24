@@ -128,16 +128,16 @@ class BaseOpenAI(BaseLLM):
         response_model = ResponseScoreReason(**response_json)
 
         result = ModelRes()
-        # error_status
+        # eval_status
         if response_model.score == 1:
-            result.error_type = {
+            result.eval_details = {
                 "label": ["QUALITY_GOOD"],
                 "metric": [cls.__name__],
                 "reason": [response_model.reason]
             }
         else:
-            result.error_status = True
-            result.error_type = {
+            result.eval_status = True
+            result.eval_details = {
                 "label": [f"QUALITY_BAD.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [response_model.reason]
@@ -171,8 +171,8 @@ class BaseOpenAI(BaseLLM):
                 except_name = e.__class__.__name__
 
         res = ModelRes()
-        res.error_status = True
-        res.error_type = {
+        res.eval_status = True
+        res.eval_details = {
             "label": [f"QUALITY_BAD.{except_name}"],
             "metric": [cls.__name__],
             "reason": [except_msg]

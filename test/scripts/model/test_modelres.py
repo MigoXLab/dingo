@@ -21,11 +21,11 @@ class RegisterRuleColon(BaseRule):
         if len(content) <= 0:
             return res
         if content[-1] == ":":
-            res.error_status = True
+            res.eval_status = True
             # res.type = [cls.metric_type, 'TestType']
             # res.name = [cls.__name__, 'TestName']
             # res.reason = [content[-100:]]
-            res.error_type = {
+            res.eval_details = {
                 "label": [cls.metric_type, 'TestType'],
                 "metric": [cls.__name__],
                 "reason": [content[-100:]]
@@ -44,7 +44,7 @@ class TestModelRes:
 
         res = RegisterRuleColon().eval(data)
         # print(res)
-        assert isinstance(res.error_type.label, List)
-        assert isinstance(res.error_type.reason, List)
-        assert len(res.error_type.label) == 2
-        assert 'TestType' in res.error_type.label
+        assert isinstance(res.eval_details.label, List)
+        assert isinstance(res.eval_details.reason, List)
+        assert len(res.eval_details.label) == 2
+        assert 'TestType' in res.eval_details.label

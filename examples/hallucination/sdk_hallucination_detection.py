@@ -34,10 +34,10 @@ def example_1_basic_hallucination_detection():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.error_status}")
+    print(f"Error Status: {result.eval_status}")
     # print(f"Type: {result.type}")
     # print(f"Name: {result.name}")
-    print(f"Type: {result.error_type}")
+    print(f"Type: {result.eval_details}")
     print(f"Reason: {result.reason[0]}")
     print(f"Score: {getattr(result, 'score', 'N/A')}")
     print()
@@ -57,10 +57,10 @@ def example_2_no_hallucination():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.error_status}")
+    print(f"Error Status: {result.eval_status}")
     # print(f"Type: {result.type}")
     # print(f"Name: {result.name}")
-    print(f"Type: {result.error_type}")
+    print(f"Type: {result.eval_details}")
     print(f"Reason: {result.reason[0]}")
     print(f"Score: {getattr(result, 'score', 'N/A')}")
     print()
@@ -86,10 +86,10 @@ def example_3_multiple_contexts():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.error_status}")
+    print(f"Error Status: {result.eval_status}")
     # print(f"Type: {result.type}")
     # print(f"Name: {result.name}")
-    print(f"Type: {result.error_type}")
+    print(f"Type: {result.eval_details}")
     print(f"Score: {getattr(result, 'score', 'N/A')}")
     # print(f"Verdict Details:")
     # for detail in getattr(result, 'verdict_details', []):
@@ -118,10 +118,10 @@ def example_4_rag_scenario():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.error_status}")
+    print(f"Error Status: {result.eval_status}")
     # print(f"Type: {result.type}")
     # print(f"Name: {result.name}")
-    print(f"Type: {result.error_type}")
+    print(f"Type: {result.eval_details}")
     print(f"Score: {getattr(result, 'score', 'N/A')}")
     print("Detailed Analysis:")
     print(result.reason[0])
@@ -141,16 +141,16 @@ def example_5_missing_context():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.error_status}")
+    print(f"Error Status: {result.eval_status}")
     # print(f"Type: {result.type}")
     # print(f"Name: {result.name}")
-    print(f"Type: {result.error_type}")
+    print(f"Type: {result.eval_details}")
     print(f"Reason: {result.reason[0]}")
     print()
 
 
 def example_6_clear_hallucination():
-    """Example 6: Clear hallucination case that triggers error_status=True"""
+    """Example 6: Clear hallucination case that triggers eval_status=True"""
     print("=== Example 6: Clear Hallucination (Error Triggered) ===")
 
     # Create a case where the response clearly contradicts multiple contexts
@@ -170,10 +170,10 @@ def example_6_clear_hallucination():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.error_status}")
+    print(f"Error Status: {result.eval_status}")
     # print(f"Type: {result.type}")
     # print(f"Name: {result.name}")
-    print(f"Type: {result.error_type}")
+    print(f"Type: {result.eval_details}")
     print(f"Score: {getattr(result, 'score', 'N/A')}")
     print("Detailed Analysis:")
     print(result.reason[0])

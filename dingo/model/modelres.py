@@ -6,11 +6,11 @@ from dingo.io.output.result_info import ResTypeInfo
 
 
 class ModelRes(BaseModel):
-    error_status: bool = False
-    error_type: ResTypeInfo = ResTypeInfo()
+    eval_status: bool = False
+    eval_details: ResTypeInfo = ResTypeInfo()
 
     def __setattr__(self, name, value):
-        # 在赋值时拦截 error_type 字段
-        if name == 'error_type' and isinstance(value, dict):
+        # 在赋值时拦截 eval_details 字段
+        if name == 'eval_details' and isinstance(value, dict):
             value = ResTypeInfo(**value)
         super().__setattr__(name, value)

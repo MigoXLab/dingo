@@ -28,13 +28,13 @@ class LLMSecurity(BaseOpenAI):
         tmp_reason = []
         for k, v in response_json.items():
             if v == "pos":
-                result.error_status = True
+                result.eval_status = True
                 # result.type = "Security"
                 # result.name = cls.prompt.__name__
                 # result.reason.append(k)
                 tmp_reason.append(k)
 
-        result.error_type = {
+        result.eval_details = {
             "label": [f"Security.{cls.__name__}"],
             "metric": [cls.__name__],
             "reason": tmp_reason

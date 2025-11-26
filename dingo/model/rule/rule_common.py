@@ -89,7 +89,7 @@ class RuleAbnormalNumber(BaseRule):
         if match:
             res.eval_status = True
             res.eval_details = {
-                "label": f"{cls.metric_type}.{cls.__name__}",
+                "label": [f"{cls.metric_type}.{cls.__name__}"],
                 "metric": [cls.__name__],
                 "reason": [match.group(0).strip("\n")]
             }

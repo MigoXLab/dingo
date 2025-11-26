@@ -40,6 +40,7 @@ class RuleDoi(BaseRule):
             }
         return res
 
+
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["xinghe"])
 class RuleIsbn(BaseRule):
     _metric_info = {

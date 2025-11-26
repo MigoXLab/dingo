@@ -15,6 +15,7 @@ SQL_CONFIG = {
 }
 TABLE_NAME = ''
 
+
 def main():
     input_data = {
         "input_path": f"SELECT * FROM {TABLE_NAME} where isbn is not null and isbn != '' LIMIT 10",

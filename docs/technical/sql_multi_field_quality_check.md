@@ -184,7 +184,7 @@ result = executor.execute()
 
 ### 4.1 灵活的数据源支持
 Dingo 支持多种数据源，包括：
-- ✅ SQL 数据库（MySQL、PostgreSQL、StarRocks 等）
+- ✅ SQL 数据库（MySQL、PostgreSQL、StarRocks、Doris 等）
 - ✅ 本地文件（JSONL、CSV 等）
 - ✅ S3 对象存储
 - ✅ Hugging Face 数据集

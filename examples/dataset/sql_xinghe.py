@@ -1,9 +1,7 @@
 from dingo.config import DatasetArgs, DatasetSqlArgs, InputArgs
 from dingo.data.dataset import SqlDataset
 from dingo.data.datasource.sql import SqlDataSource
-from dingo.config import InputArgs
 from dingo.exec import Executor
-
 
 SQL_CONFIG = {
     'dialect': 'mysql',
@@ -56,4 +54,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -71,4 +71,3 @@ class SemanticMatcher:
             return True, best_match, best_score
         else:
             return False, None, best_score
-

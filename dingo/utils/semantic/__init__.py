@@ -16,4 +16,3 @@ except ImportError as e:
             )
 
     __all__ = ["SemanticMatcher"]
-

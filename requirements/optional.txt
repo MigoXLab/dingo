@@ -12,4 +12,7 @@ torch>=1.7.1
 torchvision
 tqdm
 
+# Semantic matching dependencies
+sentence-transformers>=2.2.0
+
 git+https://github.com/openai/CLIP.git

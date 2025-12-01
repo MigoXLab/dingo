@@ -36,6 +36,9 @@ class RuleAbnormalChar(BaseRule):
                 if isinstance(tmp_res.eval_details, dict):
                     tmp_res.eval_details = ResTypeInfo(**tmp_res.eval_details)
                 res.eval_details.merge(tmp_res.eval_details)
+        # Set QUALITY_GOOD when all checks pass
+        if not res.eval_status:
+            res.eval_details = ResTypeInfo(label=["QUALITY_GOOD"])
         return res
 
 
@@ -63,6 +66,9 @@ class RuleAbnormalHtml(BaseRule):
                 if isinstance(tmp_res.eval_details, dict):
                     tmp_res.eval_details = ResTypeInfo(**tmp_res.eval_details)
                 res.eval_details.merge(tmp_res.eval_details)
+        # Set QUALITY_GOOD when all checks pass
+        if not res.eval_status:
+            res.eval_details = ResTypeInfo(label=["QUALITY_GOOD"])
         return res
 
 
@@ -697,6 +703,9 @@ class RuleEnterAndSpace(BaseRule):
                 if isinstance(tmp_res.eval_details, dict):
                     tmp_res.eval_details = ResTypeInfo(**tmp_res.eval_details)
                 res.eval_details.merge(tmp_res.eval_details)
+        # Set QUALITY_GOOD when all checks pass
+        if not res.eval_status:
+            res.eval_details = ResTypeInfo(label=["QUALITY_GOOD"])
         return res
 
 

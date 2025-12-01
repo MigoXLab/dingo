@@ -21,7 +21,7 @@ if __name__ == '__main__':
         },
         "evaluator": [
             {
-                "fields": {"id": "question_id", "content": "conversation_a"},
+                "fields": {"content": "conversation_a"},
                 "evals": [
                     {"name": "RuleEnterAndSpace"},
                     {"name": "RuleAbnormalChar"}

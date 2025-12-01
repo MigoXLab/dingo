@@ -17,7 +17,7 @@ if __name__ == '__main__':
         },
         "evaluator": [
             {
-                "fields": {"id": "id", "content": "history"},
+                "fields": {"content": "history"},
                 "evals": [
                     {"name": "RuleEnterAndSpace"},
                     {"name": "RuleAbnormalChar"}

@@ -1,5 +1,10 @@
+import json
+
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
+from dingo.model.modelres import ModelRes
+from dingo.utils import log
+from dingo.utils.exception import ConvertJsonError
 
 
 @Model.llm_register("LLMTextQualityV3")
@@ -42,3 +47,58 @@ Your primary objective is to assess the suitability of this dataset for training
 Please remember to output only a JSON format data, without any additional content.
 # Input content
     """
+
+    @classmethod
+    def process_response(cls, response: str) -> ModelRes:
+        log.info(response)
+
+        # 清理 markdown 代码块
+        if response.startswith("```json"):
+            response = response[7:]
+        if response.startswith("```"):
+            response = response[3:]
+        if response.endswith("```"):
+            response = response[:-3]
+
+        try:
+            response_json = json.loads(response)
+        except json.JSONDecodeError:
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
+
+        # 直接解析，不使用 ResponseScoreReason（因为该类不支持 type/name 字段）
+        score = response_json.get("score", 0)
+        type_list = response_json.get("type", [])
+        name_list = response_json.get("name", [])
+        reason_list = response_json.get("reason", [])
+
+        # 确保都是列表
+        if not isinstance(type_list, list):
+            type_list = [type_list] if type_list else []
+        if not isinstance(name_list, list):
+            name_list = [name_list] if name_list else []
+        if not isinstance(reason_list, list):
+            reason_list = [reason_list] if reason_list else []
+
+        result = ModelRes()
+        if score == 1:
+            result.eval_details = {
+                "label": ["QUALITY_GOOD"],
+                "metric": [cls.__name__],
+                "reason": reason_list if reason_list else [""]
+            }
+        else:
+            # 构建标签：type.name 格式
+            labels = []
+            for t, n in zip(type_list, name_list):
+                labels.append(f"{t}.{n}")
+            if not labels:
+                labels = [f"QUALITY_BAD.{cls.__name__}"]
+
+            result.eval_status = True
+            result.eval_details = {
+                "label": labels,
+                "metric": [cls.__name__],
+                "reason": reason_list if reason_list else [""]
+            }
+
+        return result

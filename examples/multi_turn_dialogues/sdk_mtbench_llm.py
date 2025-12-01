@@ -1,7 +1,18 @@
+import os
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
 if __name__ == '__main__':
+    OPENAI_MODEL = 'deepseek-chat'
+    OPENAI_URL = 'https://api.deepseek.com/v1'
+    OPENAI_KEY = os.getenv("OPENAI_KEY")
+    common_config = {
+        "model": OPENAI_MODEL,
+        "key": OPENAI_KEY,
+        "api_url": OPENAI_URL,
+    }
+
     input_data = {
         "input_path": "lmsys/mt_bench_human_judgments",
         "dataset": {
@@ -21,9 +32,9 @@ if __name__ == '__main__':
         },
         "evaluator": [
             {
-                "fields": {"id": "question_id", "content": "conversation_a"},
+                "fields": {"content": "conversation_a"},
                 "evals": [
-                    {"name": "LLMTextQualityV3", "config": {"key": "", "api_url": ""}}
+                    {"name": "LLMTextQualityV3", "config": common_config}
                 ],
             }
         ]

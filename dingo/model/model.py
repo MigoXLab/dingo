@@ -125,18 +125,32 @@ class Model:
                 except ModuleNotFoundError as e:
                     log.debug(e)
 
-        # llm auto register
-        for file in os.listdir(os.path.join(this_module_directory, 'llm')):
-            path = os.path.join(this_module_directory, 'llm', file)
-            if os.path.isfile(path) and file.endswith('.py') and not file == '__init__.py':
-                try:
-                    importlib.import_module('dingo.model.llm.' + file.split('.')[0])
-                except ModuleNotFoundError as e:
-                    log.debug(e)
-                except ImportError as e:
-                    log.debug("=" * 30 + " ImportError " + "=" * 30)
-                    log.debug(f'module {file.split(".")[0]} not imported because: \n{e}')
-                    log.debug("=" * 73)
+        # llm auto register - 递归扫描子目录
+        llm_base_dir = os.path.join(this_module_directory, 'llm')
+        for root, dirs, files in os.walk(llm_base_dir):
+            # 跳过 __pycache__ 目录
+            dirs[:] = [d for d in dirs if d != '__pycache__']
+
+            for file in files:
+                if file.endswith('.py') and file != '__init__.py':
+                    # 计算相对于 llm 目录的模块路径
+                    rel_path = os.path.relpath(root, llm_base_dir)
+                    if rel_path == '.':
+                        module_name = f'dingo.model.llm.{file[:-3]}'
+                    else:
+                        # 将路径分隔符转换为点
+                        rel_module = rel_path.replace(os.sep, '.')
+                        module_name = f'dingo.model.llm.{rel_module}.{file[:-3]}'
+
+                    try:
+                        importlib.import_module(module_name)
+                    except ModuleNotFoundError as e:
+                        log.debug(e)
+                    except ImportError as e:
+                        log.debug("=" * 30 + " ImportError " + "=" * 30)
+                        log.debug(f'module {module_name} not imported because: \n{e}')
+                        log.debug("=" * 73)
+
         cls.module_loaded = True
 
     @classmethod

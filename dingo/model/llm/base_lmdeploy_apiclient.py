@@ -16,9 +16,9 @@ from dingo.utils.exception import ConvertJsonError, ExceedMaxTokens
 class BaseLmdeployApiClient(BaseLLM):
     dynamic_config = EvaluatorLLMArgs()
 
-    @classmethod
-    def set_prompt(cls, prompt):
-        cls.prompt = prompt
+    # @classmethod
+    # def set_prompt(cls, prompt):
+    #     cls.prompt = prompt
 
     @classmethod
     def create_client(cls):
@@ -32,7 +32,7 @@ class BaseLmdeployApiClient(BaseLLM):
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
         messages = [
-            {"role": "user", "content": cls.prompt.content + input_data.content}
+            {"role": "user", "content": cls.prompt + input_data.content}
         ]
         return messages
 

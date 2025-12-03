@@ -362,7 +362,7 @@ input_data = {
     "executor": {
         "result_save": {"bad": True}
     },
-    "executor": [
+    "evaluator": [
         {
             "fields": {"content": "content"},
             "evals": [

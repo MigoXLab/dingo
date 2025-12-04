@@ -4,7 +4,7 @@ from typing import List, Union
 from dingo.io import Data
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.model.response.response_hallucination import HallucinationScoreReason, HallucinationVerdict, HallucinationVerdicts
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
@@ -153,7 +153,7 @@ class LLMHallucination(BaseOpenAI):
         else:
             # result.type = "QUALITY_GOOD"
             # result.name = "NO_HALLUCINATION"
-            result.eval_details.label = ['QUALITY_GOOD.NO_HALLUCINATION']
+            result.eval_details.label = [f'{QualityLabel.QUALITY_GOOD}.NO_HALLUCINATION']
 
         result.reason = [reason]
 

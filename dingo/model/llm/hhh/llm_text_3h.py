@@ -2,7 +2,7 @@ import json
 
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.model.response.response_class import ResponseScoreReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
@@ -43,7 +43,7 @@ class LLMText3H(BaseOpenAI):
         if response_model.score == 1:
             tmp_name = cls.prompt.__name__[8:].upper()
             result.eval_details = {
-                "label": [f"QUALITY_GOOD.{tmp_name}"],
+                "label": [f"{QualityLabel.QUALITY_GOOD}.{tmp_name}"],
                 "metric": [cls.__name__],
                 "reason": [response_model.reason] if response_model.reason else ["Response meets quality criteria"]
             }

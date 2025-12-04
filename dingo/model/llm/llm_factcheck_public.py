@@ -4,7 +4,7 @@ from typing import Dict, List, Literal, Optional
 from dingo.io import Data
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.utils.exception import ExceedMaxTokens
 
 
@@ -239,7 +239,7 @@ appear to be making claims about the topic rather than the model's internal know
             else:
                 # result.type = "QUALITY_GOOD"
                 # result.name = "FACTUALITY_CHECK_PASSED"
-                result.eval_details.label = ["QUALITY_GOOD.FACTUALITY_CHECK_PASSED"]
+                result.eval_details.label = [f"{QualityLabel.QUALITY_GOOD}.FACTUALITY_CHECK_PASSED"]
 
             return result
 

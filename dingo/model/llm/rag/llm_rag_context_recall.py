@@ -10,7 +10,7 @@ from typing import List
 from dingo.io import Data
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.model.response.response_class import ResponseScoreReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
@@ -178,7 +178,7 @@ class LLMRAGContextRecall(BaseOpenAI):
             # result.name = "CONTEXT_RECALL_PASS"
             # result.reason = [f"上下文召回评估通过 (分数: {response_model.score}/10)\n{response_model.reason}"]
             result.eval_details = {
-                "label": ["QUALITY_GOOD.CONTEXT_RECALL_PASS"],
+                "label": [f"{QualityLabel.QUALITY_GOOD}.CONTEXT_RECALL_PASS"],
                 "metric": [cls.__name__],
                 "reason": [f"上下文召回评估通过 (分数: {response_model.score}/10)\n{response_model.reason}"]
             }

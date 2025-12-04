@@ -9,7 +9,7 @@ class BaseRule:
     metric_type: str  # This will be set by the decorator
     group: List[str]  # This will be set by the decorator
     dynamic_config: EvaluatorRuleArgs
-    
+
     # Quality label constants
     LABEL_QUALITY_GOOD = "QUALITY_GOOD"  # Indicates pass the quality check
     LABEL_QUALITY_BAD_PREFIX = "QUALITY_BAD_"  # Indicates not pass the quality check
@@ -17,9 +17,9 @@ class BaseRule:
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         """Evaluate the quality of input data
-        
+
         Subclasses should override this method to implement specific evaluation logic.
-        
+
         Standard implementation pattern:
         ```python
         res = ModelRes()
@@ -36,10 +36,10 @@ class BaseRule:
             res.eval_details = {
                 "label": [cls.LABEL_QUALITY_GOOD]
             }
-        
+
         return res
         ```
-        
+
         Args:
             input_data: Data object to be evaluated
             

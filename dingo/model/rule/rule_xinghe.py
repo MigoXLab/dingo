@@ -30,7 +30,7 @@ class RuleDoi(BaseRule):
         res = ModelRes()
         content = input_data.content
         if re.match(cls.dynamic_config.pattern, content):
-            res.eval_details.label = ["QUALITY_GOOD"]
+            res.eval_details.label = [cls.LABEL_QUALITY_GOOD]
         else:
             res.eval_status = True
             res.eval_details = {
@@ -97,7 +97,7 @@ class RuleIsbn(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         res = ModelRes()
-        res.eval_details.label = ["QUALITY_GOOD"]
+        res.eval_details.label = [cls.LABEL_QUALITY_GOOD]
 
         content = input_data.content
         content = str(content).replace('-', '')

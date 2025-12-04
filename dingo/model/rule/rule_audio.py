@@ -69,7 +69,7 @@ class RuleAudioDuration(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [cls.LABEL_QUALITY_GOOD]
             }
         return res
 
@@ -123,7 +123,7 @@ class RuleAudioSnrQuality(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [cls.LABEL_QUALITY_GOOD]
             }
         return res
 

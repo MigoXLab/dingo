@@ -23,7 +23,7 @@ class BaseRule:
         Standard implementation pattern:
         ```python
         res = ModelRes()
-        
+
         # Check if there are quality issues
         if issue_detected:
             res.eval_status = True  # True indicates an issue was found
@@ -42,7 +42,7 @@ class BaseRule:
 
         Args:
             input_data: Data object to be evaluated
-            
+
         Returns:
             ModelRes: Evaluation result object
         """

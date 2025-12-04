@@ -16,21 +16,21 @@ class BaseRule:
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
-        """评估输入数据的质量
+        """Evaluate the quality of input data
         
-        子类应该覆盖此方法实现具体的评估逻辑。
+        Subclasses should override this method to implement specific evaluation logic.
         
-        标准实现模式：
+        Standard implementation pattern:
         ```python
         res = ModelRes()
         
-        # 检查是否存在质量问题
-        if 检测到问题:
-            res.eval_status = True  # True 表示发现问题
+        # Check if there are quality issues
+        if issue_detected:
+            res.eval_status = True  # True indicates an issue was found
             res.eval_details = {
-                "label": ["问题标签"],
-                "metric": ["规则名称"],
-                "reason": ["问题描述"]
+                "label": ["issue label"],
+                "metric": ["rule name"],
+                "reason": ["issue description"]
             }
         else:
             res.eval_details = {
@@ -41,14 +41,10 @@ class BaseRule:
         ```
         
         Args:
-            input_data: 待评估的数据对象
+            input_data: Data object to be evaluated
             
         Returns:
-            ModelRes: 评估结果对象
+            ModelRes: Evaluation result object
         """
-        # 默认实现：返回质量合格
-        res = ModelRes()
-        res.eval_details = {
-            "label": [cls.LABEL_QUALITY_GOOD]
-        }
-        return res
+        # Default implementation: subclasses must override this method
+        raise NotImplementedError()

@@ -79,8 +79,9 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
     def build_messages(cls, input_data: Data) -> List:
         """构建LLM输入消息"""
         # 提取字段
-        question = input_data.prompt or input_data.raw_data.get("question", "")
-        answer = input_data.content or input_data.raw_data.get("answer", "")
+        raw_data = getattr(input_data, 'raw_data', {})
+        question = input_data.prompt or raw_data.get("question", "")
+        answer = input_data.content or raw_data.get("answer", "")
 
         if not question:
             raise ValueError("Answer Relevancy评估需要question字段")
@@ -116,7 +117,6 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         response_model = ResponseScoreReason(**response_json)
 
         result = ModelRes()
-        result.score = response_model.score
 
         # 根据分数判断是否通过（默认阈值5，满分10分）
         threshold = 5

@@ -92,8 +92,9 @@ class LLMRAGFaithfulness(BaseOpenAI):
             消息列表
         """
         # 提取字段
-        question = input_data.prompt or input_data.raw_data.get("question", "")
-        answer = input_data.content or input_data.raw_data.get("answer", "")
+        raw_data = getattr(input_data, 'raw_data', {})
+        question = input_data.prompt or raw_data.get("question", "")
+        answer = input_data.content or raw_data.get("answer", "")
 
         # 处理contexts
         contexts = None
@@ -102,8 +103,8 @@ class LLMRAGFaithfulness(BaseOpenAI):
                 contexts = input_data.context
             else:
                 contexts = [input_data.context]
-        elif "contexts" in input_data.raw_data:
-            raw_contexts = input_data.raw_data["contexts"]
+        elif "contexts" in raw_data:
+            raw_contexts = raw_data["contexts"]
             if isinstance(raw_contexts, list):
                 contexts = raw_contexts
             else:
@@ -152,7 +153,6 @@ class LLMRAGFaithfulness(BaseOpenAI):
         response_model = ResponseScoreReason(**response_json)
 
         result = ModelRes()
-        result.score = response_model.score
 
         # 根据分数判断是否通过（默认阈值5，满分10分）
         threshold = 5

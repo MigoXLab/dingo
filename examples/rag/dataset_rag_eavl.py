@@ -16,6 +16,12 @@ RAGAS论文复现示例
   - poor_answer: answer with poor relevancy compared to grounded_answer and ungrounded_answer
   - context_v1: Ideal context to answer the given question
   - contetx_v2: context that contains redundant information compared to context_v1
+
+重要说明:
+- dataset.field 配置已被废弃（不起作用）
+- 字段映射现在通过 evaluator[].fields 配置
+- 格式: "fields": {"标准字段名": "数据集原始字段名"}
+- 例如: {"prompt": "question", "content": "answer", "context": "context_v1"}
 """
 
 import os
@@ -26,7 +32,7 @@ from dingo.exec import Executor
 
 # 配置（从环境变量读取，或直接设置）
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
-OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
 
 
@@ -51,15 +57,25 @@ def ragas_wikieval_faithfulness():
                 "bad": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMRAGFaithfulness": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {
+                    "prompt": "question",
+                    "content": "answer",
+                    "context": "context_v1"
+                },
+                "evals": [
+                    {
+                        "name": "LLMRAGFaithfulness",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    }
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -89,15 +105,25 @@ def ragas_wikieval_context_precision():
                 "bad": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMRAGContextPrecision": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {
+                    "prompt": "question",
+                    "content": "answer",
+                    "context": "context_v1"
+                },
+                "evals": [
+                    {
+                        "name": "LLMRAGContextPrecision",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    }
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -126,15 +152,24 @@ def ragas_wikieval_answer_relevancy():
                 "bad": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMRAGAnswerRelevancy": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {
+                    "prompt": "question",
+                    "content": "answer"
+                },
+                "evals": [
+                    {
+                        "name": "LLMRAGAnswerRelevancy",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    }
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -167,15 +202,25 @@ def ragas_wikieval_context_recall():
                 "bad": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMRAGContextRecall": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {
+                    "prompt": "question",
+                    "content": "answer",
+                    "context": "context_v1"
+                },
+                "evals": [
+                    {
+                        "name": "LLMRAGContextRecall",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    }
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -207,15 +252,24 @@ def ragas_wikieval_context_relevancy():
                 "bad": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMRAGContextRelevancy": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {
+                    "prompt": "question",
+                    "context": "context_v1"
+                },
+                "evals": [
+                    {
+                        "name": "LLMRAGContextRelevancy",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    }
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -251,35 +305,57 @@ def ragas_wikieval_all_metrics():
                 "bad": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMRAGFaithfulness": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
+        "evaluator": [
+            {
+                "fields": {
+                    "prompt": "question",
+                    "content": "answer",
+                    "context": "context_v1"
                 },
-                "LLMRAGContextPrecision": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                },
-                "LLMRAGAnswerRelevancy": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                },
-                "LLMRAGContextRecall": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                },
-                "LLMRAGContextRelevancy": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+                "evals": [
+                    {
+                        "name": "LLMRAGFaithfulness",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    },
+                    {
+                        "name": "LLMRAGContextPrecision",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    },
+                    {
+                        "name": "LLMRAGAnswerRelevancy",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    },
+                    {
+                        "name": "LLMRAGContextRecall",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    },
+                    {
+                        "name": "LLMRAGContextRelevancy",
+                        "config": {
+                            "model": OPENAI_MODEL,
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                        }
+                    }
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)

@@ -315,4 +315,3 @@ class LLMRAGContextPrecision(BaseOpenAI):
 
         # 处理所有响应
         return cls.process_response(responses)
-

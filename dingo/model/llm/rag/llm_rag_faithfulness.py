@@ -304,5 +304,3 @@ class LLMRAGFaithfulness(BaseOpenAI):
             }
 
         return result
-
-

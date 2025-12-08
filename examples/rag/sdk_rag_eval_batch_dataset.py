@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import time
+
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
 from dingo.model.llm.rag.llm_rag_answer_relevancy import LLMRAGAnswerRelevancy

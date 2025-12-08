@@ -304,4 +304,3 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
                 "reason": [f"答案相关性评估出错: {str(e)}"]
             }
             return result
-

@@ -18,6 +18,8 @@ from dingo.model.llm.rag.llm_rag_context_precision import LLMRAGContextPrecision
 from dingo.model.llm.rag.llm_rag_context_recall import LLMRAGContextRecall
 from dingo.model.llm.rag.llm_rag_context_relevancy import LLMRAGContextRelevancy
 from dingo.model.llm.rag.llm_rag_faithfulness import LLMRAGFaithfulness
+from dingo.utils import log
+
 # 配置日志文件路径
 LOG_FILE_PATH = "rag_eval_log.txt"
 
@@ -35,8 +37,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 配置Dingo项目的日志模块为INFO级别
-from dingo.utils import log
-
 log.setLevel('INFO')
 
 
@@ -50,6 +50,7 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
 
 # 输入文件路径配置
 CSV_FILE_PATH = "ragflow_eval_data_50.jsonl"  # 支持CSV和JSONL格式
+
 
 def evaluate_from_jsonl(jsonl_path):
     """从JSONL文件读取数据并进行RAG指标评测"""

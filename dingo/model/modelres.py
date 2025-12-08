@@ -8,6 +8,7 @@ from dingo.io.output.result_info import ResTypeInfo
 class ModelRes(BaseModel):
     eval_status: bool = False
     eval_details: ResTypeInfo = ResTypeInfo()
+    score: Optional[float] = None
 
     def __setattr__(self, name, value):
         # 在赋值时拦截 eval_details 字段

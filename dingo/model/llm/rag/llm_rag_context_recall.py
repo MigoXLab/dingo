@@ -10,7 +10,7 @@ from typing import List
 from dingo.io import Data
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes, QualityLabel
+from dingo.model.modelres import ModelRes
 from dingo.model.response.response_class import ResponseScoreReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
@@ -47,45 +47,67 @@ class LLMRAGContextRecall(BaseOpenAI):
         "source_frameworks": "Ragas + DeepEval"
     }
 
-    prompt = """你是一个严格的事实核查专家。你的任务是评估检索到的上下文是否完整地支持了给定答案中的所有信息。
+    prompt = """上下文召回评估提示词，用于分类陈述归因"""
 
-    **评估目标**:
-    判断答案中的每个陈述是否能从上下文中找到支持证据
+    def context_recall_prompt(question: str, context: str, answer: str) -> str:
+        """
+        生成上下文召回评估的提示词
 
-    **评估流程**:
-    1. 从答案中提取独立的事实陈述
-    2. 对每个陈述，判断是否能从上下文中归因（找到支持证据）
-    3. 计算上下文召回率 = 可归因陈述数 / 总陈述数
+        参数:
+            question: 原始问题
+            context: 用于评估的检索上下文
+            answer: 包含要分类陈述的参考答案
 
-    **判断标准**:
-    - attributed (可归因): 陈述可以从上下文中直接找到或合理推导出
-    - not attributed (不可归因): 陈述在上下文中没有支持证据
+        返回:
+            为LLM格式化的提示字符串
+        """
+        # 使用json.dumps()安全转义字符串
+        safe_question = json.dumps(question)
+        safe_context = json.dumps(context)
+        safe_answer = json.dumps(answer)
 
-    **问题**:
-    {0}
+        return f"""给定一个上下文和一个答案，请分析答案中的每个句子，并分类该句子是否可以归因于给定的上下文。仅使用'是'(1)或'否'(0)作为二元分类。输出包含理由的JSON格式。
 
-    **答案**:
-    {1}
+ --------示例-----------
+ 示例1
+ 输入: {{
+     "question": "关于中国的长城，你能告诉我什么？",
+     "context": "长城是中国古代的军事防御工程，是世界上最伟大的建筑之一。长城的修建始于春秋战国时期，秦始皇统一中国后将各诸侯国的长城连接起来，形成了万里长城的雏形。明朝是长城修建的鼎盛时期，今天我们看到的大部分长城都是明朝修建的。长城的主要作用是防御北方游牧民族的入侵，它不仅是一道军事防线，也是中国古代文明的象征。1987年，长城被联合国教科文组织列入世界文化遗产名录。",
+     "answer": "长城是中国古代的军事防御工程，是世界上最伟大的建筑之一。长城始建于春秋战国时期，秦始皇统一中国后将各诸侯国的长城连接起来。长城在唐朝达到了修建的鼎盛时期，今天我们看到的大部分长城都是唐朝修建的。长城的主要作用是抵御南方诸侯国的进攻。"
+ }}
+ 输出: {{
+     "classifications": [
+         {{
+             "statement": "长城是中国古代的军事防御工程，是世界上最伟大的建筑之一。",
+             "reason": "上下文中明确提到了长城的性质和地位。",
+             "attributed": 1
+         }},
+         {{
+             "statement": "长城始建于春秋战国时期，秦始皇统一中国后将各诸侯国的长城连接起来。",
+             "reason": "给定上下文中存在完全相同的信息。",
+             "attributed": 1
+         }},
+         {{
+             "statement": "长城在唐朝达到了修建的鼎盛时期，今天我们看到的大部分长城都是唐朝修建的。",
+             "reason": "上下文中提到鼎盛时期是明朝而非唐朝。",
+             "attributed": 0
+         }},
+         {{
+             "statement": "长城的主要作用是抵御南方诸侯国的进攻。",
+             "reason": "上下文中提到长城的作用是防御北方游牧民族而非南方诸侯国。",
+             "attributed": 0
+         }}
+     ]
+ }}
+ -----------------------------
 
-    **检索到的上下文**:
-    {2}
-
-    **任务要求**:
-    1. 提取答案中的所有独立陈述（每个陈述应该是完整的、可独立验证的事实）
-    2. 对每个陈述判断是否可以从上下文归因
-    3. 计算召回率分数 = (可归因陈述数 / 总陈述数) × 10
-    4. 以JSON格式返回结果，不要输出其他内容
-
-    **输出格式**:
-    ```json
-    {{
-        "score": 0-10,
-        "reason": "评估理由，说明有多少陈述可以归因，有多少不能归因"
-    }}
-    ```
-
-    其中score为0-10之间的整数，10表示所有陈述都能归因（完美召回），0表示所有陈述都不能归因。
-    """
+ 现在对以下输入执行相同操作
+ 输入: {{
+     "question": {safe_question},
+     "context": {safe_context},
+     "answer": {safe_answer}
+ }}
+ 输出: """
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
@@ -130,7 +152,7 @@ class LLMRAGContextRecall(BaseOpenAI):
         combined_contexts = "\n\n".join([f"上下文{i + 1}:\n{ctx}" for i, ctx in enumerate(contexts)])
 
         # 构建prompt内容
-        prompt_content = cls.prompt.format(question, expected_output, combined_contexts)
+        prompt_content = cls.context_recall_prompt(question, combined_contexts, expected_output)
 
         messages = [{"role": "user", "content": prompt_content}]
 
@@ -162,35 +184,40 @@ class LLMRAGContextRecall(BaseOpenAI):
         except json.JSONDecodeError:
             raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
-        # 解析响应
-        response_model = ResponseScoreReason(**response_json)
+        # 计算分数：(可归因陈述数 / 总陈述数) × 10
+        classifications = response_json.get("classifications", [])
+        total_statements = len(classifications)
+        attributed_statements = sum(1 for item in classifications if item.get("attributed", 0) == 1)
+
+        if total_statements == 0:
+            score = 0
+        else:
+            score = (attributed_statements / total_statements) * 10
+
+        # 生成reason
+        reason = f"在 {total_statements} 个陈述中，有 {attributed_statements} 个可以从上下文中归因，{total_statements - attributed_statements} 个不能归因"
 
         result = ModelRes()
+        result.score = score
 
         # 根据分数判断是否通过（默认阈值5，满分10分）
         threshold = 5
         if hasattr(cls, 'dynamic_config') and cls.dynamic_config.parameters:
             threshold = cls.dynamic_config.parameters.get('threshold', 5)
 
-        if response_model.score >= threshold:
+        if score >= threshold:
             result.eval_status = False
-            # result.type = "QUALITY_GOOD"
-            # result.name = "CONTEXT_RECALL_PASS"
-            # result.reason = [f"上下文召回评估通过 (分数: {response_model.score}/10)\n{response_model.reason}"]
             result.eval_details = {
-                "label": [f"{QualityLabel.QUALITY_GOOD}.CONTEXT_RECALL_PASS"],
+                "label": ["QUALITY_GOOD.CONTEXT_RECALL_PASS"],
                 "metric": [cls.__name__],
-                "reason": [f"上下文召回评估通过 (分数: {response_model.score}/10)\n{response_model.reason}"]
+                "reason": [f"上下文召回评估通过 (分数: {score:.2f}/10)\n{reason}"]
             }
         else:
             result.eval_status = True
-            # result.type = cls.prompt.metric_type
-            # result.name = cls.prompt.__name__
-            # result.reason = [f"上下文召回评估未通过 (分数: {response_model.score}/10)\n{response_model.reason}"]
             result.eval_details = {
                 "label": ["QUALITY_BAD.CONTEXT_RECALL_FAIL"],
                 "metric": [cls.__name__],
-                "reason": [f"上下文召回评估未通过 (分数: {response_model.score}/10)\n{response_model.reason}"]
+                "reason": [f"上下文召回评估未通过 (分数: {score:.2f}/10)\n{reason}"]
             }
 
         return result

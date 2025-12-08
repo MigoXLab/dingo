@@ -40,6 +40,7 @@ class EvalDetail(BaseModel):
 class ModelRes(BaseModel):
     eval_status: bool = False
     eval_details: EvalDetail = EvalDetail()
+    score: Optional[float] = None
 
     def __setattr__(self, name, value):
         # 在赋值时拦截 eval_details 字段

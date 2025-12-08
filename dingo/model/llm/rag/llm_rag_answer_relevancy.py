@@ -134,7 +134,6 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         """构建LLM输入消息"""
         # 提取字段
         raw_data = getattr(input_data, 'raw_data', {})
-        question = input_data.prompt or raw_data.get("question", "")
         answer = input_data.content or raw_data.get("answer", "")
 
         if not answer:

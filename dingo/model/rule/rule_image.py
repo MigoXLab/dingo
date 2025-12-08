@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFont
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
 from dingo.model.model import Model
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.model.rule.base import BaseRule
 
 
@@ -53,7 +53,7 @@ class RuleImageValid(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -97,7 +97,7 @@ class RuleImageSizeValid(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -145,7 +145,7 @@ class RuleImageQuality(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -206,7 +206,7 @@ class RuleImageRepeat(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -266,7 +266,7 @@ class RuleImageTextSimilarity(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -339,7 +339,7 @@ class RuleImageArtimuse(BaseRule):
                 }
             else:
                 res.eval_details = {
-                    "label": ["QUALITY_GOOD"]
+                    "label": [QualityLabel.QUALITY_GOOD]
                 }
             return res
         except Exception as e:

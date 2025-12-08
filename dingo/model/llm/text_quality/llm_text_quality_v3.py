@@ -2,7 +2,7 @@ import json
 
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
@@ -82,7 +82,7 @@ Please remember to output only a JSON format data, without any additional conten
         result = ModelRes()
         if score == 1:
             result.eval_details = {
-                "label": ["QUALITY_GOOD"],
+                "label": [QualityLabel.QUALITY_GOOD],
                 "metric": [cls.__name__],
                 "reason": reason_list if reason_list else [""]
             }

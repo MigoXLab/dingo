@@ -4,7 +4,7 @@ from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io import Data
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.utils import log
 
 
@@ -72,7 +72,7 @@ class LLMPerspective(BaseLLM):
                     res = ModelRes()
                     res.eval_status = False
                     res.eval_details = {
-                        "label": ["QUALITY_GOOD.PERSPECTIVE"],
+                        "label": [f"{QualityLabel.QUALITY_GOOD}.PERSPECTIVE"],
                         "metric": [cls.__name__],
                         "reason": []
                     }

@@ -1,7 +1,7 @@
 import pytest
 
 from dingo.io import Data
-from dingo.io.output.result_info import ResTypeInfo
+from dingo.model.modelres import EvalDetail
 from dingo.model.rule.rule_common import RuleDocFormulaRepeat, RuleUnsafeWords
 
 
@@ -12,7 +12,7 @@ class TestRuleDocFormulaRepeat:
         # print(res)
         assert res.eval_status is True
         if isinstance(res.eval_details, dict):
-            res.eval_details = ResTypeInfo(**res.eval_details)
+            res.eval_details = EvalDetail(**res.eval_details)
         assert res.eval_details.label == ["QUALITY_BAD_SIMILARITY.RuleDocFormulaRepeat"]
         assert res.eval_details.metric == ["RuleDocFormulaRepeat"]
         assert res.eval_details.reason == ["Formula has too many consecutive repeated characters, total repeat length: 130, found 1 repeat patterns"]
@@ -24,7 +24,7 @@ class TestRuleDocFormulaRepeat:
         tmp = r.eval(data)
         assert tmp.eval_status is True
         if isinstance(tmp.eval_details, dict):
-            tmp.eval_details = ResTypeInfo(**tmp.eval_details)
+            tmp.eval_details = EvalDetail(**tmp.eval_details)
         assert 'av' not in tmp.eval_details.reason
         assert 'b' not in tmp.eval_details.reason
         assert 'java' in tmp.eval_details.reason

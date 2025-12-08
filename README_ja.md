@@ -26,6 +26,7 @@
   <a href="https://github.com/DataEval/dingo/issues"><img src="https://img.shields.io/github/issues/DataEval/dingo" alt="GitHub issues"></a>
   <a href="https://mseep.ai/app/dataeval-dingo"><img src="https://mseep.net/pr/dataeval-dingo-badge.png" alt="MseeP.ai Security Assessment Badge" height="20"></a>
   <a href="https://deepwiki.com/MigoXLab/dingo"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://archestra.ai/mcp-catalog/dataeval__dingo"><img src="https://archestra.ai/mcp-catalog/api/badge/quality/DataEval/dingo" alt="Trust Score"></a>
 </p>
 
 </div>
@@ -76,7 +77,7 @@ pip install dingo-python
 ```python
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
-from dingo.model.llm.llm_text_quality_model_base import LLMTextQualityModelBase
+from dingo.model.llm.text_quality.llm_text_quality_v4 import LLMTextQualityV4
 from dingo.model.rule.rule_common import RuleEnterAndSpace
 
 data = Data(
@@ -85,13 +86,14 @@ data = Data(
     content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."
 )
 
+
 def llm():
-    LLMTextQualityModelBase.dynamic_config = EvaluatorLLMArgs(
+    LLMTextQualityV4.dynamic_config = EvaluatorLLMArgs(
         key='YOUR_API_KEY',
         api_url='https://api.openai.com/v1/chat/completions',
         model='gpt-4o',
     )
-    res = LLMTextQualityModelBase.eval(data)
+    res = LLMTextQualityV4.eval(data)
     print(res)
 
 
@@ -114,11 +116,18 @@ input_data = {
         "format": "plaintext"  # フォーマット: plaintext
     },
     "executor": {
-        "eval_group": "sft",  # SFTデータ用のルールセット
         "result_save": {
             "bad": True  # 評価結果を保存
         }
-    }
+    },
+    "evaluator": [
+        {
+            "evals": [
+                {"name": "RuleColonEnd"},
+                {"name": "RuleSpecialCharacter"}
+            ]
+        }
+    ]
 }
 
 input_args = InputArgs(**input_data)
@@ -207,20 +216,21 @@ Dingoはルールベースおよびプロンプトベースの評価メトリク
 これらの評価プロンプトを評価で使用するには、設定で指定します：
 
 ```python
+llm_config = {
+    "model": "gpt-4o",
+    "key": "YOUR_API_KEY",
+    "api_url": "https://api.openai.com/v1/chat/completions"
+}
 input_data = {
     # Other parameters...
-    "executor": {
-        "prompt_list": ["QUALITY_BAD_SIMILARITY"],  # Specific prompt to use
-    },
-    "evaluator": {
-        "llm_config": {
-            "LLMTextQualityPromptBase": {  # LLM model to use
-                "model": "gpt-4o",
-                "key": "YOUR_API_KEY",
-                "api_url": "https://api.openai.com/v1/chat/completions"
-            }
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "LLMTextRepeat", "config": llm_config}
+            ],
         }
-    }
+    ]
 }
 ```
 
@@ -238,28 +248,6 @@ Dingoの二段階事実性評価システムの使用に関する詳細なガイ
 
 📖 **[事実性評価ガイドを見る →](docs/factcheck_guide.md)**
 
-# ルールグループ
-
-Dingoは異なるタイプのデータセット用に事前設定されたルールグループを提供します：
-
-| グループ | 使用例 | ルール例 |
-|----------|--------|----------|
-| `default` | 一般的なテキスト品質 | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`など |
-| `sft` | ファインチューニングデータセット | `default`のルールに加えて幻覚検出用の`RuleHallucinationHHEM` |
-| `rag` | RAGシステム評価 | 応答一貫性検出用の`RuleHallucinationHHEM`, `PromptHallucination` |
-| `hallucination` | 幻覚検出 | LLMベース評価の`PromptHallucination` |
-| `pretrain` | 事前学習データセット | `RuleAlphaWords`, `RuleCapitalWords`などを含む20以上のルールの包括的セット |
-
-特定のルールグループを使用するには：
-
-```python
-input_data = {
-    "executor": {
-        "eval_group": "sft",  # Use "default", "sft", "rag", "hallucination", or "pretrain"
-    }
-    # other parameters...
-}
-```
 
 # 機能ハイライト
 
@@ -271,14 +259,12 @@ input_data = {
 
 ## ルールベース・モデルベース評価
 
-評価システムには以下が含まれます：
-- **テキスト品質評価メトリクス**: DataMan手法と拡張された多次元評価を使用した事前学習データの品質評価
-- **SFTデータ評価メトリクス**: 教師ありファインチューニングデータの正直、有用、無害評価
+- **内蔵ルール**: 20以上の一般的なヒューリスティック評価ルール
+- **LLM統合**: OpenAI、Kimi、ローカルモデル（例：Llama3）
 - **幻覚検出**: HHEM-2.1-OpenローカルモデルとGPTベースの評価
 - **RAGシステム評価**: 応答一貫性とコンテキスト整合性評価
-- **分類メトリクス**: トピック分類とコンテンツ分類
-- **マルチモーダル評価メトリクス**: 画像分類と関連性評価
-- **ルールベース品質メトリクス**: ヒューリスティックルールによる効果性と類似性検出を用いた自動品質チェック
+- **カスタムルール**: 独自のルールとモデルで簡単に拡張
+- **セキュリティ評価**: Perspective API統合
 
 ## 柔軟な使用方法
 
@@ -363,13 +349,21 @@ from pyspark.sql import SparkSession
 
 # Sparkを初期化
 spark = SparkSession.builder.appName("Dingo").getOrCreate()
-spark_rdd = spark.sparkContext.parallelize([...])  # MetaDataオブジェクトとしてのデータ
+spark_rdd = spark.sparkContext.parallelize([...])  # Dataオブジェクトとしてのデータ
 
 input_data = {
     "executor": {
-        "eval_group": "default",
         "result_save": {"bad": True}
-    }
+    },
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleColonEnd"},
+                {"name": "RuleSpecialCharacter"}
+            ]
+        }
+    ]
 }
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["spark"](input_args, spark_session=spark, spark_rdd=spark_rdd)
@@ -402,12 +396,10 @@ result = executor.execute()
     "num_bad": 1,
     "total": 2,
     "type_ratio": {
-        "QUALITY_BAD_COMPLETENESS": 0.5,
-        "QUALITY_BAD_RELEVANCE": 0.5
-    },
-    "name_ratio": {
-        "QUALITY_BAD_COMPLETENESS-RuleColonEnd": 0.5,
-        "QUALITY_BAD_RELEVANCE-RuleSpecialCharacter": 0.5
+        "content": {
+            "QUALITY_BAD_COMPLETENESS.RuleColonEnd": 0.5,
+            "QUALITY_BAD_RELEVANCE.RuleSpecialCharacter": 0.5
+        }
     }
 }
 ```

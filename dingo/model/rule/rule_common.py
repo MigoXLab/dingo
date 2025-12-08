@@ -4,9 +4,8 @@ from typing import Tuple
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.result_info import ResTypeInfo
 from dingo.model.model import Model
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import EvalDetail, ModelRes, QualityLabel
 from dingo.model.rule.base import BaseRule
 
 
@@ -34,11 +33,11 @@ class RuleAbnormalChar(BaseRule):
             if tmp_res.eval_status:
                 res.eval_status = True
                 if isinstance(tmp_res.eval_details, dict):
-                    tmp_res.eval_details = ResTypeInfo(**tmp_res.eval_details)
+                    tmp_res.eval_details = EvalDetail(**tmp_res.eval_details)
                 res.eval_details.merge(tmp_res.eval_details)
         # Set QUALITY_GOOD when all checks pass
         if not res.eval_status:
-            res.eval_details = ResTypeInfo(label=["QUALITY_GOOD"])
+            res.eval_details = EvalDetail(label=[QualityLabel.QUALITY_GOOD])
         return res
 
 
@@ -64,11 +63,11 @@ class RuleAbnormalHtml(BaseRule):
             if tmp_res.eval_status:
                 res.eval_status = True
                 if isinstance(tmp_res.eval_details, dict):
-                    tmp_res.eval_details = ResTypeInfo(**tmp_res.eval_details)
+                    tmp_res.eval_details = EvalDetail(**tmp_res.eval_details)
                 res.eval_details.merge(tmp_res.eval_details)
         # Set QUALITY_GOOD when all checks pass
         if not res.eval_status:
-            res.eval_details = ResTypeInfo(label=["QUALITY_GOOD"])
+            res.eval_details = EvalDetail(label=[QualityLabel.QUALITY_GOOD])
         return res
 
 
@@ -131,7 +130,7 @@ class RuleAlphaWords(BaseRule):
         ratio = n_alpha_words / n_words
         if ratio > cls.dynamic_config.threshold:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         else:
             res.eval_status = True
@@ -181,7 +180,7 @@ class RuleAudioDataFormat(BaseRule):
         key_list = ["id", "audio", "text"]
         if all(key in raw_data for key in key_list):
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
             return res
         else:
@@ -231,7 +230,7 @@ class RuleCapitalWords(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -270,7 +269,7 @@ class RuleCharNumber(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -308,7 +307,7 @@ class RuleCharSplit(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -348,7 +347,7 @@ class RuleColonEnd(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -402,7 +401,7 @@ class RuleContentNull(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -438,7 +437,7 @@ class RuleContentShort(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -487,7 +486,7 @@ class RuleContentShortMultiLan(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -527,7 +526,7 @@ class RuleCurlyBracket(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -584,7 +583,7 @@ class RuleDocRepeat(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -642,7 +641,7 @@ class RuleDocFormulaRepeat(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
 
         return res
@@ -701,11 +700,11 @@ class RuleEnterAndSpace(BaseRule):
             if tmp_res.eval_status:
                 res.eval_status = True
                 if isinstance(tmp_res.eval_details, dict):
-                    tmp_res.eval_details = ResTypeInfo(**tmp_res.eval_details)
+                    tmp_res.eval_details = EvalDetail(**tmp_res.eval_details)
                 res.eval_details.merge(tmp_res.eval_details)
         # Set QUALITY_GOOD when all checks pass
         if not res.eval_status:
-            res.eval_details = ResTypeInfo(label=["QUALITY_GOOD"])
+            res.eval_details = EvalDetail(label=[QualityLabel.QUALITY_GOOD])
         return res
 
 
@@ -756,7 +755,7 @@ class RuleEnterMore(BaseRule):
                 }
                 return res
         res.eval_details = {
-            "label": ["QUALITY_GOOD"]
+            "label": [QualityLabel.QUALITY_GOOD]
         }
         return res
 
@@ -808,7 +807,7 @@ class RuleEnterRatioMore(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -845,7 +844,7 @@ class RuleHeadWordAr(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -882,7 +881,7 @@ class RuleHeadWordCs(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -919,7 +918,7 @@ class RuleHeadWordHu(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -956,7 +955,7 @@ class RuleHeadWordKo(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -993,7 +992,7 @@ class RuleHeadWordRu(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1030,7 +1029,7 @@ class RuleHeadWordSr(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1067,7 +1066,7 @@ class RuleHeadWordTh(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1104,7 +1103,7 @@ class RuleHeadWordVi(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1195,7 +1194,7 @@ class RuleHtmlEntity(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1249,7 +1248,7 @@ class RuleHtmlTag(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1288,7 +1287,7 @@ class RuleIDCard(BaseRule):
                 }
                 return res
         res.eval_details = {
-            "label": ["QUALITY_GOOD"]
+            "label": [QualityLabel.QUALITY_GOOD]
         }
         return res
 
@@ -1341,7 +1340,7 @@ class RuleInvisibleChar(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1381,7 +1380,7 @@ class RuleImageDataFormat(BaseRule):
         key_list = ["img_id", "image"]
         if all(key in raw_data for key in key_list):
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
             return res
         else:
@@ -1424,7 +1423,7 @@ class RuleLatexSpecialChar(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1472,7 +1471,7 @@ class RuleLineEndWithEllipsis(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1527,7 +1526,7 @@ class RuleLineEndWithTerminal(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1589,7 +1588,7 @@ class RuleLineStartWithBulletpoint(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1634,7 +1633,7 @@ class RuleLineJavascriptCount(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1675,7 +1674,7 @@ class RuleLoremIpsum(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1710,7 +1709,7 @@ class RuleMeanWordLength(BaseRule):
         mean_length = round(mean_length, 2)
         if mean_length >= int(cls.dynamic_config.key_list[0]) and mean_length < int(cls.dynamic_config.key_list[1]):
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         else:
             res.eval_status = True
@@ -1757,7 +1756,7 @@ class RuleNlpDataFormat(BaseRule):
         key_list = ["track_id", "content"]
         if all(key in raw_data for key in key_list):
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
             return res
         else:
@@ -1831,7 +1830,7 @@ class RuleNoPunc(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1865,7 +1864,7 @@ class RulePatternSearch(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1903,7 +1902,7 @@ class RuleSentenceNumber(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -1943,7 +1942,7 @@ class RuleSftDataFormat(BaseRule):
         key_list = ["track_id", "type", "prompt", "completion"]
         if all(key in raw_data for key in key_list):
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
             return res
         else:
@@ -2002,7 +2001,7 @@ class RuleSpaceMore(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -2072,7 +2071,7 @@ class RuleSpecialCharacter(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -2117,7 +2116,7 @@ class RuleStopWord(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -2161,7 +2160,7 @@ class RuleSymbolWordRatio(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -2196,7 +2195,7 @@ class RuleUniqueWords(BaseRule):
         ratio = num_unique_words / num_words
         if ratio > cls.dynamic_config.threshold:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         else:
             res.eval_status = True
@@ -2260,7 +2259,7 @@ class RuleUnsafeWords(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -2310,7 +2309,7 @@ class RuleVedioDataFormat(BaseRule):
         key_list = ["id", "video", "text"]
         if all(key in raw_data for key in key_list):
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
             return res
         else:
@@ -2374,7 +2373,7 @@ class RuleOnlyUrl(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -2408,7 +2407,7 @@ class RuleWatermark(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -2440,7 +2439,7 @@ class RuleWordNumber(BaseRule):
             cls.dynamic_config.key_list[0]
         ) and num_normalized_words < int(cls.dynamic_config.key_list[1]):
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         else:
             res.eval_status = True
@@ -2482,7 +2481,7 @@ class RuleWordSplit(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -2554,7 +2553,7 @@ class RuleWordStuck(BaseRule):
                     }
                     return res
         res.eval_details = {
-            "label": ["QUALITY_GOOD"]
+            "label": [QualityLabel.QUALITY_GOOD]
         }
         return res
 

@@ -232,12 +232,12 @@ class SparkExecutor(ExecProto):
             eval_details_dict = item.get('eval_details', {})
 
             # 遍历第一层：字段名
-            for field_key, res_type_info_dict in eval_details_dict.items():
+            for field_key, eval_detail_dict in eval_details_dict.items():
                 if field_key not in acc:
                     acc[field_key] = {}
 
-                # 从 ResTypeInfo 的 label 列表中获取错误类型
-                label_list = res_type_info_dict.get('label', []) if isinstance(res_type_info_dict, dict) else res_type_info_dict.label
+                # 从 EvalDetail 的 label 列表中获取错误类型
+                label_list = eval_detail_dict.get('label', []) if isinstance(eval_detail_dict, dict) else eval_detail_dict.label
 
                 # 统计每个 label 的出现次数
                 for label in label_list:

@@ -4,9 +4,8 @@ from typing import Tuple
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.result_info import ResTypeInfo
 from dingo.model.model import Model
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.model.rule.base import BaseRule
 
 
@@ -30,7 +29,7 @@ class RuleDoi(BaseRule):
         res = ModelRes()
         content = input_data.content
         if re.match(cls.dynamic_config.pattern, content):
-            res.eval_details.label = ["QUALITY_GOOD"]
+            res.eval_details.label = [QualityLabel.QUALITY_GOOD]
         else:
             res.eval_status = True
             res.eval_details = {
@@ -97,7 +96,7 @@ class RuleIsbn(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
         res = ModelRes()
-        res.eval_details.label = ["QUALITY_GOOD"]
+        res.eval_details.label = [QualityLabel.QUALITY_GOOD]
 
         content = input_data.content
         content = str(content).replace('-', '')

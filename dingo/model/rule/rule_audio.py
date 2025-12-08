@@ -5,7 +5,7 @@ import numpy as np
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
 from dingo.model.model import Model
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.model.rule.base import BaseRule
 
 
@@ -69,7 +69,7 @@ class RuleAudioDuration(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -123,7 +123,7 @@ class RuleAudioSnrQuality(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 

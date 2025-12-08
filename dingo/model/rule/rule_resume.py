@@ -3,7 +3,7 @@ import re
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
 from dingo.model.model import Model
-from dingo.model.modelres import ModelRes
+from dingo.model.modelres import ModelRes, QualityLabel
 from dingo.model.rule.base import BaseRule
 
 # ========== Privacy Issues ==========
@@ -41,7 +41,7 @@ class RuleResumeIDCard(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -78,7 +78,7 @@ class RuleResumeDetailedAddress(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -118,7 +118,7 @@ class RuleResumeEmailMissing(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -155,7 +155,7 @@ class RuleResumePhoneMissing(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -193,7 +193,7 @@ class RuleResumePhoneFormat(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -233,7 +233,7 @@ class RuleResumeExcessiveWhitespace(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -270,7 +270,7 @@ class RuleResumeMarkdown(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -311,7 +311,7 @@ class RuleResumeNameMissing(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -348,7 +348,7 @@ class RuleResumeSectionMissing(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -388,7 +388,7 @@ class RuleResumeEmoji(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -425,7 +425,7 @@ class RuleResumeInformal(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -467,11 +467,11 @@ class RuleResumeDateFormat(BaseRule):
                 }
             else:
                 res.eval_details = {
-                    "label": ["QUALITY_GOOD"]
+                    "label": [QualityLabel.QUALITY_GOOD]
                 }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -511,7 +511,7 @@ class RuleResumeEducationMissing(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res
 
@@ -548,6 +548,6 @@ class RuleResumeExperienceMissing(BaseRule):
             }
         else:
             res.eval_details = {
-                "label": ["QUALITY_GOOD"]
+                "label": [QualityLabel.QUALITY_GOOD]
             }
         return res

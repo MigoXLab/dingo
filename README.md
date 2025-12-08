@@ -78,7 +78,7 @@ pip install dingo-python
 ```python
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
-from dingo.model.llm.llm_text_quality_model_base import LLMTextQualityModelBase
+from dingo.model.llm.text_quality.llm_text_quality_v4 import LLMTextQualityV4
 from dingo.model.rule.rule_common import RuleEnterAndSpace
 
 data = Data(
@@ -89,12 +89,12 @@ data = Data(
 
 
 def llm():
-    LLMTextQualityModelBase.dynamic_config = EvaluatorLLMArgs(
+    LLMTextQualityV4.dynamic_config = EvaluatorLLMArgs(
         key='YOUR_API_KEY',
         api_url='https://api.openai.com/v1/chat/completions',
         model='gpt-4o',
     )
-    res = LLMTextQualityModelBase.eval(data)
+    res = LLMTextQualityV4.eval(data)
     print(res)
 
 
@@ -117,11 +117,18 @@ input_data = {
         "format": "plaintext"  # Format: plaintext
     },
     "executor": {
-        "eval_group": "sft",  # Rule set for SFT data
         "result_save": {
             "bad": True  # Save evaluation results
         }
-    }
+    },
+    "evaluator": [
+        {
+            "evals": [
+                {"name": "RuleColonEnd"},
+                {"name": "RuleSpecialCharacter"}
+            ]
+        }
+    ]
 }
 
 input_args = InputArgs(**input_data)
@@ -212,20 +219,21 @@ Most metrics are backed by academic sources to ensure objectivity and scientific
 To use these assessment prompts in your evaluations, specify them in your configuration:
 
 ```python
+llm_config = {
+    "model": "gpt-4o",
+    "key": "YOUR_API_KEY",
+    "api_url": "https://api.openai.com/v1/chat/completions"
+}
 input_data = {
     # Other parameters...
-    "executor": {
-        "prompt_list": ["QUALITY_BAD_SIMILARITY"],  # Specific prompt to use
-    },
-    "evaluator": {
-        "llm_config": {
-            "LLMTextQualityPromptBase": {  # LLM model to use
-                "model": "gpt-4o",
-                "key": "YOUR_API_KEY",
-                "api_url": "https://api.openai.com/v1/chat/completions"
-            }
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "LLMTextRepeat", "config": llm_config}
+            ],
         }
-    }
+    ]
 }
 ```
 
@@ -247,28 +255,6 @@ For comprehensive guidance on using Dingo's two-stage factuality evaluation syst
 
 📖 **[View Factuality Assessment Guide →](docs/factcheck_guide.md)**
 
-# Rule Groups
-
-Dingo provides pre-configured rule groups for different types of datasets:
-
-| Group | Use Case | Example Rules |
-|-------|----------|---------------|
-| `default` | General text quality | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`, etc. |
-| `sft` | Fine-tuning datasets | Rules from `default` plus `RuleHallucinationHHEM` for hallucination detection |
-| `rag` | RAG system evaluation | `RuleHallucinationHHEM`, `PromptHallucination` for response consistency |
-| `hallucination` | Hallucination detection | `PromptHallucination` with LLM-based evaluation |
-| `pretrain` | Pre-training datasets | Comprehensive set of 20+ rules including `RuleAlphaWords`, `RuleCapitalWords`, etc. |
-
-To use a specific rule group:
-
-```python
-input_data = {
-    "executor": {
-        "eval_group": "sft",  # Use "default", "sft", "rag", "hallucination", or "pretrain"
-    }
-    # other parameters...
-}
-```
 
 # Feature Highlights
 
@@ -374,9 +360,17 @@ spark_rdd = spark.sparkContext.parallelize([...])  # Your data as Data objects
 
 input_data = {
     "executor": {
-        "eval_group": "default",
         "result_save": {"bad": True}
-    }
+    },
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleColonEnd"},
+                {"name": "RuleSpecialCharacter"}
+            ]
+        }
+    ]
 }
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["spark"](input_args, spark_session=spark, spark_rdd=spark_rdd)
@@ -409,12 +403,10 @@ Example summary:
     "num_bad": 1,
     "total": 2,
     "type_ratio": {
-        "QUALITY_BAD_COMPLETENESS": 0.5,
-        "QUALITY_BAD_RELEVANCE": 0.5
-    },
-    "name_ratio": {
-        "QUALITY_BAD_COMPLETENESS-RuleColonEnd": 0.5,
-        "QUALITY_BAD_RELEVANCE-RuleSpecialCharacter": 0.5
+        "content": {
+            "QUALITY_BAD_COMPLETENESS.RuleColonEnd": 0.5,
+            "QUALITY_BAD_RELEVANCE.RuleSpecialCharacter": 0.5
+        }
     }
 }
 ```

@@ -13,7 +13,8 @@ if __name__ == '__main__':
         "executor": {
             "result_save": {
                 "bad": True,
-                "good": True
+                "good": True,
+                "raw": True,
             }
         },
         "evaluator": [

@@ -43,6 +43,7 @@ class LLMRAGFaithfulness(BaseOpenAI):
         "source_frameworks": "Ragas + DeepEval"
     }
 
+    @staticmethod
     def statement_generator_prompt(question: str, answer: str) -> str:
         """
         Prompt to generate statements from answer (Chinese version).
@@ -67,18 +68,19 @@ class LLMRAGFaithfulness(BaseOpenAI):
 
 请以JSON格式返回结果，格式如下：
 ```json
-{
+{{
     "statements": [
         "陈述1",
         "陈述2",
         "陈述3"
     ]
-}
+}}
 ```
 
 请不要输出其他内容，只返回JSON格式的结果。
 """
 
+    @staticmethod
     def faithfulness_judge_prompt(context: str, statements: List[str]) -> str:
         """
         Prompt to judge faithfulness of statements (Chinese version).
@@ -103,15 +105,15 @@ class LLMRAGFaithfulness(BaseOpenAI):
 
 请以JSON格式返回结果，格式如下：
 ```json
-{
+{{
     "statements": [
-        {
+        {{
             "statement": "原始陈述，一字不差",
             "reason": "判断理由",
             "verdict": 0或1
-        }
+        }}
     ]
-}
+}}
 ```
 
 请不要输出其他内容，只返回JSON格式的结果。
@@ -284,12 +286,12 @@ class LLMRAGFaithfulness(BaseOpenAI):
         result = ModelRes()
         result.score = score
 
-        # 根据分数判断是否通过
-        threshold = None
+        # 根据分数判断是否通过，默认阈值为5
+        threshold = 5
         if hasattr(cls, 'dynamic_config') and cls.dynamic_config.parameters:
-            threshold = cls.dynamic_config.parameters.get('threshold')
+            threshold = cls.dynamic_config.parameters.get('threshold', 5)
 
-        if threshold is None or score >= threshold:
+        if score >= threshold:
             result.eval_status = False
             result.eval_details = {
                 "label": ["QUALITY_GOOD.FAITHFULNESS_PASS"],

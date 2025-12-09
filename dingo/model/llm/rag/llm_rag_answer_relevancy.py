@@ -265,10 +265,10 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
             result = ModelRes()
             result.score = score
 
-            # 根据分数判断是否通过（默认阈值5，满分10分）
-            threshold = 5
+            # 根据分数判断是否通过
+            threshold = None
             if hasattr(cls, 'dynamic_config') and cls.dynamic_config.parameters:
-                threshold = cls.dynamic_config.parameters.get('threshold', 5)
+                threshold = cls.dynamic_config.parameters.get('threshold')
                 # 检查是否有自定义的strictness参数
                 cls.strictness = cls.dynamic_config.parameters.get('strictness', 3)
 
@@ -277,7 +277,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
                 if embedding_model_name:
                     cls.init_embedding_model(embedding_model_name)
 
-            if score >= threshold:
+            if threshold is None or score >= threshold:
                 result.eval_status = False
                 result.eval_details = {
                     "label": ["QUALITY_GOOD.ANSWER_RELEVANCY_PASS"],

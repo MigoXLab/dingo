@@ -284,12 +284,12 @@ class LLMRAGFaithfulness(BaseOpenAI):
         result = ModelRes()
         result.score = score
 
-        # 根据分数判断是否通过（默认阈值5，满分10分）
-        threshold = 5
+        # 根据分数判断是否通过
+        threshold = None
         if hasattr(cls, 'dynamic_config') and cls.dynamic_config.parameters:
-            threshold = cls.dynamic_config.parameters.get('threshold', 5)
+            threshold = cls.dynamic_config.parameters.get('threshold')
 
-        if score >= threshold:
+        if threshold is None or score >= threshold:
             result.eval_status = False
             result.eval_details = {
                 "label": ["QUALITY_GOOD.FAITHFULNESS_PASS"],

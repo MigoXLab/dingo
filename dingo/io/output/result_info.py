@@ -13,7 +13,7 @@ class ResultInfo(BaseModel):
 
     def to_dict(self):
         """将ResultInfo转换为字典格式
-        
+
         Returns:
             包含所有字段的字典，其中eval_details被转换为嵌套字典结构
         """
@@ -22,21 +22,21 @@ class ResultInfo(BaseModel):
             'raw_data': self.raw_data,
             'eval_status': self.eval_status,
             'eval_details': {
-                k: [model_res.model_dump() for model_res in v] 
+                k: [model_res.model_dump() for model_res in v]
                 for k, v in self.eval_details.items()
             },
         }
 
     def to_raw_dict(self):
         """将ResultInfo合并到raw_data中
-        
+
         Returns:
             包含原始数据和dingo_result的字典
         """
         dingo_result = {
             'eval_status': self.eval_status,
             'eval_details': {
-                k: [model_res.model_dump() for model_res in v] 
+                k: [model_res.model_dump() for model_res in v]
                 for k, v in self.eval_details.items()
             },
         }

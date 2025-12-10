@@ -180,10 +180,10 @@ class LocalExecutor(ExecProto):
 
             # Execute evaluation
             tmp: ModelRes = model.eval(Data(**map_data))
-            
+
             # 直接添加ModelRes到列表中，不再merge
             model_res_list.append(tmp)
-            
+
             # 如果任意一个ModelRes的status为True，则result_info.eval_status为True
             if tmp.status:
                 result_info.eval_status = True
@@ -266,16 +266,16 @@ class LocalExecutor(ExecProto):
             for model_res in model_res_list:
                 # 从 ModelRes.label 中获取错误类型列表
                 label_list = model_res.label if model_res.label else []
-                
+
                 for eval_details_name in label_list:
                     # 检查是否已经写过这个(字段名, label名)组合
                     label_key = (field_name, eval_details_name)
                     if label_key in written_labels:
                         continue
-                    
+
                     # 标记为已写入
                     written_labels.add(label_key)
-                    
+
                     # 按点分割错误类型名称，创建多层文件夹
                     # 例如: "validity_errors.space_issues" -> ["validity_errors", "space_issues"]
                     parts = eval_details_name.split(".")

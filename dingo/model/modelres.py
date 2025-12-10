@@ -14,36 +14,11 @@ class EvalDetail(BaseModel):
     metric: list[str] = []
     reason: list = []
 
-    def merge(self, other: 'EvalDetail') -> None:
-        # 合并并去重 label 和 metric
-        self.label = list(set(self.label + other.label))
-        self.metric = list(set(self.metric + other.metric))
-        self.reason.extend(other.reason)
-
-    def copy(self) -> 'EvalDetail':
-        """创建当前 EvalDetail 的深拷贝"""
-        return EvalDetail(
-            label=self.label.copy(),
-            metric=self.metric.copy(),
-            reason=self.reason.copy()
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        """将 EvalDetail 转换为字典"""
-        return {
-            'label': self.label,
-            'metric': self.metric,
-            'reason': self.reason
-        }
-
 
 class ModelRes(BaseModel):
-    eval_status: bool = False
-    eval_details: EvalDetail = EvalDetail()
-    score: Optional[float] = None
+    metric: str
+    status: bool = False
 
-    def __setattr__(self, name, value):
-        # 在赋值时拦截 eval_details 字段
-        if name == 'eval_details' and isinstance(value, dict):
-            value = EvalDetail(**value)
-        super().__setattr__(name, value)
+    score: Optional[float] = None
+    label: Optional[list[str]] = None
+    reason: Optional[list] = None

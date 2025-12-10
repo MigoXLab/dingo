@@ -16,7 +16,7 @@ from dingo.exec.base import ExecProto, Executor
 from dingo.io import Data, ResultInfo, SummaryModel
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
-from dingo.model.modelres import EvalDetail, ModelRes
+from dingo.model.modelres import ModelRes
 from dingo.model.rule.base import BaseRule
 from dingo.utils import log
 
@@ -110,23 +110,20 @@ class LocalExecutor(ExecProto):
                     futures_results = self.merge_result_info(futures_results, result_info)
 
                 for result_info in futures_results:
-                    # 统计eval_details，第一层key是字段名组合，第二层value是EvalDetail
-                    # 错误类型从EvalDetail.label中获取
-                    for field_key, eval_detail in result_info.eval_details.items():
+                    # 统计eval_details，第一层key是字段名组合，第二层value是List[ModelRes]
+                    # 错误类型从ModelRes.label中获取
+                    for field_key, model_res_list in result_info.eval_details.items():
                         if field_key not in self.summary.type_ratio:
                             self.summary.type_ratio[field_key] = {}
-                        # 遍历 EvalDetail.label 中的每个错误类型
-                        # 兼容 dict 和 EvalDetail 对象两种情况
-                        if isinstance(eval_detail, dict):
-                            label_list = eval_detail.get('label', [])
-                        else:
-                            label_list = eval_detail.label
-
-                        for eval_details_name in label_list:
-                            if eval_details_name not in self.summary.type_ratio[field_key]:
-                                self.summary.type_ratio[field_key][eval_details_name] = 1
-                            else:
-                                self.summary.type_ratio[field_key][eval_details_name] += 1
+                        # 遍历 List[ModelRes]
+                        for model_res in model_res_list:
+                            # 获取label列表
+                            label_list = model_res.label if model_res.label else []
+                            for label in label_list:
+                                if label not in self.summary.type_ratio[field_key]:
+                                    self.summary.type_ratio[field_key][label] = 1
+                                else:
+                                    self.summary.type_ratio[field_key][label] += 1
 
                     if result_info.eval_status:
                         self.summary.num_bad += 1
@@ -166,8 +163,7 @@ class LocalExecutor(ExecProto):
             ResultInfo containing evaluation results
         """
         result_info = ResultInfo(dingo_id=dingo_id)
-        bad_eval_details = None
-        good_eval_details = None
+        model_res_list = []
 
         for e_c_i in eval_list:
             # Get model class and instantiate
@@ -184,54 +180,31 @@ class LocalExecutor(ExecProto):
 
             # Execute evaluation
             tmp: ModelRes = model.eval(Data(**map_data))
-            if isinstance(tmp.eval_details, dict):
-                tmp.eval_details = EvalDetail(**tmp.eval_details)
-
-            # Collect eval_details from ModelRes
-            if tmp.eval_status:
+            
+            # 直接添加ModelRes到列表中，不再merge
+            model_res_list.append(tmp)
+            
+            # 如果任意一个ModelRes的status为True，则result_info.eval_status为True
+            if tmp.status:
                 result_info.eval_status = True
-                # 合并 bad 的 eval_details (ModelRes.eval_details 现在直接是 EvalDetail)
-                if isinstance(bad_eval_details, dict):
-                    bad_eval_details = EvalDetail(**bad_eval_details)
-                if bad_eval_details:
-                    bad_eval_details.merge(tmp.eval_details)
-                else:
-                    bad_eval_details = tmp.eval_details.copy()
-            else:
-                # 合并 good 的 eval_details (ModelRes.eval_details 现在直接是 EvalDetail)
-                if isinstance(good_eval_details, dict):
-                    good_eval_details = EvalDetail(**good_eval_details)
-                if good_eval_details:
-                    good_eval_details.merge(tmp.eval_details)
-                else:
-                    good_eval_details = tmp.eval_details.copy()
 
-        # Set result_info fields based on all_labels configuration and add field
-        join_fields = ','.join(eval_fields.values())
+        # Set result_info fields
+        join_fields = ','.join(eval_fields.values()) if eval_fields else 'default'
 
+        # 根据配置决定保存哪些结果
         if self.input_args.executor.result_save.all_labels:
-            # Always include both good and bad results when they exist
-            # The final eval_status is True if ANY evaluation failed
-            # 合并 good 和 bad 的 eval_details (现在是 EvalDetail 对象)
-            all_eval_details = None
-            if bad_eval_details:
-                all_eval_details = bad_eval_details.copy()
-            if good_eval_details:
-                if all_eval_details:
-                    all_eval_details.merge(good_eval_details)
-                else:
-                    all_eval_details = good_eval_details.copy()
-            # add field (ResultInfo.eval_details 现在是 Dict[str, EvalDetail])
-            if all_eval_details:
-                result_info.eval_details = {join_fields: all_eval_details}
+            # 保存所有结果
+            if model_res_list:
+                result_info.eval_details = {join_fields: model_res_list}
         else:
-            # add field (ResultInfo.eval_details 现在是 Dict[str, EvalDetail])
+            # 只保存bad或good的结果
             if result_info.eval_status:
-                if bad_eval_details:
-                    result_info.eval_details = {join_fields: bad_eval_details}
+                # 有bad结果，只保留status=True的ModelRes
+                result_info.eval_details = {join_fields: [mr for mr in model_res_list if mr.status]}
             else:
-                if good_eval_details and self.input_args.executor.result_save.good:
-                    result_info.eval_details = {join_fields: good_eval_details}
+                # 都是good结果，根据配置决定是否保存，只保留status=False的ModelRes
+                if self.input_args.executor.result_save.good:
+                    result_info.eval_details = {join_fields: [mr for mr in model_res_list if not mr.status]}
 
         return result_info
 
@@ -241,14 +214,14 @@ class LocalExecutor(ExecProto):
         if existing_item:
             existing_item.eval_status = existing_item.eval_status or new_item.eval_status
 
-            # 合并 eval_details 字典（第一层是字段名，第二层直接是 EvalDetail）
+            # 合并 eval_details 字典（第一层是字段名，第二层是List[ModelRes]）
             for key, value in new_item.eval_details.items():
-                # 第一层是字段名，如果存在，则合并 EvalDetail
+                # 第一层是字段名，如果存在，则extend List[ModelRes]
                 if key in existing_item.eval_details:
-                    existing_item.eval_details[key].merge(value)
-                # 第一层是字段名，如果不存在，则创建副本
+                    existing_item.eval_details[key].extend(value)
+                # 第一层是字段名，如果不存在，则直接赋值
                 else:
-                    existing_item.eval_details[key] = value.copy()
+                    existing_item.eval_details[key] = value
         else:
             existing_list.append(new_item)
 
@@ -279,42 +252,53 @@ class LocalExecutor(ExecProto):
         if not input_args.executor.result_save.good and not result_info.eval_status:
             return
 
-        # 遍历 eval_details 的第一层（字段名组合），第二层直接是 EvalDetail
-        for field_name, eval_detail in result_info.eval_details.items():
+        # 用集合记录已经写过的(字段名, label名)组合，避免重复写入
+        written_labels = set()
+
+        # 遍历 eval_details 的第一层（字段名组合），第二层是List[ModelRes]
+        for field_name, model_res_list in result_info.eval_details.items():
             # 第一层：根据字段名创建文件夹
             field_dir = os.path.join(path, field_name)
             if not os.path.exists(field_dir):
                 os.makedirs(field_dir)
 
-            # 从 EvalDetail.label 中获取错误类型列表
-            if isinstance(eval_detail, dict):
-                label_list = eval_detail.get('label', [])
-            else:
-                label_list = eval_detail.label
-            for eval_details_name in label_list:
-                # 按点分割错误类型名称，创建多层文件夹
-                # 例如: "validity_errors.space_issues" -> ["validity_errors", "space_issues"]
-                parts = eval_details_name.split(".")
+            # 遍历 List[ModelRes]
+            for model_res in model_res_list:
+                # 从 ModelRes.label 中获取错误类型列表
+                label_list = model_res.label if model_res.label else []
+                
+                for eval_details_name in label_list:
+                    # 检查是否已经写过这个(字段名, label名)组合
+                    label_key = (field_name, eval_details_name)
+                    if label_key in written_labels:
+                        continue
+                    
+                    # 标记为已写入
+                    written_labels.add(label_key)
+                    
+                    # 按点分割错误类型名称，创建多层文件夹
+                    # 例如: "validity_errors.space_issues" -> ["validity_errors", "space_issues"]
+                    parts = eval_details_name.split(".")
 
-                # 除了最后一部分，其他部分都是文件夹
-                if len(parts) > 1:
-                    # 创建多层文件夹
-                    folder_path = os.path.join(field_dir, *parts[:-1])
-                    if not os.path.exists(folder_path):
-                        os.makedirs(folder_path)
-                    # 最后一部分作为文件名
-                    file_name = parts[-1] + ".jsonl"
-                    f_n = os.path.join(folder_path, file_name)
-                else:
-                    # 没有点分割，直接在字段文件夹下创建文件
-                    f_n = os.path.join(field_dir, parts[0] + ".jsonl")
-
-                with open(f_n, "a", encoding="utf-8") as f:
-                    if input_args.executor.result_save.raw:
-                        str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)
+                    # 除了最后一部分，其他部分都是文件夹
+                    if len(parts) > 1:
+                        # 创建多层文件夹
+                        folder_path = os.path.join(field_dir, *parts[:-1])
+                        if not os.path.exists(folder_path):
+                            os.makedirs(folder_path)
+                        # 最后一部分作为文件名
+                        file_name = parts[-1] + ".jsonl"
+                        f_n = os.path.join(folder_path, file_name)
                     else:
-                        str_json = json.dumps(result_info.to_dict(), ensure_ascii=False)
-                    f.write(str_json + "\n")
+                        # 没有点分割，直接在字段文件夹下创建文件
+                        f_n = os.path.join(field_dir, parts[0] + ".jsonl")
+
+                    with open(f_n, "a", encoding="utf-8") as f:
+                        if input_args.executor.result_save.raw:
+                            str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)
+                        else:
+                            str_json = json.dumps(result_info.to_dict(), ensure_ascii=False)
+                        f.write(str_json + "\n")
 
     def write_summary(self, path: str, input_args: InputArgs, summary: SummaryModel):
         if not input_args.executor.result_save.bad:

@@ -334,21 +334,25 @@ class RuleColonEnd(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+        res = ModelRes(metric=cls.__name__)
         content = input_data.content
         if len(content) <= 0:
             return res
         if content[-1] == ":":
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [content[-100:]]
-            }
+            # res.eval_status = True
+            # res.eval_details = {
+            #     "label": [f"{cls.metric_type}.{cls.__name__}"],
+            #     "metric": [cls.__name__],
+            #     "reason": [content[-100:]]
+            # }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [content[-100:]]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            # res.eval_details = {
+            #     "label": [QualityLabel.QUALITY_GOOD]
+            # }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -2052,7 +2056,7 @@ class RuleSpecialCharacter(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+        res = ModelRes(metric=cls.__name__)
         content = input_data.content
         if len(content) == 0:
             return res
@@ -2063,16 +2067,20 @@ class RuleSpecialCharacter(BaseRule):
             num += len(m)
             matches = matches + m
         if num / len(content) >= 0.01:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": list(set(matches))
-            }
+            # res.eval_status = True
+            # res.eval_details = {
+            #     "label": [f"{cls.metric_type}.{cls.__name__}"],
+            #     "metric": [cls.__name__],
+            #     "reason": list(set(matches))
+            # }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = list(set(matches))
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            # res.eval_details = {
+            #     "label": [QualityLabel.QUALITY_GOOD]
+            # }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 

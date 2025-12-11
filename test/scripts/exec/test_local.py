@@ -53,11 +53,11 @@ class TestLocal:
         new_existing_list = localexecutor.merge_result_info(existing_list, new_item1)
         new_existing_list = localexecutor.merge_result_info(new_existing_list, new_item2)
         assert len(new_existing_list) == 1
-        
+
         # 获取合并后的 content 字段的 EvalDetail 列表
         content_details = new_existing_list[0].eval_details.get('content')
         assert len(content_details) == 2
-        
+
         # 收集所有的 label, metric, reason
         all_labels = []
         all_metrics = []
@@ -69,7 +69,7 @@ class TestLocal:
                 all_metrics.append(detail.metric)
             if detail.reason:
                 all_reasons.extend(detail.reason)
-        
+
         assert len(all_labels) == 2
         assert len(all_metrics) == 2
         assert len(all_reasons) == 2

@@ -8,12 +8,10 @@ class TestRuleDocFormulaRepeat:
         data = Data(data_id="1",content="we are a $$x^2 + y^2 + z^2 == z^\\sqrt{4}\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots\\dots$$ , we are a $$x^2 + y^2 = z^2$$ ")
         res = RuleDocFormulaRepeat.eval(data)
         # print(res)
-        assert res.eval_status is True
-        if isinstance(res.eval_details, dict):
-            res.eval_details = EvalDetail(**res.eval_details)
-        assert res.eval_details.label == ["QUALITY_BAD_SIMILARITY.RuleDocFormulaRepeat"]
-        assert res.eval_details.metric == ["RuleDocFormulaRepeat"]
-        assert res.eval_details.reason == ["Formula has too many consecutive repeated characters, total repeat length: 130, found 1 repeat patterns"]
+        assert res.status is True
+        assert res.label == ["QUALITY_BAD_SIMILARITY.RuleDocFormulaRepeat"]
+        assert res.metric == "RuleDocFormulaRepeat"
+        assert res.reason == ["Formula has too many consecutive repeated characters, total repeat length: 130, found 1 repeat patterns"]
 
     def test_rule_unsafe_words(self):
         data = Data(data_id="", prompt="", content="java is good\n \n \n \n hello \n \n but python is better")

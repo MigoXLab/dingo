@@ -31,7 +31,9 @@ class RuleAbnormalChar(BaseRule):
             tmp_res = r.eval(input_data)
             if tmp_res.status:
                 res.status = True
-                res.merge(tmp_res)
+                # res.merge(tmp_res)
+                res.label = [f"{cls.metric_type}.{cls.__name__}"]
+                res.reason = [] if res.reason is None else res.reason.extend(tmp_res.reason)
         # Set QUALITY_GOOD when all checks pass
         if not res.status:
             res.label = [QualityLabel.QUALITY_GOOD]
@@ -59,7 +61,9 @@ class RuleAbnormalHtml(BaseRule):
             tmp_res = r.eval(input_data)
             if tmp_res.status:
                 res.status = True
-                res.merge(tmp_res)
+                # res.merge(tmp_res)
+                res.label = [f"{cls.metric_type}.{cls.__name__}"]
+                res.reason = [] if res.reason is None else res.reason.extend(tmp_res.reason)
         # Set QUALITY_GOOD when all checks pass
         if not res.status:
             res.label = [QualityLabel.QUALITY_GOOD]
@@ -641,7 +645,9 @@ class RuleEnterAndSpace(BaseRule):
             tmp_res = r.eval(input_data)
             if tmp_res.status:
                 res.status = True
-                res.merge(tmp_res)
+                # res.merge(tmp_res)
+                res.label = [f"{cls.metric_type}.{cls.__name__}"]
+                res.reason = [] if res.reason is None else res.reason.extend(tmp_res.reason)
         # Set QUALITY_GOOD when all checks pass
         if not res.status:
             res.label = [QualityLabel.QUALITY_GOOD]

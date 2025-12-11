@@ -3,6 +3,7 @@ import pytest
 from dingo.config import InputArgs
 from dingo.exec import Executor, LocalExecutor
 from dingo.io import ResultInfo
+from dingo.io.output.eval_detail import EvalDetail
 
 
 class TestLocal:
@@ -15,11 +16,14 @@ class TestLocal:
             },
             eval_status = True,
             eval_details = {
-                "content": {
-                    "label": ["QUALITY_BAD_EFFECTIVENESS-RuleColonEnd"],
-                    "metric": ["RuleColonEnd"],
-                    "reason": ["�I am 8 years old. ^I love apple because:"]
-                }
+                "content": [
+                    EvalDetail(
+                        metric="RuleColonEnd",
+                        status=True,
+                        label=["QUALITY_BAD_EFFECTIVENESS-RuleColonEnd"],
+                        reason=["�I am 8 years old. ^I love apple because:"]
+                    )
+                ]
             }
         )
         new_item2 = ResultInfo(
@@ -29,11 +33,14 @@ class TestLocal:
             },
             eval_status = True,
             eval_details = {
-                "content": {
-                    "label": ["QUALITY_BAD_EFFECTIVENESS-PromptContentChaos"],
-                    "metric": ["PromptContentChaos"],
-                    "reason": ["文本中包含不可见字符或乱码（如�和^），可能影响阅读理解。"]
-                }
+                "content": [
+                    EvalDetail(
+                        metric="PromptContentChaos",
+                        status=True,
+                        label=["QUALITY_BAD_EFFECTIVENESS-PromptContentChaos"],
+                        reason=["文本中包含不可见字符或乱码（如�和^），可能影响阅读理解。"]
+                    )
+                ]
             }
         )
 
@@ -46,13 +53,30 @@ class TestLocal:
         new_existing_list = localexecutor.merge_result_info(existing_list, new_item1)
         new_existing_list = localexecutor.merge_result_info(new_existing_list, new_item2)
         assert len(new_existing_list) == 1
-        assert len(new_existing_list[0].eval_details.get('content').label) == 2
-        assert len(new_existing_list[0].eval_details.get('content').metric) == 2
-        assert len(new_existing_list[0].eval_details.get('content').reason) == 2
-        assert "QUALITY_BAD_EFFECTIVENESS-RuleColonEnd" in new_existing_list[0].eval_details.get('content').label
-        assert "QUALITY_BAD_EFFECTIVENESS-PromptContentChaos" in new_existing_list[0].eval_details.get('content').label
-        assert "�I am 8 years old. ^I love apple because:" in new_existing_list[0].eval_details.get('content').reason
-        assert "文本中包含不可见字符或乱码（如�和^），可能影响阅读理解。" in new_existing_list[0].eval_details.get('content').reason
+        
+        # 获取合并后的 content 字段的 EvalDetail 列表
+        content_details = new_existing_list[0].eval_details.get('content')
+        assert len(content_details) == 2
+        
+        # 收集所有的 label, metric, reason
+        all_labels = []
+        all_metrics = []
+        all_reasons = []
+        for detail in content_details:
+            if detail.label:
+                all_labels.extend(detail.label)
+            if detail.metric:
+                all_metrics.append(detail.metric)
+            if detail.reason:
+                all_reasons.extend(detail.reason)
+        
+        assert len(all_labels) == 2
+        assert len(all_metrics) == 2
+        assert len(all_reasons) == 2
+        assert "QUALITY_BAD_EFFECTIVENESS-RuleColonEnd" in all_labels
+        assert "QUALITY_BAD_EFFECTIVENESS-PromptContentChaos" in all_labels
+        assert "�I am 8 years old. ^I love apple because:" in all_reasons
+        assert "文本中包含不可见字符或乱码（如�和^），可能影响阅读理解。" in all_reasons
 
     def test_all_labels_config(self):
         input_data = {

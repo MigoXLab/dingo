@@ -18,9 +18,7 @@ class TestRuleDocFormulaRepeat:
         r = RuleUnsafeWords
         r.dynamic_config.key_list = ['av', 'b', 'java']
         tmp = r.eval(data)
-        assert tmp.eval_status is True
-        if isinstance(tmp.eval_details, dict):
-            tmp.eval_details = EvalDetail(**tmp.eval_details)
-        assert 'av' not in tmp.eval_details.reason
-        assert 'b' not in tmp.eval_details.reason
-        assert 'java' in tmp.eval_details.reason
+        assert tmp.status is True
+        assert 'av' not in tmp.reason
+        assert 'b' not in tmp.reason
+        assert 'java' in tmp.reason

@@ -9,7 +9,7 @@ huggingface_hub
 jieba
 jsonlines
 langid
-openai==1.56.2
+openai>=1.56.2
 opencv-python
 packaging>=24.1
 pandas

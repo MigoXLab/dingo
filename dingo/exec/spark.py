@@ -1,7 +1,7 @@
 import copy
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pyspark import SparkConf
 from pyspark.rdd import RDD
@@ -11,10 +11,8 @@ from dingo.config import InputArgs
 from dingo.exec.base import ExecProto, Executor
 from dingo.io import Data, ResultInfo, SummaryModel
 from dingo.model import Model
-from dingo.model.llm.base import BaseLLM
-from dingo.model.modelres import ModelRes
+from dingo.io.output.eval_detail import ModelRes
 # from dingo.model.prompt.base import BasePrompt
-from dingo.model.rule.base import BaseRule
 
 
 @Executor.register("spark")

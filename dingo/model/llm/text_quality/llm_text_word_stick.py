@@ -2,7 +2,7 @@ import json
 
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import ModelRes, QualityLabel
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError

@@ -5,7 +5,7 @@ from typing import Tuple
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
 from dingo.model.model import Model
-from dingo.model.modelres import EvalDetail, ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, ModelRes, QualityLabel
 from dingo.model.rule.base import BaseRule
 
 
@@ -333,8 +333,8 @@ class RuleColonEnd(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes(metric=cls.__name__)
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if len(content) <= 0:
             return res
@@ -2055,8 +2055,8 @@ class RuleSpecialCharacter(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes(metric=cls.__name__)
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if len(content) == 0:
             return res
@@ -2233,7 +2233,6 @@ class RuleUnsafeWords(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> ModelRes:
-        import re
 
         import ahocorasick
 

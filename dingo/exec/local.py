@@ -10,14 +10,12 @@ from typing import Generator, List, Optional
 from tqdm import tqdm
 
 from dingo.config import InputArgs
-from dingo.config.input_args import EvalPipline
 from dingo.data import Dataset, DataSource, dataset_map, datasource_map
 from dingo.exec.base import ExecProto, Executor
 from dingo.io import Data, ResultInfo, SummaryModel
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
-from dingo.model.modelres import ModelRes
-from dingo.model.rule.base import BaseRule
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.utils import log
 
 
@@ -110,15 +108,15 @@ class LocalExecutor(ExecProto):
                     futures_results = self.merge_result_info(futures_results, result_info)
 
                 for result_info in futures_results:
-                    # 统计eval_details，第一层key是字段名组合，第二层value是List[ModelRes]
-                    # 错误类型从ModelRes.label中获取
-                    for field_key, model_res_list in result_info.eval_details.items():
+                    # 统计eval_details，第一层key是字段名组合，第二层value是List[EvalDetail]
+                    # 错误类型从EvalDetail.label中获取
+                    for field_key, eval_detail_list in result_info.eval_details.items():
                         if field_key not in self.summary.type_ratio:
                             self.summary.type_ratio[field_key] = {}
-                        # 遍历 List[ModelRes]
-                        for model_res in model_res_list:
+                        # 遍历 List[EvalDetail]
+                        for eval_detail in eval_detail_list:
                             # 获取label列表
-                            label_list = model_res.label if model_res.label else []
+                            label_list = eval_detail.label if eval_detail.label else []
                             for label in label_list:
                                 if label not in self.summary.type_ratio[field_key]:
                                     self.summary.type_ratio[field_key][label] = 1
@@ -163,7 +161,7 @@ class LocalExecutor(ExecProto):
             ResultInfo containing evaluation results
         """
         result_info = ResultInfo(dingo_id=dingo_id)
-        model_res_list = []
+        eval_detail_list = []
 
         for e_c_i in eval_list:
             # Get model class and instantiate
@@ -179,12 +177,12 @@ class LocalExecutor(ExecProto):
                 raise ValueError(f"Error eval_type: {eval_type}")
 
             # Execute evaluation
-            tmp: ModelRes = model.eval(Data(**map_data))
+            tmp: EvalDetail = model.eval(Data(**map_data))
 
-            # 直接添加ModelRes到列表中，不再merge
-            model_res_list.append(tmp)
+            # 直接添加EvalDetail到列表中，不再merge
+            eval_detail_list.append(tmp)
 
-            # 如果任意一个ModelRes的status为True，则result_info.eval_status为True
+            # 如果任意一个EvalDetail的status为True，则result_info.eval_status为True
             if tmp.status:
                 result_info.eval_status = True
 
@@ -194,17 +192,17 @@ class LocalExecutor(ExecProto):
         # 根据配置决定保存哪些结果
         if self.input_args.executor.result_save.all_labels:
             # 保存所有结果
-            if model_res_list:
-                result_info.eval_details = {join_fields: model_res_list}
+            if eval_detail_list:
+                result_info.eval_details = {join_fields: eval_detail_list}
         else:
             # 只保存bad或good的结果
             if result_info.eval_status:
-                # 有bad结果，只保留status=True的ModelRes
-                result_info.eval_details = {join_fields: [mr for mr in model_res_list if mr.status]}
+                # 有bad结果，只保留status=True的EvalDetail
+                result_info.eval_details = {join_fields: [mr for mr in eval_detail_list if mr.status]}
             else:
-                # 都是good结果，根据配置决定是否保存，只保留status=False的ModelRes
+                # 都是good结果，根据配置决定是否保存，只保留status=False的EvalDetail
                 if self.input_args.executor.result_save.good:
-                    result_info.eval_details = {join_fields: [mr for mr in model_res_list if not mr.status]}
+                    result_info.eval_details = {join_fields: [mr for mr in eval_detail_list if not mr.status]}
 
         return result_info
 
@@ -214,9 +212,9 @@ class LocalExecutor(ExecProto):
         if existing_item:
             existing_item.eval_status = existing_item.eval_status or new_item.eval_status
 
-            # 合并 eval_details 字典（第一层是字段名，第二层是List[ModelRes]）
+            # 合并 eval_details 字典（第一层是字段名，第二层是List[EvalDetail]）
             for key, value in new_item.eval_details.items():
-                # 第一层是字段名，如果存在，则extend List[ModelRes]
+                # 第一层是字段名，如果存在，则extend List[EvalDetail]
                 if key in existing_item.eval_details:
                     existing_item.eval_details[key].extend(value)
                 # 第一层是字段名，如果不存在，则直接赋值
@@ -255,17 +253,17 @@ class LocalExecutor(ExecProto):
         # 用集合记录已经写过的(字段名, label名)组合，避免重复写入
         written_labels = set()
 
-        # 遍历 eval_details 的第一层（字段名组合），第二层是List[ModelRes]
-        for field_name, model_res_list in result_info.eval_details.items():
+        # 遍历 eval_details 的第一层（字段名组合），第二层是List[EvalDetail]
+        for field_name, eval_detail_list in result_info.eval_details.items():
             # 第一层：根据字段名创建文件夹
             field_dir = os.path.join(path, field_name)
             if not os.path.exists(field_dir):
                 os.makedirs(field_dir)
 
-            # 遍历 List[ModelRes]
-            for model_res in model_res_list:
-                # 从 ModelRes.label 中获取错误类型列表
-                label_list = model_res.label if model_res.label else []
+            # 遍历 List[EvalDetail]
+            for eval_detail in eval_detail_list:
+                # 从 EvalDetail.label 中获取错误类型列表
+                label_list = eval_detail.label if eval_detail.label else []
 
                 for eval_details_name in label_list:
                     # 检查是否已经写过这个(字段名, label名)组合

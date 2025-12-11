@@ -290,7 +290,8 @@ from dingo.model import Model
 from dingo.model.rule.base import BaseRule
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.model.modelres import ModelRes
+from dingo.io.output.eval_detail import ModelRes
+
 
 @Model.rule_register('QUALITY_BAD_RELEVANCE', ['default'])
 class MyCustomRule(BaseRule):

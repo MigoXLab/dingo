@@ -1,12 +1,7 @@
-import json
 import os
 
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes
-from dingo.model.response.response_class import ResponseScoreTypeNameReason
-from dingo.utils import log
-from dingo.utils.exception import ConvertJsonError
 
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = 'https://api.deepseek.com/v1'

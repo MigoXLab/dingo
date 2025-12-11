@@ -1,7 +1,5 @@
-import pytest
-
 from dingo.io import Data
-from dingo.model.modelres import EvalDetail
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model.rule.rule_common import RuleDocFormulaRepeat, RuleUnsafeWords
 
 

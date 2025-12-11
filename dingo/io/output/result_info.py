@@ -1,15 +1,15 @@
-from typing import Any, Dict, List
+from typing import Dict, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from dingo.model.modelres import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 
 
 class ResultInfo(BaseModel):
     dingo_id: str = ''
     raw_data: Dict = {}
     eval_status: bool = False
-    eval_details: Dict[str, List[ModelRes]] = {}
+    eval_details: Dict[str, List[EvalDetail]] = {}
 
     def to_dict(self):
         """将ResultInfo转换为字典格式

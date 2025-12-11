@@ -1,13 +1,7 @@
-import base64
-import json
-import os
-from typing import List
-
 from dingo.io import Data
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes
-from dingo.utils import log
+from dingo.io.output.eval_detail import ModelRes
 
 
 @Model.llm_register("VLMOCRUnderstanding")

@@ -1,11 +1,10 @@
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal
 
 from dingo.io import Data
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes, QualityLabel
-from dingo.utils.exception import ExceedMaxTokens
+from dingo.io.output.eval_detail import ModelRes, QualityLabel
 
 
 @dataclass

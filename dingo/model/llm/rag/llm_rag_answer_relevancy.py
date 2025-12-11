@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 import numpy as np
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -204,7 +204,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         return score
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         """评估答案相关性"""
         # 初始化embedding模型（如果尚未初始化）
         if cls.embedding_model is None:
@@ -234,7 +234,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
             score = cls.calculate_score(generated_questions, original_question)
 
             # 构建结果
-            result = ModelRes()
+            result = EvalDetail(metric=cls.__name__)
             result.score = score
 
             # 根据分数判断是否通过，默认阈值为5
@@ -250,29 +250,20 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
                     cls.init_embedding_model(embedding_model_name)
 
             if score >= threshold:
-                result.eval_status = False
-                result.eval_details = {
-                    "label": ["QUALITY_GOOD.ANSWER_RELEVANCY_PASS"],
-                    "metric": [cls.__name__],
-                    "reason": [f"答案相关性评估通过 (分数: {score:.2f}/10)"]
-                }
+                result.status = False
+                result.label = ["QUALITY_GOOD.ANSWER_RELEVANCY_PASS"]
+                result.reason = [f"答案相关性评估通过 (分数: {score:.2f}/10)"]
             else:
-                result.eval_status = True
-                result.eval_details = {
-                    "label": ["QUALITY_BAD.ANSWER_RELEVANCY_FAIL"],
-                    "metric": [cls.__name__],
-                    "reason": [f"答案相关性评估未通过 (分数: {score:.2f}/10)"]
-                }
+                result.status = True
+                result.label = ["QUALITY_BAD.ANSWER_RELEVANCY_FAIL"]
+                result.reason = [f"答案相关性评估未通过 (分数: {score:.2f}/10)"]
 
             return result
 
         except Exception as e:
             log.error(f"Answer Relevancy评估出错: {str(e)}")
-            result = ModelRes()
-            result.eval_status = True
-            result.eval_details = {
-                "label": ["QUALITY_BAD.ANSWER_RELEVANCY_ERROR"],
-                "metric": [cls.__name__],
-                "reason": [f"答案相关性评估出错: {str(e)}"]
-            }
+            result = EvalDetail(metric=cls.__name__)
+            result.status = True
+            result.label = ["QUALITY_BAD.ANSWER_RELEVANCY_ERROR"]
+            result.reason = [f"答案相关性评估出错: {str(e)}"]
             return result

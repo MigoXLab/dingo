@@ -1,6 +1,6 @@
 import json
 
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.response.response_class import ResponseScoreReason
 from dingo.utils import log
@@ -20,7 +20,7 @@ class LLMText3H(BaseOpenAI):
         return messages
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         if response.startswith("```json"):
@@ -36,23 +36,17 @@ class LLMText3H(BaseOpenAI):
 
         response_model = ResponseScoreReason(**response_json)
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
 
         # eval_status
         if response_model.score == 1:
             tmp_name = cls.prompt.__name__[8:].upper()
-            result.eval_details = {
-                "label": [f"{QualityLabel.QUALITY_GOOD}.{tmp_name}"],
-                "metric": [cls.__name__],
-                "reason": [response_model.reason] if response_model.reason else ["Response meets quality criteria"]
-            }
+            result.label = [f"{QualityLabel.QUALITY_GOOD}.{tmp_name}"]
+            result.reason = [response_model.reason] if response_model.reason else ["Response meets quality criteria"]
         else:
-            result.eval_status = True
+            result.status = True
             tmp_name = "NOT_" + cls.prompt.__name__[8:].upper()
-            result.eval_details = {
-                "label": [f"QUALITY_BAD.{tmp_name}"],
-                "metric": [cls.__name__],
-                "reason": [response_model.reason] if response_model.reason else ["Response fails quality criteria"]
-            }
+            result.label = [f"QUALITY_BAD.{tmp_name}"]
+            result.reason = [response_model.reason] if response_model.reason else ["Response fails quality criteria"]
 
         return result

@@ -4,7 +4,7 @@ import re
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -107,7 +107,7 @@ class VLMDocumentParsingOCRTrain(BaseOpenAI):
         return messages
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
         json_match = re.search(r'\{[\s\S]*"errors"[\s\S]*\}', response)
         # types = []
@@ -133,12 +133,12 @@ class VLMDocumentParsingOCRTrain(BaseOpenAI):
         else:
             log.error("未找到JSON内容")
 
-        result = ModelRes()
-        result.eval_status = False
+        result = EvalDetail(metric=cls.__name__)
+        result.status = False
         # result.type = types
         # result.name = names
         # result.reason = [json_str] if 'json_str' in locals() else [response]
-        result.eval_details.label = tmp_types
-        result.eval_details.reason = [json_str] if 'json_str' in locals() else [response]
+        result.label = tmp_types
+        result.reason = [json_str] if 'json_str' in locals() else [response]
 
         return result

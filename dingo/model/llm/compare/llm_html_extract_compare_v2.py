@@ -4,7 +4,7 @@ from typing import List
 import diff_match_patch as dmp_module
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.response.response_class import ResponseNameReason
@@ -244,9 +244,9 @@ C. Text A 包含的核心信息内容少于 Text B
         )
 
     @classmethod
-    def _convert_to_model_result(cls, structured_response: ResponseNameReason) -> ModelRes:
+    def _convert_to_model_result(cls, structured_response: ResponseNameReason) -> EvalDetail:
         """
-        将结构化响应转换为 ModelRes 对象
+        将结构化响应转换为 EvalDetail 对象
 
         映射规则：
         - A -> TOOL_ONE_BETTER (工具A更好，eval_status=False)
@@ -257,9 +257,9 @@ C. Text A 包含的核心信息内容少于 Text B
             structured_response: 结构化响应对象，name 字段存储判断结果 (A/B/C)
 
         Returns:
-            ModelRes: 评估结果对象
+            EvalDetail: 评估结果对象
         """
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
 
         # 从 name 字段获取判断结果
         judgement = structured_response.name
@@ -287,29 +287,26 @@ C. Text A 包含的核心信息内容少于 Text B
         if not mapping:
             raise ValueError(f"无效的判断结果: {judgement}")
 
-        result.eval_status = mapping["eval_status"]
+        result.status = mapping["eval_status"]
         # result.type = mapping["type"]
         # result.name = f"Judgement_{judgement}"
         # result.reason = [structured_response.reason]
 
         tmp_type = mapping["type"]
         tmp_name = f"Judgement_{judgement}"
-        result.eval_details = {
-            "label": [f"{tmp_type}.{tmp_name}"],
-            "metric": [cls.__name__],
-            "reason": [structured_response.reason]
-        }
+        result.label = [f"{tmp_type}.{tmp_name}"]
+        result.reason = [structured_response.reason]
 
         return result
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         """
         处理 LLM 返回结果
 
         数据流：
         1. 原始响应 (str) -> 结构化响应 (ResponseNameReason)
-        2. 结构化响应 -> 评估结果 (ModelRes)
+        2. 结构化响应 -> 评估结果 (EvalDetail)
 
         这种分层设计的好处：
         - 更清晰的责任分离
@@ -321,7 +318,7 @@ C. Text A 包含的核心信息内容少于 Text B
             response: LLM 原始响应文本
 
         Returns:
-            ModelRes: 评估结果对象
+            EvalDetail: 评估结果对象
         """
         # 步骤1: 解析为结构化响应
         structured_response = cls._parse_response_to_structured(response)

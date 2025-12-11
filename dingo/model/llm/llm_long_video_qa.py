@@ -1,4 +1,4 @@
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -113,18 +113,11 @@ class LLMLongVideoQa(BaseOpenAI):
             """
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
-        result = ModelRes()
-        result.eval_status = False
-        # result.type = "text"
-        # result.name = "qa_pairs"
-        # result.reason = [response]
-
-        result.eval_details = {
-            "label": ["text.qa_pairs"],
-            "metric": [cls.__name__],
-            "reason": [response]
-        }
+        result = EvalDetail(metric=cls.__name__)
+        result.status = False
+        result.label = ["text.qa_pairs"]
+        result.reason = [response]
 
         return result

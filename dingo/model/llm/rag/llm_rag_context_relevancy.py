@@ -8,7 +8,7 @@ import json
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -159,7 +159,7 @@ class LLMRAGContextRelevancy(BaseOpenAI):
         return messages
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         """
         处理LLM响应
 
@@ -167,7 +167,7 @@ class LLMRAGContextRelevancy(BaseOpenAI):
             response: LLM原始响应
 
         Returns:
-            ModelRes对象
+            EvalDetail对象
         """
         log.info(f"RAG Context Relevancy response: {response}")
 
@@ -198,7 +198,7 @@ class LLMRAGContextRelevancy(BaseOpenAI):
         else:  # rating == 2
             reason = "上下文包含与问题相关的信息"
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
         result.score = score
 
         # 根据分数判断是否通过，默认阈值为5
@@ -207,18 +207,12 @@ class LLMRAGContextRelevancy(BaseOpenAI):
             threshold = cls.dynamic_config.parameters.get('threshold', 5)
 
         if score >= threshold:
-            result.eval_status = False
-            result.eval_details = {
-                "label": ["QUALITY_GOOD.CONTEXT_RELEVANCY_PASS"],
-                "metric": [cls.__name__],
-                "reason": [f"上下文相关性评估通过 (分数: {score:.2f}/10)\n{reason}"]
-            }
+            result.status = False
+            result.label = ["QUALITY_GOOD.CONTEXT_RELEVANCY_PASS"]
+            result.reason = [f"上下文相关性评估通过 (分数: {score:.2f}/10)\n{reason}"]
         else:
-            result.eval_status = True
-            result.eval_details = {
-                "label": ["QUALITY_BAD.CONTEXT_RELEVANCY_FAIL"],
-                "metric": [cls.__name__],
-                "reason": [f"上下文相关性评估未通过 (分数: {score:.2f}/10)\n{reason}"]
-            }
+            result.status = True
+            result.label = ["QUALITY_BAD.CONTEXT_RELEVANCY_FAIL"]
+            result.reason = [f"上下文相关性评估未通过 (分数: {score:.2f}/10)\n{reason}"]
 
         return result

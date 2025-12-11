@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Literal
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 
@@ -190,7 +190,7 @@ appear to be making claims about the topic rather than the model's internal know
     }
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         """执行两阶段评估"""
         try:
             # 0. 初始化 client
@@ -200,12 +200,9 @@ appear to be making claims about the topic rather than the model's internal know
             # 1. 提取声明
             claims = cls._extract_claims(input_data.prompt, input_data.content)
             if not claims:
-                return ModelRes(
-                    # score=0.0,
-                    # threshold=cls.threshold,
-                    reason=["No factual claims found"],
-                    # raw_resp={"claims": [], "results": []}
-                )
+                result = EvalDetail(metric=cls.__name__)
+                result.reason = ["No factual claims found"]
+                return result
 
             # 2. 分批验证
             all_results = []
@@ -218,40 +215,24 @@ appear to be making claims about the topic rather than the model's internal know
             metrics = cls._calculate_metrics(all_results)
 
             # 4. 设置评估结果
-            result = ModelRes(
-                # score=metrics["factual_ratio"],
-                # threshold=cls.threshold,
-                reason=[cls._format_reason(metrics)],
-                # raw_resp={
-                #     "claims": claims,
-                #     "results": all_results,
-                #     "metrics": metrics
-                # }
-            )
+            result = EvalDetail(metric=cls.__name__)
+            result.reason = [cls._format_reason(metrics)]
 
             # 5. 根据分数设置状态
             if metrics["factual_ratio"] < cls.threshold:
-                result.eval_status = True
-                # result.type = "QUALITY_BAD_FACTUALITY"
-                # result.name = "FACTUALITY_CHECK_FAILED"
-                result.eval_details.label = ["QUALITY_BAD_FACTUALITY.FACTUALITY_CHECK_FAILED"]
+                result.status = True
+                result.label = ["QUALITY_BAD_FACTUALITY.FACTUALITY_CHECK_FAILED"]
             else:
-                # result.type = "QUALITY_GOOD"
-                # result.name = "FACTUALITY_CHECK_PASSED"
-                result.eval_details.label = [f"{QualityLabel.QUALITY_GOOD}.FACTUALITY_CHECK_PASSED"]
+                result.label = [f"{QualityLabel.QUALITY_GOOD}.FACTUALITY_CHECK_PASSED"]
 
             return result
 
         except Exception as e:
-            return ModelRes(
-                eval_status=True,
-                type="QUALITY_BAD_FACTUALITY",
-                name="FACTUALITY_CHECK_ERROR",
-                # score=0.0,
-                # threshold=cls.threshold,
-                reason=[f"Evaluation failed: {str(e)}"],
-                # raw_resp={"error": str(e)}
-            )
+            result = EvalDetail(metric=cls.__name__)
+            result.status = True
+            result.label = ["QUALITY_BAD_FACTUALITY.FACTUALITY_CHECK_ERROR"]
+            result.reason = [f"Evaluation failed: {str(e)}"]
+            return result
 
     @classmethod
     def _extract_claims(cls, prompt: str, response: str) -> List[str]:

@@ -1,6 +1,6 @@
 import json
 
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
@@ -88,7 +88,7 @@ class LLMResumeQuality(BaseOpenAI):
     """
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         # Clean response format
@@ -107,23 +107,16 @@ class LLMResumeQuality(BaseOpenAI):
         # Validate response using Pydantic model
         response_model = ResponseScoreTypeNameReason(**response_json)
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
 
         # Check if resume is good quality
         if response_model.type == "Good" and response_model.score == 1:
-            result.eval_status = False
-            # result.type = "QUALITY_GOOD"
-            # result.name = "ResumeQualityGood"
-            # result.reason = [response_model.reason]
-
-            result.eval_details = {
-                "label": f"{QualityLabel.QUALITY_GOOD}.ResumeQualityGood",
-                "metric": [cls.__name__],
-                "reason": [response_model.reason]
-            }
+            result.status = False
+            result.label = [f"{QualityLabel.QUALITY_GOOD}.ResumeQualityGood"]
+            result.reason = [response_model.reason]
         else:
             # Resume has quality issues
-            result.eval_status = True
+            result.status = True
 
             # Map issue type to metric type
             type_mapping = {
@@ -136,16 +129,9 @@ class LLMResumeQuality(BaseOpenAI):
                 "Completeness": "RESUME_QUALITY_BAD_COMPLETENESS"
             }
 
-            # result.type = type_mapping.get(response_model.type, "RESUME_QUALITY_BAD")
-            # result.name = response_model.name
-            # result.reason = [response_model.reason]
-
             tmp_type = type_mapping.get(response_model.type, "RESUME_QUALITY_BAD")
             tmp_name = response_model.name
-            result.eval_details = {
-                "label": [f"{tmp_type}.{tmp_name}"],
-                "metric": [cls.__name__],
-                "reason": [response_model.reason]
-            }
+            result.label = [f"{tmp_type}.{tmp_name}"]
+            result.reason = [response_model.reason]
 
         return result

@@ -1,6 +1,6 @@
 import json
 
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
@@ -103,7 +103,7 @@ Please output only the JSON format data shown above, without any additional cont
     """
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         if response.startswith("```json"):
@@ -121,26 +121,14 @@ Please output only the JSON format data shown above, without any additional cont
         # Parse the response using the ResponseScoreTypeNameReason model
         response_model = ResponseScoreTypeNameReason(**response_json)
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
         # Set eval_status based on score (1 = good quality, 0 = low quality)
         if response_model.score == 1:
-            result.eval_status = False
+            result.status = False
         else:
-            result.eval_status = True
+            result.status = True
 
-        # # Set type to the domain classification
-        # result.type = response_model.type
-        #
-        # # Set name to the quality category
-        # result.name = response_model.name
-        #
-        # # Set reason to the detailed assessment
-        # result.reason = [response_model.reason]
-
-        result.eval_details = {
-            "label": [f"{response_model.type}.{response_model.name}"],
-            "metric": [cls.__name__],
-            "reason": [response_model.reason]
-        }
+        result.label = [f"{response_model.type}.{response_model.name}"]
+        result.reason = [response_model.reason]
 
         return result

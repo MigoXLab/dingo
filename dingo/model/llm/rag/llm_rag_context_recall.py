@@ -8,7 +8,7 @@ import json
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -159,7 +159,7 @@ class LLMRAGContextRecall(BaseOpenAI):
         return messages
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         """
         处理LLM响应
 
@@ -167,7 +167,7 @@ class LLMRAGContextRecall(BaseOpenAI):
             response: LLM原始响应
 
         Returns:
-            ModelRes对象
+            EvalDetail对象
         """
         log.info(f"RAG Context Recall response: {response}")
 
@@ -197,7 +197,7 @@ class LLMRAGContextRecall(BaseOpenAI):
         # 生成reason
         reason = f"在 {total_statements} 个陈述中，有 {attributed_statements} 个可以从上下文中归因，{total_statements - attributed_statements} 个不能归因"
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
         result.score = score
 
         # 根据分数判断是否通过，默认阈值为5
@@ -206,18 +206,12 @@ class LLMRAGContextRecall(BaseOpenAI):
             threshold = cls.dynamic_config.parameters.get('threshold', 5)
 
         if score >= threshold:
-            result.eval_status = False
-            result.eval_details = {
-                "label": ["QUALITY_GOOD.CONTEXT_RECALL_PASS"],
-                "metric": [cls.__name__],
-                "reason": [f"上下文召回评估通过 (分数: {score:.2f}/10)\n{reason}"]
-            }
+            result.status = False
+            result.label = ["QUALITY_GOOD.CONTEXT_RECALL_PASS"]
+            result.reason = [f"上下文召回评估通过 (分数: {score:.2f}/10)\n{reason}"]
         else:
-            result.eval_status = True
-            result.eval_details = {
-                "label": ["QUALITY_BAD.CONTEXT_RECALL_FAIL"],
-                "metric": [cls.__name__],
-                "reason": [f"上下文召回评估未通过 (分数: {score:.2f}/10)\n{reason}"]
-            }
+            result.status = True
+            result.label = ["QUALITY_BAD.CONTEXT_RECALL_FAIL"]
+            result.reason = [f"上下文召回评估未通过 (分数: {score:.2f}/10)\n{reason}"]
 
         return result

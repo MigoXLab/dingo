@@ -3,7 +3,7 @@ import re
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
@@ -107,7 +107,7 @@ class LLMHtmlExtractCompare(BaseOpenAI):
         return messages
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         response_think = ""
@@ -133,10 +133,10 @@ class LLMHtmlExtractCompare(BaseOpenAI):
 
         response_model = ResponseScoreTypeNameReason(**response_json)
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
         # status
         if response_model.score != 1:
-            result.eval_status = True
+            result.status = True
 
         # type
         # if response_model.score == 1:
@@ -159,11 +159,7 @@ class LLMHtmlExtractCompare(BaseOpenAI):
             tmp_type = "TOOL_TWO_BETTER"
         if response_model.score == 0:
             tmp_type = "TOOL_EQUAL"
-
-        result.eval_details = {
-            "label": [f"{tmp_type}.{response_model.name}"],
-            "metric": [cls.__name__],
-            "reason": [json.dumps(response_json, ensure_ascii=False)]
-        }
+        result.label = [f"{tmp_type}.{response_model.name}"]
+        result.reason = [json.dumps(response_json, ensure_ascii=False)]
 
         return result

@@ -2,7 +2,7 @@ import time
 
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
 from dingo.utils import log
@@ -38,7 +38,7 @@ class LLMPerspective(BaseLLM):
                 )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         cls.create_client()
         analyze_request = {
             "comment": {"text": input_data.content},
@@ -69,43 +69,24 @@ class LLMPerspective(BaseLLM):
                         error_list.append(e)
 
                 if is_good:
-                    res = ModelRes()
-                    res.eval_status = False
-                    res.eval_details = {
-                        "label": [f"{QualityLabel.QUALITY_GOOD}.PERSPECTIVE"],
-                        "metric": [cls.__name__],
-                        "reason": []
-                    }
+                    res = EvalDetail(metric=cls.__name__)
+                    res.status = False
+                    res.label = [f"{QualityLabel.QUALITY_GOOD}.PERSPECTIVE"]
+                    res.reason = []
                     return res
                 else:
-                    # return ModelRes(
-                    #     eval_status=True,
-                    #     type="QUALITY_BAD",
-                    #     name="PERSPECTIVE",
-                    #     reason=error_list,
-                    # )
-                    res = ModelRes()
-                    res.eval_status = True
-                    res.eval_details = {
-                        "label": ["QUALITY_BAD.PERSPECTIVE"],
-                        "metric": [cls.__name__],
-                        "reason": error_list
-                    }
+                    res = EvalDetail(metric=cls.__name__)
+                    res.status = True
+                    res.label = ["QUALITY_BAD.PERSPECTIVE"]
+                    res.reason = error_list
                     return res
             except Exception as e:
                 attempts += 1
                 time.sleep(1)
                 except_msg = str(e)
 
-        # return ModelRes(
-        #     eval_status=True, type="QUALITY_BAD", name="API_LOSS", reason=[except_msg]
-        # )
-
-        res = ModelRes()
-        res.eval_status = True
-        res.eval_details = {
-            "label": ["QUALITY_BAD.API_LOSS"],
-            "metric": [cls.__name__],
-            "reason": [except_msg]
-        }
+        res = EvalDetail(metric=cls.__name__)
+        res.status = True
+        res.label = ["QUALITY_BAD.API_LOSS"]
+        res.reason = [except_msg]
         return res

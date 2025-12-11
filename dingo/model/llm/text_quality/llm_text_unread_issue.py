@@ -1,6 +1,6 @@
 import json
 
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
@@ -41,7 +41,7 @@ class LLMTextUnreadIssue(BaseOpenAI):
     """
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         if response.startswith("```json"):
@@ -57,24 +57,14 @@ class LLMTextUnreadIssue(BaseOpenAI):
 
         response_model = ResponseScoreTypeNameReason(**response_json)
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
         # eval_status
         if response_model.score == 1:
-            # result.reason = [response_model.reason]
-            result.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD],
-                "metric": [cls.__name__],
-                "reason": [response_model.reason]
-            }
+            result.label = [QualityLabel.QUALITY_GOOD]
+            result.reason = [response_model.reason]
         else:
-            result.eval_status = True
-            # result.type = response_model.type
-            # result.name = response_model.name
-            # result.reason = [response_model.reason]
-            result.eval_details = {
-                "label": [f"{response_model.type}.{response_model.name}"],
-                "metric": [cls.__name__],
-                "reason": [response_model.reason]
-            }
+            result.status = True
+            result.label = [f"{response_model.type}.{response_model.name}"]
+            result.reason = [response_model.reason]
 
         return result

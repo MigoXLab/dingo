@@ -3,7 +3,7 @@ import re
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -136,7 +136,7 @@ class LLMTableCompare(BaseOpenAI):
         return messages
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         # 提取思考内容和清理响应
@@ -181,30 +181,25 @@ class LLMTableCompare(BaseOpenAI):
         return response
 
     @staticmethod
-    def _create_no_table_result(response_json: dict) -> ModelRes:
-        result = ModelRes()
-        result.eval_status = False
-        result.eval_details = {
-            "label": ["NO_TABLE.table"],
-            "metric": ["LLMTableCompare"],
-            "reason": [json.dumps(response_json, ensure_ascii=False)]
-        }
+    def _create_no_table_result(response_json: dict) -> EvalDetail:
+        result = EvalDetail(metric="LLMTableCompare")
+        result.status = False
+        result.label = ["NO_TABLE.table"]
+
+        result.reason = [json.dumps(response_json, ensure_ascii=False)]
         return result
 
     @staticmethod
-    def _create_normal_result(response_json: dict) -> ModelRes:
-        result = ModelRes()
+    def _create_normal_result(response_json: dict) -> EvalDetail:
+        result = EvalDetail(metric="LLMTableCompare")
         score = response_json.get('score', 0)
 
-        result.eval_status = score != 1
+        result.status = score != 1
         # result.type = {1: 'TOOL_ONE_BETTER', 2: 'TOOL_TWO_BETTER'}.get(score, 'TOOL_EQUAL')
         # result.name = 'table'
         # result.reason = [json.dumps(response_json, ensure_ascii=False)]
         tmp_type = {1: 'TOOL_ONE_BETTER', 2: 'TOOL_TWO_BETTER'}.get(score, 'TOOL_EQUAL')
-        result.eval_details = {
-            "label": [f"{tmp_type}.table"],
-            "metric": ["LLMMathCompare"],
-            "reason": [json.dumps(response_json, ensure_ascii=False)]
-        }
+        result.label = [f"{tmp_type}.table"]
+        result.reason = [json.dumps(response_json, ensure_ascii=False)]
 
         return result

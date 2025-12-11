@@ -2,7 +2,7 @@ import json
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.response.response_hallucination import HallucinationVerdict, HallucinationVerdicts
@@ -19,7 +19,7 @@ class LLMHallucination(BaseOpenAI):
     This implementation adapts DeepEval's verdict-based approach to Dingo's architecture:
     1. Generates verdicts for each context against the actual output
     2. Calculates hallucination score based on contradiction ratio
-    3. Returns standardized ModelRes with eval_status based on threshold
+    3. Returns standardized EvalDetail with eval_status based on threshold
     """
     # Metadata for documentation generation
     _metric_info = {
@@ -107,7 +107,7 @@ class LLMHallucination(BaseOpenAI):
         return messages
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         """
         Process LLM response to calculate hallucination score.
         Follows DeepEval's approach:
@@ -142,26 +142,16 @@ class LLMHallucination(BaseOpenAI):
         # Generate detailed reason
         reason = cls._generate_reason(verdicts, score)
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
 
         # Set eval_status based on threshold
         if score > cls.threshold:
-            result.eval_status = True
-            # result.type = "QUALITY_BAD_HALLUCINATION"
-            # result.name = "HALLUCINATION_DETECTED"
-            result.eval_details.label = ['QUALITY_BAD_HALLUCINATION.HALLUCINATION_DETECTED']
+            result.status = True
+            result.label = ['QUALITY_BAD_HALLUCINATION.HALLUCINATION_DETECTED']
         else:
-            # result.type = "QUALITY_GOOD"
-            # result.name = "NO_HALLUCINATION"
-            result.eval_details.label = [f'{QualityLabel.QUALITY_GOOD}.NO_HALLUCINATION']
+            result.label = [f'{QualityLabel.QUALITY_GOOD}.NO_HALLUCINATION']
 
         result.reason = [reason]
-
-        # Store additional metadata
-        # result.score = score
-        # result.verdict_details = [
-        #     f"{v.verdict}: {v.reason}" for v in verdicts
-        # ]
 
         log.info(f"Hallucination score: {score:.3f}, threshold: {cls.threshold}")
 
@@ -220,22 +210,17 @@ class LLMHallucination(BaseOpenAI):
         return "\n".join(reason_parts)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         """
         Override eval to add context validation
         """
         # Validate that context is provided
         if not hasattr(input_data, 'context') or not input_data.context:
-            return ModelRes(
-                eval_status=True,
-                # type="QUALITY_BAD",
-                # name="MISSING_CONTEXT",
-                # reason=["Context is required for hallucination detection but was not provided"]
-                eval_details = {
-                    "label": ["QUALITY_BAD.MISSING_CONTEXT"],
-                    "reason": ["Context is required for hallucination detection but was not provided"]
-                }
-            )
+            result = EvalDetail(metric=cls.__name__)
+            result.status = True
+            result.label = ["QUALITY_BAD.MISSING_CONTEXT"]
+            result.reason = ["Context is required for hallucination detection but was not provided"]
+            return result
 
         # Call parent eval method
         return super().eval(input_data)

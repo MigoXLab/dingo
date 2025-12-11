@@ -9,7 +9,7 @@ import json
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -95,7 +95,7 @@ Here is the text:
         return messages
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         """
         Process the LLM response for Meta-rater Cleanliness evaluation.
 
@@ -103,7 +103,7 @@ Here is the text:
             response: Raw response string from the LLM
 
         Returns:
-            ModelRes: Processed evaluation results with score and reason
+            EvalDetail: Processed evaluation results with score and reason
         """
         log.info(response)
 
@@ -125,30 +125,24 @@ Here is the text:
         score = response_json.get('score', 0)
         reason = response_json.get('reason', '')
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
 
         # Meta-rater uses 1-5 scoring, with higher scores being better;
         # We normalize this to binary classification for compatibility
         # Scores >= 3 are considered "good quality", < 3 are "low quality"
         if score >= 3:
-            result.eval_status = False
+            result.status = False
             # result.type = cls.prompt.metric_type
             # result.name = "HighQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.eval_details = {
-                "label": [f"{cls.__name__}.HighQuality"],
-                "metric": [cls.__name__],
-                "reason": [f"Score: {score}/5. {reason}"]
-            }
+            result.label = [f"{cls.__name__}.HighQuality"]
+            result.reason = [f"Score: {score}/5. {reason}"]
         else:
-            result.eval_status = True
+            result.status = True
             # result.type = cls.prompt.metric_type
             # result.name = "LowQuality"
             # result.reason = [f"Score: {score}/5. {reason}"]
-            result.eval_details = {
-                "label": [f"{cls.__name__}.LowQuality"],
-                "metric": [cls.__name__],
-                "reason": [f"Score: {score}/5. {reason}"]
-            }
+            result.label = [f"{cls.__name__}.LowQuality"]
+            result.reason = [f"Score: {score}/5. {reason}"]
 
         return result

@@ -1,6 +1,6 @@
 import json
 
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -49,7 +49,7 @@ Please remember to output only a JSON format data, without any additional conten
     """
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         # 清理 markdown 代码块
@@ -79,13 +79,10 @@ Please remember to output only a JSON format data, without any additional conten
         if not isinstance(reason_list, list):
             reason_list = [reason_list] if reason_list else []
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
         if score == 1:
-            result.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD],
-                "metric": [cls.__name__],
-                "reason": reason_list if reason_list else [""]
-            }
+            result.label = [QualityLabel.QUALITY_GOOD]
+            result.reason = reason_list if reason_list else [""]
         else:
             # 构建标签：type.name 格式
             labels = []
@@ -94,11 +91,8 @@ Please remember to output only a JSON format data, without any additional conten
             if not labels:
                 labels = [f"QUALITY_BAD.{cls.__name__}"]
 
-            result.eval_status = True
-            result.eval_details = {
-                "label": labels,
-                "metric": [cls.__name__],
-                "reason": reason_list if reason_list else [""]
-            }
+            result.status = True
+            result.label = labels
+            result.reason = reason_list if reason_list else [""]
 
         return result

@@ -3,7 +3,7 @@ import re
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -97,7 +97,7 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
         return messages
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
         json_match = re.search(r'\{[\s\S]*"errors"[\s\S]*\}', response)
         types = []
@@ -121,18 +121,12 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
         else:
             log.error("未找到JSON内容")
 
-        result = ModelRes()
-        result.eval_status = False
-        # result.type = types
-        # result.name = names
-        # result.reason = [json_str] if 'json_str' in locals() else [response]
+        result = EvalDetail(metric=cls.__name__)
+        result.status = False
 
         tmp_type = '.'.join(types)
         tmp_name = '.'.join(names)
-        result.eval_details = {
-            "label": [f"{tmp_type}.{tmp_name}"],
-            "metric": [cls.__name__],
-            "reason": [json_str] if 'json_str' in locals() else [response]
-        }
+        result.label = [f"{tmp_type}.{tmp_name}"]
+        result.reason = [json_str] if 'json_str' in locals() else [response]
 
         return result

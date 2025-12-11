@@ -1,6 +1,6 @@
 import json
 
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
@@ -9,7 +9,7 @@ from dingo.utils.exception import ConvertJsonError
 # @Model.llm_register("LLMSecurity")
 class LLMSecurity(BaseOpenAI):
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         if response.startswith("```json"):
@@ -23,19 +23,13 @@ class LLMSecurity(BaseOpenAI):
         except json.JSONDecodeError:
             raise ConvertJsonError(f"Convert to JSON format failed: {response}")
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
         tmp_reason = []
         for k, v in response_json.items():
             if v == "pos":
-                result.eval_status = True
-                # result.type = "Security"
-                # result.name = cls.prompt.__name__
-                # result.reason.append(k)
+                result.status = True
                 tmp_reason.append(k)
 
-        result.eval_details = {
-            "label": [f"Security.{cls.__name__}"],
-            "metric": [cls.__name__],
-            "reason": tmp_reason
-        }
+        result.label = [f"Security.{cls.__name__}"]
+        result.reason = tmp_reason
         return result

@@ -8,7 +8,7 @@ import time
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -195,14 +195,14 @@ class LLMRAGContextPrecision(BaseOpenAI):
         return messages_list
 
     @classmethod
-    def process_response(cls, responses: List[str]) -> ModelRes:
+    def process_response(cls, responses: List[str]) -> EvalDetail:
         """处理LLM响应
 
         Args:
             responses: 每个上下文的评估响应列表
 
         Returns:
-            ModelRes: 评估结果
+            EvalDetail: 评估结果
         """
         log.info(f"RAG Context Precision responses: {responses}")
 
@@ -249,7 +249,7 @@ class LLMRAGContextPrecision(BaseOpenAI):
         reason_text = "\n\n".join(all_reasons)
         reason_text += f"\n\n平均精度: {avg_precision:.4f}，转换为0-10分: {score}/10"
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
         result.score = score
 
         # 根据分数判断是否通过，默认阈值为5
@@ -258,24 +258,18 @@ class LLMRAGContextPrecision(BaseOpenAI):
             threshold = cls.dynamic_config.parameters.get('threshold', 5)
 
         if score >= threshold:
-            result.eval_status = False
-            result.eval_details = {
-                "label": ["QUALITY_GOOD.CONTEXT_PRECISION_PASS"],
-                "metric": [cls.__name__],
-                "reason": [f"上下文精度评估通过 (分数: {score}/10)\n{reason_text}"]
-            }
+            result.status = False
+            result.label = ["QUALITY_GOOD.CONTEXT_PRECISION_PASS"]
+            result.reason = [f"上下文精度评估通过 (分数: {score}/10)\n{reason_text}"]
         else:
-            result.eval_status = True
-            result.eval_details = {
-                "label": ["QUALITY_BAD.CONTEXT_PRECISION_FAIL"],
-                "metric": [cls.__name__],
-                "reason": [f"上下文精度评估未通过 (分数: {score}/10)\n{reason_text}"]
-            }
+            result.status = True
+            result.label = ["QUALITY_BAD.CONTEXT_PRECISION_FAIL"]
+            result.reason = [f"上下文精度评估未通过 (分数: {score}/10)\n{reason_text}"]
 
         return result
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         """重写父类的eval方法，支持为每个上下文发送单独的请求"""
         if cls.client is None:
             cls.create_client()
@@ -301,13 +295,16 @@ class LLMRAGContextPrecision(BaseOpenAI):
 
             if response is None:
                 # 如果所有尝试都失败，返回错误结果
-                res = ModelRes()
-                res.eval_status = True
-                res.eval_details = {
-                    "label": ["QUALITY_BAD.REQUEST_FAILED"],
-                    "metric": [cls.__name__],
-                    "reason": [f"为上下文{item['context_index']+1}发送请求失败"]
-                }
+                res = EvalDetail(metric=cls.__name__)
+                # res.eval_status = True
+                # res.eval_details = {
+                #     "label": ["QUALITY_BAD.REQUEST_FAILED"],
+                #     "metric": [cls.__name__],
+                #     "reason": [f"为上下文{item['context_index']+1}发送请求失败"]
+                # }
+                res.status =True
+                res.label = ["QUALITY_BAD.REQUEST_FAILED"]
+                res.reason = [f"为上下文{item['context_index']+1}发送请求失败"]
                 return res
 
             responses.append(response)

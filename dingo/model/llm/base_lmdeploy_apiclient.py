@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.llm.base import BaseLLM
 from dingo.model.response.response_class import ResponseScoreReason
 from dingo.utils import log
@@ -44,7 +44,7 @@ class BaseLmdeployApiClient(BaseLLM):
         return str(response)
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         if response.startswith("```json"):
@@ -60,30 +60,20 @@ class BaseLmdeployApiClient(BaseLLM):
 
         response_model = ResponseScoreReason(**response_json)
 
-        result = ModelRes()
+        result = EvalDetail(metric=cls.__name__)
         # eval_status
         if response_model.score == 1:
-            # result.reason = [response_model.reason]
-            result.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD],
-                "metric": [cls.__name__],
-                "reason": [response_model.reason]
-            }
+            result.label = [QualityLabel.QUALITY_GOOD]
+            result.reason = [response_model.reason]
         else:
-            result.eval_status = True
-            # result.type = cls.prompt.metric_type
-            # result.name = cls.prompt.__name__
-            # result.reason = [response_model.reason]
-            result.eval_details = {
-                "label": [f"QUALITY_BAD.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [response_model.reason]
-            }
+            result.status = True
+            result.label = [f"QUALITY_BAD.{cls.__name__}"]
+            result.reason = [response_model.reason]
 
         return result
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         if cls.client is None:
             cls.create_client()
 
@@ -106,11 +96,8 @@ class BaseLmdeployApiClient(BaseLLM):
                 except_msg = str(e)
                 except_name = e.__class__.__name__
 
-        res = ModelRes()
-        res.eval_status = True
-        res.eval_details = {
-            "label": [f"QUALITY_BAD.{except_name}"],
-            "metric": [cls.__name__],
-            "reason": [except_msg]
-        }
+        res = EvalDetail(metric=cls.__name__)
+        res.status = True
+        res.label = [f"QUALITY_BAD.{except_name}"]
+        res.reason = [except_msg]
         return res

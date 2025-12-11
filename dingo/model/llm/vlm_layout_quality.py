@@ -4,7 +4,7 @@ import os
 from typing import List
 
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -212,14 +212,13 @@ class VLMLayoutQuality(BaseOpenAI):
         return str(completions.choices[0].message.content)
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         response = response.replace("```json", "")
         response = response.replace("```", "")
 
         types = []
-        # names = []
 
         if response:
             try:
@@ -231,16 +230,11 @@ class VLMLayoutQuality(BaseOpenAI):
 
                     if eval_details:
                         types.append(eval_details)
-                        # names.append(eval_details)
             except json.JSONDecodeError as e:
                 log.error(f"JSON解析错误: {e}")
 
-        result = ModelRes()
-        # result.eval_status = False
-        # result.type = types
-        # result.name = names
-        # result.reason = [response]
-        result.eval_details.label = types
-        result.eval_details.reason = [response]
+        result = EvalDetail(metric=cls.__name__)
+        result.label = types
+        result.reason = [response]
 
         return result

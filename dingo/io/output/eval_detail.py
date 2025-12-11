@@ -17,6 +17,3 @@ class EvalDetail(BaseModel):
     label: Optional[list[str]] = None
     reason: Optional[list] = None
 
-
-class ModelRes(BaseModel):
-    pass

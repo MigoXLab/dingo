@@ -16,7 +16,7 @@ from typing import List
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.rule.base import BaseRule
 from dingo.utils import log
@@ -71,7 +71,7 @@ class RuleHallucinationHHEM(BaseRule):
                 raise RuntimeError(f"Failed to load HHEM model: {e}")
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         """
         Evaluate hallucination using HHEM-2.1-Open model.
 
@@ -79,7 +79,7 @@ class RuleHallucinationHHEM(BaseRule):
             input_data: Data object containing content and context
 
         Returns:
-            ModelRes with hallucination detection results
+            EvalDetail with hallucination detection results
         """
         # Check if context is available
         if not hasattr(input_data, 'context') or not input_data.context:
@@ -88,16 +88,13 @@ class RuleHallucinationHHEM(BaseRule):
                 contexts = input_data.raw_data['context']
             else:
                 # No context available - cannot evaluate
-                result = ModelRes()
-                result.eval_status = True
+                result = EvalDetail(metric=cls.__name__)
+                result.status = True
                 # result.type = cls.metric_type
                 # result.name = "MISSING_CONTEXT"
                 # result.reason = ["Context is required for HHEM hallucination detection but was not provided"]
-                result.eval_details = {
-                    "label": [f"{cls.metric_type}.MISSING_CONTEXT"],
-                    "metric": [cls.__name__],
-                    "reason": ["Context is required for HHEM hallucination detection but was not provided"]
-                }
+                result.label = [f"{cls.metric_type}.MISSING_CONTEXT"]
+                result.reason = ["Context is required for HHEM hallucination detection but was not provided"]
                 return result
         else:
             contexts = input_data.context
@@ -139,15 +136,15 @@ class RuleHallucinationHHEM(BaseRule):
             avg_hallucination_score = sum(hallucination_scores) / len(hallucination_scores)
 
             # Create result
-            result = ModelRes()
+            result = EvalDetail(metric=cls.__name__)
             # result.score = avg_hallucination_score
 
             # Determine if hallucination detected based on threshold
             if avg_hallucination_score > cls.dynamic_config.threshold:
-                result.eval_status = True
+                result.status = True
                 # result.type = cls.metric_type
                 # result.name = "HALLUCINATION_DETECTED"
-                result.eval_details.label = [f"{cls.metric_type}.HALLUCINATION_DETECTED"]
+                result.label = [f"{cls.metric_type}.HALLUCINATION_DETECTED"]
 
                 # Generate detailed analysis
                 analysis_parts = [
@@ -190,12 +187,12 @@ class RuleHallucinationHHEM(BaseRule):
                 ])
 
                 # result.reason = ["\n".join(analysis_parts)]
-                result.eval_details.reason = ["\n".join(analysis_parts)]
+                result.reason = ["\n".join(analysis_parts)]
             else:
-                result.eval_status = False
+                result.status = False
                 # result.type = "QUALITY_GOOD"
                 # result.name = "NO_HALLUCINATION"
-                result.eval_details.label = ['QUALITY_GOOD.NO_HALLUCINATION']
+                result.label = ['QUALITY_GOOD.NO_HALLUCINATION']
 
                 # Generate analysis for non-hallucination case
                 analysis = (
@@ -206,22 +203,19 @@ class RuleHallucinationHHEM(BaseRule):
                     f"💡 模型信息: 使用 Vectara HHEM-2.1-Open (本地推理)"
                 )
                 # result.reason = [analysis]
-                result.eval_details.reason = [analysis]
+                result.reason = [analysis]
 
             return result
 
         except Exception as e:
             # Handle model inference errors
-            result = ModelRes()
-            result.eval_status = True
+            result = EvalDetail(metric=cls.__name__)
+            result.status = True
             # result.type = cls.metric_type
             # result.name = "HHEM_ERROR"
             # result.reason = [f"HHEM model inference failed: {str(e)}"]
-            result.eval_details = {
-                "label": [f"{cls.metric_type}.HHEM_ERROR"],
-                "metric": [cls.__name__],
-                "reason": [f"HHEM model inference failed: {str(e)}"]
-            }
+            result.label = [f"{cls.metric_type}.HHEM_ERROR"]
+            result.reason = [f"HHEM model inference failed: {str(e)}"]
             return result
 
     @classmethod
@@ -245,7 +239,7 @@ class RuleHallucinationHHEM(BaseRule):
         }
 
     @classmethod
-    def batch_evaluate(cls, data_list: List[Data]) -> List[ModelRes]:
+    def batch_evaluate(cls, data_list: List[Data]) -> List[EvalDetail]:
         """
         Batch evaluation for efficiency.
 
@@ -253,7 +247,7 @@ class RuleHallucinationHHEM(BaseRule):
             data_list: List of Data objects to evaluate
 
         Returns:
-            List of ModelRes objects
+            List of EvalDetail objects
         """
         # Load model once for batch processing
         cls.load_model()

@@ -25,19 +25,16 @@ class RuleAbnormalChar(BaseRule):
     }
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         for r in [RuleSpecialCharacter, RuleInvisibleChar]:
             tmp_res = r.eval(input_data)
-            # print(tmp_res)
-            if tmp_res.eval_status:
-                res.eval_status = True
-                if isinstance(tmp_res.eval_details, dict):
-                    tmp_res.eval_details = EvalDetail(**tmp_res.eval_details)
-                res.eval_details.merge(tmp_res.eval_details)
+            if tmp_res.status:
+                res.status = True
+                res.merge(tmp_res)
         # Set QUALITY_GOOD when all checks pass
-        if not res.eval_status:
-            res.eval_details = EvalDetail(label=[QualityLabel.QUALITY_GOOD])
+        if not res.status:
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -56,18 +53,16 @@ class RuleAbnormalHtml(BaseRule):
     }
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         for r in [RuleHtmlEntity, RuleHtmlTag]:
             tmp_res = r.eval(input_data)
-            if tmp_res.eval_status:
-                res.eval_status = True
-                if isinstance(tmp_res.eval_details, dict):
-                    tmp_res.eval_details = EvalDetail(**tmp_res.eval_details)
-                res.eval_details.merge(tmp_res.eval_details)
+            if tmp_res.status:
+                res.status = True
+                res.merge(tmp_res)
         # Set QUALITY_GOOD when all checks pass
-        if not res.eval_status:
-            res.eval_details = EvalDetail(label=[QualityLabel.QUALITY_GOOD])
+        if not res.status:
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -87,17 +82,16 @@ class RuleAbnormalNumber(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern=r"\n{4}\d+\n{4}")
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [match.group(0).strip("\n")]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [match.group(0).strip("\n")]
+        else:
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -118,9 +112,9 @@ class RuleAlphaWords(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=0.6)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from nltk.tokenize import word_tokenize
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         words = word_tokenize(content)
         n_words = len(words)
@@ -129,19 +123,14 @@ class RuleAlphaWords(BaseRule):
         n_alpha_words = sum([any((c.isalpha() for c in w)) for w in words])
         ratio = n_alpha_words / n_words
         if ratio > cls.dynamic_config.threshold:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [
-                    "The ratio of words that contain at least one alphabetic character is: "
-                    + str(ratio)
-                ]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [
+                "The ratio of words that contain at least one alphabetic character is: "
+                + str(ratio)
+            ]
         return res
 
 
@@ -173,23 +162,17 @@ class RuleAudioDataFormat(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
 
         raw_data = input_data.raw_data
         key_list = ["id", "audio", "text"]
         if all(key in raw_data for key in key_list):
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
-            return res
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Audio Data format error"]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Audio Data format error"]
         return res
 
 
@@ -211,9 +194,9 @@ class RuleCapitalWords(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=0.2)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from nltk.tokenize import WordPunctTokenizer
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         words = WordPunctTokenizer().tokenize(content)
         num_words = len(words)
@@ -222,16 +205,11 @@ class RuleCapitalWords(BaseRule):
         num_caps_words = sum(map(str.isupper, words))
         ratio = num_caps_words / num_words
         if ratio > cls.dynamic_config.threshold and num_words < 200:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["ratio: " + str(ratio)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["ratio: " + str(ratio)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -252,8 +230,8 @@ class RuleCharNumber(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=100)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         text = input_data.content
         text = text.strip()
         text = text.replace(" ", "")
@@ -261,16 +239,11 @@ class RuleCharNumber(BaseRule):
         text = text.replace("\t", "")
         num_char = len(text)
         if num_char < cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The number of char is: " + str(num_char)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The number of char is: " + str(num_char)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -293,22 +266,17 @@ class RuleCharSplit(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         matches = re.findall(cls.dynamic_config.pattern, content)
         count = len(matches)
         if count >= cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": matches
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = matches
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -393,20 +361,15 @@ class RuleContentNull(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         count = len(input_data.content.strip())
         if count == 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content is empty."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content is empty."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -429,20 +392,15 @@ class RuleContentShort(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=20)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content.encode("utf-8")
         if len(content) <= cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content is too short."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content is too short."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -475,23 +433,18 @@ class RuleContentShortMultiLan(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=20)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from nltk.tokenize import WordPunctTokenizer
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         tk = WordPunctTokenizer()
         tokens = tk.tokenize(input_data.content)
         words = [word for word in tokens if word.isalpha()]
         if len(words) < cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content is too short."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content is too short."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -512,26 +465,21 @@ class RuleCurlyBracket(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=0.025)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if len(content) == 0:
             return res
         num = content.count("{") + content.count("}")
         ratio = num / len(content)
         if ratio > cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [
-                    "The ratio of curly bracket and characters is : " + str(ratio)
-                ]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [
+                "The ratio of curly bracket and characters is : " + str(ratio)
+            ]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -571,24 +519,19 @@ class RuleDocRepeat(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=80)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import base_rps_frac_chars_in_dupe_ngrams
 
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         repeat_score = base_rps_frac_chars_in_dupe_ngrams(6, input_data.content)
         if repeat_score >= cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [
-                    "Repeatability of text is too high, with ratio： " + str(repeat_score)
-                ]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [
+                "Repeatability of text is too high, with ratio： " + str(repeat_score)
+            ]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -617,8 +560,8 @@ class RuleDocFormulaRepeat(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=20)  # 设置阈值为20
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
 
         # 提取所有公式
         pattern = r'(?:\$\$(.*?)\$\$|\\\((.*?)\\\))'
@@ -633,20 +576,15 @@ class RuleDocFormulaRepeat(BaseRule):
         repeat_analysis = cls.analyze_repeats(formula_content)
         # 如果总连续重复长度超过阈值，则标记为错误
         if repeat_analysis['total_repeat_length'] >= cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [
-                    f"Formula has too many consecutive repeated characters, "
-                    f"total repeat length: {repeat_analysis['total_repeat_length']}, "
-                    f"found {len(repeat_analysis['repeats'])} repeat patterns"
-                ]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [
+                f"Formula has too many consecutive repeated characters, "
+                f"total repeat length: {repeat_analysis['total_repeat_length']}, "
+                f"found {len(repeat_analysis['repeats'])} repeat patterns"
+            ]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
 
         return res
 
@@ -697,18 +635,16 @@ class RuleEnterAndSpace(BaseRule):
     }
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         for r in [RuleEnterMore, RuleEnterRatioMore, RuleSpaceMore]:
             tmp_res = r.eval(input_data)
-            if tmp_res.eval_status:
-                res.eval_status = True
-                if isinstance(tmp_res.eval_details, dict):
-                    tmp_res.eval_details = EvalDetail(**tmp_res.eval_details)
-                res.eval_details.merge(tmp_res.eval_details)
+            if tmp_res.status:
+                res.status = True
+                res.merge(tmp_res)
         # Set QUALITY_GOOD when all checks pass
-        if not res.eval_status:
-            res.eval_details = EvalDetail(label=[QualityLabel.QUALITY_GOOD])
+        if not res.status:
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -744,23 +680,18 @@ class RuleEnterMore(BaseRule):
     dynamic_config = EvaluatorRuleArgs(key_list=[r"\n{8,}", r"\r\n{8,}"])
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         for p in cls.dynamic_config.key_list:
             SEARCH_REGEX = re.compile(p)
             match = SEARCH_REGEX.search(content)
             if match:
-                res.eval_status = True
-                res.eval_details = {
-                    "label": [f"{cls.metric_type}.{cls.__name__}"],
-                    "metric": [cls.__name__],
-                    "reason": ["Content has 8 consecutive carriage returns."]
-                }
+                res.status = True
+                res.label = [f"{cls.metric_type}.{cls.__name__}"]
+                res.reason = ["Content has 8 consecutive carriage returns."]
                 return res
-        res.eval_details = {
-            "label": [QualityLabel.QUALITY_GOOD]
-        }
+        res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -796,23 +727,18 @@ class RuleEnterRatioMore(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if len(content) == 0:
             return res
         ratio = content.count("\n") / len(content)
         if ratio > 0.25:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The number of enter / the number of content > 25%."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The number of enter / the number of content > 25%."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -833,23 +759,18 @@ class RuleHeadWordAr(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         keyword = get_xyz_head_word("ar")
         content_tail = input_data.content[-100:]
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content has irrelevance tail source info."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content has irrelevance tail source info."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -870,23 +791,18 @@ class RuleHeadWordCs(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         keyword = get_xyz_head_word("cs")
         content_tail = input_data.content[-100:]
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content has irrelevance tail source info."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content has irrelevance tail source info."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -907,23 +823,18 @@ class RuleHeadWordHu(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         keyword = get_xyz_head_word("hu")
         content_tail = input_data.content[-100:]
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content has irrelevance tail source info."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content has irrelevance tail source info."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -944,23 +855,18 @@ class RuleHeadWordKo(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         keyword = get_xyz_head_word("ko")
         content_tail = input_data.content[-100:]
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content has irrelevance tail source info."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content has irrelevance tail source info."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -981,23 +887,18 @@ class RuleHeadWordRu(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         keyword = get_xyz_head_word("ru")
         content_tail = input_data.content[-100:]
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content has irrelevance tail source info."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content has irrelevance tail source info."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1018,23 +919,18 @@ class RuleHeadWordSr(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         keyword = get_xyz_head_word("sr")
         content_tail = input_data.content[-100:]
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content has irrelevance tail source info."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content has irrelevance tail source info."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1055,23 +951,18 @@ class RuleHeadWordTh(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         keyword = get_xyz_head_word("th")
         content_tail = input_data.content[-100:]
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content has irrelevance tail source info."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content has irrelevance tail source info."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1092,23 +983,18 @@ class RuleHeadWordVi(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.multi_lan_util import get_xyz_head_word
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         keyword = get_xyz_head_word("vi")
         content_tail = input_data.content[-100:]
         matches = re.findall("|".join(keyword), content_tail)
         if len(matches) > 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content has irrelevance tail source info."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content has irrelevance tail source info."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1163,8 +1049,8 @@ class RuleHtmlEntity(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if len(content) == 0:
             return res
@@ -1190,16 +1076,11 @@ class RuleHtmlEntity(BaseRule):
                 num += content.count(entity)
                 error_entity.append(entity)
         if num / len(content) >= 0.01:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [list(set(error_entity))]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [list(set(error_entity))]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1236,24 +1117,19 @@ class RuleHtmlTag(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if len(content) == 0:
             return res
         matches = re.findall("|".join(cls.dynamic_config.key_list), content)
         num = len(matches)
         if num / len(content) >= 0.01:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": list(set(matches))
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = list(set(matches))
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1276,23 +1152,18 @@ class RuleIDCard(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import Extractor
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         match = re.search(cls.dynamic_config.pattern, input_data.content, re.I)
         if match:
             person_id = Extractor().extract_id_card(input_data.content)
             if len(person_id) != 0:
-                res.eval_status = True
-                res.eval_details = {
-                    "label": [f"{cls.metric_type}.{cls.__name__}"],
-                    "metric": [cls.__name__],
-                    "reason": [str(person_id)]
-                }
+                res.status = True
+                res.label = [f"{cls.metric_type}.{cls.__name__}"]
+                res.reason = [str(person_id)]
                 return res
-        res.eval_details = {
-            "label": [QualityLabel.QUALITY_GOOD]
-        }
+        res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1328,24 +1199,19 @@ class RuleInvisibleChar(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if len(content) == 0:
             return res
         matches = re.findall(cls.dynamic_config.pattern, content)
         num = len(matches)
         if num / len(content) >= 0.01:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [repr(s) for s in list(set(matches))]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [repr(s) for s in list(set(matches))]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1377,23 +1243,17 @@ class RuleImageDataFormat(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
 
         raw_data = input_data.raw_data
         key_list = ["img_id", "image"]
         if all(key in raw_data for key in key_list):
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
-            return res
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Image Data format error"]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Image Data format error"]
         return res
 
 
@@ -1414,21 +1274,16 @@ class RuleLatexSpecialChar(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern=r"\$\$(.*?\!\!.*?)\$\$")
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         match = re.search(cls.dynamic_config.pattern, content)
         if match:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [match.group(0).strip("\n")]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [match.group(0).strip("\n")]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1449,9 +1304,9 @@ class RuleLineEndWithEllipsis(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=0.3, key_list=["...", "…"])
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import TextSlice, split_paragraphs
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         raw_content = input_data.content
         raw_lines: Tuple[TextSlice] = split_paragraphs(
             text=raw_content, normalizer=lambda x: x, remove_empty=True
@@ -1467,16 +1322,11 @@ class RuleLineEndWithEllipsis(BaseRule):
         )
         ratio = num_occurrences / num_lines
         if ratio > cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The ratio of lines end with ellipsis is: " + str(ratio)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The ratio of lines end with ellipsis is: " + str(ratio)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1499,9 +1349,9 @@ class RuleLineEndWithTerminal(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import TextSlice, split_paragraphs
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         raw_content = input_data.content
         raw_lines: Tuple[TextSlice] = split_paragraphs(
             text=raw_content, normalizer=lambda x: x, remove_empty=True
@@ -1522,16 +1372,11 @@ class RuleLineEndWithTerminal(BaseRule):
         )
         ratio = num_occurrences / num_lines
         if ratio < cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": list(set(terminal_marks))
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = list(set(terminal_marks))
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1566,9 +1411,9 @@ class RuleLineStartWithBulletpoint(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import TextSlice, split_paragraphs
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         raw_content = input_data.content
         raw_lines: Tuple[TextSlice] = split_paragraphs(
             text=raw_content, normalizer=lambda x: x, remove_empty=True
@@ -1584,16 +1429,11 @@ class RuleLineStartWithBulletpoint(BaseRule):
         )
         ratio = num_occurrences / num_lines
         if ratio > cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The ratio of lines start with bulletpoint is: " + str(ratio)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The ratio of lines start with bulletpoint is: " + str(ratio)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1614,9 +1454,9 @@ class RuleLineJavascriptCount(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=3)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import TextSlice, normalize, split_paragraphs
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         raw_content = input_data.content
         normalized_lines: Tuple[TextSlice] = split_paragraphs(
             text=raw_content, normalizer=normalize, remove_empty=True
@@ -1627,18 +1467,13 @@ class RuleLineJavascriptCount(BaseRule):
         num_occurrences = sum(["javascript" in line.text for line in normalized_lines])
         num_not_occur = num_lines - num_occurrences
         if num_not_occur < cls.dynamic_config.threshold and num_lines > 3:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [
-                    "The lines with the word Javascript is: " + str(num_occurrences)
-                ]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [
+                "The lines with the word Javascript is: " + str(num_occurrences)
+            ]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1659,9 +1494,9 @@ class RuleLoremIpsum(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=3e-08)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import normalize
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         normalized_content = normalize(input_data.content)
         num_normalized_content = len(normalized_content)
         if num_normalized_content == 0:
@@ -1670,16 +1505,11 @@ class RuleLoremIpsum(BaseRule):
         num_occurrences = len(SEARCH_REGEX.findall(normalized_content))
         ratio = num_occurrences / num_normalized_content
         if ratio > cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The ratio of lorem ipsum is: " + str(ratio)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The ratio of lorem ipsum is: " + str(ratio)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1700,9 +1530,9 @@ class RuleMeanWordLength(BaseRule):
     dynamic_config = EvaluatorRuleArgs(key_list=["3", "10"])
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import normalize
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         normalized_content = normalize(input_data.content)
         normalized_words = tuple(normalized_content.split())
         num_normalized_words = len(normalized_words)
@@ -1712,16 +1542,11 @@ class RuleMeanWordLength(BaseRule):
         mean_length = num_chars / num_normalized_words
         mean_length = round(mean_length, 2)
         if mean_length >= int(cls.dynamic_config.key_list[0]) and mean_length < int(cls.dynamic_config.key_list[1]):
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The mean length of word is: " + str(mean_length)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The mean length of word is: " + str(mean_length)]
         return res
 
 
@@ -1753,23 +1578,17 @@ class RuleNlpDataFormat(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
 
         raw_data = input_data.raw_data
         key_list = ["track_id", "content"]
         if all(key in raw_data for key in key_list):
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
-            return res
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["NLP Data format error"]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["NLP Data format error"]
         return res
 
 
@@ -1809,8 +1628,8 @@ class RuleNoPunc(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=112)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         paragraphs = content.split("\n")
         longest_sentence = ""
@@ -1826,16 +1645,11 @@ class RuleNoPunc(BaseRule):
                     max_word_count = word_count
                     longest_sentence = sentence.strip()
         if int(max_word_count) > cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [longest_sentence]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [longest_sentence]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1856,20 +1670,15 @@ class RulePatternSearch(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern="your pattern")
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         matches = re.findall(cls.dynamic_config.pattern, input_data.content)
         if matches:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": matches
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = matches
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1890,24 +1699,19 @@ class RuleSentenceNumber(BaseRule):
     dynamic_config = EvaluatorRuleArgs(key_list=["3", "7500"])
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         raw_content = input_data.content
         SENT_PATTERN = re.compile(r"\b[^.!?\n]+[.!?]*", flags=re.UNICODE)
         num_sentence = len(SENT_PATTERN.findall(raw_content))
         if num_sentence < int(cls.dynamic_config.key_list[0]) or num_sentence > int(
             cls.dynamic_config.key_list[1]
         ):
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The number of sentence is: " + str(num_sentence)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The number of sentence is: " + str(num_sentence)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -1939,23 +1743,17 @@ class RuleSftDataFormat(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
 
         raw_data = input_data.raw_data
         key_list = ["track_id", "type", "prompt", "completion"]
         if all(key in raw_data for key in key_list):
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
-            return res
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["SFT Data format error"]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["SFT Data format error"]
         return res
 
 
@@ -1991,22 +1789,17 @@ class RuleSpaceMore(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern=" {500,}")
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         SEARCH_REGEX = re.compile(cls.dynamic_config.pattern)
         match = SEARCH_REGEX.search(content)
         if match:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content has 500 spaces."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content has 500 spaces."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -2101,11 +1894,11 @@ class RuleStopWord(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=0.06)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from nltk.tokenize import WordPunctTokenizer
 
         from dingo.model.rule.utils.util import get_stop_words
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         raw_content = input_data.content
         raw_words = list(WordPunctTokenizer().tokenize(raw_content))
         raw_words = [str(w).lower() for w in raw_words]
@@ -2116,16 +1909,11 @@ class RuleStopWord(BaseRule):
         num_stop_words = len(list(filter(lambda word: word in STOP_WORDS, raw_words)))
         ratio = num_stop_words / num_raw_words
         if ratio < cls.dynamic_config.threshold or num_stop_words < 2:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The ratio of stop words is: " + str(ratio)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The ratio of stop words is: " + str(ratio)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -2146,9 +1934,9 @@ class RuleSymbolWordRatio(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=0.4, key_list=["#", "...", "…"])
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from nltk.tokenize import WordPunctTokenizer
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         raw_content = input_data.content
         raw_words = tuple(WordPunctTokenizer().tokenize(raw_content))
         num_raw_words = len(raw_words)
@@ -2160,16 +1948,11 @@ class RuleSymbolWordRatio(BaseRule):
         )
         ratio = num_symbols / num_words
         if ratio > cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The ratio of symbol / word is: " + str(ratio)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The ratio of symbol / word is: " + str(ratio)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -2190,9 +1973,9 @@ class RuleUniqueWords(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=0.1)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import normalize
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         normalized_content = normalize(input_data.content)
         normalized_words = tuple(normalized_content.split())
         num_normalized_words = len(normalized_words)
@@ -2202,16 +1985,11 @@ class RuleUniqueWords(BaseRule):
         num_unique_words = len(set(normalized_words))
         ratio = num_unique_words / num_words
         if ratio > cls.dynamic_config.threshold:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The ratio of unique words is: " + str(ratio)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The ratio of unique words is: " + str(ratio)]
         return res
 
 
@@ -2232,13 +2010,13 @@ class RuleUnsafeWords(BaseRule):
     dynamic_config = EvaluatorRuleArgs(refer_path=[])
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
 
         import ahocorasick
 
         from dingo.model.rule.utils.util import get_unsafe_words
 
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         key_list = cls.dynamic_config.key_list
         if key_list is None:
@@ -2258,16 +2036,11 @@ class RuleUnsafeWords(BaseRule):
                 matches.append((start_index, keyword))
 
         if matches:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [value for index, value in matches]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [value for index, value in matches]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
     @classmethod
@@ -2310,22 +2083,16 @@ class RuleVedioDataFormat(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         raw_data = input_data.raw_data
         key_list = ["id", "video", "text"]
         if all(key in raw_data for key in key_list):
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
-            return res
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Vedio Data format error"]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Vedio Data format error"]
         return res
 
 
@@ -2364,24 +2131,19 @@ class RuleOnlyUrl(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if len(content.strip()) == 0:
             return res
         SEARCH_REGEX = re.compile(cls.dynamic_config.pattern)
         content_without_url = SEARCH_REGEX.sub("", content)
         if len(content_without_url.strip()) == 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Content is only an url link."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Content is only an url link."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -2402,20 +2164,15 @@ class RuleWatermark(BaseRule):
     dynamic_config = EvaluatorRuleArgs(key_list=[])
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         matches = re.findall("|".join(cls.dynamic_config.key_list), input_data.content)
         if matches:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": matches
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = matches
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -2436,25 +2193,20 @@ class RuleWordNumber(BaseRule):
     dynamic_config = EvaluatorRuleArgs(key_list=["20", "100000"])
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import normalize
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         normalized_content = normalize(input_data.content)
         normalized_words = tuple(normalized_content.split())
         num_normalized_words = len(normalized_words)
         if num_normalized_words >= int(
             cls.dynamic_config.key_list[0]
         ) and num_normalized_words < int(cls.dynamic_config.key_list[1]):
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The number of word is: " + str(num_normalized_words)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The number of word is: " + str(num_normalized_words)]
         return res
 
 
@@ -2475,21 +2227,16 @@ class RuleWordSplit(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern=r"[A-Za-z]+-\s*$")
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         match = re.findall(cls.dynamic_config.pattern, content)
         if match:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": match
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = match
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -2532,12 +2279,12 @@ class RuleWordStuck(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         import wordninja
 
         from dingo.model.rule.utils.detect_lang import decide_language_by_str
         from dingo.model.rule.utils.util import is_sha256
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         for p in cls.dynamic_config.key_list:
             content = re.sub(p, "", content)
@@ -2552,16 +2299,11 @@ class RuleWordStuck(BaseRule):
                 lan = decide_language_by_str(longest_string)
                 cut = wordninja.split(longest_string)
                 if lan == "en" and len(cut) > 1:
-                    res.eval_status = True
-                    res.eval_details = {
-                        "label": [f"{cls.metric_type}.{cls.__name__}"],
-                        "metric": [cls.__name__],
-                        "reason": [str(longest_string)]
-                    }
+                    res.status = True
+                    res.label = [f"{cls.metric_type}.{cls.__name__}"]
+                    res.reason = [str(longest_string)]
                     return res
-        res.eval_details = {
-            "label": [QualityLabel.QUALITY_GOOD]
-        }
+        res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 

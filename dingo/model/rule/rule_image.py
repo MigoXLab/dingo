@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
 
@@ -36,8 +36,8 @@ class RuleImageValid(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         if isinstance(input_data.image[0], str):
             img = Image.open(input_data.image[0])
         else:
@@ -45,16 +45,11 @@ class RuleImageValid(BaseRule):
         img_new = img.convert("RGB")
         img_np = np.asarray(img_new)
         if np.all(img_np == (255, 255, 255)) or np.all(img_np == (0, 0, 0)):
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Image is not valid: all white or black"]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Image is not valid: all white or black"]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -77,8 +72,8 @@ class RuleImageSizeValid(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         if isinstance(input_data.image[0], str):
             img = Image.open(input_data.image[0])
         else:
@@ -86,19 +81,14 @@ class RuleImageSizeValid(BaseRule):
         width, height = img.size
         aspect_ratio = width / height
         if aspect_ratio > 4 or aspect_ratio < 0.25:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [
-                    "Image size is not valid, the ratio of width to height: "
-                    + str(aspect_ratio)
-                ]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [
+                "Image size is not valid, the ratio of width to height: "
+                + str(aspect_ratio)
+            ]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -121,11 +111,11 @@ class RuleImageQuality(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=5.5)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         import pyiqa
         import torch
 
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         if isinstance(input_data.image[0], str):
             img = Image.open(input_data.image[0])
         else:
@@ -137,16 +127,11 @@ class RuleImageQuality(BaseRule):
         score_fr = iqa_metric(img)
         score = score_fr.item()
         if score < cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Image quality is not satisfied, ratio: " + str(score)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Image quality is not satisfied, ratio: " + str(score)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -170,10 +155,10 @@ class RuleImageRepeat(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         from imagededup.methods import CNN, PHash
 
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         image_dir = input_data.content
         if len(os.listdir(image_dir)) == 0:
             raise ZeroDivisionError(
@@ -195,19 +180,14 @@ class RuleImageRepeat(BaseRule):
             set(duplicates_cnn.keys())
         )
         if common_duplicates:
-            res.eval_status = True
+            res.status = True
             tmp_reason = [f"{image} -> {duplicates_cnn[image]}" for image in common_duplicates]
             tmp_reason.append({"duplicate_ratio": len(common_duplicates) / len(os.listdir(image_dir))})
 
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": tmp_reason
-            }
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = tmp_reason
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -230,7 +210,7 @@ class RuleImageTextSimilarity(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=0.17)
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         import nltk
 
         nltk.download("punkt_tab")
@@ -239,7 +219,7 @@ class RuleImageTextSimilarity(BaseRule):
 
         from dingo.model.rule.utils.image_util import download_similar_tool
 
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         if not input_data.image or not input_data.content:
             return res
         if isinstance(input_data.image[0], str):
@@ -258,16 +238,11 @@ class RuleImageTextSimilarity(BaseRule):
             scores.append(sim_score[0][0])
         average_score = sum(scores) / len(scores)
         if average_score < cls.dynamic_config.threshold:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["Image quality is not satisfied, ratio: " + str(average_score)]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Image quality is not satisfied, ratio: " + str(average_score)]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -288,7 +263,7 @@ class RuleImageArtimuse(BaseRule):
     dynamic_config = EvaluatorRuleArgs(threshold=6, refer_path=['https://artimuse.intern-ai.org.cn/'])
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         try:
             response_create_task = requests.post(
                 cls.dynamic_config.refer_path[0] + 'api/v1/task/create_task',
@@ -328,28 +303,20 @@ class RuleImageArtimuse(BaseRule):
                     break
                 time.sleep(5)
 
-            res = ModelRes()
-            res.eval_status = True if status_data['score_overall'] < cls.dynamic_config.threshold else False
+            res = EvalDetail(metric=cls.__name__)
+            res.status = True if status_data['score_overall'] < cls.dynamic_config.threshold else False
             tmp = "BadImage" if status_data['score_overall'] < cls.dynamic_config.threshold else "GoodImage"
-            if res.eval_status:
-                res.eval_details = {
-                    "label": [f"Artimuse_Succeeded.{tmp}"],
-                    "metric": [cls.__name__],
-                    "reason": [json.dumps(status_data, ensure_ascii=False)]
-                }
+            if res.status:
+                res.label = [f"Artimuse_Succeeded.{tmp}"]
+                res.reason = [json.dumps(status_data, ensure_ascii=False)]
             else:
-                res.eval_details = {
-                    "label": [QualityLabel.QUALITY_GOOD]
-                }
+                res.label = [QualityLabel.QUALITY_GOOD]
             return res
         except Exception as e:
-            res = ModelRes()
-            res.eval_status = False
-            res.eval_details = {
-                "label": ["Artimuse_Fail.Exception"],
-                "metric": [cls.__name__],
-                "reason": [str(e)]
-            }
+            res = EvalDetail(metric=cls.__name__)
+            res.status = False
+            res.label = ["Artimuse_Fail.Exception"]
+            res.reason = [str(e)]
             return res
 
 
@@ -372,9 +339,9 @@ class RuleImageLabelOverlap(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
 
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
 
         try:
             # 1. 阈值参数
@@ -390,44 +357,32 @@ class RuleImageLabelOverlap(BaseRule):
                 try:
                     annotations = json.loads(content)
                 except json.JSONDecodeError as e:
-                    res = ModelRes()
-                    res.eval_status = False
-                    res.eval_details = {
-                        "label": ["LabelOverlap_Fail.ParseError"],
-                        "metric": [cls.__name__],
-                        "reason": [f"content解析失败：{str(e)}，前50字符：{content[:50]}..."]
-                    }
+                    res = EvalDetail(metric=cls.__name__)
+                    res.status = False
+                    res.label = ["LabelOverlap_Fail.ParseError"]
+                    res.reason = [f"content解析失败：{str(e)}，前50字符：{content[:50]}..."]
                     return res
             elif isinstance(content, dict):
                 annotations = content
             else:
-                res = ModelRes()
-                res.eval_status = False
-                res.eval_details = {
-                    "label": ["LabelOverlap_Fail.InvalidContentType"],
-                    "metric": [cls.__name__],
-                    "reason": [f"content类型错误：需dict/str，实际是{type(content).__name__}"]
-                }
+                res = EvalDetail(metric=cls.__name__)
+                res.status = False
+                res.label = ["LabelOverlap_Fail.InvalidContentType"]
+                res.reason = [f"content类型错误：需dict/str，实际是{type(content).__name__}"]
                 return res
 
             # 4. 验证数据有效性
             if not annotations:
-                res = ModelRes()
-                res.eval_status = False
-                res.eval_details = {
-                    "label": ["LabelOverlap_Fail.EmptyAnnotations"],
-                    "metric": [cls.__name__],
-                    "reason": ["annotations为空"]
-                }
+                res = EvalDetail(metric=cls.__name__)
+                res.status = False
+                res.label = ["LabelOverlap_Fail.EmptyAnnotations"]
+                res.reason = ["annotations为空"]
                 return res
             if not image_path or not os.path.exists(image_path):
-                res = ModelRes()
-                res.eval_status = False
-                res.eval_details = {
-                    "label": ["LabelOverlap_Fail.InvalidImagePath"],
-                    "metric": [cls.__name__],
-                    "reason": [f"图片路径无效：{image_path}"]
-                }
+                res = EvalDetail(metric=cls.__name__)
+                res.status = False
+                res.label = ["LabelOverlap_Fail.InvalidImagePath"]
+                res.reason = [f"图片路径无效：{image_path}"]
                 return res
 
             # 5. 提取边界框并计算重叠
@@ -480,15 +435,12 @@ class RuleImageLabelOverlap(BaseRule):
             # 6. 根据重叠状态设置错误信息
             if has_overlap:
                 # 符合阈值重叠：标记为错误状态
-                res.eval_status = True
-                res.eval_details = {
-                    "label": ["LabelOverlap_Fail.RuleImageLabelOverlap"],
-                    "metric": [cls.__name__],
-                    "reason": [f"重叠检测：完全重叠={len(full_overlap_pairs)}，部分重叠={len(partial_overlap_pairs)}"]
-                }
+                res.status = True
+                res.label = ["LabelOverlap_Fail.RuleImageLabelOverlap"]
+                res.reason = [f"重叠检测：完全重叠={len(full_overlap_pairs)}，部分重叠={len(partial_overlap_pairs)}"]
             else:
                 # 不符合阈值重叠：正常状态
-                res.eval_status = False
+                res.status = False
 
             # 7. 生成可视化标注框重叠图片
             vis_path = None  # 初始化vis_path变量
@@ -560,13 +512,10 @@ class RuleImageLabelOverlap(BaseRule):
             # 8. 整理结果（结果已通过eval_status和eval_details返回）
 
         except Exception as global_e:
-            res = ModelRes()
-            res.eval_status = False
-            res.eval_details = {
-                "label": ["LabelOverlap_Fail.GlobalError"],
-                "metric": [cls.__name__],
-                "reason": [f"全局处理错误：{str(global_e)}"]
-            }
+            res = EvalDetail(metric=cls.__name__)
+            res.status = False
+            res.label = ["LabelOverlap_Fail.GlobalError"]
+            res.reason = [f"全局处理错误：{str(global_e)}"]
 
         return res
 
@@ -590,9 +539,9 @@ class RuleImageLabelVisualization(BaseRule):
     )
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
 
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
 
         try:
             # --------------------------
@@ -674,13 +623,10 @@ class RuleImageLabelVisualization(BaseRule):
 
             # 验证图片路径有效性
             if not image_path or not os.path.exists(image_path):
-                res = ModelRes()
-                res.eval_status = False
-                res.eval_details = {
-                    "label": ["LabelVisualization_Fail.InvalidImagePath"],
-                    "metric": [cls.__name__],
-                    "reason": [f"图片路径无效/不存在：{image_path}"]
-                }
+                res = EvalDetail(metric=cls.__name__)
+                res.status = False
+                res.label = ["LabelVisualization_Fail.InvalidImagePath"]
+                res.reason = [f"图片路径无效/不存在：{image_path}"]
                 return res
 
             # 解析标注内容
@@ -688,41 +634,32 @@ class RuleImageLabelVisualization(BaseRule):
                 try:
                     annotations = json.loads(content)
                 except json.JSONDecodeError as e:
-                    res = ModelRes()
-                    res.eval_status = False
-                    res.eval_details = {
-                        "label": ["LabelVisualization_Fail.ParseError"],
-                        "metric": [cls.__name__],
-                        "reason": [f"标注解析失败：{str(e)}，前50字符：{content[:50]}..."]
-                    }
+                    res = EvalDetail(metric=cls.__name__)
+                    res.status = False
+                    res.label = ["LabelVisualization_Fail.ParseError"]
+                    res.reason = [f"标注解析失败：{str(e)}，前50字符：{content[:50]}..."]
                     return res
             elif isinstance(content, dict):
                 annotations = content
             else:
-                res = ModelRes()
-                res.eval_status = False
-                res.eval_details = {
-                    "label": ["LabelVisualization_Fail.InvalidAnnotationType"],
-                    "metric": [cls.__name__],
-                    "reason": [f"标注类型错误：需dict/str，实际{type(content).__name__}"]
-                }
+                res = EvalDetail(metric=cls.__name__)
+                res.status = False
+                res.label = ["LabelVisualization_Fail.InvalidAnnotationType"]
+                res.reason = [f"标注类型错误：需dict/str，实际{type(content).__name__}"]
                 return res
 
             # 提取布局标注（适配"layout_dets"字段）
             layout_dets = annotations.get("layout_dets", [])
             if not layout_dets:
                 # 无标注数据时的处理
-                res = ModelRes()
-                res.eval_status = False
-                res.eval_details = {
-                    "label": ["LabelVisualization_Fail.EmptyLayoutData"],
-                    "metric": [cls.__name__],
-                    "reason": [json.dumps({
-                        "message": "无布局标注数据（layout_dets为空）",
-                        "visualization_path": None,
-                        "label_stats": {"total_labels": 0}
-                    }, ensure_ascii=False)]
-                }
+                res = EvalDetail(metric=cls.__name__)
+                res.status = False
+                res.label = ["LabelVisualization_Fail.EmptyLayoutData"]
+                res.reason = [json.dumps({
+                    "message": "无布局标注数据（layout_dets为空）",
+                    "visualization_path": None,
+                    "label_stats": {"total_labels": 0}
+                }, ensure_ascii=False)]
                 return res
 
             # --------------------------
@@ -770,30 +707,24 @@ class RuleImageLabelVisualization(BaseRule):
             try:
                 img.save(vis_path)
             except Exception as e:
-                res = ModelRes()
-                res.eval_status = False
-                res.eval_details = {
-                    "label": ["LabelVisualization_Fail.SaveImageError"],
-                    "metric": [cls.__name__],
-                    "reason": [f"保存图像失败：{str(e)}"]
-                }
+                res = EvalDetail(metric=cls.__name__)
+                res.status = False
+                res.label = ["LabelVisualization_Fail.SaveImageError"]
+                res.reason = [f"保存图像失败：{str(e)}"]
                 return res
 
             # --------------------------
             # 5. 整理结果（结果已通过eval_status返回）
             # --------------------------
 
-            res.eval_status = False
+            res.status = False
 
         except Exception as global_e:
             # 全局异常处理
-            res = ModelRes()
-            res.eval_status = False
-            res.eval_details = {
-                "label": ["LabelVisualization_Fail.GlobalError"],
-                "metric": [cls.__name__],
-                "reason": [f"可视化处理全局错误：{str(global_e)}"]
-            }
+            res = EvalDetail(metric=cls.__name__)
+            res.status = False
+            res.label = ["LabelVisualization_Fail.GlobalError"]
+            res.reason = [f"可视化处理全局错误：{str(global_e)}"]
 
         return res
 

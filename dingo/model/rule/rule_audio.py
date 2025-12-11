@@ -4,7 +4,7 @@ import numpy as np
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
 
@@ -37,11 +37,11 @@ class RuleAudioDuration(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         import librosa
         from scipy.signal import welch
 
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
 
         y, sr = librosa.load(input_data.content, sr=16000)
         f_signal, Pxx_signal = welch(y, fs=sr)
@@ -51,26 +51,19 @@ class RuleAudioDuration(BaseRule):
         noise_power = np.sum(Pxx_noise)
 
         if noise_power == 0:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The audio power is zero. Cannot calculate SNR."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The audio power is zero. Cannot calculate SNR."]
+            return res
 
         snr_dB = round(10 * np.log10(signal_power / noise_power), 2)
 
         if snr_dB < 8:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The audio signal-to-noise ratio is too low."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The audio signal-to-noise ratio is too low."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
@@ -102,10 +95,10 @@ class RuleAudioSnrQuality(BaseRule):
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         import wave
 
-        res = ModelRes()
+        res = EvalDetail(metric=cls.__name__)
         if not input_data.content:
             return res
         if isinstance(input_data.content, str):
@@ -115,16 +108,11 @@ class RuleAudioSnrQuality(BaseRule):
                 duration = frame_count / sample_rate
 
         if duration > 10:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": ["The audio duration is too long."]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["The audio duration is too long."]
         else:
-            res.eval_details = {
-                "label": [QualityLabel.QUALITY_GOOD]
-            }
+            res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 

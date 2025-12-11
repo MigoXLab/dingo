@@ -2,7 +2,7 @@ import re
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
 
@@ -23,18 +23,15 @@ class RuleDoi(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern=r'^10\.\d{4,9}/([^A-Z\s]*)$')
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if re.match(cls.dynamic_config.pattern, content):
-            res.eval_details.label = [QualityLabel.QUALITY_GOOD]
+            res.label = [QualityLabel.QUALITY_GOOD]
         else:
-            res.eval_status = True
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [content]
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [content]
         return res
 
 
@@ -92,9 +89,9 @@ class RuleIsbn(BaseRule):
         return total % 10 == 0
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
-        res.eval_details.label = [QualityLabel.QUALITY_GOOD]
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
+        res.label = [QualityLabel.QUALITY_GOOD]
 
         content = input_data.content
         content = str(content).replace('-', '')
@@ -102,20 +99,17 @@ class RuleIsbn(BaseRule):
             if cls._validate_isbn10(content):
                 pass
             else:
-                res.eval_status = True
+                res.status = True
         elif len(content) == 13:
             if cls._validate_isbn13(content):
                 pass
             else:
-                res.eval_status = True
+                res.status = True
         else:
-            res.eval_status = True
+            res.status = True
 
         # add details
-        if res.eval_status:
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": [content]
-            }
+        if res.status:
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = [content]
         return res

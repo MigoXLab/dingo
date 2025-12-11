@@ -10,7 +10,7 @@ from pyspark.sql import SparkSession
 from dingo.config import InputArgs
 from dingo.exec.base import ExecProto, Executor
 from dingo.io import Data, ResultInfo, SummaryModel
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 
 # from dingo.model.prompt.base import BasePrompt
@@ -153,20 +153,20 @@ class SparkExecutor(ExecProto):
                 else:
                     raise ValueError(f"Error eval_type: {eval_type}")
 
-            if r_i.eval_status:
-                result_info.eval_status = True
-            for k,v in r_i.eval_details.items():
-                if k not in result_info.eval_details:
-                    result_info.eval_details[k] = v
-                else:
-                    result_info.eval_details[k].merge(v)
+                if r_i.eval_status:
+                    result_info.eval_status = True
+                # Merge eval_details: Dict[str, List[EvalDetail]]
+                for k, v in r_i.eval_details.items():
+                    if k not in result_info.eval_details:
+                        result_info.eval_details[k] = v
+                    else:
+                        result_info.eval_details[k].extend(v)
 
         return result_info.to_dict()
 
     def evaluate_item(self, eval_fields: dict, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
         result_info = ResultInfo()
-        bad_eval_details = None
-        good_eval_details = None
+        eval_detail_list = []
 
         for e_c_i in eval_list:
             if eval_type == 'rule':
@@ -177,40 +177,32 @@ class SparkExecutor(ExecProto):
                 Model.set_config_llm(model, e_c_i.config)
             else:
                 raise ValueError(f"Error eval_type: {eval_type}")
-            tmp: ModelRes = model.eval(Data(**map_data))
-            # Collect eval_details from ModelRes
-            if tmp.eval_status:
-                result_info.eval_status = True
-                if bad_eval_details:
-                    bad_eval_details.merge(tmp.eval_details)
-                else:
-                    bad_eval_details = tmp.eval_details.copy()
-            else:
-                if good_eval_details:
-                    good_eval_details.merge(tmp.eval_details)
-                else:
-                    good_eval_details = tmp.eval_details.copy()
 
-        # Set result_info fields based on all_labels configuration and add field
-        join_fields = ','.join(eval_fields.values())
+            tmp: EvalDetail = model.eval(Data(**map_data))
+            eval_detail_list.append(tmp)
+
+            # If any EvalDetail's status is True, result_info.eval_status is True
+            if tmp.status:
+                result_info.eval_status = True
+
+        # Set result_info fields
+        join_fields = ','.join(eval_fields.values()) if eval_fields else 'default'
+
+        # Decide which results to save based on configuration
         if self.input_args.executor.result_save.all_labels:
-            all_eval_details = None
-            if bad_eval_details:
-                all_eval_details = bad_eval_details.copy()
-            if good_eval_details:
-                if all_eval_details:
-                    all_eval_details.merge(good_eval_details)
-                else:
-                    all_eval_details = good_eval_details.copy()
-            if all_eval_details:
-                result_info.eval_details = {join_fields: all_eval_details}
+            # Save all results
+            if eval_detail_list:
+                result_info.eval_details = {join_fields: eval_detail_list}
         else:
+            # Only save bad or good results
             if result_info.eval_status:
-                if bad_eval_details:
-                    result_info.eval_details = {join_fields: bad_eval_details}
+                # Has bad results, only keep EvalDetail with status=True
+                result_info.eval_details = {join_fields: [ed for ed in eval_detail_list if ed.status]}
             else:
-                if good_eval_details and self.input_args.executor.result_save.good:
-                    result_info.eval_details = {join_fields: good_eval_details}
+                # All good results, decide whether to save based on configuration
+                if self.input_args.executor.result_save.good:
+                    result_info.eval_details = {join_fields: [ed for ed in eval_detail_list if not ed.status]}
+
         return result_info
 
     def summarize(self, summary: SummaryModel) -> SummaryModel:
@@ -230,20 +222,22 @@ class SparkExecutor(ExecProto):
             """聚合单个 item 的 eval_details 到累加器中"""
             eval_details_dict = item.get('eval_details', {})
 
-            # 遍历第一层：字段名
-            for field_key, eval_detail_dict in eval_details_dict.items():
+            # 遍历第一层：字段名，第二层是 List[EvalDetail] (序列化为 list of dicts)
+            for field_key, eval_detail_list in eval_details_dict.items():
                 if field_key not in acc:
                     acc[field_key] = {}
 
-                # 从 EvalDetail 的 label 列表中获取错误类型
-                label_list = eval_detail_dict.get('label', []) if isinstance(eval_detail_dict, dict) else eval_detail_dict.label
-
-                # 统计每个 label 的出现次数
-                for label in label_list:
-                    if label not in acc[field_key]:
-                        acc[field_key][label] = 1
-                    else:
-                        acc[field_key][label] += 1
+                # 遍历 List[EvalDetail]
+                for eval_detail in eval_detail_list:
+                    # 从 EvalDetail 的 label 列表中获取错误类型
+                    label_list = eval_detail.get('label', []) if isinstance(eval_detail, dict) else eval_detail.label
+                    if label_list:
+                        # 统计每个 label 的出现次数
+                        for label in label_list:
+                            if label not in acc[field_key]:
+                                acc[field_key][label] = 1
+                            else:
+                                acc[field_key][label] += 1
 
             return acc
 

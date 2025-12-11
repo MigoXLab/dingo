@@ -15,18 +15,19 @@ class S3DataSource(DataSource):
         input_args: InputArgs = None,
         config_name: Optional[str] = None,
     ):
-        """Create a `LocalDataSource` instance.
+        """Create a `S3DataSource` instance.
         Args:
             input_args: A `InputArgs` instance to load the dataset from.
-            config_name: The name of the Hugging Face dataset configuration.
+            config_name: Optional configuration name.
         """
         self.client = self._get_client(
-            input_args.s3_ak,
-            input_args.s3_sk,
-            input_args.s3_endpoint_url,
-            input_args.s3_addressing_style,
+            input_args.dataset.s3_config.s3_ak,
+            input_args.dataset.s3_config.s3_sk,
+            input_args.dataset.s3_config.s3_endpoint_url,
+            input_args.dataset.s3_config.s3_addressing_style,
         )
         self.path = input_args.input_path
+        self.bucket = input_args.dataset.s3_config.s3_bucket
         self.config_name = config_name
         super().__init__(input_args=input_args)
 
@@ -64,15 +65,15 @@ class S3DataSource(DataSource):
     def _load(self) -> Generator[str, None, None]:
         if not self.path.endswith("/"):
             obj = self.client.get_object(
-                Bucket=self.input_args.s3_bucket, Key=self.path
+                Bucket=self.bucket, Key=self.path
             )
             obj_list = [obj]
         else:
             contents = self.client.list_objects(
-                Bucket=self.input_args.s3_bucket, Prefix=self.path
+                Bucket=self.bucket, Prefix=self.path
             )["Contents"]
             obj_list = [
-                self.client.get_object(Bucket=self.input_args.s3_bucket, Key=obj["Key"])
+                self.client.get_object(Bucket=self.bucket, Key=obj["Key"])
                 for obj in contents
             ]
         for obj in obj_list:

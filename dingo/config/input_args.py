@@ -12,6 +12,14 @@ class DatasetHFConfigArgs(BaseModel):
     huggingface_config_name: Optional[str] = None
 
 
+class DatasetS3ConfigArgs(BaseModel):
+    s3_ak: str = ""
+    s3_sk: str = ""
+    s3_endpoint_url: str = ""
+    s3_bucket: str = ""
+    s3_addressing_style: str = "path"
+
+
 class DatasetFieldArgs(BaseModel):
     id: str = ''
     prompt: str = ''
@@ -25,11 +33,13 @@ class DatasetArgs(BaseModel):
     format: str = 'json'
     field: DatasetFieldArgs = DatasetFieldArgs()
     hf_config: DatasetHFConfigArgs = DatasetHFConfigArgs()
+    s3_config: DatasetS3ConfigArgs = DatasetS3ConfigArgs()
 
 
 class ExecutorResultSaveArgs(BaseModel):
     bad: bool = False
     good: bool = False
+    all_labels: bool = False
     raw: bool = False
 
 
@@ -50,6 +60,7 @@ class EvaluatorRuleArgs(BaseModel):
     pattern: Optional[str] = None
     key_list: Optional[List[str]] = None
     refer_path: Optional[List[str]] = None
+    parameters: Optional[dict] = None
 
 
 class EvaluatorLLMArgs(BaseModel):

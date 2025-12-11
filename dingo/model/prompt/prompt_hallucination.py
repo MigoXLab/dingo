@@ -31,26 +31,26 @@ Example contexts: ["Einstein won the Nobel Prize for his discovery of the photoe
 Example actual output: "Einstein won the Nobel Prize in 1969 for his discovery of the photoelectric effect."
 
 Example:
-{
+{{
     "verdicts": [
-        {
+        {{
             "verdict": "yes",
             "reason": "The actual output agrees with the provided context which states that Einstein won the Nobel Prize for his discovery of the photoelectric effect."
-        },
-        {
+        }},
+        {{
             "verdict": "no",
             "reason": "The actual output contradicts the provided context which states that Einstein won the Nobel Prize in 1968, not 1969."
-        }
+        }}
     ]
-}
+}}
 
 You should NOT incorporate any prior knowledge you have and take each context at face value. Since you are going to generate a verdict for each context, the number of 'verdicts' SHOULD BE STRICTLY EQUAL TO the number of contexts provided.
 You should FORGIVE cases where the actual output is lacking in detail, you should ONLY provide a 'no' answer if IT IS A CONTRADICTION.
 
 **Input Data:**
-Question/Prompt: %s
-Response: %s
-Contexts: %s
+Question/Prompt: {}
+Response: {}
+Contexts: {}
 
 Please evaluate the response against each context and return the verdicts in JSON format:
 """

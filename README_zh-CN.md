@@ -1,7 +1,18 @@
-<div align="center" xmlns="http://www.w3.org/1999/html">
+<!-- SEO 元信息和结构化数据 -->
+<div itemscope itemtype="https://schema.org/SoftwareApplication" align="center" xmlns="http://www.w3.org/1999/html">
+  <meta itemprop="name" content="Dingo: AI 数据质量评估工具">
+  <meta itemprop="description" content="全面的AI驱动数据质量评估平台，专为机器学习数据集、LLM训练数据验证、幻觉检测和RAG系统评估而设计">
+  <meta itemprop="applicationCategory" content="数据质量软件">
+  <meta itemprop="operatingSystem" content="跨平台">
+  <meta itemprop="programmingLanguage" content="Python">
+  <meta itemprop="url" content="https://github.com/MigoXLab/dingo">
+  <meta itemprop="downloadUrl" content="https://pypi.org/project/dingo-python/">
+  <meta itemprop="softwareVersion" content="latest">
+  <meta itemprop="license" content="Apache-2.0">
+
 <!-- logo -->
 <p align="center">
-  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;">
+  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;" alt="Dingo AI 数据质量评估工具 Logo">
 </p>
 
 <!-- badges -->
@@ -29,10 +40,18 @@
     👋 加入我们 <a href="https://discord.gg/Jhgb2eKWh8" target="_blank">Discord</a> 和 <a href="./docs/assets/wechat.jpg" target="_blank">微信</a>
 </p>
 
+<p align="center">
+  如果觉得有帮助，欢迎在 GitHub 上点个 ⭐ 支持！
+  <br/>
+  <a href="https://github.com/DataEval/dingo/stargazers" target="_blank">
+    <img src="docs/assets/clickstar_2.gif" alt="点击 Star 支持" width="480">
+  </a>
+</p>
+
 </div>
 
 
-# 介绍
+# Dingo 介绍
 
 Dingo是一款数据质量评估工具，帮助你自动化检测数据集中的数据质量问题。Dingo提供了多种内置的规则和模型评估方法，同时也支持自定义评估方法。Dingo支持常用的文本数据集和多模态数据集，包括预训练数据集、微调数据集和评测数据集。此外，Dingo支持多种使用方式，包括本地CLI和SDK，便于集成到各种评测平台，如[OpenCompass](https://github.com/open-compass/opencompass)等。
 
@@ -49,7 +68,7 @@ Dingo是一款数据质量评估工具，帮助你自动化检测数据集中的
 pip install dingo-python
 ```
 
-## 2. 使用示例
+## 2. Dingo 使用示例
 
 ### 2.1 评估LLM对话数据
 
@@ -179,6 +198,7 @@ Dingo通过基于规则和基于提示的评估指标提供全面的数据质量
 - **分类指标**：主题分类和内容分类
 - **多模态评估指标**：图像分类和相关性评估
 - **基于规则的质量指标**：使用启发式规则进行效果性和相似性检测的自动化质量检查
+- **事实性评估指标**：基于 GPT-5 System Card 的两阶段事实性评估
 - 等等
 
 大部分指标都由学术来源支持，以确保客观性和科学严谨性。
@@ -212,6 +232,12 @@ input_data = {
 有关使用Dingo幻觉检测功能的详细指导，包括HHEM-2.1-Open本地推理和基于LLM的评估：
 
 📖 **[查看幻觉检测指南 →](docs/hallucination_guide.md)**
+
+### 事实性评估
+
+有关使用Dingo两阶段事实性评估系统的详细指导：
+
+📖 **[查看事实性评估指南 →](docs/factcheck_guide.md)**
 
 # 规则组
 
@@ -418,9 +444,9 @@ If you find this project useful, please consider citing our tool:
 
 ```
 @misc{dingo,
-  title={Dingo: A Comprehensive Data Quality Evaluation Tool for Large Models},
+  title={Dingo: A Comprehensive AI Data Quality Evaluation Tool for Large Models},
   author={Dingo Contributors},
-  howpublished={\url{https://github.com/DataEval/dingo}},
+  howpublished={\url{https://github.com/MigoXLab/dingo}},
   year={2024}
 }
 ```

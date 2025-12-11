@@ -218,7 +218,7 @@ def generate_metrics_documentation() -> str:
            "ensure objectivity and scientific rigor.\n\n"
 
     # 按预定义顺序生成各个类别
-    category_order = ["Text Quality Assessment Metrics", "SFT Data Assessment Metrics",
+    category_order = ["Pretrain Text Quality Assessment Metrics", "SFT Data Assessment Metrics",
                       "Classification Metrics", "Multimodality Assessment Metrics",
                       "Rule-Based TEXT Quality Metrics", "Rule-Based IMG Quality Metrics"]
 

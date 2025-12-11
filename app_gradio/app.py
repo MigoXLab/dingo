@@ -21,8 +21,8 @@ def dingo_demo(
 ):
     if not data_format:
         raise gr.Error('ValueError: data_format can not be empty, please input.')
-    if not column_content:
-        raise gr.Error('ValueError: column_content can not be empty, please input.')
+    # if not column_content:
+    #     raise gr.Error('ValueError: column_content can not be empty, please input.')
     if not rule_list and not prompt_list:
         raise gr.Error('ValueError: rule_list and prompt_list can not be empty at the same time.')
 
@@ -48,20 +48,24 @@ def dingo_demo(
 
     try:
         input_data = {
-            "dataset": dataset_source,
-            "data_format": data_format,
             "input_path": final_input_path,
             "output_path": "" if dataset_source == 'hugging_face' else os.path.dirname(final_input_path),
-            "save_data": True,
-            "save_raw": True,
-
-            "max_workers": max_workers,
-            "batch_size": batch_size,
-
-            "column_content": column_content,
-            "custom_config": {
+            "dataset": {
+                "source": dataset_source,
+                "format": data_format,
+                "field": {}
+            },
+            "executor": {
                 "rule_list": rule_list,
                 "prompt_list": prompt_list,
+                "result_save": {
+                    "bad": True,
+                    "raw": True
+                },
+                "max_workers": max_workers,
+                "batch_size": batch_size,
+            },
+            "evaluator": {
                 "llm_config": {
                     scene_list: {
                         "model": model,
@@ -72,11 +76,13 @@ def dingo_demo(
             }
         }
         if column_id:
-            input_data['column_id'] = column_id
+            input_data['dataset']['field']['id'] = column_id
         if column_prompt:
-            input_data['column_prompt'] = column_prompt
+            input_data['dataset']['field']['prompt'] = column_prompt
+        if column_content:
+            input_data['dataset']['field']['content'] = column_content
         if column_image:
-            input_data['column_image'] = column_image
+            input_data['dataset']['field']['image'] = column_image
 
         # print(input_data)
         # exit(0)
@@ -286,7 +292,7 @@ if __name__ == '__main__':
                     )
 
                     data_format = gr.Dropdown(
-                        ["jsonl", "json", "plaintext", "listjson"],
+                        ["jsonl", "json", "plaintext", "listjson","image"],
                         label="data_format"
                     )
                     with gr.Row():
@@ -382,7 +388,7 @@ if __name__ == '__main__':
                 # 修改输出组件部分，使用Tabs
                 with gr.Tabs():
                     with gr.Tab("Result Summary"):
-                        summary_output = gr.Textbox(label="summary", max_lines=50)
+                        summary_output = gr.JSON(label="summary", max_height=800)
                     with gr.Tab("Result Detail"):
                         detail_output = gr.JSON(label="detail", max_height=800)  # 使用JSON组件来更好地展示结构化数据
 
@@ -432,4 +438,4 @@ if __name__ == '__main__':
         )
 
     # 启动界面
-    demo.launch()
+    demo.launch(share=True)

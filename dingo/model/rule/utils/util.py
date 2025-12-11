@@ -175,7 +175,6 @@ def base_rps_frac_chars_in_dupe_ngrams(NGRAM_SIZE, content):
     """
     normalized_content = normalize(content)
     normalized_words = split_words(normalized_content)
-
     if len(normalized_words) < NGRAM_SIZE:
         return 0
 
@@ -185,8 +184,8 @@ def base_rps_frac_chars_in_dupe_ngrams(NGRAM_SIZE, content):
 
     # keep only ngrams which occur at least twice
     ngram_dupes = {ngram for ngram, count in Counter(doc_n_grams).items() if count > 1}
-
     duplicated_grams = numpy.zeros(len(normalized_words), dtype=int)
+
     i = 0
     for ngram in doc_n_grams:
         if ngram in ngram_dupes:
@@ -200,7 +199,6 @@ def base_rps_frac_chars_in_dupe_ngrams(NGRAM_SIZE, content):
 
     if total_chars == 0:
         return 0
-
     score = float(chars_duped / total_chars) * 100
     return score
 

@@ -24,7 +24,9 @@ def image_relevant():
         },
         "evaluator": {
             "llm_config": {
+                # IMPORTANT: VLMImageRelevant requires a vision-language model (VLM)
                 "VLMImageRelevant": {
+                    "model": "",  # e.g. qwen3-vl, gpt-4o, doubao-seed-vision
                     "key": "",
                     "api_url": "",
                 }

@@ -58,7 +58,7 @@ class LLMHallucination(BaseOpenAI):
         # Format contexts for display
         contexts_str = json.dumps(contexts, ensure_ascii=False, indent=2)
 
-        prompt_content = cls.prompt.content % (question, response, contexts_str)
+        prompt_content = cls.prompt.content.format(question, response, contexts_str)
 
         messages = [{"role": "user", "content": prompt_content}]
         return messages

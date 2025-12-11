@@ -5,8 +5,8 @@ from pydantic import BaseModel
 
 class ModelRes(BaseModel):
     error_status: bool = False
-    type: str = "QUALITY_GOOD"
-    name: str = "Data"
+    type: str | List[str] = "QUALITY_GOOD"
+    name: str | List[str] = "Data"
     reason: List[str] = []
 
     # Optional fields for enhanced functionality (e.g., hallucination detection)

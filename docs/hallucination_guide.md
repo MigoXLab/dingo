@@ -136,18 +136,31 @@ from dingo.config import InputArgs
 from dingo.exec import Executor
 
 input_data = {
-    "input_path": "your_dataset.jsonl",
-    "data_format": "jsonl",
-    "dataset": "local",
-    "custom_config": {
-        "rule_config": {
-            "RuleHallucinationHHEM": {  # 使用 HHEM 模型
-                "threshold": 0.5
-            }
+    "input_path": str(Path("test/data/hallucination_test.jsonl")),
+    "output_path": "output/hhem_evaluation/",
+    "dataset": {
+        "source": "local",
+        "format": "jsonl",
+        "field": {
+            "prompt": "prompt",
+            "content": "content",
+            "context": "context",
         }
     },
-    "save_data": True,
-    "output_dir": "output/hhem_hallucination_check"
+    "executor": {
+        "rule_list": ["RuleHallucinationHHEM"],  # Use HHEM rule instead of LLM
+        "result_save": {
+            "bad": True,
+            "good": True  # Also save good examples for comparison
+        }
+    },
+    "evaluator": {
+        "rule_config": {
+            "RuleHallucinationHHEM": {
+                "threshold": 0.5  # Default threshold (0.0-1.0, higher = more strict)
+            }
+        }
+    }
 }
 
 input_args = InputArgs(**input_data)
@@ -164,27 +177,39 @@ from dingo.config import InputArgs
 from dingo.exec import Executor
 
 input_data = {
-    "input_path": "your_dataset.jsonl",
-    "data_format": "jsonl",
-    "dataset": "local",
-    "eval_group": "sft",  # 使用包含幻觉检测的评估组
-    "custom_config": {
-        "prompt_list": ["QUALITY_BAD_HALLUCINATION"],  # 仅运行幻觉检测
-        "llm_config": {
-            "LLMHallucination": {
-                "model": "gpt-4o",
-                "key": "YOUR_OPENAI_API_KEY",
-                "api_url": "https://api.openai.com/v1/chat/completions"
-            }
+    "input_path": "test/data/hallucination_test.jsonl",  # Your JSONL file path
+    "output_path": "output/hallucination_evaluation/",
+    "dataset": {
+        "source": "local",
+        "format": "jsonl",
+        "field": {
+            "prompt": "prompt",
+            "content": "content",
+            "context": "context",
         }
     },
-    "save_data": True,
-    "output_dir": "output/gpt_hallucination_check"
+    "executor": {
+        "prompt_list": ["PromptHallucination"],
+        "result_save": {
+            "bad": True
+        }
+    },
+    "evaluator": {
+        "llm_config": {
+            "LLMHallucination": {
+                "model": "deepseek-chat",
+                "key": "Your API Key",
+                "api_url": "https://api.deepseek.com/v1"
+            }
+        }
+    }
 }
 
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["local"](input_args)
 result = executor.execute()
+
+print(result)
 
 print(f"GPT 幻觉检测完成: 发现 {result.bad_count}/{result.total_count} 个问题")
 ```

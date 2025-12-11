@@ -1,7 +1,18 @@
-<div align="center" xmlns="http://www.w3.org/1999/html">
+<!-- SEO メタ情報と構造化データ -->
+<div itemscope itemtype="https://schema.org/SoftwareApplication" align="center" xmlns="http://www.w3.org/1999/html">
+  <meta itemprop="name" content="Dingo: AI データ品質評価ツール">
+  <meta itemprop="description" content="機械学習データセット、LLM学習データ検証、幻覚検出、RAGシステム評価のための包括的なAI駆動データ品質評価プラットフォーム">
+  <meta itemprop="applicationCategory" content="データ品質ソフトウェア">
+  <meta itemprop="operatingSystem" content="クロスプラットフォーム">
+  <meta itemprop="programmingLanguage" content="Python">
+  <meta itemprop="url" content="https://github.com/MigoXLab/dingo">
+  <meta itemprop="downloadUrl" content="https://pypi.org/project/dingo-python/">
+  <meta itemprop="softwareVersion" content="latest">
+  <meta itemprop="license" content="Apache-2.0">
+
 <!-- logo -->
 <p align="center">
-  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;">
+  <img src="docs/assets/dingo-logo.png" width="300px" style="vertical-align:middle;" alt="Dingo AI データ品質評価ツール ロゴ">
 </p>
 
 <!-- badges -->
@@ -31,6 +42,14 @@
 
 <p align="center">
     👋 <a href="https://discord.gg/Jhgb2eKWh8" target="_blank">Discord</a>と<a href="./docs/assets/wechat.jpg" target="_blank">WeChat</a>でご参加ください
+</p>
+
+<p align="center">
+  このプロジェクトが役に立ったら、GitHubで⭐を付けてください！
+  <br/>
+  <a href="https://github.com/DataEval/dingo/stargazers" target="_blank">
+    <img src="docs/assets/clickstar_2.gif" alt="Star をクリック" width="480">
+  </a>
 </p>
 
 
@@ -178,6 +197,7 @@ Dingoはルールベースおよびプロンプトベースの評価メトリク
 - **分類メトリクス**: トピック分類とコンテンツ分類
 - **マルチモーダル評価メトリクス**: 画像分類と関連性評価
 - **ルールベース品質メトリクス**: ヒューリスティックルールによる効果性と類似性検出を用いた自動品質チェック
+- **事実性評価メトリクス**: GPT-5 System Cardに基づく二段階事実性評価
 - など
 
 大部分のメトリクスは学術的なソースによって支持されており、客観性と科学的厳密性を保証しています。
@@ -211,6 +231,12 @@ input_data = {
 HHEM-2.1-Openローカル推論とLLMベース評価を含む、Dingoの幻覚検出機能の使用に関する詳細なガイダンス：
 
 📖 **[幻覚検出ガイドを見る →](docs/hallucination_guide.md)**
+
+### 事実性評価
+
+Dingoの二段階事実性評価システムの使用に関する詳細なガイダンス：
+
+📖 **[事実性評価ガイドを見る →](docs/factcheck_guide.md)**
 
 # ルールグループ
 
@@ -419,9 +445,9 @@ result = executor.execute()
 
 ```
 @misc{dingo,
-  title={Dingo: A Comprehensive Data Quality Evaluation Tool for Large Models},
+  title={Dingo: A Comprehensive AI Data Quality Evaluation Tool for Large Models},
   author={Dingo Contributors},
-  howpublished={\url{https://github.com/DataEval/dingo}},
+  howpublished={\url{https://github.com/MigoXLab/dingo}},
   year={2024}
 }
 ```

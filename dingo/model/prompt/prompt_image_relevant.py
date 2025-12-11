@@ -9,16 +9,37 @@ class PromptImageRelevant(BasePrompt):
     _metric_info = {
         "category": "Multimodality Assessment Metrics",
         "metric_name": "PromptImageRelevant",
-        "description": "Evaluates if an image matches reference image in terms of face count, feature details, and visual elements",
+        "description": "Evaluates image consistency and relevance through comprehensive analysis of content, semantics, visual quality, and detail fidelity",
         "evaluation_results": ""
     }
 
-    content = """
-    作为一款专业的图片检测AI工具，请结合第一张图评估第二张图片是否符合标准。请先分析第一张图片，包括背景信息、人脸数量、以及每个人物的脸部和手部特征。
-    然后根据以下标准对第二张图片进行评分：\n
-    1. 图片中的人脸数量是否与第一张图片一致；\n
-    2. 每个人物的脸部和手部是否变形；\n
-    3. 如果第一张图片中有国旗标志，则判断第二张图片中的国旗标志颜色和形状是否一致。\n
-    只要存在一处不符合，即不通过。评分0表示不通过，1表示通过。\n
-    请只输出评分和理由，输出格式为json，模版为{"score": xxx, "reason": "xxx"}。\n
-    """
+    content = """你是一个专业的图像对比分析系统。请对比分析两张图片的一致性和相关性。
+
+【分析步骤】
+1. 第一张图片分析
+   仔细观察并记录第一张图片的核心内容：
+   - 主要对象（人物、物体、场景）
+   - 视觉元素（颜色、构图、风格）
+   - 关键细节（文字、标识、特征）
+   - 语义信息（主题、意图、情境）
+
+2. 第二张图片评估
+   基于第一张图片，从以下维度评估第二张图片：
+   - 内容一致性：主要对象和场景元素是否保持一致
+   - 语义相关性：主题意图和信息传达是否相符
+   - 视觉质量：图像清晰度、完整性、是否存在明显缺陷
+   - 细节保真度：重要特征、比例、空间关系是否准确
+
+3. 综合评分
+   评分标准：
+   - 分数1：图片整体一致且相关，无明显问题
+   - 分数0：存在以下任一情况
+     * 主要内容不一致或缺失
+     * 语义偏离或不相关
+     * 存在明显的质量缺陷
+     * 关键细节错误或失真
+
+【输出要求】
+请进行逐步分析后，输出最终评分和简要原因。
+输出格式必须为JSON：{"score": 评分, "reason": "原因说明"}
+"""

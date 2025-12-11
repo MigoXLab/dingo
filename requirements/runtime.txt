@@ -9,11 +9,11 @@ huggingface_hub
 jieba
 jsonlines
 langid
-openai==1.56.2
+openai>=1.56.2
 opencv-python
-packaging
+packaging>=24.1
 pandas
-Pillow==9.4.0
+Pillow>=9.4.0
 prettytable
 pyahocorasick
 nltk
@@ -27,5 +27,5 @@ wordninja==2.0.0
 zhon
 fastmcp>=2.0.0
 twine==6.0.1
-packaging==24.1
 pkginfo==1.12.0
+diff_match_patch

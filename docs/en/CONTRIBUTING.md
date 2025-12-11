@@ -178,7 +178,7 @@ Style configurations can be found in `setup.cfg` and `.pre-commit-config.yaml`.
 from typing import List, Optional
 
 from dingo.io.input import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 
 
 class ExampleRule:
@@ -195,16 +195,16 @@ class ExampleRule:
     self.pattern = pattern
     self.threshold = threshold
 
-  def eval(self, input_data: Data) -> ModelRes:
+  def eval(self, input_data: Data) -> EvalDetail:
     """Evaluate input data against the rule.
 
     Args:
         input_data: Input data to evaluate
 
     Returns:
-        ModelRes: Evaluation result
+        EvalDetail: Evaluation result
     """
-    res = ModelRes()
+    res = EvalDetail()
     # Implementation here
     return res
 ```
@@ -233,7 +233,7 @@ from dingo.model import Model
 from dingo.model.rule.base import BaseRule
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 
 
 @Model.rule_register('QUALITY_BAD_CUSTOM', ['default'])
@@ -243,8 +243,8 @@ class CustomRule(BaseRule):
   dynamic_config = EvaluatorRuleArgs(pattern=r'custom_pattern')
 
   @classmethod
-  def eval(cls, input_data: Data) -> ModelRes:
-    res = ModelRes()
+  def eval(cls, input_data: Data) -> EvalDetail:
+    res = EvalDetail()
     # Implementation
     return res
 ```

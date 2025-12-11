@@ -296,7 +296,7 @@ from dingo.model import Model
 from dingo.model.rule.base import BaseRule
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 
 
 @Model.rule_register('QUALITY_BAD_RELEVANCE', ['default'])
@@ -306,8 +306,8 @@ class MyCustomRule(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern=r'your_pattern_here')
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail()
         # 您的规则实现
         return res
 ```

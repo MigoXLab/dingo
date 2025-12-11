@@ -16,4 +16,3 @@ class EvalDetail(BaseModel):
     score: Optional[float] = None
     label: Optional[list[str]] = None
     reason: Optional[list] = None
-

@@ -302,7 +302,7 @@ class LLMRAGContextPrecision(BaseOpenAI):
                 #     "metric": [cls.__name__],
                 #     "reason": [f"为上下文{item['context_index']+1}发送请求失败"]
                 # }
-                res.status =True
+                res.status = True
                 res.label = ["QUALITY_BAD.REQUEST_FAILED"]
                 res.reason = [f"为上下文{item['context_index']+1}发送请求失败"]
                 return res

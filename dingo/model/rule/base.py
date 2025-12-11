@@ -2,7 +2,7 @@ from typing import List
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 
 
 class BaseRule:
@@ -11,5 +11,5 @@ class BaseRule:
     dynamic_config: EvaluatorRuleArgs
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         raise NotImplementedError()

@@ -2,7 +2,7 @@ import re
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.io.output.eval_detail import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
 
@@ -13,19 +13,13 @@ class CommonPatternDemo(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern = "blue")
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         matches = re.findall(cls.dynamic_config.pattern, input_data.content)
         if matches:
-            res.eval_status = True
-            # res.type = cls.metric_type
-            # res.name = cls.__name__
-            # res.reason = matches
-            res.eval_details = {
-                "label": [f"{cls.metric_type}.{cls.__name__}"],
-                "metric": [cls.__name__],
-                "reason": matches
-            }
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = matches
         return res
 
 

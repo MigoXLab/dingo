@@ -48,8 +48,8 @@ def test_faithfulness():
 
     print("\n用例1 - 忠实的答案:")
     result1 = LLMRAGFaithfulness.eval(data1)
-    print(f"  状态: {'✅ 通过' if not result1.eval_status else '❌ 未通过'}")
-    print(f"  详情: {result1.eval_details}")
+    print(f"  状态: {'✅ 通过' if not result1.status else '❌ 未通过'}")
+    print(f"  详情: {result1}")
 
     # 测试用例2: 包含幻觉
     data2 = Data(
@@ -63,8 +63,8 @@ def test_faithfulness():
 
     print("\n用例2 - 包含幻觉:")
     result2 = LLMRAGFaithfulness.eval(data2)
-    print(f"  状态: {'✅ 通过' if not result2.eval_status else '❌ 未通过'}")
-    print(f"  详情: {result2.eval_details}")
+    print(f"  状态: {'✅ 通过' if not result2.status else '❌ 未通过'}")
+    print(f"  详情: {result2}")
     print("\n预期: 用例2分数 < 用例1分数")
 
     return result1, result2
@@ -96,8 +96,8 @@ def test_context_precision():
     )
 
     result = LLMRAGContextPrecision.eval(data)
-    print(f"  状态: {'✅ 通过' if not result.eval_status else '❌ 未通过'}")
-    print(f"  详情: {result.eval_details}")
+    print(f"  状态: {'✅ 通过' if not result.status else '❌ 未通过'}")
+    print(f"  详情: {result}")
     print("\n预期: 前3个上下文相关，最后1个不相关")
 
     return result
@@ -125,8 +125,8 @@ def test_answer_relevancy():
 
     print("\n用例1 - 直接回答:")
     result1 = LLMRAGAnswerRelevancy.eval(data1)
-    print(f"  状态: {'✅ 通过' if not result1.eval_status else '❌ 未通过'}")
-    print(f"  详情: {result1.eval_details}")
+    print(f"  状态: {'✅ 通过' if not result1.status else '❌ 未通过'}")
+    print(f"  详情: {result1}")
 
     # 测试用例2: 包含无关信息
     data2 = Data(
@@ -137,8 +137,8 @@ def test_answer_relevancy():
 
     print("\n用例2 - 包含无关信息:")
     result2 = LLMRAGAnswerRelevancy.eval(data2)
-    print(f"  状态: {'✅ 通过' if not result2.eval_status else '❌ 未通过'}")
-    print(f"  详情: {result2.eval_details}")
+    print(f"  状态: {'✅ 通过' if not result2.status else '❌ 未通过'}")
+    print(f"  详情: {result2}")
     print("\n预期: 用例2分数 < 用例1分数")
 
     return result1, result2
@@ -170,8 +170,8 @@ def test_context_recall():
 
     print("\n用例1 - 上下文完全支持:")
     result1 = LLMRAGContextRecall.eval(data1)
-    print(f"  状态: {'✅ 通过' if not result1.eval_status else '❌ 未通过'}")
-    print(f"  详情: {result1.eval_details}")
+    print(f"  状态: {'✅ 通过' if not result1.status else '❌ 未通过'}")
+    print(f"  详情: {result1}")
 
     # 测试用例2: 上下文部分支持答案
     data2 = Data(
@@ -186,8 +186,8 @@ def test_context_recall():
 
     print("\n用例2 - 上下文部分支持:")
     result2 = LLMRAGContextRecall.eval(data2)
-    print(f"  状态: {'✅ 通过' if not result2.eval_status else '❌ 未通过'}")
-    print(f"  详情: {result2.eval_details}")
+    print(f"  状态: {'✅ 通过' if not result2.status else '❌ 未通过'}")
+    print(f"  详情: {result2}")
     print("\n预期: 用例2分数 < 用例1分数")
 
     return result1, result2
@@ -219,8 +219,8 @@ def test_context_relevancy():
 
     print("\n用例1 - 所有上下文相关:")
     result1 = LLMRAGContextRelevancy.eval(data1)
-    print(f"  状态: {'✅ 通过' if not result1.eval_status else '❌ 未通过'}")
-    print(f"  详情: {result1.eval_details}")
+    print(f"  状态: {'✅ 通过' if not result1.status else '❌ 未通过'}")
+    print(f"  详情: {result1}")
 
     # 测试用例2: 包含不相关上下文
     data2 = Data(
@@ -235,8 +235,8 @@ def test_context_relevancy():
 
     print("\n用例2 - 包含不相关上下文:")
     result2 = LLMRAGContextRelevancy.eval(data2)
-    print(f"  状态: {'✅ 通过' if not result2.eval_status else '❌ 未通过'}")
-    print(f"  详情: {result2.eval_details}")
+    print(f"  状态: {'✅ 通过' if not result2.status else '❌ 未通过'}")
+    print(f"  详情: {result2}")
     print("\n预期: 用例2分数 < 用例1分数")
 
     return result1, result2

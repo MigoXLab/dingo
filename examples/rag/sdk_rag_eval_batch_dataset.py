@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import time
+from pathlib import Path
 
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
@@ -50,7 +51,7 @@ OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
 
 # 输入文件路径配置
-CSV_FILE_PATH = "ragflow_eval_data_50.jsonl"  # 支持CSV和JSONL格式
+CSV_FILE_PATH = Path("test/data/ragflow_eval_data_50.jsonl")  # 支持CSV和JSONL格式
 
 
 def evaluate_from_jsonl(jsonl_path):
@@ -126,34 +127,34 @@ def evaluate_from_jsonl(jsonl_path):
             # # 进行各项指标评测
             print("\n1. 忠实度 (Faithfulness):")
             faithfulness_result = LLMRAGFaithfulness.eval(data)
-            print(f"   状态: {'✅ 通过' if not faithfulness_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not faithfulness_result.status else '❌ 未通过'}")
             print(f"   分数: {faithfulness_result.score}/10")
             total_faithfulness += faithfulness_result.score
 
             logger.info("\n2. 上下文精度 (Context Precision):")
             print("\n2. 上下文精度 (Context Precision):")
             precision_result = LLMRAGContextPrecision.eval(data)
-            logger.info(f"   状态: {'✅ 通过' if not precision_result.eval_status else '❌ 未通过'}")
+            logger.info(f"   状态: {'✅ 通过' if not precision_result.status else '❌ 未通过'}")
             logger.info(f"   分数: {precision_result.score}/10")
-            print(f"   状态: {'✅ 通过' if not precision_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not precision_result.status else '❌ 未通过'}")
             print(f"   分数: {precision_result.score}/10")
             total_precision += precision_result.score
 
             print("\n3. 上下文召回 (Context Recall):")
             recall_result = LLMRAGContextRecall.eval(data)
-            print(f"   状态: {'✅ 通过' if not recall_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not recall_result.status else '❌ 未通过'}")
             print(f"   分数: {recall_result.score}/10")
             total_recall += recall_result.score
 
             print("\n4. 上下文相关性 (Context Relevancy):")
             relevancy_result = LLMRAGContextRelevancy.eval(data)
-            print(f"   状态: {'✅ 通过' if not relevancy_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not relevancy_result.status else '❌ 未通过'}")
             print(f"   分数: {relevancy_result.score}/10")
             total_relevancy += relevancy_result.score
             #
             print("\n5. 答案相关性 (Answer Relevancy):")
             answer_relevancy_result = LLMRAGAnswerRelevancy.eval(data)
-            print(f"   状态: {'✅ 通过' if not answer_relevancy_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not answer_relevancy_result.status else '❌ 未通过'}")
             print(f"   分数: {answer_relevancy_result.score}/10")
             total_answer_relevancy += answer_relevancy_result.score
 
@@ -269,34 +270,34 @@ def evaluate_from_csv(csv_path):
             # # # # 进行各项指标评测
             print("\n1. 忠实度 (Faithfulness):")
             faithfulness_result = LLMRAGFaithfulness.eval(data)
-            print(f"   状态: {'✅ 通过' if not faithfulness_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not faithfulness_result.status else '❌ 未通过'}")
             print(f"   分数: {faithfulness_result.score}/10")
             total_faithfulness += faithfulness_result.score
 
             logger.info("\n2. 上下文精度 (Context Precision):")
             print("\n2. 上下文精度 (Context Precision):")
             precision_result = LLMRAGContextPrecision.eval(data)
-            logger.info(f"   状态: {'✅ 通过' if not precision_result.eval_status else '❌ 未通过'}")
+            logger.info(f"   状态: {'✅ 通过' if not precision_result.status else '❌ 未通过'}")
             logger.info(f"   分数: {precision_result.score}/10")
-            print(f"   状态: {'✅ 通过' if not precision_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not precision_result.status else '❌ 未通过'}")
             print(f"   分数: {precision_result.score}/10")
             total_precision += precision_result.score
 
             print("\n3. 上下文召回 (Context Recall):")
             recall_result = LLMRAGContextRecall.eval(data)
-            print(f"   状态: {'✅ 通过' if not recall_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not recall_result.status else '❌ 未通过'}")
             print(f"   分数: {recall_result.score}/10")
             total_recall += recall_result.score
 
             print("\n4. 上下文相关性 (Context Relevancy):")
             relevancy_result = LLMRAGContextRelevancy.eval(data)
-            print(f"   状态: {'✅ 通过' if not relevancy_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not relevancy_result.status else '❌ 未通过'}")
             print(f"   分数: {relevancy_result.score}/10")
             total_relevancy += relevancy_result.score
 
             print("\n5. 答案相关性 (Answer Relevancy):")
             answer_relevancy_result = LLMRAGAnswerRelevancy.eval(data)
-            print(f"   状态: {'✅ 通过' if not answer_relevancy_result.eval_status else '❌ 未通过'}")
+            print(f"   状态: {'✅ 通过' if not answer_relevancy_result.status else '❌ 未通过'}")
             print(f"   分数: {answer_relevancy_result.score}/10")
             total_answer_relevancy += answer_relevancy_result.score
 

@@ -199,7 +199,7 @@ def evaluate_rag_result(question: str, rag_result: Dict[str, Any]):
         model=OPENAI_MODEL,
     )
     faith_result = LLMRAGFaithfulness.eval(data)
-    print(f"Faithfulness details: {faith_result.eval_details}")
+    print(f"Faithfulness details: {faith_result}")
 
     # 2. 评测答案相关性
     LLMRAGAnswerRelevancy.dynamic_config = EvaluatorLLMArgs(
@@ -208,7 +208,7 @@ def evaluate_rag_result(question: str, rag_result: Dict[str, Any]):
         model=OPENAI_MODEL,
     )
     ans_rel_result = LLMRAGAnswerRelevancy.eval(data)
-    print(f"Answer Relevancy details: {ans_rel_result.eval_details}")
+    print(f"Answer Relevancy details: {ans_rel_result}")
 
     # 3. 评测上下文相关性
     LLMRAGContextRelevancy.dynamic_config = EvaluatorLLMArgs(
@@ -217,12 +217,12 @@ def evaluate_rag_result(question: str, rag_result: Dict[str, Any]):
         model=OPENAI_MODEL,
     )
     ctx_rel_result = LLMRAGContextRelevancy.eval(data)
-    print(f"Context Relevancy details: {ctx_rel_result.eval_details}")
+    print(f"Context Relevancy details: {ctx_rel_result}")
 
     return {
-        "faithfulness": faith_result.eval_details,
-        "answer_relevancy": ans_rel_result.eval_details,
-        "context_relevancy": ctx_rel_result.eval_details
+        "faithfulness": faith_result,
+        "answer_relevancy": ans_rel_result,
+        "context_relevancy": ctx_rel_result
     }
 
 

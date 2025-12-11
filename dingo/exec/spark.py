@@ -10,8 +10,9 @@ from pyspark.sql import SparkSession
 from dingo.config import InputArgs
 from dingo.exec.base import ExecProto, Executor
 from dingo.io import Data, ResultInfo, SummaryModel
-from dingo.model import Model
 from dingo.io.output.eval_detail import ModelRes
+from dingo.model import Model
+
 # from dingo.model.prompt.base import BasePrompt
 
 

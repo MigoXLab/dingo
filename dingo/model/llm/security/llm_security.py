@@ -1,7 +1,7 @@
 import json
 
-from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.io.output.eval_detail import ModelRes
+from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 

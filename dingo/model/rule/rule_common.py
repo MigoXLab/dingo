@@ -4,8 +4,8 @@ from typing import Tuple
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.model.model import Model
 from dingo.io.output.eval_detail import EvalDetail, ModelRes, QualityLabel
+from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
 
 

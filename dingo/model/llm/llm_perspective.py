@@ -2,9 +2,9 @@ import time
 
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io import Data
+from dingo.io.output.eval_detail import ModelRes, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
-from dingo.io.output.eval_detail import ModelRes, QualityLabel
 from dingo.utils import log
 
 

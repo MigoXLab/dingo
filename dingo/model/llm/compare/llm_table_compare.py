@@ -3,9 +3,9 @@ import re
 from typing import List
 
 from dingo.io import Data
+from dingo.io.output.eval_detail import ModelRes
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.io.output.eval_detail import ModelRes
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 

@@ -4,9 +4,9 @@ from typing import List
 import diff_match_patch as dmp_module
 
 from dingo.io import Data
+from dingo.io.output.eval_detail import ModelRes
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.io.output.eval_detail import ModelRes
 from dingo.model.response.response_class import ResponseNameReason
 from dingo.utils import log
 

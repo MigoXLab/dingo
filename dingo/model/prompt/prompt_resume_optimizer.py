@@ -287,4 +287,3 @@ Please optimize and return the JSON result:
 
     # Default content (will be selected based on mode in LLM layer)
     content = content_targeted
-

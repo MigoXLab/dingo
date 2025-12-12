@@ -1,7 +1,6 @@
 from dingo.model.model import Model
 from dingo.model.prompt.base import BasePrompt
 
-
 # Complete synonym mapping for keyword normalization
 SYNONYM_MAP = {
     "k8s": "Kubernetes",
@@ -141,4 +140,3 @@ Resume:
 
 Please analyze and return the JSON result:
 """
-

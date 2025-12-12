@@ -279,4 +279,3 @@ class LLMResumeOptimizer(BaseOpenAI):
 
         # Call parent eval method
         return super().eval(input_data)
-

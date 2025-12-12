@@ -19,6 +19,16 @@ jobs:
       - name: Install pre-commit
         run: pip install pre-commit==3.8.0
 
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements/runtime.txt ]; then pip install -r requirements/runtime.txt; fi
+          pip install -e .
+
+      - name: Check Python syntax and imports
+        run: |
+          python .github/scripts/check_imports.py
+
       - name: Run pre-commit (auto-fix)
         id: pre_commit_auto_fix
         run: |

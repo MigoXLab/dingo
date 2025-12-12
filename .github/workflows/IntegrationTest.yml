@@ -27,6 +27,10 @@ jobs:
         if [ -f requirements/runtime.txt ]; then pip install -r requirements/runtime.txt; fi
         pip install -e .
 
+    - name: Check Python syntax and imports
+      run: |
+        python .github/scripts/check_imports.py
+
     - name: Integration Test(local plaintext)
       run: |
         python -m dingo.run.cli --input .github/env/local_plaintext.json

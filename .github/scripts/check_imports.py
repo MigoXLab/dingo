@@ -2,8 +2,8 @@
 """检查所有Python文件是否可以成功编译和导入"""
 
 import os
-import sys
 import py_compile
+import sys
 from pathlib import Path
 
 
@@ -20,34 +20,34 @@ def main():
     """主函数"""
     project_root = Path(__file__).parent.parent.parent
     dingo_path = project_root / "dingo"
-    
+
     if not dingo_path.exists():
         print(f"❌ 找不到dingo目录: {dingo_path}")
         sys.exit(1)
-    
+
     errors = []
     checked = 0
-    
+
     print("🔍 检查所有Python文件的语法和导入...")
     print("-" * 60)
-    
+
     for py_file in dingo_path.rglob("*.py"):
         if "__pycache__" in str(py_file):
             continue
-            
+
         checked += 1
         success, error = check_syntax(str(py_file))
-        
+
         if success:
             print(f"✓ {py_file.relative_to(project_root)}")
         else:
             error_msg = f"✗ {py_file.relative_to(project_root)}: {error}"
             print(error_msg)
             errors.append(error_msg)
-    
+
     print("-" * 60)
     print(f"📊 检查了 {checked} 个文件")
-    
+
     if errors:
         print(f"\n❌ 发现 {len(errors)} 个错误:")
         for error in errors:

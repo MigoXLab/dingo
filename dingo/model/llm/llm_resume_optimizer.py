@@ -236,22 +236,22 @@ class LLMResumeOptimizer(BaseOpenAI):
         # Keywords added
         keywords_added = summary.get("keywords_added", [])
         if keywords_added:
-            reason_parts.append(f"✅ Keywords Added: {', '.join(keywords_added)}")
+            reason_parts.append(f"Keywords Added: {', '.join(keywords_added)}")
 
         # Associative keywords
         keywords_assoc = summary.get("keywords_associative", [])
         if keywords_assoc:
-            reason_parts.append(f"🔗 Associative: {', '.join(keywords_assoc)}")
+            reason_parts.append(f"Associative: {', '.join(keywords_assoc)}")
 
         # De-emphasized keywords
         keywords_de = summary.get("keywords_deemphasized", [])
         if keywords_de:
-            reason_parts.append(f"⬇️ De-emphasized: {', '.join(keywords_de)}")
+            reason_parts.append(f"De-emphasized: {', '.join(keywords_de)}")
 
         # Unused keywords
         keywords_unused = summary.get("keywords_unused", [])
         if keywords_unused:
-            reason_parts.append(f"⚠️ Could not integrate: {', '.join(keywords_unused)}")
+            reason_parts.append(f"Could not integrate: {', '.join(keywords_unused)}")
 
         # General improvements (for General Mode)
         improvements = summary.get("improvements", [])

@@ -439,7 +439,6 @@ Resume:
 Please optimize and return the JSON result:
 """
 
-
     @staticmethod
     def _build_targeted_prompt_zh(
         target_position: str, required_str: str, nice_str: str, negative_str: str, resume_text: str

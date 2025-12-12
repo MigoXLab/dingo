@@ -36,21 +36,34 @@ class LLMResumeOptimizer(BaseOpenAI):
         - content: Resume text
         - prompt: Target position (optional)
         - context: Match report JSON (optional, enables Targeted Mode)
+
+        Language detection:
+        - Auto-detects Chinese content and uses Chinese prompts
+        - Falls back to English prompts for other languages
         """
         resume_text = input_data.content or ""
         target_position = input_data.prompt or "Not specified"
         match_report = input_data.context or ""
+
+        # Detect language (simple heuristic: check for Chinese characters)
+        is_chinese = cls._detect_chinese(resume_text)
 
         # Parse match report to determine mode
         missing_required, missing_nice, negative_keywords, is_targeted = cls._parse_match_report(match_report)
 
         if is_targeted:
             # Targeted Mode: Use content_targeted prompt
-            required_str = ", ".join(missing_required) if missing_required else "None"
-            nice_str = ", ".join(missing_nice) if missing_nice else "None"
-            negative_str = ", ".join(negative_keywords) if negative_keywords else "None"
+            required_str = ", ".join(missing_required) if missing_required else ("无" if is_chinese else "None")
+            nice_str = ", ".join(missing_nice) if missing_nice else ("无" if is_chinese else "None")
+            negative_str = ", ".join(negative_keywords) if negative_keywords else ("无" if is_chinese else "None")
 
-            prompt_content = cls.prompt.content_targeted.format(
+            # Select prompt based on language
+            if is_chinese:
+                prompt_template = cls.prompt.content_targeted_zh
+            else:
+                prompt_template = cls.prompt.content_targeted
+
+            prompt_content = prompt_template.format(
                 target_position,  # {0}
                 required_str,     # {1}
                 nice_str,         # {2}
@@ -59,7 +72,12 @@ class LLMResumeOptimizer(BaseOpenAI):
             )
         else:
             # General Mode: Use content_general prompt
-            prompt_content = cls.prompt.content_general.format(
+            if is_chinese:
+                prompt_template = cls.prompt.content_general_zh
+            else:
+                prompt_template = cls.prompt.content_general
+
+            prompt_content = prompt_template.format(
                 target_position,  # {0}
                 resume_text       # {1}
             )
@@ -68,9 +86,38 @@ class LLMResumeOptimizer(BaseOpenAI):
         return messages
 
     @classmethod
+    def _detect_chinese(cls, text: str) -> bool:
+        """
+        Detect if text contains significant Chinese characters.
+        Returns True if more than 10% of characters are Chinese.
+        """
+        if not text:
+            return False
+
+        chinese_count = 0
+        total_count = 0
+
+        for char in text:
+            if '\u4e00' <= char <= '\u9fff':
+                chinese_count += 1
+            if char.strip():  # Count non-whitespace characters
+                total_count += 1
+
+        if total_count == 0:
+            return False
+
+        return (chinese_count / total_count) > 0.1
+
+    @classmethod
     def _parse_match_report(cls, match_report) -> Tuple[List[str], List[str], List[str], bool]:
         """
         Parse match_report from KeywordMatcher.
+
+        Supports TWO formats:
+        1. Plugin format (match_details structure):
+           {"match_details": {"missing": [...], "negative_warnings": [...]}}
+        2. Dingo format (keyword_analysis structure):
+           {"keyword_analysis": [{"keyword": ..., "importance": ..., "match_status": ...}]}
 
         Returns:
             tuple: (missing_required, missing_nice, negative_keywords, is_targeted_mode)
@@ -87,21 +134,42 @@ class LLMResumeOptimizer(BaseOpenAI):
             if isinstance(match_report, str):
                 match_report = json.loads(match_report)
 
-            # Extract from keyword_analysis structure
+            # Try Plugin format first (match_details structure)
+            match_details = match_report.get("match_details", {})
+            if match_details:
+                # Extract missing keywords from Plugin format
+                missing_list = match_details.get("missing", [])
+                for item in missing_list:
+                    skill = item.get("skill", "")
+                    importance = item.get("importance", "Nice-to-have")
+                    if skill:
+                        if importance == "Required":
+                            missing_required.append(skill)
+                        else:
+                            missing_nice.append(skill)
+
+                # Extract negative warnings from Plugin format
+                negative_list = match_details.get("negative_warnings", [])
+                for item in negative_list:
+                    skill = item.get("skill", "")
+                    if skill:
+                        negative_keywords.append(skill)
+
+            # Try Dingo format (keyword_analysis structure)
             keyword_analysis = match_report.get("keyword_analysis", [])
+            if keyword_analysis and not match_details:
+                for kw in keyword_analysis:
+                    keyword = kw.get("keyword", "")
+                    importance = kw.get("importance", "").lower()
+                    match_status = kw.get("match_status", "").lower()
 
-            for kw in keyword_analysis:
-                keyword = kw.get("keyword", "")
-                importance = kw.get("importance", "").lower()
-                match_status = kw.get("match_status", "").lower()
-
-                if importance == "excluded" and match_status == "matched":
-                    negative_keywords.append(keyword)
-                elif match_status == "missing":
-                    if importance == "required":
-                        missing_required.append(keyword)
-                    elif importance == "nice-to-have":
-                        missing_nice.append(keyword)
+                    if importance == "excluded" and match_status == "matched":
+                        negative_keywords.append(keyword)
+                    elif match_status == "missing":
+                        if importance == "required":
+                            missing_required.append(keyword)
+                        elif importance == "nice-to-have":
+                            missing_nice.append(keyword)
 
             is_targeted = bool(missing_required or missing_nice or negative_keywords)
             return missing_required, missing_nice, negative_keywords, is_targeted

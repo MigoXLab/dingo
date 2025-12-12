@@ -186,15 +186,15 @@ class LLMKeywordMatcher(BaseOpenAI):
             reason_parts.append(f"Position: {job_title}")
 
         if matched_required:
-            reason_parts.append(f"✅ Required (Matched): {', '.join(matched_required)}")
+            reason_parts.append(f"Required (Matched): {', '.join(matched_required)}")
         if missing_required:
-            reason_parts.append(f"❌ Required (Missing): {', '.join(missing_required)}")
+            reason_parts.append(f"Required (Missing): {', '.join(missing_required)}")
         if matched_nice:
-            reason_parts.append(f"✅ Nice-to-have (Matched): {', '.join(matched_nice)}")
+            reason_parts.append(f"Nice-to-have (Matched): {', '.join(matched_nice)}")
         if missing_nice:
-            reason_parts.append(f"⚪ Nice-to-have (Missing): {', '.join(missing_nice)}")
+            reason_parts.append(f"Nice-to-have (Missing): {', '.join(missing_nice)}")
         if excluded_warning:
-            reason_parts.append(f"⚠️ Warning - Excluded skills in resume: {', '.join(excluded_warning)}")
+            reason_parts.append(f"Warning - Excluded skills in resume: {', '.join(excluded_warning)}")
 
         return "\n".join(reason_parts)
 

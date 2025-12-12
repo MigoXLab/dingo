@@ -113,11 +113,11 @@ class LLMResumeOptimizer(BaseOpenAI):
         """
         Parse match_report from KeywordMatcher.
 
-        Supports TWO formats:
-        1. Plugin format (match_details structure):
-           {"match_details": {"missing": [...], "negative_warnings": [...]}}
-        2. Dingo format (keyword_analysis structure):
-           {"keyword_analysis": [{"keyword": ..., "importance": ..., "match_status": ...}]}
+        Supports multiple input formats:
+        1. JSON string: Will be parsed to dict
+        2. Dict with Plugin format: {"match_details": {"missing": [...], "negative_warnings": [...]}}
+        3. Dict with Dingo format: {"keyword_analysis": [...]}
+        4. List[str]: Treated as list of missing required keywords
 
         Returns:
             tuple: (missing_required, missing_nice, negative_keywords, is_targeted_mode)
@@ -133,6 +133,17 @@ class LLMResumeOptimizer(BaseOpenAI):
             # Parse JSON string if needed
             if isinstance(match_report, str):
                 match_report = json.loads(match_report)
+
+            # Handle List[str] type - treat as list of missing required keywords
+            if isinstance(match_report, list):
+                missing_required = [kw for kw in match_report if isinstance(kw, str)]
+                is_targeted = bool(missing_required)
+                return missing_required, missing_nice, negative_keywords, is_targeted
+
+            # Ensure match_report is a dict before calling .get()
+            if not isinstance(match_report, dict):
+                log.warning(f"Unsupported match_report type: {type(match_report)}")
+                return [], [], [], False
 
             # Try Plugin format first (match_details structure)
             match_details = match_report.get("match_details", {})

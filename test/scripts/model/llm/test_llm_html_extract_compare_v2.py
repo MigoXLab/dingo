@@ -119,55 +119,81 @@ class TestConvertResult:
         structured = ResponseNameReason(name="A", reason="工具A更完整")
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
-        # assert result.type == "TOOL_ONE_BETTER"
-        assert "TOOL_ONE_BETTER" in result.eval_details.label
-        assert result.eval_status is False
+        assert any("TOOL_ONE_BETTER" in label for label in result.label)
+        assert any("Judgement_A" in label for label in result.label)
+        assert result.status is False  # False = good
+        assert result.metric == "LLMHtmlExtractCompareV2"
+        assert "工具A更完整" in result.reason[0]
 
     def test_convert_b_to_equal(self):
         """B -> TOOL_EQUAL"""
         structured = ResponseNameReason(name="B", reason="两者相同")
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
-        # assert result.type == "TOOL_EQUAL"
-        assert "TOOL_EQUAL" in result.eval_details.label
-        assert result.eval_status is False
+        assert any("TOOL_EQUAL" in label for label in result.label)
+        assert any("Judgement_B" in label for label in result.label)
+        assert result.status is False  # False = good
+        assert result.metric == "LLMHtmlExtractCompareV2"
+        assert "两者相同" in result.reason[0]
 
     def test_convert_c_to_tool_two_better(self):
         """C -> TOOL_TWO_BETTER"""
         structured = ResponseNameReason(name="C", reason="工具B更完整")
         result = LLMHtmlExtractCompareV2._convert_to_model_result(structured)
 
-        # assert result.type == "TOOL_TWO_BETTER"
-        assert "TOOL_TWO_BETTER" in result.eval_details.label
-        assert result.eval_status is True
+        assert any("TOOL_TWO_BETTER" in label for label in result.label)
+        assert any("Judgement_C" in label for label in result.label)
+        assert result.status is True  # True = bad (工具B更好意味着工具A有问题)
+        assert result.metric == "LLMHtmlExtractCompareV2"
+        assert "工具B更完整" in result.reason[0]
 
 
 class TestCompleteFlow:
     """测试完整流程"""
 
     def test_process_response_a(self):
-        """测试完整流程A"""
+        """测试完整流程A（工具A更好）"""
         response = "分析...\n<Judgement>A</Judgement>"
         result = LLMHtmlExtractCompareV2.process_response(response)
 
-        # assert result.type == "TOOL_ONE_BETTER"
-        assert "TOOL_ONE_BETTER" in result.eval_details.label
-        assert result.eval_status is False
+        assert any("TOOL_ONE_BETTER" in label for label in result.label)
+        assert any("Judgement_A" in label for label in result.label)
+        assert result.status is False  # False = good
+        assert "分析..." in result.reason[0]
 
     def test_process_response_b(self):
-        """测试完整流程B"""
+        """测试完整流程B（两者相同）"""
         response = "判断：B"
         result = LLMHtmlExtractCompareV2.process_response(response)
 
-        # assert result.type == "TOOL_EQUAL"
-        assert "TOOL_EQUAL" in result.eval_details.label
-        assert result.eval_status is False
+        assert any("TOOL_EQUAL" in label for label in result.label)
+        assert any("Judgement_B" in label for label in result.label)
+        assert result.status is False  # False = good
 
     def test_process_response_c(self):
-        """测试完整流程C"""
+        """测试完整流程C（工具B更好）"""
         response = "<Judgement>C</Judgement>"
         result = LLMHtmlExtractCompareV2.process_response(response)
 
-        # assert result.type == "TOOL_TWO_BETTER"
-        assert "TOOL_TWO_BETTER" in result.eval_details.label
-        assert result.eval_status is True
+        assert any("TOOL_TWO_BETTER" in label for label in result.label)
+        assert any("Judgement_C" in label for label in result.label)
+        assert result.status is True  # True = bad (工具A有问题)
+
+    def test_process_response_with_english_format(self):
+        """测试英文格式"""
+        response = "Analysis shows Tool A is better\n<Judgement>A</Judgement>"
+        result = LLMHtmlExtractCompareV2.process_response(response)
+
+        assert any("TOOL_ONE_BETTER" in label for label in result.label)
+        assert result.status is False
+        assert "Analysis shows Tool A is better" in result.reason[0]
+
+    def test_process_response_invalid_judgement(self):
+        """测试无效的判断（应该抛出异常）"""
+        response = "没有判断结果"
+
+        try:
+            LLMHtmlExtractCompareV2.process_response(response)
+            assert False, "应该抛出 ValueError"
+        except ValueError as e:
+            assert "无法从响应中提取判断结果" in str(e)

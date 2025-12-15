@@ -64,16 +64,16 @@ def print_metrics_summary(summary: SummaryModel):
             # 简化指标名称显示
             display_name = metric_name.replace("LLMRAG", "")
             print(f"\n  {display_name}:")
-            print(f"    平均分: {stats.get('score_average', 0):.2f}/10")
-            print(f"    最小分: {stats.get('score_min', 0):.2f}/10")
-            print(f"    最大分: {stats.get('score_max', 0):.2f}/10")
+            print(f"    平均分: {stats.get('score_average', 0):.2f}")
+            print(f"    最小分: {stats.get('score_min', 0):.2f}")
+            print(f"    最大分: {stats.get('score_max', 0):.2f}")
             print(f"    样本数: {stats.get('score_count', 0)}")
             if 'score_std_dev' in stats:
                 print(f"    标准差: {stats.get('score_std_dev', 0):.2f}")
 
         # 打印该字段组的总平均分
         overall_avg = summary.get_metrics_score_overall_average(field_key)
-        print(f"\n  🎯 该字段组总平均分: {overall_avg:.2f}/10")
+        print(f"\n  🎯 该字段组总平均分: {overall_avg:.2f}")
 
         # 打印该字段组的指标排名（从高到低）
         metrics_summary = summary.get_metrics_score_summary(field_key)
@@ -82,7 +82,7 @@ def print_metrics_summary(summary: SummaryModel):
         print(f"\n  📈 指标排名（从高到低）:")
         for i, (metric_name, avg_score) in enumerate(sorted_metrics, 1):
             display_name = metric_name.replace("LLMRAG", "")
-            print(f"    {i}. {display_name}: {avg_score:.2f}/10")
+            print(f"    {i}. {display_name}: {avg_score:.2f}")
 
     # 如果有多个字段组，打印总体统计
     if len(summary.metrics_score_stats) > 1:
@@ -91,7 +91,7 @@ def print_metrics_summary(summary: SummaryModel):
         print("=" * 80)
         for field_key in summary.metrics_score_stats.keys():
             overall_avg = summary.get_metrics_score_overall_average(field_key)
-            print(f"  {field_key}: {overall_avg:.2f}/10")
+            print(f"  {field_key}: {overall_avg:.2f}")
 
     print("\n" + "=" * 80)
 
@@ -108,12 +108,29 @@ def run_rag_evaluation():
     print(f"API: {OPENAI_URL}")
     print("=" * 80)
 
+    llm_config = {
+        "model": OPENAI_MODEL,
+        "key": OPENAI_KEY,
+        "api_url": OPENAI_URL,
+    }
+
+    llm_config_embedding = {
+        "model": OPENAI_MODEL,
+        "key": OPENAI_KEY,
+        "api_url": OPENAI_URL,
+        "parameters": {
+            "embedding_model": EMBEDDING_MODEL,
+            "strictness": 3,
+            "threshold": 5
+        }
+    }
+
     # 构建配置
     input_data = {
         "task_name": "rag_evaluation_with_metrics",
         "input_path": INPUT_DATA_PATH,
         "output_path": "outputs/",
-        "log_level": "INFO",
+        # "log_level": "INFO",
         "dataset": {
             "source": "local",
             "format": "jsonl",
@@ -146,50 +163,25 @@ def run_rag_evaluation():
                 "evals": [
                     {
                         "name": "LLMRAGFaithfulness",
-                        "config": {
-                            "model": OPENAI_MODEL,
-                            "key": OPENAI_KEY,
-                            "api_url": OPENAI_URL,
-                        }
+                        "config": llm_config
                     },
                     {
                         "name": "LLMRAGContextPrecision",
-                        "config": {
-                            "model": OPENAI_MODEL,
-                            "key": OPENAI_KEY,
-                            "api_url": OPENAI_URL,
-                        }
+                        "config": llm_config
                     },
                     {
                         "name": "LLMRAGContextRecall",
-                        "config": {
-                            "model": OPENAI_MODEL,
-                            "key": OPENAI_KEY,
-                            "api_url": OPENAI_URL,
-                        }
+                        "config": llm_config
                     },
                     {
                         "name": "LLMRAGContextRelevancy",
-                        "config": {
-                            "model": OPENAI_MODEL,
-                            "key": OPENAI_KEY,
-                            "api_url": OPENAI_URL,
-                        }
+                        "config": llm_config
                     },
                     # Answer Relevancy 需要 Embedding API
                     # 如果您的 API 支持 embeddings 端点，可以启用此项
                     {
                         "name": "LLMRAGAnswerRelevancy",
-                        "config": {
-                            "model": OPENAI_MODEL,
-                            "key": OPENAI_KEY,
-                            "api_url": OPENAI_URL,
-                            "parameters": {
-                                "embedding_model": EMBEDDING_MODEL,
-                                "strictness": 3,
-                                "threshold": 5
-                            }
-                        }
+                        "config": llm_config_embedding
                     }
                 ]
             }

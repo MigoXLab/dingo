@@ -130,7 +130,18 @@ LLMKeywordMatcher.threshold = 0.7  # 更严格
 
 ## 📁 输出格式
 
-### KeywordMatcher 输出示例
+### KeywordMatcher 输出
+
+结果存放在 `result.reason[0]` 中，格式化的文本报告：
+
+```python
+# 访问方式
+result = LLMKeywordMatcher.eval(data)
+print(result.reason[0])  # 完整分析报告
+print(result.score)      # 匹配分数 (0.0-1.0)
+```
+
+**`reason[0]` 内容示例：**
 ```
 JD Analysis: 高级Python工程师
 Keywords: Python, Docker, Kubernetes, MySQL
@@ -143,7 +154,18 @@ Nice-to-have (Matched): MySQL
 Nice-to-have (Missing): Kubernetes
 ```
 
-### ResumeOptimizer 输出示例
+### ResumeOptimizer 输出
+
+结果同样存放在 `result.reason[0]` 中，JSON 格式：
+
+```python
+# 访问方式
+result = LLMResumeOptimizer.eval(data)
+import json
+output = json.loads(result.reason[0])
+```
+
+**`reason[0]` 内容示例：**
 ```json
 {
   "optimization_summary": {

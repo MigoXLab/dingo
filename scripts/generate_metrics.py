@@ -15,22 +15,21 @@ sys.path.insert(0, str(project_root))
 from dingo.model.model import Model  # noqa: E402
 
 
-def scan_prompt_classes() -> List[Dict[str, Any]]:
-    """扫描所有 prompt 类，提取 _metric_info 信息"""
+def scan_llm_classes() -> List[Dict[str, Any]]:
+    """扫描所有 LLM 类，提取 _metric_info 信息"""
     # 先加载模型
     Model.load_model()
 
     metrics_info = []
 
-    # 直接从 prompt_metric_type_map 中获取信息
-    for metric_type, prompt_classes in Model.prompt_metric_type_map.items():
-        for prompt_class in prompt_classes:
-            if hasattr(prompt_class, '_metric_info'):
-                info = prompt_class._metric_info.copy()
-                info['prompt_type'] = metric_type
-                info['class_name'] = prompt_class.__name__
-                info['type'] = 'prompt'
-                metrics_info.append(info)
+    # 从 llm_name_map 中获取所有 LLM 类
+    for llm_name, llm_class in Model.llm_name_map.items():
+        if hasattr(llm_class, '_metric_info'):
+            info = llm_class._metric_info.copy()
+            info['llm_name'] = llm_name
+            info['class_name'] = llm_class.__name__
+            info['type'] = 'llm'
+            metrics_info.append(info)
 
     return metrics_info
 
@@ -77,7 +76,7 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
     table += "| Type | Metric | Description | Paper Source | Evaluation Results |\n"
     table += "|------|--------|-------------|--------------|-------------------|\n"
 
-    # 对于rule类，按type分组合并；对于prompt类，保持原有逻辑
+    # 对于rule类，按type分组合并；对于llm类，保持原有逻辑
     if title.startswith("Rule-Based") and "Quality Metrics" in title:
         # 按type分组
         type_groups = {}
@@ -138,22 +137,19 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
             table += f"| {type_name} | {combined_metrics} | " \
                 f"{combined_description} | {paper_source} | {eval_results} |\n"
     else:
-        # 对于prompt类，保持原有逻辑
-        sort_key = lambda x: x.get('prompt_type', x.get('rule_type', ''))  # noqa: E731
+        # 对于llm类，按类名排序；对于其他类型保持原有逻辑
+        sort_key = lambda x: x.get('class_name', '')  # noqa: E731
         for metric in sorted(metrics, key=sort_key):
             # 处理type列
-            if metric.get('type') == 'prompt':
-                type_name = f"`{metric['prompt_type']}`"
+            if metric.get('type') == 'llm':
+                type_name = f"`{metric.get('llm_name', 'LLM')}`"
             elif metric.get('type') == 'rule':
                 type_name = f"`{metric['rule_type']}`"
             else:
                 type_name = "N/A"
 
-            # 对于rule类，使用类名作为metric名称；对于prompt类，使用描述名称
-            if metric.get('type') == 'rule':
-                metric_name = metric['class_name']
-            else:
-                metric_name = metric['metric_name']
+            # 使用类名作为metric名称
+            metric_name = metric['class_name']
             description = truncate_description(metric['description'])
 
             # 处理论文来源
@@ -196,11 +192,11 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
 def generate_metrics_documentation() -> str:
     """生成完整的 metrics 文档"""
     # 扫描所有类
-    prompt_metrics = scan_prompt_classes()
+    llm_metrics = scan_llm_classes()
     rule_metrics = scan_rule_classes()
 
     # 合并所有metrics
-    all_metrics = prompt_metrics + rule_metrics
+    all_metrics = llm_metrics + rule_metrics
 
     # 按类别分组
     categories = {}
@@ -218,9 +214,15 @@ def generate_metrics_documentation() -> str:
            "ensure objectivity and scientific rigor.\n\n"
 
     # 按预定义顺序生成各个类别
-    category_order = ["Pretrain Text Quality Assessment Metrics", "SFT Data Assessment Metrics",
-                      "Classification Metrics", "Multimodality Assessment Metrics",
-                      "Rule-Based TEXT Quality Metrics", "Rule-Based IMG Quality Metrics"]
+    category_order = [
+        "RAG Evaluation Metrics",
+        "Pretrain Text Quality Assessment Metrics",
+        "SFT Data Assessment Metrics",
+        "Classification Metrics",
+        "Multimodality Assessment Metrics",
+        "Rule-Based TEXT Quality Metrics",
+        "Rule-Based IMG Quality Metrics"
+    ]
 
     processed_categories = set()
 
@@ -261,12 +263,12 @@ def main():
         print(f"✅ Metrics documentation generated successfully: {output_file}")
 
         # 打印统计信息
-        prompt_metrics = scan_prompt_classes()
+        llm_metrics = scan_llm_classes()
         rule_metrics = scan_rule_classes()
-        all_metrics = prompt_metrics + rule_metrics
+        all_metrics = llm_metrics + rule_metrics
 
         print(f"📊 Total metrics found: {len(all_metrics)}")
-        print(f"   - Prompt-based: {len(prompt_metrics)}")
+        print(f"   - LLM-based: {len(llm_metrics)}")
         print(f"   - Rule-based: {len(rule_metrics)}")
 
         categories = {}

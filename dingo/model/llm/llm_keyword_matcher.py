@@ -89,7 +89,7 @@ class LLMKeywordMatcher(BaseOpenAI):
     """
 
     _metric_info = {
-        "category": "Resume ATS Matching Metrics",
+        "category": "Resume Quality Assessment Metrics",
         "metric_name": "LLMKeywordMatcher",
         "description": "Semantic keyword matching between resume and job description",
         "paper_title": "N/A",

@@ -39,7 +39,7 @@ class LLMResumeOptimizer(BaseOpenAI):
     """
 
     _metric_info = {
-        "category": "Resume ATS Optimization Metrics",
+        "category": "Resume Quality Assessment Metrics",
         "metric_name": "LLMResumeOptimizer",
         "description": "ATS-focused resume optimization with keyword injection and STAR polishing",
         "paper_title": "N/A",

@@ -54,7 +54,8 @@ class LLMResumeOptimizer(BaseOpenAI):
         """
         resume_text = input_data.content or ""
         target_position = input_data.prompt or "Not specified"
-        match_report = input_data.context or ""
+        # Handle both branches: dev branch has context, main branch doesn't
+        match_report = getattr(input_data, 'context', None) or ""
 
         # Detect language (simple heuristic: check for Chinese characters)
         is_chinese = cls._detect_chinese(resume_text)

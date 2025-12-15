@@ -124,13 +124,13 @@ class SummaryModel(BaseModel):
 
         # 如果有指标分数统计，以层级结构添加到输出中（与 type_ratio 结构一致）
         if self.metrics_score_stats:
-            metrics_score_result = {}
-            for field_key, metrics in self.metrics_score_stats.items():
-                metrics_score_result[field_key] = {
+            result['metrics_score'] = {
+                field_key: {
                     'stats': metrics,
                     'summary': self.get_metrics_score_summary(field_key),
                     'overall_average': self.get_metrics_score_overall_average(field_key)
                 }
-            result['metrics_score'] = metrics_score_result
+                for field_key, metrics in self.metrics_score_stats.items()
+            }
 
         return result

@@ -2,11 +2,11 @@
 参考 ragas/examples/ragas_examples/improve_rag/rag.py 构建的 RAG 系统及评测示例。
 
 本示例展示了如何：
-1. 构建一个基于 BM25 检索和 OpenAI 生成的简单 RAG 系统。
-2. 使用 Dingo 对 RAG 系统的输出进行多维度评测（忠实度、上下文相关性、答案相关性等）。
+1. 使用 test/data/fiqa.jsonl 构建一个基于 BM25 检索和 OpenAI 生成的简单 RAG 系统。
+2. 使用 Dingo 对 RAG 系统的输出进行批量评测（使用 Dingo 框架）。
 
 前置依赖:
-    pip install langchain langchain-community langchain-text-splitters datasets openai dingo-python
+    pip install langchain langchain-community langchain-text-splitters openai dingo-python
 
 环境变量:
     OPENAI_API_KEY: OpenAI API 密钥
@@ -15,25 +15,22 @@
 """
 
 import asyncio
+import json
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # RAG 构建相关依赖
-import datasets
 from langchain_community.retrievers import BM25Retriever as LangchainBM25Retriever
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from openai import AsyncOpenAI
 
-# Dingo 评测相关依赖
-from dingo.config.input_args import EvaluatorLLMArgs
-from dingo.io.input import Data
-from dingo.model.llm.rag.llm_rag_answer_relevancy import LLMRAGAnswerRelevancy
-from dingo.model.llm.rag.llm_rag_context_precision import LLMRAGContextPrecision
-from dingo.model.llm.rag.llm_rag_context_recall import LLMRAGContextRecall
-from dingo.model.llm.rag.llm_rag_context_relevancy import LLMRAGContextRelevancy
-from dingo.model.llm.rag.llm_rag_faithfulness import LLMRAGFaithfulness
+# Dingo 框架评测相关依赖
+from dingo.config import InputArgs
+from dingo.exec import Executor
+from dingo.io.output.summary_model import SummaryModel
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -51,24 +48,35 @@ if not OPENAI_API_KEY:
 class BM25Retriever:
     """基于 BM25 的文档检索器"""
 
-    def __init__(self, dataset_name="m-ric/huggingface_doc", default_k=3):
+    def __init__(self, jsonl_path="test/data/fiqa.jsonl", default_k=3):
         self.default_k = default_k
-        # 为了演示方便，这里只加载数据集的前 100 条数据，避免下载过多数据
-        logger.info(f"正在加载数据集 {dataset_name}...")
-        try:
-            # 尝试加载数据集，如果是流式或者部分加载会更快
-            self.dataset = datasets.load_dataset(dataset_name, split="train", streaming=True)
-            self.knowledge_base = list(self.dataset.take(100))
-            logger.info(f"已加载 100 条数据用于构建索引")
-        except Exception as e:
-            logger.warning(f"加载 HuggingFace 数据集失败: {e}。将使用内置示例文档。")
-            self.knowledge_base = [
-                {"text": "Python 由 Guido van Rossum 于 1989 年底发明，第一个公开发行版发行于 1991 年。", "source": "manual/python_history"},
-                {"text": "Dingo 是一个用于评估大语言模型(LLM)应用的框架，支持 RAG 评测。", "source": "manual/dingo_intro"},
-                {"text": "深度学习是机器学习的一种，通过多层神经网络学习数据的表示。", "source": "manual/deep_learning"},
-            ]
+        # 从 JSONL 文件加载数据
+        logger.info(f"正在从 {jsonl_path} 加载数据...")
+        self.knowledge_base = self._load_jsonl(jsonl_path)
+        logger.info(f"已加载 {len(self.knowledge_base)} 条数据用于构建索引")
 
         self.retriever = self._build_retriever()
+
+    def _load_jsonl(self, jsonl_path: str) -> List[Dict]:
+        """从 JSONL 文件加载数据"""
+        knowledge_base = []
+        try:
+            with open(jsonl_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    data = json.loads(line.strip())
+                    # 使用 retrieved_contexts 作为知识库
+                    if 'retrieved_contexts' in data and data['retrieved_contexts']:
+                        for idx, context in enumerate(data['retrieved_contexts']):
+                            knowledge_base.append({
+                                "text": context,
+                                "source": f"fiqa/{data.get('user_input', 'unknown')[:50]}/{idx}"
+                            })
+            logger.info(f"从 JSONL 文件中提取了 {len(knowledge_base)} 条上下文文档")
+        except Exception as e:
+            logger.error(f"加载 JSONL 文件失败: {e}")
+            raise
+
+        return knowledge_base
 
     def _build_retriever(self) -> LangchainBM25Retriever:
         """构建 BM25 检索器"""
@@ -168,114 +176,202 @@ class RAG:
         }
 
 
-def evaluate_rag_result(question: str, rag_result: Dict[str, Any]):
-    """使用 Dingo 评测 RAG 结果"""
+def print_metrics_summary(summary: SummaryModel):
+    """打印指标统计摘要（支持按字段分组）"""
+    if not summary.metrics_score_stats:
+        print("⚠️  没有指标统计数据")
+        return
 
-    answer = rag_result["answer"]
-    contexts = rag_result["context_list"]
+    print("\n" + "=" * 80)
+    print("📊 RAG 评估指标统计")
+    print("=" * 80)
 
-    logger.info("正在进行评测...")
+    # 遍历每个字段组
+    for field_key, metrics in summary.metrics_score_stats.items():
+        print(f"\n📁 字段组: {field_key}")
+        print("-" * 80)
 
-    # 构造 Dingo 数据对象
-    # 注意：某些指标（如 ContextRecall）通常需要 ground_truth (reference)，
-    # 这里我们模拟一种无 ground_truth 的场景，或者只评测无参考指标。
-    # 如果需要评测 Recall，通常需要人工标注的标准答案。
-    # 为了演示，我们只评测：
-    # 1. Faithfulness (忠实度): 答案是否忠实于上下文
-    # 2. Answer Relevancy (答案相关性): 答案是否回答了问题
-    # 3. Context Relevancy (上下文相关性): 检索到的上下文是否与问题相关
+        # 打印该字段组的每个指标详细统计
+        for metric_name, stats in metrics.items():
+            # 简化指标名称显示
+            display_name = metric_name.replace("LLMRAG", "")
+            print(f"\n  {display_name}:")
+            print(f"    平均分: {stats.get('score_average', 0):.2f}")
+            print(f"    最小分: {stats.get('score_min', 0):.2f}")
+            print(f"    最大分: {stats.get('score_max', 0):.2f}")
+            print(f"    样本数: {stats.get('score_count', 0)}")
+            if 'score_std_dev' in stats:
+                print(f"    标准差: {stats.get('score_std_dev', 0):.2f}")
 
-    data = Data(
-        data_id="rag_eval_demo",
-        prompt=question,
-        content=answer,
-        context=contexts
-    )
+        # 打印该字段组的总平均分
+        overall_avg = summary.get_metrics_score_overall_average(field_key)
+        print(f"\n  🎯 该字段组总平均分: {overall_avg:.2f}")
 
-    # 1. 评测忠实度
-    LLMRAGFaithfulness.dynamic_config = EvaluatorLLMArgs(
-        key=OPENAI_API_KEY,
-        api_url=OPENAI_BASE_URL,
-        model=OPENAI_MODEL,
-    )
-    faith_result = LLMRAGFaithfulness.eval(data)
-    print(f"Faithfulness details: {faith_result}")
+        # 打印该字段组的指标排名（从高到低）
+        metrics_summary = summary.get_metrics_score_summary(field_key)
+        sorted_metrics = sorted(metrics_summary.items(), key=lambda x: x[1], reverse=True)
 
-    # 2. 评测答案相关性
-    LLMRAGAnswerRelevancy.dynamic_config = EvaluatorLLMArgs(
-        key=OPENAI_API_KEY,
-        api_url=OPENAI_BASE_URL,
-        model=OPENAI_MODEL,
-    )
-    ans_rel_result = LLMRAGAnswerRelevancy.eval(data)
-    print(f"Answer Relevancy details: {ans_rel_result}")
+        print(f"\n  📈 指标排名（从高到低）:")
+        for i, (metric_name, avg_score) in enumerate(sorted_metrics, 1):
+            display_name = metric_name.replace("LLMRAG", "")
+            print(f"    {i}. {display_name}: {avg_score:.2f}")
 
-    # 3. 评测上下文相关性
-    LLMRAGContextRelevancy.dynamic_config = EvaluatorLLMArgs(
-        key=OPENAI_API_KEY,
-        api_url=OPENAI_BASE_URL,
-        model=OPENAI_MODEL,
-    )
-    ctx_rel_result = LLMRAGContextRelevancy.eval(data)
-    print(f"Context Relevancy details: {ctx_rel_result}")
+    # 如果有多个字段组，打印总体统计
+    if len(summary.metrics_score_stats) > 1:
+        print("\n" + "=" * 80)
+        print("🌍 所有字段组总体统计")
+        print("=" * 80)
+        for field_key in summary.metrics_score_stats.keys():
+            overall_avg = summary.get_metrics_score_overall_average(field_key)
+            print(f"  {field_key}: {overall_avg:.2f}")
 
-    return {
-        "faithfulness": faith_result,
-        "answer_relevancy": ans_rel_result,
-        "context_relevancy": ctx_rel_result
-    }
+    print("\n" + "=" * 80)
+
+
+async def generate_rag_responses(rag: RAG, questions: List[str]) -> List[Dict[str, Any]]:
+    """为所有问题生成 RAG 响应"""
+    results = []
+    for i, question in enumerate(questions, 1):
+        logger.info(f"处理问题 {i}/{len(questions)}: {question[:50]}...")
+        result = await rag.query(question, top_k=3)
+        results.append({
+            "user_input": question,
+            "response": result["answer"],
+            "retrieved_contexts": result["context_list"]
+        })
+    return results
+
+
+def save_rag_results_to_jsonl(results: List[Dict], output_path: str):
+    """将 RAG 结果保存到 JSONL 文件"""
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        for result in results:
+            f.write(json.dumps(result, ensure_ascii=False) + '\n')
+    logger.info(f"RAG 结果已保存到: {output_path}")
 
 
 async def main():
-    print("=" * 60)
-    print("Dingo RAG 构建与评测示例")
-    print("=" * 60)
+    print("=" * 80)
+    print("Dingo RAG 构建与批量评测示例")
+    print("=" * 80)
 
-    # 初始化 OpenAI 客户端
+    # 数据路径
+    INPUT_JSONL = "test/data/fiqa.jsonl"
+    RAG_OUTPUT_JSONL = "test/data/fiqa_rag_output.jsonl"
+
+    # 步骤1: 从 fiqa.jsonl 加载问题
+    logger.info(f"从 {INPUT_JSONL} 加载问题...")
+    questions = []
+    with open(INPUT_JSONL, 'r', encoding='utf-8') as f:
+        for line in f:
+            data = json.loads(line.strip())
+            questions.append(data['user_input'])
+    logger.info(f"已加载 {len(questions)} 个问题")
+
+    # 步骤2: 使用 fiqa.jsonl 的 retrieved_contexts 构建 BM25 索引
+    logger.info("构建 BM25 检索器...")
+    retriever = BM25Retriever(jsonl_path=INPUT_JSONL, default_k=3)
+
+    # 步骤3: 初始化 OpenAI 客户端和 RAG 系统
     client = AsyncOpenAI(
         api_key=OPENAI_API_KEY,
         base_url=OPENAI_BASE_URL
     )
-
-    # 初始化检索器
-    # 如果没有 HuggingFace 环境，可能会回退到内置的简单文档
-    retriever = BM25Retriever()
-
-    # 初始化 RAG
     rag = RAG(client, retriever, model=OPENAI_MODEL)
 
-    # 示例问题
-    # 注意：问题的选择取决于加载了什么文档。
-    # 如果加载了 huggingface_doc，可以问 transformers 相关的问题。
-    # 如果回退到内置文档，可以问 Python 相关的问题。
+    # 步骤4: 为所有问题生成 RAG 响应
+    logger.info("开始生成 RAG 响应...")
+    rag_results = await generate_rag_responses(rag, questions)
 
-    # 这里我们检测一下知识库内容来决定问什么
-    sample_text = retriever.knowledge_base[0]["text"]
-    if "Python" in sample_text or "Dingo" in sample_text:
-        query = "Python 是哪一年发布的？"
-    else:
-        query = "How to load a model using transformers?"
+    # 步骤5: 保存 RAG 结果到 JSONL
+    save_rag_results_to_jsonl(rag_results, RAG_OUTPUT_JSONL)
 
-    print(f"\nQuery: {query}")
+    # 步骤6: 使用 Dingo 框架进行批量评测
+    print("\n" + "=" * 80)
+    print("使用 Dingo 框架进行 RAG 评估")
+    print("=" * 80)
 
-    # 运行 RAG
-    print("正在运行 RAG 查询...")
-    result = await rag.query(query)
+    llm_config = {
+        "model": OPENAI_MODEL,
+        "key": OPENAI_API_KEY,
+        "api_url": OPENAI_BASE_URL,
+    }
+    llm_config_embedding = {
+        "model": OPENAI_MODEL,
+        "key": OPENAI_API_KEY,
+        "api_url": OPENAI_BASE_URL,
+        "parameters": {
+            "embedding_model": os.getenv("EMBEDDING_MODEL", "text-embedding-3-large"),
+            "strictness": 3,
+            "threshold": 5
+        }
+    }
 
-    print("\nRAG Result:")
-    print(f"Answer: {result['answer']}")
-    print(f"Retrieved {len(result['context_list'])} documents.")
-    print(f"Contexts: {result['context_list']}")
+    input_data = {
+        "task_name": "rag_evaluation_with_mock_rag",
+        "input_path": RAG_OUTPUT_JSONL,
+        "output_path": "outputs/",
+        # "log_level": "INFO",
+        "dataset": {
+            "source": "local",
+            "format": "jsonl",
+        },
+        "executor": {
+            "max_workers": 10,
+            "batch_size": 10,
+            "result_save": {
+                "good": True,
+                "bad": True,
+                "all_labels": True
+            }
+        },
+        "evaluator": [
+            {
+                "fields": {
+                    "prompt": "user_input",
+                    "content": "response",
+                    "reference": "reference",
+                    "context": "retrieved_contexts"
+                },
+                "evals": [
+                    {
+                        "name": "LLMRAGFaithfulness",
+                        "config": llm_config
+                    },
+                    {
+                        "name": "LLMRAGContextPrecision",
+                        "config": llm_config
+                    },
+                    {
+                        "name": "LLMRAGContextRecall",
+                        "config": llm_config
+                    },
+                    {
+                        "name": "LLMRAGContextRelevancy",
+                        "config": llm_config
+                    },
+                    # Answer Relevancy 需要 Embedding API
+                    # 如果您的 API 支持 embeddings 端点，可以启用此项
+                    {
+                        "name": "LLMRAGAnswerRelevancy",
+                        "config": llm_config_embedding
+                    }
+                ]
+            }
+        ]
+    }
 
-    # 运行评测
-    print("\n" + "-" * 40)
-    print("开始 Dingo 评测")
-    print("-" * 40)
+    # 执行评测
+    input_args = InputArgs(**input_data)
+    executor = Executor.exec_map["local"](input_args)
+    summary = executor.execute()
 
-    if result["context_list"]:
-        evaluate_rag_result(query, result)
-    else:
-        print("未检索到文档，跳过评测。")
+    # 打印评测结果
+    print_metrics_summary(summary)
+
+    print("\n✅ 评测完成！")
+    print(f"详细结果已保存到: {summary.output_path}")
 
 if __name__ == "__main__":
     asyncio.run(main())

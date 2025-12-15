@@ -6,10 +6,11 @@ Compatible with both main branch (EvalDetail) and dev branch (ModelRes).
 """
 
 import json
+
 import pytest
 
 from dingo.io.input import Data
-from dingo.model.llm.llm_keyword_matcher import LLMKeywordMatcher, SYNONYM_MAP
+from dingo.model.llm.llm_keyword_matcher import SYNONYM_MAP, LLMKeywordMatcher
 from dingo.model.llm.llm_resume_optimizer import LLMResumeOptimizer
 
 
@@ -197,4 +198,3 @@ class TestLLMResumeOptimizer:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
-

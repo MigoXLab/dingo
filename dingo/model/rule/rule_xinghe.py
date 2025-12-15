@@ -10,7 +10,7 @@ from dingo.model.rule.base import BaseRule
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["xinghe"])
 class RuleDoi(BaseRule):
     _metric_info = {
-        "category": "Xinghe Data Quality Metrics",
+        "category": "Rule-Based TEXT Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
         "metric_name": "RuleDoi",
         "description": "Check whether the string is in the correct format of the doi",
@@ -38,7 +38,7 @@ class RuleDoi(BaseRule):
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["xinghe"])
 class RuleIsbn(BaseRule):
     _metric_info = {
-        "category": "Xinghe Data Quality Metrics",
+        "category": "Rule-Based TEXT Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
         "metric_name": "RuleIsbn",
         "description": "Check whether the string is in the correct format of the isbn",

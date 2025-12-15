@@ -86,17 +86,19 @@ class SparkExecutor(ExecProto):
             # 初始化字段的统计数据
             if field_key not in acc['label_counts']:
                 acc['label_counts'][field_key] = {}
+            if field_key not in acc['metric_scores']:
+                acc['metric_scores'][field_key] = {}
 
             # 遍历 List[EvalDetail]
             for eval_detail in eval_detail_list:
-                # 收集指标分数（用于RAG等评估场景）
+                # 收集指标分数（用于RAG等评估场景，按 field_key 分组）
                 score = eval_detail.get('score') if isinstance(eval_detail, dict) else getattr(eval_detail, 'score', None)
                 metric = eval_detail.get('metric') if isinstance(eval_detail, dict) else getattr(eval_detail, 'metric', None)
 
                 if score is not None and metric:
-                    if metric not in acc['metric_scores']:
-                        acc['metric_scores'][metric] = []
-                    acc['metric_scores'][metric].append(score)
+                    if metric not in acc['metric_scores'][field_key]:
+                        acc['metric_scores'][field_key][metric] = []
+                    acc['metric_scores'][field_key][metric].append(score)
 
                 # 收集标签统计
                 label_list = eval_detail.get('label', []) if isinstance(eval_detail, dict) else getattr(eval_detail, 'label', [])
@@ -124,12 +126,15 @@ class SparkExecutor(ExecProto):
                     else:
                         acc1['label_counts'][field_key][label] += count
 
-        # 合并 metric scores
-        for metric, scores in acc2['metric_scores'].items():
-            if metric not in acc1['metric_scores']:
-                acc1['metric_scores'][metric] = scores.copy()
-            else:
-                acc1['metric_scores'][metric].extend(scores)
+        # 合并 metric scores（按 field_key 分组）
+        for field_key, metrics_dict in acc2['metric_scores'].items():
+            if field_key not in acc1['metric_scores']:
+                acc1['metric_scores'][field_key] = {}
+            for metric, scores in metrics_dict.items():
+                if metric not in acc1['metric_scores'][field_key]:
+                    acc1['metric_scores'][field_key][metric] = scores.copy()
+                else:
+                    acc1['metric_scores'][field_key][metric].extend(scores)
 
         return acc1
 
@@ -297,10 +302,11 @@ class SparkExecutor(ExecProto):
                     type_ratio_counts[field_name][eval_details] / new_summary.total, 6
                 )
 
-        # 添加收集到的 metric scores 到 summary
-        for metric_name, scores in metric_scores.items():
-            for score in scores:
-                new_summary.add_metric_score(metric_name, score)
+        # 添加收集到的 metric scores 到 summary（按 field_key 分组）
+        for field_key, metrics in metric_scores.items():
+            for metric_name, scores in metrics.items():
+                for score in scores:
+                    new_summary.add_metric_score(field_key, metric_name, score)
 
         # 计算 metrics 的平均分等统计信息
         new_summary.calculate_metrics_score_averages()

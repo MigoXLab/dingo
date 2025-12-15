@@ -132,9 +132,9 @@ class TestLocal:
         )
 
         # 手动模拟评估结果（因为实际 API 调用需要真实的 key）
-        summary.add_metric_score("LLMRAGFaithfulness", 8.5)
-        summary.add_metric_score("LLMRAGFaithfulness", 9.0)
-        summary.add_metric_score("LLMRAGFaithfulness", 7.5)
+        summary.add_metric_score("field1", "LLMRAGFaithfulness", 8.5)
+        summary.add_metric_score("field1", "LLMRAGFaithfulness", 9.0)
+        summary.add_metric_score("field1", "LLMRAGFaithfulness", 7.5)
 
         # 创建 executor 并调用 summarize
         executor = LocalExecutor({})
@@ -143,24 +143,25 @@ class TestLocal:
         # 验证 metrics_score 存在（层级结构）
         result_dict = result.to_dict()
         assert "metrics_score" in result_dict
-        assert "stats" in result_dict["metrics_score"]
-        assert "summary" in result_dict["metrics_score"]
-        assert "overall_average" in result_dict["metrics_score"]
+        assert "field1" in result_dict["metrics_score"]
+        assert "stats" in result_dict["metrics_score"]["field1"]
+        assert "summary" in result_dict["metrics_score"]["field1"]
+        assert "overall_average" in result_dict["metrics_score"]["field1"]
 
         # 验证统计信息正确
-        stats = result.metrics_score_stats["LLMRAGFaithfulness"]
+        stats = result.metrics_score_stats["field1"]["LLMRAGFaithfulness"]
         assert stats["score_average"] == 8.33
         assert stats["score_min"] == 7.5
         assert stats["score_max"] == 9.0
         assert stats["score_count"] == 3
 
         # 验证 summary 方法
-        score_summary = result.get_metrics_score_summary()
+        score_summary = result.get_metrics_score_summary("field1")
         assert "LLMRAGFaithfulness" in score_summary
         assert score_summary["LLMRAGFaithfulness"] == 8.33
 
         # 验证总平均分
-        overall_avg = result.get_metrics_score_overall_average()
+        overall_avg = result.get_metrics_score_overall_average("field1")
         assert overall_avg == 8.33
 
     def test_metrics_score_collection_without_scores(self):
@@ -212,8 +213,8 @@ class TestLocal:
         )
 
         # 只添加一个指标的分数（模拟混合场景）
-        summary.add_metric_score("MetricWithScore", 8.0)
-        summary.add_metric_score("MetricWithScore", 9.0)
+        summary.add_metric_score("field1", "MetricWithScore", 8.0)
+        summary.add_metric_score("field1", "MetricWithScore", 9.0)
         # 注意：没有为其他指标添加分数
 
         # 创建 executor 并调用 summarize
@@ -223,10 +224,11 @@ class TestLocal:
         # 验证有 metrics_score
         result_dict = result.to_dict()
         assert "metrics_score" in result_dict
-        assert "MetricWithScore" in result.metrics_score_stats
+        assert "field1" in result.metrics_score_stats
+        assert "MetricWithScore" in result.metrics_score_stats["field1"]
 
         # 验证统计信息
-        stats = result.metrics_score_stats["MetricWithScore"]
+        stats = result.metrics_score_stats["field1"]["MetricWithScore"]
         assert stats["score_average"] == 8.5
         assert stats["score_count"] == 2
 
@@ -246,24 +248,25 @@ class TestLocal:
         )
 
         # 添加一些分数
-        summary.add_metric_score("TestMetric1", 8.0)
-        summary.add_metric_score("TestMetric1", 9.0)
-        summary.add_metric_score("TestMetric2", 7.0)
-        summary.add_metric_score("TestMetric2", 6.0)
+        summary.add_metric_score("field1", "TestMetric1", 8.0)
+        summary.add_metric_score("field1", "TestMetric1", 9.0)
+        summary.add_metric_score("field1", "TestMetric2", 7.0)
+        summary.add_metric_score("field1", "TestMetric2", 6.0)
 
         # 创建 executor 并调用 summarize
         executor = LocalExecutor({})
         result = executor.summarize(summary)
 
         # 验证统计已计算
-        assert "TestMetric1" in result.metrics_score_stats
-        assert "TestMetric2" in result.metrics_score_stats
+        assert "field1" in result.metrics_score_stats
+        assert "TestMetric1" in result.metrics_score_stats["field1"]
+        assert "TestMetric2" in result.metrics_score_stats["field1"]
 
         # 验证 scores 列表已被删除（calculate_metrics_score_averages 会删除它）
-        assert "scores" not in result.metrics_score_stats["TestMetric1"]
-        assert "scores" not in result.metrics_score_stats["TestMetric2"]
+        assert "scores" not in result.metrics_score_stats["field1"]["TestMetric1"]
+        assert "scores" not in result.metrics_score_stats["field1"]["TestMetric2"]
 
         # 验证统计值正确
-        assert result.metrics_score_stats["TestMetric1"]["score_average"] == 8.5
-        assert result.metrics_score_stats["TestMetric2"]["score_average"] == 6.5
-        assert result.get_metrics_score_overall_average() == 7.5
+        assert result.metrics_score_stats["field1"]["TestMetric1"]["score_average"] == 8.5
+        assert result.metrics_score_stats["field1"]["TestMetric2"]["score_average"] == 6.5
+        assert result.get_metrics_score_overall_average("field1") == 7.5

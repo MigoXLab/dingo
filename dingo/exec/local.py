@@ -116,9 +116,9 @@ class LocalExecutor(ExecProto):
 
                         # 遍历 List[EvalDetail]，同时收集指标分数和标签
                         for eval_detail in eval_detail_list:
-                            # 收集指标分数
+                            # 收集指标分数（按 field_key 分组）
                             if eval_detail.score is not None and eval_detail.metric:
-                                self.summary.add_metric_score(eval_detail.metric, eval_detail.score)
+                                self.summary.add_metric_score(field_key, eval_detail.metric, eval_detail.score)
 
                             # 收集标签统计
                             label_list = eval_detail.label if eval_detail.label else []

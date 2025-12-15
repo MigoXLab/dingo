@@ -25,14 +25,15 @@ class TestSummaryModel:
         )
 
         # 添加分数
-        summary.add_metric_score("TestMetric1", 8.5)
-        summary.add_metric_score("TestMetric1", 9.0)
-        summary.add_metric_score("TestMetric1", 7.5)
+        summary.add_metric_score("field1", "TestMetric1", 8.5)
+        summary.add_metric_score("field1", "TestMetric1", 9.0)
+        summary.add_metric_score("field1", "TestMetric1", 7.5)
 
         # 验证分数已添加
-        assert "TestMetric1" in summary.metrics_score_stats
-        assert summary.metrics_score_stats["TestMetric1"]["score_count"] == 3
-        assert len(summary.metrics_score_stats["TestMetric1"]["scores"]) == 3
+        assert "field1" in summary.metrics_score_stats
+        assert "TestMetric1" in summary.metrics_score_stats["field1"]
+        assert summary.metrics_score_stats["field1"]["TestMetric1"]["score_count"] == 3
+        assert len(summary.metrics_score_stats["field1"]["TestMetric1"]["scores"]) == 3
 
     def test_add_metric_score_multiple_metrics(self):
         """测试添加多个指标的分数"""
@@ -42,15 +43,16 @@ class TestSummaryModel:
         )
 
         # 添加不同指标的分数
-        summary.add_metric_score("Metric1", 8.0)
-        summary.add_metric_score("Metric2", 7.0)
-        summary.add_metric_score("Metric1", 9.0)
-        summary.add_metric_score("Metric2", 6.5)
+        summary.add_metric_score("field1", "Metric1", 8.0)
+        summary.add_metric_score("field1", "Metric2", 7.0)
+        summary.add_metric_score("field1", "Metric1", 9.0)
+        summary.add_metric_score("field1", "Metric2", 6.5)
 
         # 验证分数已正确分类
-        assert len(summary.metrics_score_stats) == 2
-        assert summary.metrics_score_stats["Metric1"]["score_count"] == 2
-        assert summary.metrics_score_stats["Metric2"]["score_count"] == 2
+        assert "field1" in summary.metrics_score_stats
+        assert len(summary.metrics_score_stats["field1"]) == 2
+        assert summary.metrics_score_stats["field1"]["Metric1"]["score_count"] == 2
+        assert summary.metrics_score_stats["field1"]["Metric2"]["score_count"] == 2
 
     def test_calculate_metrics_score_averages(self):
         """测试计算指标分数的平均值、最小值、最大值、标准差"""
@@ -60,15 +62,15 @@ class TestSummaryModel:
         )
 
         # 添加分数
-        summary.add_metric_score("TestMetric", 8.0)
-        summary.add_metric_score("TestMetric", 9.0)
-        summary.add_metric_score("TestMetric", 7.0)
+        summary.add_metric_score("field1", "TestMetric", 8.0)
+        summary.add_metric_score("field1", "TestMetric", 9.0)
+        summary.add_metric_score("field1", "TestMetric", 7.0)
 
         # 计算统计值
         summary.calculate_metrics_score_averages()
 
         # 验证统计结果
-        stats = summary.metrics_score_stats["TestMetric"]
+        stats = summary.metrics_score_stats["field1"]["TestMetric"]
         assert stats["score_average"] == 8.0
         assert stats["score_min"] == 7.0
         assert stats["score_max"] == 9.0
@@ -86,13 +88,13 @@ class TestSummaryModel:
         )
 
         # 只添加一个分数
-        summary.add_metric_score("TestMetric", 8.5)
+        summary.add_metric_score("field1", "TestMetric", 8.5)
 
         # 计算统计值
         summary.calculate_metrics_score_averages()
 
         # 验证统计结果
-        stats = summary.metrics_score_stats["TestMetric"]
+        stats = summary.metrics_score_stats["field1"]["TestMetric"]
         assert stats["score_average"] == 8.5
         assert stats["score_min"] == 8.5
         assert stats["score_max"] == 8.5
@@ -108,16 +110,16 @@ class TestSummaryModel:
         )
 
         # 添加多个指标的分数
-        summary.add_metric_score("Metric1", 8.0)
-        summary.add_metric_score("Metric1", 9.0)
-        summary.add_metric_score("Metric2", 7.0)
-        summary.add_metric_score("Metric2", 6.0)
+        summary.add_metric_score("field1", "Metric1", 8.0)
+        summary.add_metric_score("field1", "Metric1", 9.0)
+        summary.add_metric_score("field1", "Metric2", 7.0)
+        summary.add_metric_score("field1", "Metric2", 6.0)
 
         # 计算统计值
         summary.calculate_metrics_score_averages()
 
         # 获取汇总
-        score_summary = summary.get_metrics_score_summary()
+        score_summary = summary.get_metrics_score_summary("field1")
 
         # 验证汇总结果
         assert len(score_summary) == 2
@@ -132,16 +134,16 @@ class TestSummaryModel:
         )
 
         # 添加多个指标的分数
-        summary.add_metric_score("Metric1", 8.0)
-        summary.add_metric_score("Metric1", 9.0)
-        summary.add_metric_score("Metric2", 7.0)
-        summary.add_metric_score("Metric2", 5.0)
+        summary.add_metric_score("field1", "Metric1", 8.0)
+        summary.add_metric_score("field1", "Metric1", 9.0)
+        summary.add_metric_score("field1", "Metric2", 7.0)
+        summary.add_metric_score("field1", "Metric2", 5.0)
 
         # 计算统计值
         summary.calculate_metrics_score_averages()
 
         # 获取总平均分
-        overall_avg = summary.get_metrics_score_overall_average()
+        overall_avg = summary.get_metrics_score_overall_average("field1")
 
         # 验证：(8.5 + 6.0) / 2 = 7.25
         assert overall_avg == 7.25
@@ -154,7 +156,7 @@ class TestSummaryModel:
         )
 
         # 没有添加分数
-        overall_avg = summary.get_metrics_score_overall_average()
+        overall_avg = summary.get_metrics_score_overall_average("field1")
 
         # 验证：应该返回 0.0
         assert overall_avg == 0.0
@@ -170,8 +172,8 @@ class TestSummaryModel:
         )
 
         # 添加分数
-        summary.add_metric_score("Metric1", 8.0)
-        summary.add_metric_score("Metric1", 9.0)
+        summary.add_metric_score("field1", "Metric1", 8.0)
+        summary.add_metric_score("field1", "Metric1", 9.0)
 
         # 计算统计值
         summary.calculate_metrics_score_averages()
@@ -186,15 +188,16 @@ class TestSummaryModel:
 
         # 验证分数统计字段（层级结构）
         assert "metrics_score" in result
-        assert "stats" in result["metrics_score"]
-        assert "summary" in result["metrics_score"]
-        assert "overall_average" in result["metrics_score"]
+        assert "field1" in result["metrics_score"]
+        assert "stats" in result["metrics_score"]["field1"]
+        assert "summary" in result["metrics_score"]["field1"]
+        assert "overall_average" in result["metrics_score"]["field1"]
 
         # 验证分数统计内容
-        assert "Metric1" in result["metrics_score"]["stats"]
-        assert result["metrics_score"]["stats"]["Metric1"]["score_average"] == 8.5
-        assert result["metrics_score"]["summary"]["Metric1"] == 8.5
-        assert result["metrics_score"]["overall_average"] == 8.5
+        assert "Metric1" in result["metrics_score"]["field1"]["stats"]
+        assert result["metrics_score"]["field1"]["stats"]["Metric1"]["score_average"] == 8.5
+        assert result["metrics_score"]["field1"]["summary"]["Metric1"] == 8.5
+        assert result["metrics_score"]["field1"]["overall_average"] == 8.5
 
     def test_to_dict_without_scores(self):
         """测试 to_dict() 在没有分数时的输出"""
@@ -226,22 +229,22 @@ class TestSummaryModel:
         )
 
         # Metric1 有 3 个分数
-        summary.add_metric_score("Metric1", 8.0)
-        summary.add_metric_score("Metric1", 9.0)
-        summary.add_metric_score("Metric1", 7.0)
+        summary.add_metric_score("field1", "Metric1", 8.0)
+        summary.add_metric_score("field1", "Metric1", 9.0)
+        summary.add_metric_score("field1", "Metric1", 7.0)
 
         # Metric2 有 5 个分数
         for score in [6.0, 7.0, 8.0, 9.0, 10.0]:
-            summary.add_metric_score("Metric2", score)
+            summary.add_metric_score("field1", "Metric2", score)
 
         # 计算统计值
         summary.calculate_metrics_score_averages()
 
         # 验证统计结果
-        assert summary.metrics_score_stats["Metric1"]["score_count"] == 3
-        assert summary.metrics_score_stats["Metric2"]["score_count"] == 5
-        assert summary.metrics_score_stats["Metric1"]["score_average"] == 8.0
-        assert summary.metrics_score_stats["Metric2"]["score_average"] == 8.0
+        assert summary.metrics_score_stats["field1"]["Metric1"]["score_count"] == 3
+        assert summary.metrics_score_stats["field1"]["Metric2"]["score_count"] == 5
+        assert summary.metrics_score_stats["field1"]["Metric1"]["score_average"] == 8.0
+        assert summary.metrics_score_stats["field1"]["Metric2"]["score_average"] == 8.0
 
     def test_score_rounding(self):
         """测试分数的四舍五入"""
@@ -251,15 +254,15 @@ class TestSummaryModel:
         )
 
         # 添加会产生小数的分数
-        summary.add_metric_score("TestMetric", 8.333)
-        summary.add_metric_score("TestMetric", 9.666)
-        summary.add_metric_score("TestMetric", 7.111)
+        summary.add_metric_score("field1", "TestMetric", 8.333)
+        summary.add_metric_score("field1", "TestMetric", 9.666)
+        summary.add_metric_score("field1", "TestMetric", 7.111)
 
         # 计算统计值
         summary.calculate_metrics_score_averages()
 
         # 验证四舍五入
-        stats = summary.metrics_score_stats["TestMetric"]
+        stats = summary.metrics_score_stats["field1"]["TestMetric"]
         # (8.333 + 9.666 + 7.111) / 3 = 8.37
         assert stats["score_average"] == 8.37
         assert stats["score_min"] == 7.11
@@ -286,18 +289,19 @@ class TestSummaryModel:
             for i in range(10):
                 # 模拟不同的分数
                 score = 7.0 + (i % 3)  # 7.0, 8.0, 9.0 循环
-                summary.add_metric_score(metric, score)
+                summary.add_metric_score("field1", metric, score)
 
         # 计算统计值
         summary.calculate_metrics_score_averages()
 
         # 验证所有指标都有统计
-        assert len(summary.metrics_score_stats) == 5
+        assert "field1" in summary.metrics_score_stats
+        assert len(summary.metrics_score_stats["field1"]) == 5
         for metric in rag_metrics:
-            assert metric in summary.metrics_score_stats
-            assert summary.metrics_score_stats[metric]["score_count"] == 10
+            assert metric in summary.metrics_score_stats["field1"]
+            assert summary.metrics_score_stats["field1"][metric]["score_count"] == 10
 
         # 验证总平均分
-        overall_avg = summary.get_metrics_score_overall_average()
+        overall_avg = summary.get_metrics_score_overall_average("field1")
         # 7.0, 8.0, 9.0 循环10次：(7+8+9)*3 + 7 = 79, 79/10 = 7.9
         assert overall_avg == 7.9

@@ -30,6 +30,7 @@ from pathlib import Path
 
 from dingo.config import InputArgs
 from dingo.exec import Executor
+from dingo.io.output.summary_model import SummaryModel
 
 # 配置（从环境变量读取）
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
@@ -41,49 +42,58 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
 INPUT_DATA_PATH = str(Path("test/data/fiqa.jsonl"))  # 或 "test/data/ragflow_eval_data_50.jsonl"
 
 
-def print_metrics_summary(summary):
-    """
-    打印指标统计摘要
-
-    Args:
-        summary: SummaryModel 对象
-    """
-    print("\n" + "=" * 80)
-    print("📊 RAG 指标统计摘要")
-    print("=" * 80)
+def print_metrics_summary(summary: SummaryModel):
+    """打印指标统计摘要（支持按字段分组）"""
+    # print(summary.to_dict())  # 如果需要看完整输出，取消注释
 
     if not summary.metrics_score_stats:
-        print("⚠️  没有收集到指标分数数据")
+        print("⚠️  没有指标统计数据")
         return
 
-    # 打印每个指标的详细统计
-    for metric_name, stats in summary.metrics_score_stats.items():
-        # 简化指标名称显示
-        display_name = metric_name.replace("LLMRAG", "")
-        print(f"\n{display_name}:")
-        print(f"  平均分: {stats.get('score_average', 0):.2f}/10")
-        print(f"  最小分: {stats.get('score_min', 0):.2f}/10")
-        print(f"  最大分: {stats.get('score_max', 0):.2f}/10")
-        print(f"  样本数: {stats.get('score_count', 0)}")
-        if 'score_std_dev' in stats:
-            print(f"  标准差: {stats.get('score_std_dev', 0):.2f}")
-
-    # 打印总平均分
-    overall_avg = summary.get_metrics_score_overall_average()
-    print(f"\n{'=' * 40}")
-    print(f"🎯 总平均分: {overall_avg:.2f}/10")
-    print(f"{'=' * 40}")
-
-    # 打印指标排名（从高到低）
-    metrics_summary = summary.get_metrics_score_summary()
-    sorted_metrics = sorted(metrics_summary.items(), key=lambda x: x[1], reverse=True)
-
-    print("\n📈 指标排名（从高到低）:")
-    for i, (metric_name, avg_score) in enumerate(sorted_metrics, 1):
-        display_name = metric_name.replace("LLMRAG", "")
-        print(f"  {i}. {display_name}: {avg_score:.2f}/10")
-
+    print("\n" + "=" * 80)
+    print("📊 RAG 评估指标统计")
     print("=" * 80)
+
+    # 遍历每个字段组
+    for field_key, metrics in summary.metrics_score_stats.items():
+        print(f"\n📁 字段组: {field_key}")
+        print("-" * 80)
+
+        # 打印该字段组的每个指标详细统计
+        for metric_name, stats in metrics.items():
+            # 简化指标名称显示
+            display_name = metric_name.replace("LLMRAG", "")
+            print(f"\n  {display_name}:")
+            print(f"    平均分: {stats.get('score_average', 0):.2f}/10")
+            print(f"    最小分: {stats.get('score_min', 0):.2f}/10")
+            print(f"    最大分: {stats.get('score_max', 0):.2f}/10")
+            print(f"    样本数: {stats.get('score_count', 0)}")
+            if 'score_std_dev' in stats:
+                print(f"    标准差: {stats.get('score_std_dev', 0):.2f}")
+
+        # 打印该字段组的总平均分
+        overall_avg = summary.get_metrics_score_overall_average(field_key)
+        print(f"\n  🎯 该字段组总平均分: {overall_avg:.2f}/10")
+
+        # 打印该字段组的指标排名（从高到低）
+        metrics_summary = summary.get_metrics_score_summary(field_key)
+        sorted_metrics = sorted(metrics_summary.items(), key=lambda x: x[1], reverse=True)
+
+        print(f"\n  📈 指标排名（从高到低）:")
+        for i, (metric_name, avg_score) in enumerate(sorted_metrics, 1):
+            display_name = metric_name.replace("LLMRAG", "")
+            print(f"    {i}. {display_name}: {avg_score:.2f}/10")
+
+    # 如果有多个字段组，打印总体统计
+    if len(summary.metrics_score_stats) > 1:
+        print("\n" + "=" * 80)
+        print("🌍 所有字段组总体统计")
+        print("=" * 80)
+        for field_key in summary.metrics_score_stats.keys():
+            overall_avg = summary.get_metrics_score_overall_average(field_key)
+            print(f"  {field_key}: {overall_avg:.2f}/10")
+
+    print("\n" + "=" * 80)
 
 
 def run_rag_evaluation():

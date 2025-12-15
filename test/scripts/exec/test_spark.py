@@ -48,32 +48,33 @@ class TestSparkExecutor:
             acc = SparkExecutor._aggregate_eval_details(acc, item)
 
         # 验证结果
-        assert 'LLMRAGFaithfulness' in acc['metric_scores']
-        assert len(acc['metric_scores']['LLMRAGFaithfulness']) == 2
-        assert acc['metric_scores']['LLMRAGFaithfulness'] == [9.5, 8.3]
+        assert 'field1' in acc['metric_scores']
+        assert 'LLMRAGFaithfulness' in acc['metric_scores']['field1']
+        assert len(acc['metric_scores']['field1']['LLMRAGFaithfulness']) == 2
+        assert acc['metric_scores']['field1']['LLMRAGFaithfulness'] == [9.5, 8.3]
         assert 'field1' in acc['label_counts']
         assert acc['label_counts']['field1']['good'] == 2
 
     def test_merge_eval_details_with_scores(self):
         """测试合并函数正确合并多个累加器的分数"""
-        # 模拟两个 partition 的累加器
+        # 模拟两个 partition 的累加器（按 field_key 分组）
         acc1 = {
             'label_counts': {'field1': {'good': 2}},
-            'metric_scores': {'LLMRAGFaithfulness': [9.5, 8.3]}
+            'metric_scores': {'field1': {'LLMRAGFaithfulness': [9.5, 8.3]}}
         }
         acc2 = {
             'label_counts': {'field1': {'good': 1, 'bad': 1}},
-            'metric_scores': {'LLMRAGFaithfulness': [7.8], 'LLMRAGAnswerRelevancy': [6.5]}
+            'metric_scores': {'field1': {'LLMRAGFaithfulness': [7.8], 'LLMRAGAnswerRelevancy': [6.5]}}
         }
 
         # 执行合并（使用 SparkExecutor 的静态方法）
         result = SparkExecutor._merge_eval_details(acc1, acc2)
 
         # 验证 metric scores 合并正确
-        assert len(result['metric_scores']['LLMRAGFaithfulness']) == 3
-        assert result['metric_scores']['LLMRAGFaithfulness'] == [9.5, 8.3, 7.8]
-        assert 'LLMRAGAnswerRelevancy' in result['metric_scores']
-        assert result['metric_scores']['LLMRAGAnswerRelevancy'] == [6.5]
+        assert len(result['metric_scores']['field1']['LLMRAGFaithfulness']) == 3
+        assert result['metric_scores']['field1']['LLMRAGFaithfulness'] == [9.5, 8.3, 7.8]
+        assert 'LLMRAGAnswerRelevancy' in result['metric_scores']['field1']
+        assert result['metric_scores']['field1']['LLMRAGAnswerRelevancy'] == [6.5]
 
         # 验证 label counts 合并正确
         assert result['label_counts']['field1']['good'] == 3
@@ -112,25 +113,27 @@ class TestSparkExecutor:
             final_result = SparkExecutor._merge_eval_details(final_result, partition_result)
 
         # 验证聚合结果
-        assert 'M1' in final_result['metric_scores']
-        assert 'M2' in final_result['metric_scores']
-        assert len(final_result['metric_scores']['M1']) == 3
-        assert len(final_result['metric_scores']['M2']) == 3
+        assert 'field1' in final_result['metric_scores']
+        assert 'M1' in final_result['metric_scores']['field1']
+        assert 'M2' in final_result['metric_scores']['field1']
+        assert len(final_result['metric_scores']['field1']['M1']) == 3
+        assert len(final_result['metric_scores']['field1']['M2']) == 3
 
         # Step 3: 将结果添加到 summary
         summary = SummaryModel(task_name="test_full", total=6)
-        for metric_name, scores in final_result['metric_scores'].items():
-            for score in scores:
-                summary.add_metric_score(metric_name, score)
+        for field_key, metrics in final_result['metric_scores'].items():
+            for metric_name, scores in metrics.items():
+                for score in scores:
+                    summary.add_metric_score(field_key, metric_name, score)
         summary.calculate_metrics_score_averages()
 
         # 验证最终结果
         result = summary.to_dict()
         assert 'metrics_score' in result
-        assert result['metrics_score']['stats']['M1']['score_count'] == 3
-        assert result['metrics_score']['stats']['M2']['score_count'] == 3
-        assert result['metrics_score']['stats']['M1']['score_average'] == 8.93
-        assert result['metrics_score']['stats']['M2']['score_average'] == 7.37
+        assert result['metrics_score']['field1']['stats']['M1']['score_count'] == 3
+        assert result['metrics_score']['field1']['stats']['M2']['score_count'] == 3
+        assert result['metrics_score']['field1']['stats']['M1']['score_average'] == 8.93
+        assert result['metrics_score']['field1']['stats']['M2']['score_average'] == 7.37
 
     def test_spark_executor_summarize_with_mock_data(self):
         """测试 SparkExecutor.summarize 方法（使用 mock 数据）"""
@@ -203,7 +206,7 @@ class TestSparkExecutor:
         assert 'metrics_score' in result_dict
 
         # 验证 LLMRAGFaithfulness 的统计
-        stats = result_dict['metrics_score']['stats']['LLMRAGFaithfulness']
+        stats = result_dict['metrics_score']['field1']['stats']['LLMRAGFaithfulness']
         assert stats['score_count'] == 2
         assert stats['score_average'] == 8.9  # (9.5 + 8.3) / 2
         assert stats['score_min'] == 8.3
@@ -268,20 +271,20 @@ class TestSparkExecutor:
         # 验证结果
         result_dict = result.to_dict()
         assert 'metrics_score' in result_dict
-        assert 'LLMRAGFaithfulness' in result_dict['metrics_score']['stats']
-        assert 'LLMRAGAnswerRelevancy' in result_dict['metrics_score']['stats']
+        assert 'LLMRAGFaithfulness' in result_dict['metrics_score']['field1']['stats']
+        assert 'LLMRAGAnswerRelevancy' in result_dict['metrics_score']['field1']['stats']
 
         # 验证各指标的统计
-        faith_stats = result_dict['metrics_score']['stats']['LLMRAGFaithfulness']
+        faith_stats = result_dict['metrics_score']['field1']['stats']['LLMRAGFaithfulness']
         assert faith_stats['score_count'] == 2
         assert faith_stats['score_average'] == 8.9
 
-        relevancy_stats = result_dict['metrics_score']['stats']['LLMRAGAnswerRelevancy']
+        relevancy_stats = result_dict['metrics_score']['field1']['stats']['LLMRAGAnswerRelevancy']
         assert relevancy_stats['score_count'] == 2
         assert relevancy_stats['score_average'] == 7.0  # (7.8 + 6.2) / 2
 
         # 验证 overall_average
-        assert result_dict['metrics_score']['overall_average'] == 7.95  # (8.9 + 7.0) / 2
+        assert result_dict['metrics_score']['field1']['overall_average'] == 7.95  # (8.9 + 7.0) / 2
 
     def test_spark_executor_summarize_empty_data(self):
         """测试 SparkExecutor.summarize 处理空数据"""

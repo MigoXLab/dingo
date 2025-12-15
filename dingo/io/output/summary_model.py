@@ -1,4 +1,5 @@
-from typing import Any, Dict, List
+import statistics
+from typing import Any, Dict
 
 from pydantic import BaseModel, Field
 
@@ -30,41 +31,38 @@ class SummaryModel(BaseModel):
             metric_name: 指标名称（如 LLMRAGFaithfulness）
             score: 分数值
         """
-        if field_key not in self.metrics_score_stats:
-            self.metrics_score_stats[field_key] = {}
-
-        if metric_name not in self.metrics_score_stats[field_key]:
-            self.metrics_score_stats[field_key][metric_name] = {
+        metric_stats = self.metrics_score_stats.setdefault(field_key, {}).setdefault(
+            metric_name,
+            {
                 'scores': [],
                 'score_average': 0.0,
                 'score_count': 0,
                 'score_min': None,
                 'score_max': None
             }
+        )
 
-        self.metrics_score_stats[field_key][metric_name]['scores'].append(score)
-        self.metrics_score_stats[field_key][metric_name]['score_count'] += 1
+        metric_stats['scores'].append(score)
+        metric_stats['score_count'] += 1
 
     def calculate_metrics_score_averages(self):
         """
         计算所有字段和指标分数的平均值、最小值、最大值、标准差
 
-        注意：为保证精度，先计算未四舍五入的平均值用于方差计算，
-        最后再对平均值和标准差进行四舍五入
+        使用 statistics 模块进行统计计算，提高代码可读性和健壮性
         """
         for field_key, metrics in self.metrics_score_stats.items():
             for metric_name, stats in metrics.items():
                 scores = stats['scores']
                 if scores:
-                    # 先计算未四舍五入的平均值（用于方差计算）
-                    mean = sum(scores) / len(scores)
+                    # 使用 statistics 模块进行计算
+                    mean = statistics.mean(scores)
                     stats['score_average'] = round(mean, 2)
                     stats['score_min'] = round(min(scores), 2)
                     stats['score_max'] = round(max(scores), 2)
-                    # 计算标准差（使用未四舍五入的 mean）
+                    # 计算标准差
                     if len(scores) > 1:
-                        variance = sum((x - mean) ** 2 for x in scores) / len(scores)
-                        stats['score_std_dev'] = round(variance ** 0.5, 2)
+                        stats['score_std_dev'] = round(statistics.pstdev(scores), 2)
                     # 清理scores列表以减少存储空间（保留统计信息即可）
                     del stats['scores']
 

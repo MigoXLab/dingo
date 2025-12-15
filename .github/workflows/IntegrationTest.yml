@@ -62,4 +62,4 @@ jobs:
         python -m dingo.run.cli --input .github/env/custom_config_rule.json
     - name: Run unit tests
       run: |
-        pytest test/scripts --ignore=test/scripts/data --ignore=test/scripts/model/llm/test_llm_html_extract_compare_v2.py --ignore=test/scripts/model/llm/test_rag_metrics.py
+        pytest test/scripts --ignore=test/scripts/data

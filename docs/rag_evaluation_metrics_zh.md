@@ -27,7 +27,7 @@ python examples/rag/dataset_rag_eval_baseline.py
 python examples/rag/sdk_rag_eval.py
 
 # 模拟RAG系统并评估
-python examples/rag/eval_with_mock_rag.py
+python examples/rag/e2e_RAG_eval_with_mockRAG_fiqa.py
 ```
 
 ### 2. SDK方式 - 单个评估

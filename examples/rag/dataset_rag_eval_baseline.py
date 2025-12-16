@@ -79,7 +79,7 @@ def print_metrics_summary(summary: SummaryModel):
         metrics_summary = summary.get_metrics_score_summary(field_key)
         sorted_metrics = sorted(metrics_summary.items(), key=lambda x: x[1], reverse=True)
 
-        print(f"\n  📈 指标排名（从高到低）:")
+        print("\n  📈 指标排名（从高到低）:")
         for i, (metric_name, avg_score) in enumerate(sorted_metrics, 1):
             display_name = metric_name.replace("LLMRAG", "")
             print(f"    {i}. {display_name}: {avg_score:.2f}")

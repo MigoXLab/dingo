@@ -20,8 +20,8 @@ dingo 的 RAG 评估指标系统基于 [RAGAS 论文](https://arxiv.org/abs/2309
 ### 1. 运行示例
 
 ```bash
-# Dataset方式 - 批量评估（推荐）
-python examples/rag/dataset_rag_eval_with_all_metrics.py
+# Dataset方式 - 批量评估baseline（推荐）
+python examples/rag/dataset_rag_eval_baseline.py
 
 # SDK方式 - 单个评估
 python examples/rag/sdk_rag_eval.py

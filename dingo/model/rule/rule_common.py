@@ -2313,6 +2313,221 @@ class RuleWordStuck(BaseRule):
         return res
 
 
+@Model.rule_register("QUALITY_BAD_SECURITY", ["default", "pretrain", "benchmark"])
+class RulePIIDetection(BaseRule):
+    """检测文本中的个人身份信息（PII）- 基于 NIST SP 800-122 和中国《个人信息保护法》"""
+
+    # Metadata for documentation generation
+    _metric_info = {
+        "category": "Rule-Based TEXT Quality Metrics",
+        "quality_dimension": "SECURITY",
+        "metric_name": "RulePIIDetection",
+        "description": "Detects Personal Identifiable Information (PII) including ID cards, phone numbers, emails, and credit cards",
+        "standard": "NIST SP 800-122, China Personal Information Protection Law",
+        "reference_url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-122.pdf",
+        "evaluation_results": ""
+    }
+
+    # PII 检测模式配置（按严重程度排序）
+    PII_PATTERNS = {
+        # 1. 中国身份证号（18位）- 高风险
+        "cn_id_card": {
+            "pattern": r"\b[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[0-9Xx]\b",
+            "description": "Chinese ID Card",
+            "description_zh": "中国身份证号",
+            "severity": "high"
+        },
+
+        # 2. 信用卡号（13-19位，支持分隔符）- 高风险
+        "credit_card": {
+            "pattern": r"\b(?:\d{4}[-\s]?){3}\d{3,4}\b",
+            "description": "Credit Card Number",
+            "description_zh": "信用卡号",
+            "severity": "high",
+            "validator": "_validate_luhn"
+        },
+
+        # 3. 中国手机号（11位）- 中风险
+        "cn_phone": {
+            "pattern": r"\b1[3-9]\d{9}\b",
+            "description": "Chinese Mobile Phone",
+            "description_zh": "中国手机号",
+            "severity": "medium"
+        },
+
+        # 4. 电子邮件 - 中风险
+        "email": {
+            "pattern": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
+            "description": "Email Address",
+            "description_zh": "电子邮件",
+            "severity": "medium"
+        },
+
+        # 5. 美国社会安全号（SSN）- 高风险
+        "ssn": {
+            "pattern": r"\b\d{3}-\d{2}-\d{4}\b",
+            "description": "US Social Security Number",
+            "description_zh": "美国社会安全号",
+            "severity": "high"
+        },
+
+        # 6. 中国护照号（E/G/P开头+8位数字）- 高风险
+        "cn_passport": {
+            "pattern": r"\b[EGP]\d{8}\b",
+            "description": "Chinese Passport Number",
+            "description_zh": "中国护照号",
+            "severity": "high"
+        },
+
+        # 7. IP 地址（IPv4）- 低风险
+        "ip_address": {
+            "pattern": r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b",
+            "description": "IP Address",
+            "description_zh": "IP地址",
+            "severity": "low",
+            "validator": "_validate_ip"
+        }
+    }
+
+    @classmethod
+    def _validate_luhn(cls, number: str) -> bool:
+        """Luhn 算法验证信用卡号"""
+        # 移除空格和连字符
+        digits = [int(d) for d in number if d.isdigit()]
+
+        if len(digits) < 13 or len(digits) > 19:
+            return False
+
+        checksum = 0
+        reverse_digits = digits[::-1]
+
+        for i, digit in enumerate(reverse_digits):
+            if i % 2 == 1:
+                digit *= 2
+                if digit > 9:
+                    digit -= 9
+            checksum += digit
+
+        return checksum % 10 == 0
+
+    @classmethod
+    def _validate_ip(cls, ip: str) -> bool:
+        """验证 IP 地址合法性"""
+        parts = ip.split('.')
+        if len(parts) != 4:
+            return False
+
+        try:
+            for part in parts:
+                num = int(part)
+                if num < 0 or num > 255:
+                    return False
+            return True
+        except ValueError:
+            return False
+
+    @classmethod
+    def _mask_pii(cls, value: str, pii_type: str) -> str:
+        """
+        脱敏处理：根据不同类型的 PII 采用不同的脱敏策略
+
+        Args:
+            value: 原始 PII 值
+            pii_type: PII 类型
+
+        Returns:
+            脱敏后的值
+        """
+        if pii_type == "email":
+            # 邮箱：保留用户名首字母和域名
+            if "@" in value:
+                username, domain = value.split("@", 1)
+                if len(username) <= 2:
+                    masked_username = "*" * len(username)
+                else:
+                    masked_username = username[0] + "*" * (len(username) - 1)
+                return f"{masked_username}@{domain}"
+
+        elif pii_type == "cn_phone":
+            # 手机号：保留前3位和后4位
+            if len(value) == 11:
+                return value[:3] + "****" + value[-4:]
+
+        elif pii_type == "cn_id_card":
+            # 身份证：保留前6位和后4位
+            if len(value) == 18:
+                return value[:6] + "********" + value[-4:]
+
+        elif pii_type == "credit_card":
+            # 信用卡：只保留后4位
+            digits = ''.join(c for c in value if c.isdigit())
+            return "*" * (len(digits) - 4) + digits[-4:]
+
+        elif pii_type == "ip_address":
+            # IP：保留第一段和最后一段
+            parts = value.split('.')
+            if len(parts) == 4:
+                return f"{parts[0]}.***.***.{parts[3]}"
+
+        # 默认策略：保留前3位和后4位
+        if len(value) <= 7:
+            return "*" * len(value)
+        return value[:3] + "*" * (len(value) - 7) + value[-4:]
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
+        content = input_data.content
+
+        detected_pii = []
+
+        # 遍历所有 PII 模式进行检测
+        for pii_type, config in cls.PII_PATTERNS.items():
+            pattern = config["pattern"]
+            matches = re.findall(pattern, content)
+
+            for match in matches:
+                # 如果有自定义验证器，进行额外验证
+                if "validator" in config:
+                    validator_method = getattr(cls, config["validator"], None)
+                    if validator_method and not validator_method(match):
+                        continue  # 验证失败，跳过
+
+                # 脱敏处理
+                masked_value = cls._mask_pii(match, pii_type)
+
+                detected_pii.append({
+                    "type": pii_type,
+                    "value": masked_value,
+                    "description": config.get("description_zh", config["description"]),
+                    "severity": config["severity"]
+                })
+
+        # 如果检测到 PII，标记为 QUALITY_BAD
+        if detected_pii:
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+
+            # 构建详细原因，按严重程度分组
+            high_severity = [item for item in detected_pii if item["severity"] == "high"]
+            medium_severity = [item for item in detected_pii if item["severity"] == "medium"]
+            low_severity = [item for item in detected_pii if item["severity"] == "low"]
+
+            reasons = []
+            if high_severity:
+                reasons.append(f"High Risk PII: {', '.join([f'{item["description"]}({item["value"]})' for item in high_severity])}")
+            if medium_severity:
+                reasons.append(f"Medium Risk PII: {', '.join([f'{item["description"]}({item["value"]})' for item in medium_severity])}")
+            if low_severity:
+                reasons.append(f"Low Risk PII: {', '.join([f'{item["description"]}({item["value"]})' for item in low_severity])}")
+
+            res.reason = reasons
+        else:
+            res.label = [QualityLabel.QUALITY_GOOD]
+
+        return res
+
+
 if __name__ == "__main__":
     data = Data(data_id="", prompt="", content="\n \n \n \n hello \n \n ")
     tmp = RuleEnterAndSpace().eval(data)

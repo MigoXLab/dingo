@@ -1,5 +1,11 @@
+import json
+
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
+from dingo.model.response.response_class import ResponseScoreTypeNameReason
+from dingo.utils import log
+from dingo.utils.exception import ConvertJsonError
 
 
 @Model.llm_register("LLMTextQualityV4")
@@ -7,7 +13,7 @@ class LLMTextQualityV4(BaseOpenAI):
     # Metadata for documentation generation
     _metric_info = {
         "category": "Pretrain Text Quality Assessment Metrics",
-        "metric_name": "PromptTextQualityV4",
+        "metric_name": "LLMTextQualityV4",
         "description": "Enhanced text quality evaluation covering completeness (formulas, tables, code), effectiveness (garbled text, spacing), similarity (duplicates), and security (politics, prohibited content)",
         "paper_title": "WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages",
         "paper_url": "https://arxiv.org/abs/2501.14506",
@@ -67,3 +73,34 @@ class LLMTextQualityV4(BaseOpenAI):
     # Input content
 
     """
+
+    @classmethod
+    def process_response(cls, response: str) -> EvalDetail:
+        log.info(response)
+
+        # 清理 markdown 代码块
+        if response.startswith("```json"):
+            response = response[7:]
+        if response.startswith("```"):
+            response = response[3:]
+        if response.endswith("```"):
+            response = response[:-3]
+
+        try:
+            response_json = json.loads(response)
+        except json.JSONDecodeError:
+            raise ConvertJsonError(f"Convert to JSON format failed: {response}")
+
+        # 使用 ResponseScoreTypeNameReason 解析（支持 type 和 name 字段）
+        response_model = ResponseScoreTypeNameReason(**response_json)
+
+        result = EvalDetail(metric=cls.__name__)
+        if response_model.score == 1:
+            result.label = [QualityLabel.QUALITY_GOOD]
+            result.reason = [response_model.reason]
+        else:
+            result.status = True
+            result.label = [f"{response_model.type}.{response_model.name}"]
+            result.reason = [response_model.reason]
+
+        return result

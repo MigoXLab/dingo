@@ -20,11 +20,11 @@ Output:
 - Missing required/nice-to-have skills
 """
 
+import os
+
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
 from dingo.model.llm.llm_keyword_matcher import LLMKeywordMatcher
-
-import os
 
 # Configure LLM (set your API key via environment variable OPENAI_KEY)
 LLMKeywordMatcher.dynamic_config = EvaluatorLLMArgs(

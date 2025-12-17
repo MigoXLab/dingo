@@ -16,7 +16,7 @@ llm_config = {
 
 if __name__ == '__main__':
     input_data = {
-        "input_path": str(Path("test/data/part-6942258d4c42-000000_from_3071.jsonl")),
+        "input_path": str(Path("test/data/test_local_jsonl.jsonl")),
         "dataset": {
             "source": "local",
             "format": "jsonl",

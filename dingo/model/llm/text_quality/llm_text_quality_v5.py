@@ -23,7 +23,7 @@ Evaluate whether this text is suitable for LLM pretraining. Focus on issues that
 
 # Quality Dimensions
 
-## 1. Completeness (结构完整性)
+## 1. Completeness (完整性)
 **Impact**: Broken structures prevent models from learning correct formatting patterns.
 
 **Check for**:
@@ -65,7 +65,7 @@ Evaluate whether this text is suitable for LLM pretraining. Focus on issues that
 
 ---
 
-## 2. Effectiveness (可读性)
+## 2. Effectiveness (有效性)
 **Impact**: Noise prevents models from learning meaningful semantic patterns.
 
 **Check for**:
@@ -87,7 +87,7 @@ Evaluate whether this text is suitable for LLM pretraining. Focus on issues that
 
 ---
 
-## 3. Similarity (重复性)
+## 3. Similarity (相似性)
 **Impact**: Repetitive content reduces training efficiency and causes memorization.
 
 **Check for**:

@@ -166,6 +166,10 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         if cls.embedding_model is None:
             cls.init_embedding_model()
 
+        # 检查生成的问题是否为空列表或全为空字符串
+        if not generated_questions or all(q == "" for q in generated_questions):
+            return np.array([])
+
         # 生成embedding
         # 单个查询的embedding
         question_response = cls.embedding_model['client'].embeddings.create(
@@ -203,10 +207,12 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         cosine_sim = cls.calculate_similarity(original_question, gen_questions)
 
         # 计算最终分数
-        score = cosine_sim.mean() * int(not all_noncommittal)
-
-        # 转换为0-10的分数范围
-        score = float(score * 10)
+        if len(cosine_sim) == 0:
+            score = 0.0
+        else:
+            score = cosine_sim.mean() * int(not all_noncommittal)
+            # 转换为0-10的分数范围
+            score = float(score * 10)
 
         # 收集详细信息
         details = []
@@ -274,7 +280,8 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
                 all_reasons.append(f"生成的问题{detail['question_index']}: {detail['generated_question']}{noncommittal_text}\n与原始问题的相似度: {detail['similarity_score']:.4f}")
             
             reason_text = "\n\n".join(all_reasons)
-            reason_text += f"\n\n平均相似度: {np.mean([d['similarity_score'] for d in details]):.4f}\n是否所有回答都不置可否: {'是' if np.all([d['is_noncommittal'] for d in details]) else '否'}"
+            if details:
+                reason_text += f"\n\n平均相似度: {np.mean([d['similarity_score'] for d in details]):.4f}\n是否所有回答都不置可否: {'是' if np.all([d['is_noncommittal'] for d in details]) else '否'}"
 
             if score >= threshold:
                 result.status = False

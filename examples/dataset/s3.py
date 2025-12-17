@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     input_data = {
         # 数据文件路径
-        "input_path": "chupei/AICC/1217/1w_sample/v2/part-6942258d4c42-000000.jsonl",  # 单个文件路径
+        "input_path": "dingo/test_local_jsonl.jsonl",  # 单个文件路径
         # 或者 "input_path": "path/to/your/data/",  # 目录路径（以 / 结尾会读取目录下所有文件）
 
         # 数据集配置

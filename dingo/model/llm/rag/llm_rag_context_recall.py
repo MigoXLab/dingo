@@ -200,10 +200,10 @@ class LLMRAGContextRecall(BaseOpenAI):
             statement = item.get("statement", "")
             is_attributed = item.get("attributed", 0) == 1
             reason = item.get("reason", "")
-            
+
             status_text = "可归因于上下文" if is_attributed else "不可归因于上下文"
             all_reasons.append(f"陈述{i+1}: {statement}\n状态: {status_text}\n理由: {reason}")
-        
+
         # 构建完整的reason文本
         reason_text = "\n\n".join(all_reasons)
         reason_text += f"\n\n总共有 {total_statements} 个陈述，其中 {attributed_statements} 个可归因于上下文，{total_statements - attributed_statements} 个不可归因于上下文"

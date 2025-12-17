@@ -50,7 +50,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
        - Set "noncommittal" to 1 if the answer is evasive, vague, or ambiguous (e.g., "I don't know", "I'm not sure")
        - Set "noncommittal" to 0 if the answer provides a clear, direct response
     3. Ensure the generated question maintains a consistent language style throughout.
-    
+
     --------EXAMPLES-----------
     Example 1:
     Input: {{
@@ -60,7 +60,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         "question": "Where was Albert Einstein born?",
         "noncommittal": 0
     }}
-    
+
     Example 2:
     Input: {{
         "response": "I don't know about the groundbreaking feature of the smartphone invented in 2023 as I'm unaware of information beyond 2022."
@@ -70,7 +70,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         "noncommittal": 1
     }}
     -----------------------------
-    
+
     Now perform the same with the following input:
     Input: {{
         "response": {0}
@@ -277,7 +277,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
             for detail in details:
                 noncommittal_text = "(不置可否的回答)" if detail["is_noncommittal"] else ""
                 all_reasons.append(f"生成的问题{detail['question_index']}: {detail['generated_question']}{noncommittal_text}\n与原始问题的相似度: {detail['similarity_score']:.4f}")
-            
+
             reason_text = "\n\n".join(all_reasons)
             if details:
                 reason_text += f"\n\n平均相似度: {np.mean([d['similarity_score'] for d in details]):.4f}\n是否所有回答都不置可否: {'是' if np.all([d['is_noncommittal'] for d in details]) else '否'}"

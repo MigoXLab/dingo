@@ -1,7 +1,13 @@
+import os
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
 if __name__ == '__main__':
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
+    OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
+    OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+
     input_data = {
         "input_path": "../../test/data/test_local_jsonl.jsonl",
         "dataset": {
@@ -18,7 +24,7 @@ if __name__ == '__main__':
             {
                 "fields": {"content": "content"},
                 "evals": [
-                    {"name": "LLMTextRepeat", "config": {"model": "deepseek-chat", "key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1"}}
+                    {"name": "LLMTextRepeat", "config": {"model": OPENAI_MODEL, "key": OPENAI_KEY, "api_url": OPENAI_URL}}
                 ]
             }
         ]

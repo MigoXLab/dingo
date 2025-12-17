@@ -1,7 +1,13 @@
+import os
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
 if __name__ == '__main__':
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
+    OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
+    OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+
     input_data = {
         "input_path": "../../test/data/test_meta_rater.jsonl",
         "dataset": {
@@ -18,10 +24,10 @@ if __name__ == '__main__':
             {
                 "fields": {"content": "content"},
                 "evals": [
-                    {"name": "LLMMetaRaterEvaluation", "config": {"key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"}},
-                    {"name": "PromptMetaRaterReadability", "config": {"key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"}},
-                    {"name": "PromptMetaRaterReasoning", "config": {"key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"}},
-                    {"name": "PromptMetaRaterCleanliness", "config": {"key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"}},
+                    {"name": "LLMMetaRaterEvaluation", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL, "model": OPENAI_MODEL}},
+                    {"name": "PromptMetaRaterReadability", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL, "model": OPENAI_MODEL}},
+                    {"name": "PromptMetaRaterReasoning", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL, "model": OPENAI_MODEL}},
+                    {"name": "PromptMetaRaterCleanliness", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL, "model": OPENAI_MODEL}},
                 ]
             }
         ]

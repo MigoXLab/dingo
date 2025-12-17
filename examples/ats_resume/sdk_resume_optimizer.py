@@ -18,15 +18,17 @@ Output:
 - Section-by-section changes
 """
 
+import os
+
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
 from dingo.model.llm.llm_resume_optimizer import LLMResumeOptimizer
 
-# Configure LLM
+# Configure LLM (从环境变量读取)
 LLMResumeOptimizer.dynamic_config = EvaluatorLLMArgs(
-    key='sk-xxx',  # Replace with your API key
-    api_url='https://api.deepseek.com',
-    model='deepseek-chat',
+    key=os.getenv("OPENAI_API_KEY", ""),
+    api_url=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
+    model=os.getenv("OPENAI_MODEL", "deepseek-chat"),
 )
 
 

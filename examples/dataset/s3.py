@@ -11,10 +11,15 @@ if __name__ == '__main__':
     S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "https://s3.amazonaws.com")
     S3_BUCKET = os.getenv("S3_BUCKET", "your_bucket_name")  # qa-huawei
 
-    # LLM 配置信息
-    OPENAI_MODEL = 'deepseek-chat'
-    OPENAI_URL = 'https://api.deepseek.com/v1'
-    OPENAI_KEY = os.getenv("OPENAI_KEY")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
+    OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
+    OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+
+    llm_config = {
+        "model": OPENAI_MODEL,
+        "key": OPENAI_KEY,
+        "api_url": OPENAI_URL,
+    }
 
     input_data = {
         # 数据文件路径
@@ -37,30 +42,22 @@ if __name__ == '__main__':
 
         # 执行器配置
         "executor": {
+            "max_workers": 10,
+            "batch_size": 10,
             "result_save": {
+                "good": True,
                 "bad": True,
-                "good": True
+                "all_labels": True
             }
         },
         "evaluator": [
             {
                 "fields": {"content": "content"},
                 "evals": [
-                    {"name": "RuleColonEnd"}
+                    {"name": "LLMTextQualityV4", "config": llm_config}
                 ]
             }
         ]
-
-        # # 评估器配置
-        # "evaluator": {
-        #     "llm_config": {
-        #         "LLMTextQualityPromptBase": {
-        #             "model": OPENAI_MODEL,
-        #             "key": OPENAI_KEY,
-        #             "api_url": OPENAI_URL,
-        #         }
-        #     }
-        # }
     }
 
     # 创建 InputArgs 实例

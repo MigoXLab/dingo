@@ -1,13 +1,13 @@
 from dingo.model import Model
-from dingo.model.llm.base_openai import BaseOpenAI
+from dingo.model.llm.text_quality.base_text_quality import BaseTextQuality
 
 
 @Model.llm_register("LLMTextQualityV4")
-class LLMTextQualityV4(BaseOpenAI):
+class LLMTextQualityV4(BaseTextQuality):
     # Metadata for documentation generation
     _metric_info = {
         "category": "Pretrain Text Quality Assessment Metrics",
-        "metric_name": "PromptTextQualityV4",
+        "metric_name": "LLMTextQualityV4",
         "description": "Enhanced text quality evaluation covering completeness (formulas, tables, code), effectiveness (garbled text, spacing), similarity (duplicates), and security (politics, prohibited content)",
         "paper_title": "WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages",
         "paper_url": "https://arxiv.org/abs/2501.14506",
@@ -67,3 +67,4 @@ class LLMTextQualityV4(BaseOpenAI):
     # Input content
 
     """
+    # process_response method is now inherited from BaseTextQuality

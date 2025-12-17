@@ -18,7 +18,7 @@ if __name__ == '__main__':
             {
                 "fields": {"content": "content"},
                 "evals": [
-                    {"name": "LLMSecurityPolitics", "config": {"key": "", "api_url": ""}}
+                    {"name": "LLMSecurityPolitics", "config": {"key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"}}
                 ],
             }
         ]

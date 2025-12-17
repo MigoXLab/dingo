@@ -16,6 +16,12 @@ ATS 工具套件用于：
 
 分析简历与 JD 的匹配度，输出加权匹配分数和详细分析报告。
 
+**核心功能：**
+- 语义匹配（不仅是字符串匹配）
+- 同义词自动识别（如 k8s → Kubernetes）
+- 负向约束识别（Excluded 技能警告）
+- 基于证据的匹配（引用简历原文）
+
 **输入字段：**
 | 字段 | 类型 | 必需 | 说明 |
 |------|------|------|------|
@@ -26,8 +32,17 @@ ATS 工具套件用于：
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `score` | float | 匹配分数 (0.0-1.0) |
-| `error_status` | bool | 是否低于阈值 (默认 0.6) |
-| `reason` | List[str] | 详细分析报告 |
+| `status` | bool | 是否低于阈值 (True=低于，False=通过) |
+| `reason` | List[str] | 详细分析报告（文本格式） |
+
+**内置同义词映射 (SYNONYM_MAP)：**
+```
+k8s → Kubernetes, js → JavaScript, ts → TypeScript
+py → Python, tf → TensorFlow, pt → PyTorch
+nodejs → Node.js, postgres → PostgreSQL
+aws → Amazon Web Services, gcp → Google Cloud Platform
+ml → Machine Learning, dl → Deep Learning, nlp → NLP
+```
 
 ### 2. LLMResumeOptimizer（简历优化器）
 
@@ -80,6 +95,8 @@ jd = """
 match_data = Data(data_id='test_1', content=resume, prompt=jd)
 match_result = LLMKeywordMatcher.eval(match_data)
 print(f"匹配分数: {match_result.score}")
+print(f"是否通过: {'通过' if not match_result.status else '未通过'}")
+print(f"分析报告: {match_result.reason[0]}")
 
 # Step 2: 简历优化
 optimize_data = Data(
@@ -89,18 +106,23 @@ optimize_data = Data(
     context='{"match_details": {"missing": [{"skill": "Docker", "importance": "Required"}]}}'
 )
 opt_result = LLMResumeOptimizer.eval(optimize_data)
-print(f"优化结果: {opt_result.reason[0]}")
+print(f"优化摘要: {opt_result.reason[0]}")
+print(f"完整结果: {opt_result.optimized_content}")
 ```
 
 ## 📊 匹配分数计算
 
-### 权重分配
+### 权重公式
+
+```
+score = (Required_Matched × 2 + Nice_Matched × 1) / (Required_Total × 2 + Nice_Total × 1)
+```
 
 | 类别 | 权重 | 说明 |
 |------|------|------|
-| Required (必需) | 0.7 | 缺失会显著降低分数 |
-| Nice-to-have (加分) | 0.3 | 缺失影响较小 |
-| Excluded (排除) | -0.1 | 存在会扣分 |
+| Required (必需) | ×2 | 缺失会显著降低分数 |
+| Nice-to-have (加分) | ×1 | 缺失影响较小 |
+| Excluded (排除) | 不计分 | 仅生成警告，不影响分数 |
 
 ### 阈值配置
 
@@ -156,16 +178,31 @@ Nice-to-have (Missing): Kubernetes
 
 ### ResumeOptimizer 输出
 
-结果同样存放在 `result.reason[0]` 中，JSON 格式：
+**`reason[0]`**: 人类可读的摘要文本
+**`optimized_content`**: 完整的 JSON 优化结果
 
 ```python
 # 访问方式
 result = LLMResumeOptimizer.eval(data)
-import json
-output = json.loads(result.reason[0])
+
+# 摘要文本
+print(result.reason[0])
+
+# 完整 JSON 结果
+opt = result.optimized_content
+print(opt.get('optimization_summary'))
+print(opt.get('section_changes'))
 ```
 
 **`reason[0]` 内容示例：**
+```
+Overall: 优化了专业技能板块
+Keywords Added: Docker
+Associative: Kubernetes (了解概念)
+Sections Modified: 专业技能
+```
+
+**`optimized_content` 结构：**
 ```json
 {
   "optimization_summary": {

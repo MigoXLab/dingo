@@ -64,14 +64,10 @@ data = Data(
 # 执行评估
 result = LLMFactCheckPublic.eval(data)
 
-# 查看结果
-print(f"Factual ratio: {result.score:.2%}")
-print(f"Reason: {result.reason}")
-print("\nDetailed results:")
-for claim in result.raw_resp["results"]:
-    print(f"\nClaim: {claim.claim}")
-    print(f"Answer: {claim.answer}")
-    print(f"Reasoning: {claim.reasoning}")
+# 查看结果 (返回 EvalDetail 对象)
+print(f"是否通过: {'通过' if not result.status else '未通过'}")
+print(f"标签: {result.label}")
+print(f"详细原因: {result.reason[0]}")
 ```
 
 ### 场景二：评估数据集
@@ -143,13 +139,10 @@ rag_data = {
 data = Data(**rag_data)
 result = LLMFactCheckPublic.eval(data)
 
-# 分析结果
-print(f"Factual consistency: {result.score:.2%}")
-for claim in result.raw_resp["results"]:
-    if claim.answer != "true":
-        print(f"\nPotential hallucination:")
-        print(f"Claim: {claim.claim}")
-        print(f"Evidence: {claim.reasoning}")
+# 分析结果 (返回 EvalDetail 对象)
+print(f"是否通过: {'通过' if not result.status else '未通过'}")
+print(f"标签: {result.label}")
+print(f"详细原因: {result.reason[0]}")
 ```
 
 ### 场景四：多轮对话监控
@@ -173,9 +166,10 @@ for turn in conversation:
     data = Data(**turn)
     result = LLMFactCheckPublic.eval(data)
     print(f"\nTurn {turn['data_id']}:")
-    print(f"Factual ratio: {result.score:.2%}")
-    if result.score < LLMFactCheckPublic.threshold:
+    print(f"是否通过: {'通过' if not result.status else '未通过'}")
+    if result.status:
         print("Warning: Potential misinformation detected!")
+        print(f"详情: {result.reason[0]}")
 ```
 
 ## 最佳实践
@@ -241,30 +235,16 @@ dingo/
 ### 评估结果格式
 
 ```python
-ModelRes(
-    score=0.85,  # 事实性得分
-    threshold=0.8,  # 判断阈值
-    reason=["Found 10 claims: 8 true, 1 false, 1 unsure..."],
-    raw_resp={
-        "claims": ["claim1", "claim2", ...],
-        "results": [
-            FactCheckResult(
-                claim="...",
-                answer="true",
-                reasoning="...",
-                supporting_evidence=[...]
-            ),
-            ...
-        ],
-        "metrics": {
-            "factual_ratio": 0.85,
-            "true_count": 8,
-            "false_count": 1,
-            "unsure_count": 1,
-            "total_claims": 10
-        }
-    }
+# LLMFactCheckPublic 返回 EvalDetail 对象
+EvalDetail(
+    metric="LLMFactCheckPublic",           # 指标名称
+    status=False,                           # 是否未通过 (False=通过, True=未通过)
+    label=["QUALITY_GOOD.FACTUALITY_CHECK_PASSED"],  # 质量标签
+    reason=["Found 10 claims: 8 true, 1 false, 1 unsure. Factual ratio: 80.00%"]
 )
+
+# reason[0] 包含完整的评估摘要，格式示例：
+# "Found 10 claims: 8 true, 1 false, 1 unsure. Factual ratio: 80.00%"
 ```
 
 ## 参考资料

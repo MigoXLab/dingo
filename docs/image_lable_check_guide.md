@@ -235,39 +235,28 @@ if __name__ == '__main__':
 #### RuleImageLabelOverlap 输出结果格式：
 
 ```python
-ModelRes(
-    name="RuleImageLabelOverlap" or "GOOD_IMG_LABEL",
-    type="IMG_LABEL_OVERLAP" or "NO_LABEL_OVERLAP",
-    eval_status=True/False,  # 是否存在符合阈值的重叠
-    reason=[json.dumps({
-        "id": data_id,
-        "has_overlap": True/False,
-        "overlap_stats": {
-            "full_overlap_pairs": 完全重叠框数量,
-            "partial_overlap_pairs": 部分重叠框数量,
-            "total_boxes": 总边界框数
-        },
-        "visualization_path": 图像保存路径
-    })]
+EvalDetail(
+    metric="RuleImageLabelOverlap",
+    status=True/False,  # 是否存在符合阈值的重叠
+    label=["LabelOverlap_Fail.RuleImageLabelOverlap"],  # 存在重叠时设置
+    reason=["重叠检测：完全重叠=N，部分重叠=M"]  # 重叠统计信息
 )
 ```
 
 #### RuleImageLabelVisualization 输出结果格式：
 ```python
-ModelRes(
-    name="RuleImageLabelVisualization" or "NO_LABEL_DATA",
-    type="IMG_LABEL_VISUALIZATION" or "NO_IMG_LABEL_VISUALIZATION",
-    eval_status=True/False,  # 是否发生错误
-    reason=[json.dumps({
-        "id": data_id,
-        "visualization_status": "success",
-        "original_image_path": 原始图像路径,
-        "visualization_path": 可视化图像路径,
-        "label_stats": {
-            "total_labels": 总标注数,
-            "top_level_labels": 顶层标注数
-        }
-    })]
+EvalDetail(
+    metric="RuleImageLabelVisualization",
+    status=False,  # 成功时为False
+    label=None,    # 成功时不设置label
+    reason=None    # 成功时不设置reason
+)
+# 错误时：
+EvalDetail(
+    metric="RuleImageLabelVisualization",
+    status=False,
+    label=["LabelVisualization_Fail.错误类型"],  # 如ParseError, InvalidAnnotationType等
+    reason=["错误描述信息"]
 )
 ```
 

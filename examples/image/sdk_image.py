@@ -8,6 +8,10 @@ def image():
         "dataset": {
             "source": "local",
             "format": "image",
+            "field": {
+                "id": "id",
+                "image": "img"
+            }
         },
         "executor": {
             "result_save": {

@@ -88,8 +88,7 @@ data = Data(
 result = RuleHallucinationHHEM.eval(data)
 
 # 查看结果
-print(f"是否检测到幻觉: {result.eval_status}")
-print(f"HHEM 分数: {getattr(result, 'score', 'N/A')}")
+print(f"是否检测到幻觉: {result.status}")  # True=检测到幻觉, False=未检测到
 print(f"详细分析: {result.reason[0]}")
 ```
 
@@ -122,9 +121,8 @@ data = Data(
 result = LLMHallucination.eval(data)
 
 # 查看结果
-print(f"是否检测到幻觉: {result.eval_status}")
-print(f"幻觉分数: {getattr(result, 'score', 'N/A')}")
-print(f"详细原因: {result.reason[0]}")
+print(f"是否检测到幻觉: {result.status}")  # True=检测到幻觉, False=未检测到
+print(f"详细原因: {result.reason[0]}")  # 包含幻觉分数等详细信息
 ```
 
 ## 📊 批量数据集评估
@@ -280,21 +278,30 @@ results = RuleHallucinationHHEM.batch_evaluate(data_list)  # 批量更高效
 
 ## 📊 输出结果解析
 
-### ModelRes 字段说明
+### RuleHallucinationHHEM (EvalDetail) 字段说明
 
 ```python
-result = RuleHallucinationHHEM.eval(data)  # 或 LLMHallucination.eval(data)
+result = RuleHallucinationHHEM.eval(data)
 
-# 标准字段
-result.eval_status      # bool: 是否检测到幻觉
-result.type             # str: 质量类型标识
-result.name             # str: 检测结果名称
+# 标准字段 (EvalDetail)
+result.metric           # str: 指标名称 ("RuleHallucinationHHEM")
+result.status           # bool: 是否检测到幻觉 (True=有幻觉, False=无幻觉)
+result.label            # List[str]: 质量标签 (如 ["QUALITY_BAD_HALLUCINATION.HALLUCINATION_DETECTED"])
 result.reason           # List[str]: 详细分析原因
+```
 
-# 扩展字段
-result.score            # float: 幻觉分数 (0.0-1.0)
-result.verdict_details  # List[str]: 每个上下文的判断详情（GPT 模式）
-result.consistency_scores # List[float]: HHEM 原始一致性分数（HHEM 模式）
+### LLMHallucination (EvalDetail) 字段说明
+
+```python
+result = LLMHallucination.eval(data)
+
+# 标准字段 (EvalDetail)
+result.metric           # str: 指标名称 ("LLMHallucination")
+result.status           # bool: 是否检测到幻觉 (True=有幻觉, False=无幻觉)
+result.label            # List[str]: 质量标签
+                        # 有幻觉: ["QUALITY_BAD_HALLUCINATION.HALLUCINATION_DETECTED"]
+                        # 无幻觉: ["QUALITY_GOOD.NO_HALLUCINATION"]
+result.reason           # List[str]: 详细分析原因（包含幻觉分数信息）
 ```
 
 ### 典型输出示例
@@ -357,7 +364,7 @@ def monitor_rag_response(question, generated_answer, retrieved_docs):
 
     result = RuleHallucinationHHEM.eval(data)  # 本地、快速、免费
 
-    if result.eval_status:
+    if result.status:
         logger.warning(f"检测到幻觉: {result.reason[0]}")
         # 触发人工审核或回答重生成
 ```
@@ -387,7 +394,7 @@ def filter_hallucinated_responses(responses_with_context):
         # 使用本地HHEM进行快速检测
         result = RuleHallucinationHHEM.eval(data)
 
-        if not result.eval_status:  # 无幻觉
+        if not result.status:  # 无幻觉
             clean_responses.append(item)
         else:
             log_quality_issue(item, result.reason[0])
@@ -427,7 +434,7 @@ class RAGWithHallucinationDetection:
         hallucination_result = self.detector.eval(data)
 
         # 4. 根据检测结果决定是否返回答案
-        if hallucination_result.eval_status:
+        if hallucination_result.status:
             self.log_hallucination(question, generated_answer, hallucination_result)
             return {
                 "answer": None,

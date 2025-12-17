@@ -8,15 +8,17 @@ The hallucination detector evaluates whether LLM responses contain factual contr
 against provided reference contexts.
 """
 
+import os
+
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
 from dingo.model.llm.llm_hallucination import LLMHallucination
 
-# Configure LLM
+# Configure LLM (set your API key via environment variable OPENAI_KEY)
 LLMHallucination.dynamic_config = EvaluatorLLMArgs(
-    key='sk-xxx',
-    api_url='https://api.deepseek.com',
-    model='deepseek-chat',
+    key=os.getenv("OPENAI_KEY", "YOUR_API_KEY"),  # Replace with your API key or set OPENAI_KEY env var
+    api_url=os.getenv("OPENAI_URL", "https://api.openai.com/v1"),
+    model=os.getenv("OPENAI_MODEL", "gpt-4o"),
 )
 
 
@@ -34,10 +36,8 @@ def example_1_basic_hallucination_detection():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.eval_status}")
-    # print(f"Type: {result.type}")
-    # print(f"Name: {result.name}")
-    print(f"Type: {result.eval_details}")
+    print(f"Status: {result.status}")  # True = hallucination detected, False = no hallucination
+    print(f"Label: {result.label}")
     print(f"Reason: {result.reason[0]}")
     print(f"Score: {getattr(result, 'score', 'N/A')}")
     print()
@@ -57,10 +57,8 @@ def example_2_no_hallucination():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.eval_status}")
-    # print(f"Type: {result.type}")
-    # print(f"Name: {result.name}")
-    print(f"Type: {result.eval_details}")
+    print(f"Status: {result.status}")  # True = hallucination detected, False = no hallucination
+    print(f"Label: {result.label}")
     print(f"Reason: {result.reason[0]}")
     print(f"Score: {getattr(result, 'score', 'N/A')}")
     print()
@@ -86,14 +84,9 @@ def example_3_multiple_contexts():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.eval_status}")
-    # print(f"Type: {result.type}")
-    # print(f"Name: {result.name}")
-    print(f"Type: {result.eval_details}")
+    print(f"Status: {result.status}")  # True = hallucination detected, False = no hallucination
+    print(f"Label: {result.label}")
     print(f"Score: {getattr(result, 'score', 'N/A')}")
-    # print(f"Verdict Details:")
-    # for detail in getattr(result, 'verdict_details', []):
-    #     print(f"  - {detail}")
     print()
 
 
@@ -118,10 +111,8 @@ def example_4_rag_scenario():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.eval_status}")
-    # print(f"Type: {result.type}")
-    # print(f"Name: {result.name}")
-    print(f"Type: {result.eval_details}")
+    print(f"Status: {result.status}")  # True = hallucination detected, False = no hallucination
+    print(f"Label: {result.label}")
     print(f"Score: {getattr(result, 'score', 'N/A')}")
     print("Detailed Analysis:")
     print(result.reason[0])
@@ -141,16 +132,14 @@ def example_5_missing_context():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.eval_status}")
-    # print(f"Type: {result.type}")
-    # print(f"Name: {result.name}")
-    print(f"Type: {result.eval_details}")
+    print(f"Status: {result.status}")  # True = hallucination detected, False = no hallucination
+    print(f"Label: {result.label}")
     print(f"Reason: {result.reason[0]}")
     print()
 
 
 def example_6_clear_hallucination():
-    """Example 6: Clear hallucination case that triggers eval_status=True"""
+    """Example 6: Clear hallucination case that triggers status=True"""
     print("=== Example 6: Clear Hallucination (Error Triggered) ===")
 
     # Create a case where the response clearly contradicts multiple contexts
@@ -170,17 +159,10 @@ def example_6_clear_hallucination():
 
     result = LLMHallucination.eval(data)
 
-    print(f"Error Status: {result.eval_status}")
-    # print(f"Type: {result.type}")
-    # print(f"Name: {result.name}")
-    print(f"Type: {result.eval_details}")
-    print(f"Score: {getattr(result, 'score', 'N/A')}")
-    print("Detailed Analysis:")
-    print(result.reason[0])
-    # if hasattr(result, 'verdict_details'):
-    #     print("Verdict Details:")
-    #     for detail in result.verdict_details:
-    #         print(f"  - {detail}")
+    print(f"Error Status: {result.status}")
+    print(f"Label: {result.label}")
+    print(f"Detailed Analysis:")
+    print(result.reason[0] if result.reason else "N/A")
     print()
 
 

@@ -81,20 +81,20 @@ data = Data(
 ## 输出结果格式
 
 ```python
-# result 是 ModelRes 对象，包含以下字段：
-result.type          # 判断类型: "TOOL_ONE_BETTER" / "TOOL_EQUAL" / "TOOL_TWO_BETTER"
-result.name          # 判断名称: "Judgement_A" / "Judgement_B" / "Judgement_C"
-result.eval_status  # 错误状态: False (A/B) 或 True (C)
+# result 是 EvalDetail 对象，包含以下字段：
+result.metric        # 指标名称: "LLMHtmlExtractCompareV2"
+result.label         # 判断标签: ["TOOL_ONE_BETTER.Judgement_A"] 等
+result.status        # 错误状态: False (A/B) 或 True (C)
 result.reason        # 推理过程: List[str]
 ```
 
 ### 结果映射
 
-| 判断结果 | `result.type` | `result.name` | `result.eval_status` | 含义 |
-|----------|---------------|---------------|----------------------|------|
-| A | TOOL_ONE_BETTER | Judgement_A | False | 工具A提取的信息更完整 |
-| B | TOOL_EQUAL | Judgement_B | False | 两个工具提取的信息量相同 |
-| C | TOOL_TWO_BETTER | Judgement_C | True | 工具B提取的信息更完整 |
+| 判断结果 | `result.label` | `result.status` | 含义 |
+|----------|----------------|-----------------|------|
+| A | ["TOOL_ONE_BETTER.Judgement_A"] | False | 工具A提取的信息更完整 |
+| B | ["TOOL_EQUAL.Judgement_B"] | False | 两个工具提取的信息量相同 |
+| C | ["TOOL_TWO_BETTER.Judgement_C"] | True | 工具B提取的信息更完整 |
 
 ## 使用示例
 
@@ -125,7 +125,7 @@ data = Data(
 result = evaluator.eval(data)
 
 # 查看结果
-print(f"判断: {result.type}")
+print(f"判断: {result.label}")
 print(f"推理: {result.reason[0]}")
 ```
 

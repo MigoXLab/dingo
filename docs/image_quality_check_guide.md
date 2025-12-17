@@ -432,54 +432,64 @@ if __name__ == '__main__':
 
 ### 10.2 输出结果格式
 
-#### RuleImageValid 输出结果格式：
+所有图像规则返回 `EvalDetail` 对象，包含以下字段：
 
 ```python
-ModelRes(
-    name="RuleImageValid",
-    type="QUALITY_BAD_IMG_EFFECTIVENESS",
-    eval_status=True/False,  # 是否为无效图像
-    reason=["Image is not valid: all white or black"]  # 错误原因
+EvalDetail(
+    metric="RuleImageValid",    # 指标名称
+    status=True/False,          # 是否未通过 (True=未通过, False=通过)
+    label=["QUALITY_BAD_IMG_EFFECTIVENESS.RuleImageValid"],  # 质量标签
+    reason=["Image is not valid: all white or black"]  # 详细原因
 )
 ```
 
-#### RuleImageSizeValid 输出结果格式：
+#### RuleImageValid 输出结果示例：
 ```python
-ModelRes(
-    name="RuleImageSizeValid",
-    type="QUALITY_BAD_IMG_EFFECTIVENESS",
-    eval_status=True/False,  # 图像尺寸是否无效
-    reason=["Image size is not valid, the ratio of width to height: 比值"]  # 错误原因
+EvalDetail(
+    metric="RuleImageValid",
+    status=True,  # 是否为无效图像
+    label=["QUALITY_BAD_IMG_EFFECTIVENESS.RuleImageValid"],
+    reason=["Image is not valid: all white or black"]
 )
 ```
 
-#### RuleImageQuality 输出结果格式：
+#### RuleImageSizeValid 输出结果示例：
 ```python
-ModelRes(
-    name="RuleImageQuality",
-    type="QUALITY_BAD_IMG_EFFECTIVENESS",
-    eval_status=True/False,  # 图像质量是否不满足要求
-    reason=["Image quality is not satisfied, ratio: 评分值"]  # 错误原因
+EvalDetail(
+    metric="RuleImageSizeValid",
+    status=True,  # 图像尺寸是否无效
+    label=["QUALITY_BAD_IMG_EFFECTIVENESS.RuleImageSizeValid"],
+    reason=["Image size is not valid, the ratio of width to height: 比值"]
 )
 ```
 
-#### RuleImageRepeat 输出结果格式：
+#### RuleImageQuality 输出结果示例：
 ```python
-ModelRes(
-    name="RuleImageRepeat",
-    type="QUALITY_BAD_IMG_SIMILARITY",
-    eval_status=True/False,  # 是否存在重复图像
+EvalDetail(
+    metric="RuleImageQuality",
+    status=True,  # 图像质量是否不满足要求
+    label=["QUALITY_BAD_IMG_EFFECTIVENESS.RuleImageQuality"],
+    reason=["Image quality is not satisfied, ratio: 评分值"]
+)
+```
+
+#### RuleImageRepeat 输出结果示例：
+```python
+EvalDetail(
+    metric="RuleImageRepeat",
+    status=True,  # 是否存在重复图像
+    label=["QUALITY_BAD_IMG_SIMILARITY.RuleImageRepeat"],
     reason=["图像1 -> [重复图像列表]", ..., {"duplicate_ratio": 重复率}]
 )
 ```
 
-#### RuleImageTextSimilarity 输出结果格式：
+#### RuleImageTextSimilarity 输出结果示例：
 ```python
-ModelRes(
-    name="RuleImageTextSimilarity",
-    type="QUALITY_BAD_IMG_RELEVANCE",
-    eval_status=True/False,  # 图像与文本相似度是否不足
-    reason=["Image quality is not satisfied, ratio: 相似度值"]  # 错误原因
+EvalDetail(
+    metric="RuleImageTextSimilarity",
+    status=True,  # 图像与文本相似度是否不足
+    label=["QUALITY_BAD_IMG_RELEVANCE.RuleImageTextSimilarity"],
+    reason=["Image quality is not satisfied, ratio: 相似度值"]
 )
 ```
 

@@ -18,10 +18,10 @@ if __name__ == '__main__':
             {
                 "fields": {"content": "content"},
                 "evals": [
-                    {"name": "LLMMetaRaterEvaluation", "config": {"key": "", "api_url": ""}},
-                    {"name": "PromptMetaRaterReadability", "config": {"key": "", "api_url": ""}},
-                    {"name": "PromptMetaRaterReasoning", "config": {"key": "", "api_url": ""}},
-                    {"name": "PromptMetaRaterCleanliness", "config": {"key": "", "api_url": ""}},
+                    {"name": "LLMMetaRaterEvaluation", "config": {"key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"}},
+                    {"name": "PromptMetaRaterReadability", "config": {"key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"}},
+                    {"name": "PromptMetaRaterReasoning", "config": {"key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"}},
+                    {"name": "PromptMetaRaterCleanliness", "config": {"key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"}},
                 ]
             }
         ]

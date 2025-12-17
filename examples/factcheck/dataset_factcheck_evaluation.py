@@ -18,7 +18,7 @@ from dingo.model.llm.llm_factcheck_public import LLMFactCheckPublic
 
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = 'https://api.deepseek.com/v1'
-OPENAI_KEY = os.getenv("OPENAI_KEY")
+OPENAI_KEY = 'sk-5b3e85f25d214c3b9c79ea62eab41e35'
 
 
 def evaluate_factuality_jsonl_dataset():
@@ -92,9 +92,8 @@ def evaluate_single_data_example():
     result = evaluator.eval(test_data)
 
     print("\n=== Evaluation Result ===")
-    print(f"Error Status: {result.eval_status}")
-    print(f"Type: {result.type}")
-    print(f"Name: {result.name}")
+    print(f"Error Status: {result.status}")
+    print(f"Label: {result.label}")
     print(f"Reason: {result.reason}")
 
 

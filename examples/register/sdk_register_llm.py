@@ -5,7 +5,7 @@ from dingo.model.llm.base_openai import BaseOpenAI
 
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = 'https://api.deepseek.com/v1'
-OPENAI_KEY = os.getenv("OPENAI_KEY")
+OPENAI_KEY = os.getenv("OPENAI_KEY", "sk-5b3e85f25d214c3b9c79ea62eab41e35")
 
 common_config = {
     "model": OPENAI_MODEL,

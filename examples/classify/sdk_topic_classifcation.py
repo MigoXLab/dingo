@@ -1,10 +1,23 @@
+import os
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+# Configure LLM (set your API key via environment variable OPENAI_KEY)
+LLM_CONFIG = {
+    "key": os.getenv("OPENAI_KEY", "YOUR_API_KEY"),
+    "api_url": os.getenv("OPENAI_URL", "https://api.openai.com/v1"),
+    "model": os.getenv("OPENAI_MODEL", "gpt-4o")
+}
+
 
 def classify_topic():
+    script_dir = Path(__file__).parent
+    data_path = script_dir / "../../test/data/test_sft_jsonl.jsonl"
+
     input_data = {
-        "input_path": "../../test/data/test_sft_jsonl.jsonl",
+        "input_path": str(data_path.resolve()),
         "dataset": {
             "source": "local",
             "format": "jsonl"
@@ -19,7 +32,7 @@ def classify_topic():
             {
                 "fields": {"content": "question"},
                 "evals": [
-                    {"name": "LLMClassifyTopic", "config": {"key": "", "api_url": ""}}
+                    {"name": "LLMClassifyTopic", "config": LLM_CONFIG}
                 ]
             }
         ]

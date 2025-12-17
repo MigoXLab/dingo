@@ -18,7 +18,7 @@ if __name__ == '__main__':
             {
                 "fields": {"content": "content"},
                 "evals": [
-                    {"name": "LLMTextRepeat", "config": {"model": "deepseek-chat", "key": "", "api_url": "https://api.deepseek.com/v1"}}
+                    {"name": "LLMTextRepeat", "config": {"model": "deepseek-chat", "key": "sk-5b3e85f25d214c3b9c79ea62eab41e35", "api_url": "https://api.deepseek.com/v1"}}
                 ]
             }
         ]

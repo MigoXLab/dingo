@@ -13,7 +13,9 @@ class LLMText3H(BaseOpenAI):
     def build_messages(cls, input_data):
         question = input_data.prompt
         response = input_data.content
-        prompt_content = cls.prompt.content % (question, response)
+        # cls.prompt is a string (not a class with .content attribute) in subclasses
+        prompt_template = cls.prompt if isinstance(cls.prompt, str) else getattr(cls.prompt, 'content', cls.prompt)
+        prompt_content = prompt_template % (question, response)
 
         messages = [{"role": "user", "content": prompt_content}]
 
@@ -38,15 +40,25 @@ class LLMText3H(BaseOpenAI):
 
         result = EvalDetail(metric=cls.__name__)
 
+        # Get the quality dimension name from class name (e.g., LLMText3HHelpful -> HELPFUL)
+        # When prompt is a string, we derive the name from the class name instead
+        if hasattr(cls.prompt, '__name__'):
+            quality_name = cls.prompt.__name__[8:].upper()  # e.g., PromptTextHelpful -> HELPFUL
+        else:
+            # Derive from class name: LLMText3HHelpful -> HELPFUL
+            class_name = cls.__name__
+            if class_name.startswith("LLMText3H"):
+                quality_name = class_name[9:].upper()  # LLMText3HHelpful -> HELPFUL
+            else:
+                quality_name = class_name.upper()
+
         # eval_status
         if response_model.score == 1:
-            tmp_name = cls.prompt.__name__[8:].upper()
-            result.label = [f"{QualityLabel.QUALITY_GOOD}.{tmp_name}"]
+            result.label = [f"{QualityLabel.QUALITY_GOOD}.{quality_name}"]
             result.reason = [response_model.reason] if response_model.reason else ["Response meets quality criteria"]
         else:
             result.status = True
-            tmp_name = "NOT_" + cls.prompt.__name__[8:].upper()
-            result.label = [f"QUALITY_BAD.{tmp_name}"]
+            result.label = [f"QUALITY_BAD.NOT_{quality_name}"]
             result.reason = [response_model.reason] if response_model.reason else ["Response fails quality criteria"]
 
         return result

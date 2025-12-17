@@ -18,9 +18,9 @@ from dingo.model.llm.rag.llm_rag_context_relevancy import LLMRAGContextRelevancy
 from dingo.model.llm.rag.llm_rag_faithfulness import LLMRAGFaithfulness
 
 # 配置（从环境变量读取，或直接设置）
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
-OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+OPENAI_MODEL = "deepseek-chat"
+OPENAI_URL = "https://api.deepseek.com"
+OPENAI_KEY = "sk-5b3e85f25d214c3b9c79ea62eab41e35"
 
 
 def test_faithfulness():

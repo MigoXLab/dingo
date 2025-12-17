@@ -24,11 +24,13 @@ from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
 from dingo.model.llm.llm_keyword_matcher import LLMKeywordMatcher
 
-# Configure LLM
+import os
+
+# Configure LLM (set your API key via environment variable OPENAI_KEY)
 LLMKeywordMatcher.dynamic_config = EvaluatorLLMArgs(
-    key='sk-xxx',  # Replace with your API key
-    api_url='https://api.deepseek.com',
-    model='deepseek-chat',
+    key=os.getenv("OPENAI_KEY", "YOUR_API_KEY"),  # Replace with your API key or set OPENAI_KEY env var
+    api_url=os.getenv("OPENAI_URL", "https://api.openai.com/v1"),
+    model=os.getenv("OPENAI_MODEL", "gpt-4o"),
 )
 
 
@@ -74,7 +76,7 @@ def example_1_basic_matching():
     result = LLMKeywordMatcher.eval(data)
 
     print(f"Match Score: {getattr(result, 'score', 'N/A')}")
-    print(f"Error Status: {result.error_status}")
+    print(f"Status: {result.status}")  # True = has issues, False = passed
     print(f"Reason:\n{result.reason[0]}")
     print()
 
@@ -121,7 +123,7 @@ def example_2_english_resume():
     result = LLMKeywordMatcher.eval(data)
 
     print(f"Match Score: {getattr(result, 'score', 'N/A')}")
-    print(f"Error Status: {result.error_status}")
+    print(f"Status: {result.status}")  # True = has issues, False = passed
     print(f"Reason:\n{result.reason[0]}")
     print()
 
@@ -155,7 +157,7 @@ def example_3_low_match():
     result = LLMKeywordMatcher.eval(data)
 
     print(f"Match Score: {getattr(result, 'score', 'N/A')}")
-    print(f"Error Status: {result.error_status}")  # Should be True (low match)
+    print(f"Status: {result.status}")  # True = has issues (low match), False = passed
     print(f"Reason:\n{result.reason[0]}")
     print()
 

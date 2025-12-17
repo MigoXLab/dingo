@@ -6,7 +6,7 @@ from dingo.exec import Executor
 if __name__ == '__main__':
     OPENAI_MODEL = 'deepseek-chat'
     OPENAI_URL = 'https://api.deepseek.com/v1'
-    OPENAI_KEY = os.getenv("OPENAI_KEY")
+    OPENAI_KEY = "sk-5b3e85f25d214c3b9c79ea62eab41e35"
 
     input_data = {
         "input_path": "../../test/data/test_local_jsonl.jsonl",

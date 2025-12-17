@@ -42,34 +42,40 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         "source_frameworks": "Ragas"
     }
 
-    # 问题生成的prompt模板
-    question_generation_prompt = """为给定的答案生成一个问题，并判断该答案是否是非承诺性的。如果答案是非承诺性的，将noncommittal设为1；如果答案是承诺性的，将noncommittal设为0。非承诺性答案是指回避、模糊或模棱两可的回答。例如，"我不知道"或"我不确定"就是非承诺性答案。
+    question_generation_prompt = """Task: Generate a question for the given answer and identify if the answer is noncommittal.
 
- --------EXAMPLES-----------
- 示例1
- 输入: {{
-     "response": "爱因斯坦出生于德国。"
- }}
- 输出: {{
-     "question": "爱因斯坦出生于哪里？",
-     "noncommittal": 0
- }}
+    Instructions:
+    1. Generate a single question that directly corresponds to the provided answer content.
+    2. Determine if the answer is noncommittal:
+       - Set "noncommittal" to 1 if the answer is evasive, vague, or ambiguous (e.g., "I don't know", "I'm not sure")
+       - Set "noncommittal" to 0 if the answer provides a clear, direct response
+    3. Ensure the generated question maintains a consistent language style throughout.
 
- 示例2
- 输入: {{
-     "response": "我不知道2023年发明的智能手机的突破性功能，因为我对2022年以后的信息不了解。"
- }}
- 输出: {{
-     "question": "2023年发明的智能手机的突破性功能是什么？",
-     "noncommittal": 1
- }}
- -----------------------------
+    --------EXAMPLES-----------
+    Example 1:
+    Input: {{
+        "response": "Albert Einstein was born in Germany."
+    }}
+    Output: {{
+        "question": "Where was Albert Einstein born?",
+        "noncommittal": 0
+    }}
 
- 现在对以下输入执行相同的操作。请尝试从不同角度生成问题，使用不同的表述方式，但保持与原答案的相关性。
- 输入: {{
-     "response": {0}
- }}
- 输出: """
+    Example 2:
+    Input: {{
+        "response": "I don't know about the groundbreaking feature of the smartphone invented in 2023 as I'm unaware of information beyond 2022."
+    }}
+    Output: {{
+        "question": "What was the groundbreaking feature of the smartphone invented in 2023?",
+        "noncommittal": 1
+    }}
+    -----------------------------
+
+    Now perform the same with the following input:
+    Input: {{
+        "response": {0}
+    }}
+    Output: """
 
     # 默认的embedding模型
     embedding_model = None
@@ -159,6 +165,10 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         if cls.embedding_model is None:
             cls.init_embedding_model()
 
+        # 检查生成的问题是否为空列表或全为空字符串
+        if not generated_questions or all(q == "" for q in generated_questions):
+            return np.array([])
+
         # 生成embedding
         # 单个查询的embedding
         question_response = cls.embedding_model['client'].embeddings.create(
@@ -179,15 +189,15 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         return np.dot(gen_question_vec, question_vec.T).reshape(-1) / norm
 
     @classmethod
-    def calculate_score(cls, answers: List[Dict[str, Any]], original_question: str) -> float:
-        """计算答案相关性分数"""
+    def calculate_score(cls, answers: List[Dict[str, Any]], original_question: str) -> tuple[float, List[Dict[str, Any]]]:
+        """计算答案相关性分数并收集详细信息"""
         # 提取生成的问题
         gen_questions = [answer.get("question", "") for answer in answers]
 
         # 检查是否所有生成的问题都为空
         if all(q == "" for q in gen_questions):
             log.warning("Invalid response. Expected dictionary with key 'question'")
-            return 0.0
+            return 0.0, []
 
         # 检查是否所有答案都是不置可否的
         all_noncommittal = np.all([answer.get("noncommittal", 0) for answer in answers])
@@ -196,12 +206,25 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         cosine_sim = cls.calculate_similarity(original_question, gen_questions)
 
         # 计算最终分数
-        score = cosine_sim.mean() * int(not all_noncommittal)
+        if len(cosine_sim) == 0:
+            score = 0.0
+        else:
+            score = cosine_sim.mean() * int(not all_noncommittal)
+            # 转换为0-10的分数范围
+            score = float(score * 10)
 
-        # 转换为0-10的分数范围
-        score = float(score * 10)
+        # 收集详细信息
+        details = []
+        for i, (answer, question, sim) in enumerate(zip(answers, gen_questions, cosine_sim)):
+            is_noncommittal = answer.get("noncommittal", 0) == 1
+            details.append({
+                "question_index": i + 1,
+                "generated_question": question,
+                "similarity_score": sim,
+                "is_noncommittal": is_noncommittal
+            })
 
-        return score
+        return score, details
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -230,8 +253,8 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
             # 生成多个相关问题
             generated_questions = cls.generate_multiple_questions(input_data, cls.strictness)
 
-            # 计算相关性分数
-            score = cls.calculate_score(generated_questions, original_question)
+            # 计算相关性分数和详细信息
+            score, details = cls.calculate_score(generated_questions, original_question)
 
             # 构建结果
             result = EvalDetail(metric=cls.__name__)
@@ -249,14 +272,24 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
                 if embedding_model_name:
                     cls.init_embedding_model(embedding_model_name)
 
+            # 构建详细的reason文本
+            all_reasons = []
+            for detail in details:
+                noncommittal_text = "(不置可否的回答)" if detail["is_noncommittal"] else ""
+                all_reasons.append(f"生成的问题{detail['question_index']}: {detail['generated_question']}{noncommittal_text}\n与原始问题的相似度: {detail['similarity_score']:.4f}")
+
+            reason_text = "\n\n".join(all_reasons)
+            if details:
+                reason_text += f"\n\n平均相似度: {np.mean([d['similarity_score'] for d in details]):.4f}\n是否所有回答都不置可否: {'是' if np.all([d['is_noncommittal'] for d in details]) else '否'}"
+
             if score >= threshold:
                 result.status = False
                 result.label = ["QUALITY_GOOD.ANSWER_RELEVANCY_PASS"]
-                result.reason = [f"答案相关性评估通过 (分数: {score:.2f}/10)"]
+                result.reason = [f"答案相关性评估通过 (分数: {score:.2f}/10)\n{reason_text}"]
             else:
                 result.status = True
                 result.label = ["QUALITY_BAD.ANSWER_RELEVANCY_FAIL"]
-                result.reason = [f"答案相关性评估未通过 (分数: {score:.2f}/10)"]
+                result.reason = [f"答案相关性评估未通过 (分数: {score:.2f}/10)\n{reason_text}"]
 
             return result
 

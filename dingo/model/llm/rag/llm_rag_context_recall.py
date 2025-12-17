@@ -194,8 +194,19 @@ class LLMRAGContextRecall(BaseOpenAI):
         else:
             score = (attributed_statements / total_statements) * 10
 
-        # 生成reason
-        reason = f"在 {total_statements} 个陈述中，有 {attributed_statements} 个可以从上下文中归因，{total_statements - attributed_statements} 个不能归因"
+        # 生成详细的reason文本，包含每个陈述的信息
+        all_reasons = []
+        for i, item in enumerate(classifications):
+            statement = item.get("statement", "")
+            is_attributed = item.get("attributed", 0) == 1
+            reason = item.get("reason", "")
+
+            status_text = "可归因于上下文" if is_attributed else "不可归因于上下文"
+            all_reasons.append(f"陈述{i+1}: {statement}\n状态: {status_text}\n理由: {reason}")
+
+        # 构建完整的reason文本
+        reason_text = "\n\n".join(all_reasons)
+        reason_text += f"\n\n总共有 {total_statements} 个陈述，其中 {attributed_statements} 个可归因于上下文，{total_statements - attributed_statements} 个不可归因于上下文"
 
         result = EvalDetail(metric=cls.__name__)
         result.score = score
@@ -208,10 +219,10 @@ class LLMRAGContextRecall(BaseOpenAI):
         if score >= threshold:
             result.status = False
             result.label = ["QUALITY_GOOD.CONTEXT_RECALL_PASS"]
-            result.reason = [f"上下文召回评估通过 (分数: {score:.2f}/10)\n{reason}"]
+            result.reason = [f"上下文召回评估通过 (分数: {score:.2f}/10)\n{reason_text}"]
         else:
             result.status = True
             result.label = ["QUALITY_BAD.CONTEXT_RECALL_FAIL"]
-            result.reason = [f"上下文召回评估未通过 (分数: {score:.2f}/10)\n{reason}"]
+            result.reason = [f"上下文召回评估未通过 (分数: {score:.2f}/10)\n{reason_text}"]
 
         return result

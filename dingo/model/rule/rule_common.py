@@ -2340,7 +2340,7 @@ class RulePIIDetection(BaseRule):
 
         # 2. 信用卡号（13-19位，支持分隔符）- 高风险
         "credit_card": {
-            "pattern": r"\b(?:\d{4}[-\s]?){3}\d{3,4}\b",
+            "pattern": r"\b\d{4}(?:[-\s]?\d{4}){2}[-\s]?\d{1,7}\b",
             "description": "Credit Card Number",
             "description_zh": "信用卡号",
             "severity": "high",
@@ -2427,6 +2427,55 @@ class RulePIIDetection(BaseRule):
             return False
 
     @classmethod
+    def _mask_email(cls, value: str) -> str:
+        """邮箱脱敏：保留用户名首字母和域名"""
+        if "@" in value:
+            username, domain = value.split("@", 1)
+            if len(username) <= 2:
+                masked_username = "*" * len(username)
+            else:
+                masked_username = username[0] + "*" * (len(username) - 1)
+            return f"{masked_username}@{domain}"
+        return cls._mask_default(value)
+
+    @classmethod
+    def _mask_cn_phone(cls, value: str) -> str:
+        """手机号脱敏：保留前3位和后4位"""
+        if len(value) == 11:
+            return value[:3] + "****" + value[-4:]
+        return cls._mask_default(value)
+
+    @classmethod
+    def _mask_cn_id_card(cls, value: str) -> str:
+        """身份证脱敏：保留前6位和后4位"""
+        if len(value) == 18:
+            return value[:6] + "********" + value[-4:]
+        return cls._mask_default(value)
+
+    @classmethod
+    def _mask_credit_card(cls, value: str) -> str:
+        """信用卡脱敏：只保留后4位"""
+        digits = ''.join(c for c in value if c.isdigit())
+        if len(digits) >= 4:
+            return "*" * (len(digits) - 4) + digits[-4:]
+        return "*" * len(digits)
+
+    @classmethod
+    def _mask_ip_address(cls, value: str) -> str:
+        """IP地址脱敏：保留第一段和最后一段"""
+        parts = value.split('.')
+        if len(parts) == 4:
+            return f"{parts[0]}.***.***.{parts[3]}"
+        return cls._mask_default(value)
+
+    @classmethod
+    def _mask_default(cls, value: str) -> str:
+        """默认脱敏策略：保留前3位和后4位"""
+        if len(value) <= 7:
+            return "*" * len(value)
+        return value[:3] + "*" * (len(value) - 7) + value[-4:]
+
+    @classmethod
     def _mask_pii(cls, value: str, pii_type: str) -> str:
         """
         脱敏处理：根据不同类型的 PII 采用不同的脱敏策略
@@ -2438,41 +2487,17 @@ class RulePIIDetection(BaseRule):
         Returns:
             脱敏后的值
         """
-        if pii_type == "email":
-            # 邮箱：保留用户名首字母和域名
-            if "@" in value:
-                username, domain = value.split("@", 1)
-                if len(username) <= 2:
-                    masked_username = "*" * len(username)
-                else:
-                    masked_username = username[0] + "*" * (len(username) - 1)
-                return f"{masked_username}@{domain}"
+        # 使用字典分发策略
+        strategies = {
+            "email": cls._mask_email,
+            "cn_phone": cls._mask_cn_phone,
+            "cn_id_card": cls._mask_cn_id_card,
+            "credit_card": cls._mask_credit_card,
+            "ip_address": cls._mask_ip_address,
+        }
 
-        elif pii_type == "cn_phone":
-            # 手机号：保留前3位和后4位
-            if len(value) == 11:
-                return value[:3] + "****" + value[-4:]
-
-        elif pii_type == "cn_id_card":
-            # 身份证：保留前6位和后4位
-            if len(value) == 18:
-                return value[:6] + "********" + value[-4:]
-
-        elif pii_type == "credit_card":
-            # 信用卡：只保留后4位
-            digits = ''.join(c for c in value if c.isdigit())
-            return "*" * (len(digits) - 4) + digits[-4:]
-
-        elif pii_type == "ip_address":
-            # IP：保留第一段和最后一段
-            parts = value.split('.')
-            if len(parts) == 4:
-                return f"{parts[0]}.***.***.{parts[3]}"
-
-        # 默认策略：保留前3位和后4位
-        if len(value) <= 7:
-            return "*" * len(value)
-        return value[:3] + "*" * (len(value) - 7) + value[-4:]
+        mask_func = strategies.get(pii_type, cls._mask_default)
+        return mask_func(value)
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -2508,18 +2533,23 @@ class RulePIIDetection(BaseRule):
             res.status = True
             res.label = [f"{cls.metric_type}.{cls.__name__}"]
 
-            # 构建详细原因，按严重程度分组
-            high_severity = [item for item in detected_pii if item["severity"] == "high"]
-            medium_severity = [item for item in detected_pii if item["severity"] == "medium"]
-            low_severity = [item for item in detected_pii if item["severity"] == "low"]
+            # 使用 defaultdict 按严重程度分组（一次遍历）
+            from collections import defaultdict
+            pii_by_severity = defaultdict(list)
+            for item in detected_pii:
+                pii_by_severity[item["severity"]].append(item)
 
+            # 构建详细原因
             reasons = []
-            if high_severity:
-                reasons.append(f"High Risk PII: {', '.join([f'{item["description"]}({item["value"]})' for item in high_severity])}")
-            if medium_severity:
-                reasons.append(f"Medium Risk PII: {', '.join([f'{item["description"]}({item["value"]})' for item in medium_severity])}")
-            if low_severity:
-                reasons.append(f"Low Risk PII: {', '.join([f'{item["description"]}({item["value"]})' for item in low_severity])}")
+            severity_labels = {"high": "High Risk PII", "medium": "Medium Risk PII", "low": "Low Risk PII"}
+
+            for severity in ["high", "medium", "low"]:
+                if severity in pii_by_severity:
+                    items = ', '.join([
+                        "{desc}({val})".format(desc=item["description"], val=item["value"])
+                        for item in pii_by_severity[severity]
+                    ])
+                    reasons.append(f"{severity_labels[severity]}: {items}")
 
             res.reason = reasons
         else:

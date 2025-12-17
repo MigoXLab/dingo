@@ -64,13 +64,22 @@ class TestRulePIIDetection:
         assert "@example.com" in str(res.reason)
 
     def test_credit_card_valid(self):
-        """测试有效信用卡号检测（通过 Luhn 验证）"""
+        """测试有效信用卡号检测（通过 Luhn 验证）- 16位"""
         # 4532148803436464 是一个通过 Luhn 验证的测试卡号
         data = Data(data_id="5", content="信用卡号：4532 1488 0343 6464")
         res = RulePIIDetection.eval(data)
         assert res.status is True
         assert res.label == ["QUALITY_BAD_SECURITY.RulePIIDetection"]
         assert "6464" in str(res.reason)
+
+    def test_credit_card_15_digits(self):
+        """测试15位信用卡号检测（Amex）"""
+        # 378282246310005 是一个有效的15位 Amex 测试卡号
+        data = Data(data_id="5b", content="Card: 378282246310005")
+        res = RulePIIDetection.eval(data)
+        assert res.status is True
+        assert res.label == ["QUALITY_BAD_SECURITY.RulePIIDetection"]
+        assert "0005" in str(res.reason)
 
     def test_credit_card_invalid_luhn(self):
         """测试无效信用卡号（不通过 Luhn 验证）"""

@@ -55,9 +55,25 @@
 </p>
 
 
-# Introduction of Dingo
+# Introduction
 
-Dingo is a data quality evaluation tool that helps you automatically detect data quality issues in your datasets. Dingo provides a variety of built-in rules and model evaluation methods, and also supports custom evaluation methods. Dingo supports commonly used text datasets and multimodal datasets, including pre-training datasets, fine-tuning datasets, and evaluation datasets. In addition, Dingo supports multiple usage methods, including local CLI and SDK, making it easy to integrate into various evaluation platforms, such as [OpenCompass](https://github.com/open-compass/opencompass).
+**Dingo is A Comprehensive AI Data, Model and Application Quality Evaluation Tool**, designed for ML practitioners, data engineers, and AI researchers. It helps you systematically assess and improve the quality of training data, fine-tuning datasets, and production AI systems.
+
+## Why Dingo?
+
+🎯 **Production-Grade Quality Checks** - From pre-training datasets to RAG systems, ensure your AI gets high-quality data
+
+🗄️ **Multi-Source Data Integration** - Seamlessly connect to Local files, SQL databases (PostgreSQL/MySQL/SQLite), HuggingFace datasets, and S3 storage
+
+🔍 **Multi-Field Evaluation** - Apply different quality rules to different fields in parallel (e.g., ISBN validation for `isbn`, text quality for `title`)
+
+🤖 **RAG System Assessment** - Comprehensive evaluation of retrieval and generation quality with 5 academic-backed metrics
+
+🧠 **LLM & Rule Hybrid** - Combine fast heuristic rules (30+ built-in) with LLM-based deep assessment
+
+🚀 **Flexible Execution** - Run locally for rapid iteration or scale with Spark for billion-scale datasets
+
+📊 **Rich Reporting** - Detailed quality reports with GUI visualization and field-level insights
 
 ## Architecture Diagram
 
@@ -197,26 +213,87 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 This video demonstrates step-by-step how to use Dingo MCP server with Cursor.
 
 
-# Data Quality Metrics
+# 🎓 Key Concepts for Practitioners
 
-Dingo provides comprehensive data quality assessment through both rule-based and prompt-based evaluation metrics. These metrics cover multiple quality dimensions including effectiveness, completeness, similarity, security, and more.
+## What Makes Dingo Production-Ready?
+
+### 1. **Multi-Field Evaluation Pipeline**
+Apply different quality checks to different fields in a single pass:
+```python
+"evaluator": [
+    {"fields": {"content": "isbn"}, "evals": [{"name": "RuleIsbn"}]},
+    {"fields": {"content": "title"}, "evals": [{"name": "RuleAbnormalChar"}]},
+    {"fields": {"content": "description"}, "evals": [{"name": "LLMTextQualityV5"}]}
+]
+```
+**Why It Matters**: Evaluate structured data (like database tables) without writing separate scripts for each field.
+
+### 2. **Stream Processing for Large Datasets**
+SQL datasources use SQLAlchemy's server-side cursors:
+```python
+# Handles billions of rows without OOM
+for data in dataset.get_data():  # Yields one row at a time
+    result = evaluator.eval(data)
+```
+**Why It Matters**: Process production databases without exporting to intermediate files.
+
+### 3. **Field Isolation in Memory**
+RAG evaluations prevent context bleeding across different field combinations:
+```
+outputs/
+├── user_input,response,retrieved_contexts/  # Faithfulness group
+└── user_input,response/                     # Answer Relevancy group
+```
+**Why It Matters**: Accurate metric calculations when evaluating multiple field combinations.
+
+### 4. **Hybrid Rule-LLM Strategy**
+Combine fast rules (100% coverage) with sampled LLM checks (10% coverage):
+```python
+"evals": [
+    {"name": "RuleAbnormalChar"},        # Fast, runs on all data
+    {"name": "LLMTextQualityV5"}         # Expensive, sample if needed
+]
+```
+**Why It Matters**: Balance cost and coverage for production-scale evaluation.
+
+### 5. **Extensibility Through Registration**
+Clean plugin architecture for custom rules, prompts, and models:
+```python
+@Model.rule_register('QUALITY_BAD_CUSTOM', ['default'])
+class MyCustomRule(BaseRule):
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        # Your logic here
+        return EvalDetail(status=False, label=['QUALITY_GOOD'])
+```
+**Why It Matters**: Adapt to domain-specific requirements without forking the codebase.
+
+---
+
+# 📚 Data Quality Metrics
+
+Dingo provides **70+ evaluation metrics** across multiple dimensions, combining rule-based speed with LLM-based depth.
+
+## Metric Categories
+
+| Category | Examples | Use Case |
+|----------|----------|----------|
+| **Pretrain Text Quality** | Completeness, Effectiveness, Similarity, Security | LLM pre-training data filtering |
+| **SFT Data Quality** | Honest, Helpful, Harmless (3H) | Instruction fine-tuning data |
+| **RAG Evaluation** | Faithfulness, Context Precision, Answer Relevancy | RAG system assessment |
+| **Hallucination Detection** | HHEM-2.1-Open, Factuality Check | Production AI reliability |
+| **Classification** | Topic categorization, Content labeling | Data organization |
+| **Multimodal** | Image-text relevance, VLM quality | Vision-language data |
+| **Security** | PII detection, Perspective API toxicity | Privacy and safety |
 
 📊 **[View Complete Metrics Documentation →](docs/metrics.md)**
+📖 **[RAG Evaluation Guide →](docs/rag_evaluation_metrics_zh.md)**
+🔍 **[Hallucination Detection Guide →](docs/hallucination_guide.md)**
+✅ **[Factuality Assessment Guide →](docs/factcheck_guide.md)**
 
-Our evaluation system includes:
-- **Pretrain Text Quality Assessment Metrics**: Pre-training data quality evaluation using DataMan methodology and enhanced multi-dimensional assessment
-- **SFT Data Assessment Metrics**: Honest, Helpful, Harmless evaluation for supervised fine-tuning data
-- **Classification Metrics**: Topic categorization and content classification
-- **Multimodality Assessment Metrics**: Image classification and relevance evaluation
-- **Rule-Based Quality Metrics**: Automated quality checks using heuristic rules for effectiveness and similarity detection
-- **Factuality Assessment Metrics**: Two-stage factuality evaluation based on GPT-5 System Card
-- etc
+Most metrics are backed by academic research to ensure scientific rigor.
 
-Most metrics are backed by academic sources to ensure objectivity and scientific rigor.
-
-### Using LLM Assessment in Evaluation
-
-To use these assessment prompts in your evaluations, specify them in your configuration:
+## Quick Metric Usage
 
 ```python
 llm_config = {
@@ -224,115 +301,188 @@ llm_config = {
     "key": "YOUR_API_KEY",
     "api_url": "https://api.openai.com/v1/chat/completions"
 }
+
 input_data = {
-    # Other parameters...
     "evaluator": [
         {
             "fields": {"content": "content"},
             "evals": [
-                {"name": "LLMTextRepeat", "config": llm_config}
-            ],
+                {"name": "RuleAbnormalChar"},           # Rule-based (fast)
+                {"name": "LLMTextQualityV5", "config": llm_config}  # LLM-based (deep)
+            ]
         }
     ]
 }
 ```
 
-You can customize these prompts to focus on specific quality dimensions or to adapt to particular domain requirements. When combined with appropriate LLM models, these prompts enable comprehensive evaluation of data quality across multiple dimensions.
-
-### Hallucination Detection & RAG System Evaluation
-
-For detailed guidance on using Dingo's hallucination detection capabilities, including HHEM-2.1-Open local inference and LLM-based evaluation:
-
-📖 **[View Hallucination Detection Guide →](docs/hallucination_guide.md)**
-
-For comprehensive guidance on RAG evaluation metrics including Faithfulness, Context Precision, Answer Relevancy, Context Recall, and Context Relevancy:
-
-📖 **[View RAG Evaluation Metrics Guide →](docs/rag_evaluation_metrics_zh.md)**
-
-### Factuality Assessment
-
-For comprehensive guidance on using Dingo's two-stage factuality evaluation system:
-
-📖 **[View Factuality Assessment Guide →](docs/factcheck_guide.md)**
+**Customization**: All prompts are defined in `dingo/model/llm/` directory (organized by category: `text_quality/`, `rag/`, `hhh/`, etc.). Extend or modify them for domain-specific requirements.
 
 
-# Feature Highlights
+# 🌟 Feature Highlights
 
-## Multi-source & Multi-modal Support
+## 📊 Multi-Source Data Integration
 
-- **Data Sources**: Local files, Hugging Face datasets, S3 storage
-- **Data Types**: Pre-training, fine-tuning, and evaluation datasets
-- **Data Modalities**: Text and image
+**Diverse Data Sources** - Connect to where your data lives
+✅ **Local Files**: JSONL, CSV, TXT, Parquet
+✅ **SQL Databases**: PostgreSQL, MySQL, SQLite, Oracle, SQL Server (with stream processing)
+✅ **Cloud Storage**: S3 and S3-compatible storage
+✅ **ML Platforms**: Direct HuggingFace datasets integration
 
-## Rule-based & Model-based Evaluation
+**Enterprise-Ready SQL Support** - Production database integration
+✅ Memory-efficient streaming for billion-scale datasets
+✅ Connection pooling and automatic resource cleanup
+✅ Complex SQL queries (JOIN, WHERE, aggregations)
+✅ Multiple dialect support with SQLAlchemy
 
-- **Built-in Rules**: 20+ general heuristic evaluation rules
-- **LLM Integration**: OpenAI, Kimi, and local models (e.g., Llama3)
-- **Hallucination Detection**: HHEM-2.1-Open local model and GPT-based evaluation
-- **RAG System Evaluation**: Response consistency and context alignment assessment
-- **Custom Rules**: Easily extend with your own rules and models
-- **Security Evaluation**: Perspective API integration
+**Multi-Field Quality Checks** - Different rules for different fields
+✅ Parallel evaluation pipelines (e.g., ISBN validation + text quality simultaneously)
+✅ Field aliasing and nested field extraction (`user.profile.name`)
+✅ Independent result reports per field
+✅ ETL pipeline architecture for flexible data transformation
 
-## Flexible Usage
+---
 
-- **Interfaces**: CLI and SDK options
-- **Integration**: Easy integration with other platforms
-- **Execution Engines**: Local and Spark
+## 🤖 RAG System Evaluation
 
-## Comprehensive Reporting
+**5 Academic-Backed Metrics** - Based on RAGAS, DeepEval, TruLens research
+✅ **Faithfulness**: Answer-context consistency (hallucination detection)
+✅ **Answer Relevancy**: Answer-query alignment
+✅ **Context Precision**: Retrieval precision
+✅ **Context Recall**: Retrieval recall
+✅ **Context Relevancy**: Context-query relevance
 
-- **Quality Metrics**: 7-dimensional quality assessment
-- **Traceability**: Detailed reports for anomaly tracking
+**Comprehensive Reporting** - Auto-aggregated statistics
+✅ Average, min, max, standard deviation for each metric
+✅ Field-grouped results
+✅ Batch and single evaluation modes
 
-# User Guide
+📖 **[View RAG Evaluation Guide →](docs/rag_evaluation_metrics_zh.md)**
 
-## Custom Rules, Prompts, and Models
+---
 
-If the built-in rules don't meet your requirements, you can create custom ones:
+## 🧠 Hybrid Evaluation System
 
-### Custom Rule Example
+**Rule-Based** - Fast, deterministic, cost-effective
+✅ 30+ built-in rules (text quality, format, PII detection)
+✅ Regex, heuristics, statistical checks
+✅ Custom rule registration
+
+**LLM-Based** - Deep semantic understanding
+✅ OpenAI (GPT-4o, GPT-3.5), DeepSeek, Kimi
+✅ Local models (Llama3, Qwen)
+✅ Vision-Language Models (InternVL, Gemini)
+✅ Custom prompt registration
+
+**Extensible Architecture**
+✅ Plugin-based rule/prompt/model registration
+✅ Clean separation of concerns (agents, tools, orchestration)
+✅ Domain-specific customization
+
+---
+
+## 🚀 Flexible Execution & Integration
+
+**Multiple Interfaces**
+✅ CLI for quick checks
+✅ Python SDK for integration
+✅ MCP (Model Context Protocol) server for IDEs (Cursor, etc.)
+
+**Scalable Execution**
+✅ Local executor for rapid iteration
+✅ Spark executor for distributed processing
+✅ Configurable concurrency and batching
+
+**Data Sources**
+✅ **Local Files**: JSONL, CSV, TXT, Parquet formats
+✅ **Hugging Face**: Direct integration with HF datasets hub
+✅ **S3 Storage**: AWS S3 and S3-compatible storage
+✅ **SQL Databases**: PostgreSQL, MySQL, SQLite, Oracle, SQL Server (stream processing for large-scale data)
+
+**Modalities**
+✅ Text (chat, documents, code)
+✅ Images (with VLM support)
+✅ Multimodal (text + image consistency)
+
+---
+
+## 📈 Rich Reporting & Visualization
+
+**Multi-Level Reports**
+✅ Summary JSON with overall scores
+✅ Field-level breakdown
+✅ Per-rule violation details
+✅ Type and name distribution
+
+**GUI Visualization**
+✅ Built-in web interface
+✅ Interactive data exploration
+✅ Anomaly tracking
+
+**Metric Aggregation**
+✅ Automatic statistics (avg, min, max, std_dev)
+✅ Field-grouped metrics
+✅ Overall quality score
+
+---
+
+# 📖 User Guide
+
+## 🔧 Extensibility
+
+Dingo uses a clean plugin architecture for domain-specific customization:
+
+### Custom Rule Registration
 
 ```python
 from dingo.model import Model
 from dingo.model.rule.base import BaseRule
-from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
 from dingo.io.output.eval_detail import EvalDetail
 
-
-@Model.rule_register('QUALITY_BAD_RELEVANCE', ['default'])
-class MyCustomRule(BaseRule):
-    """Check for custom pattern in text"""
-
-    dynamic_config = EvaluatorRuleArgs(pattern=r'your_pattern_here')
+@Model.rule_register('QUALITY_BAD_CUSTOM', ['default'])
+class DomainSpecificRule(BaseRule):
+    """Check domain-specific patterns"""
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
-        res = EvalDetail()
-        # Your rule implementation here
-        return res
+        text = input_data.content
+
+        # Your custom logic
+        is_valid = your_validation_logic(text)
+
+        return EvalDetail(
+            status=not is_valid,  # False = good, True = bad
+            label=['QUALITY_GOOD' if is_valid else 'QUALITY_BAD_CUSTOM'],
+            reason=["Validation details..."]
+        )
 ```
 
-### Custom LLM Integration
+### Custom LLM/Prompt Registration
 
 ```python
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 
-@Model.llm_register('my_custom_model')
-class MyCustomModel(BaseOpenAI):
-    # Custom implementation here
-    pass
+@Model.llm_register('custom_evaluator')
+class CustomEvaluator(BaseOpenAI):
+    """Custom LLM evaluator with specialized prompts"""
+
+    _metric_info = {
+        "metric_name": "CustomEvaluator",
+        "metric_type": "LLM-Based Quality",
+        "category": "Custom Category"
+    }
+
+    prompt = """Your custom prompt here..."""
 ```
 
-See more examples in:
-- [Register Rules](examples/register/sdk_register_rule.py)
-- [Register Prompts](examples/register/sdk_register_prompt.py)
-- [Register Models](examples/register/sdk_register_llm.py)
+**Examples:**
+- [Custom Rules](examples/register/sdk_register_rule.py)
+- [Custom Models](examples/register/sdk_register_llm.py)
 
-## Execution Engines
+## ⚙️ Execution Modes
 
-### Local Execution
+### Local Executor (Development & Small-Scale)
 
 ```python
 from dingo.config import InputArgs
@@ -342,41 +492,32 @@ input_args = InputArgs(**input_data)
 executor = Executor.exec_map["local"](input_args)
 result = executor.execute()
 
-# Get results
-summary = executor.get_summary()        # Overall evaluation summary
-bad_data = executor.get_bad_info_list() # List of problematic data
-good_data = executor.get_good_info_list() # List of high-quality data
+# Access results
+summary = executor.get_summary()           # Overall metrics
+bad_data = executor.get_bad_info_list()    # Quality issues
+good_data = executor.get_good_info_list()  # High-quality data
 ```
 
-### Spark Execution
+**Best For**: Rapid iteration, debugging, datasets < 100K rows
+
+### Spark Executor (Production & Large-Scale)
 
 ```python
-from dingo.config import InputArgs
-from dingo.exec import Executor
 from pyspark.sql import SparkSession
+from dingo.exec import Executor
 
-# Initialize Spark
 spark = SparkSession.builder.appName("Dingo").getOrCreate()
-spark_rdd = spark.sparkContext.parallelize([...])  # Your data as Data objects
+spark_rdd = spark.sparkContext.parallelize(your_data)
 
-input_data = {
-    "executor": {
-        "result_save": {"bad": True}
-    },
-    "evaluator": [
-        {
-            "fields": {"content": "content"},
-            "evals": [
-                {"name": "RuleColonEnd"},
-                {"name": "RuleSpecialCharacter"}
-            ]
-        }
-    ]
-}
-input_args = InputArgs(**input_data)
-executor = Executor.exec_map["spark"](input_args, spark_session=spark, spark_rdd=spark_rdd)
+executor = Executor.exec_map["spark"](
+    input_args,
+    spark_session=spark,
+    spark_rdd=spark_rdd
+)
 result = executor.execute()
 ```
+
+**Best For**: Production pipelines, distributed processing, datasets > 1M rows
 
 ## Evaluation Reports
 
@@ -388,7 +529,6 @@ After evaluation, Dingo generates:
 Report Description:
 1. **score**: `num_good` / `total`
 2. **type_ratio**: The count of type / total, such as: `QUALITY_BAD_COMPLETENESS` / `total`
-3. **name_ratio**: The count of name / total, such as: `QUALITY_BAD_COMPLETENESS-RuleColonEnd` / `total`
 
 Example summary:
 ```json
@@ -412,16 +552,19 @@ Example summary:
 }
 ```
 
-# Future Plans
+# 🚀 Roadmap & Contributions
 
-- [ ] Richer graphic and text evaluation indicators
-- [ ] Audio and video data modality evaluation
-- [ ] Small model evaluation (fasttext, Qurating)
-- [ ] Data diversity evaluation
+## Future Plans
 
-# Limitations
+- [ ] **Agent-as-a-Judge** - Multi-agent debate patterns for bias reduction and complex reasoning
+- [ ] **SaaS Platform** - Hosted evaluation service with API access and dashboard
+- [ ] **Audio & Video Modalities** - Extend beyond text/image
+- [ ] **Diversity Metrics** - Statistical diversity assessment
+- [ ] **Real-time Monitoring** - Continuous quality checks in production pipelines
 
-The current built-in detection rules and model methods focus on common data quality problems. For specialized evaluation needs, we recommend customizing detection rules.
+## Limitations
+
+The current built-in detection rules and model methods primarily focus on common data quality issues. For special evaluation needs, we recommend customizing detection rules.
 
 # Acknowledgments
 

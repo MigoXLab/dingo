@@ -13,8 +13,8 @@ class LLMText3H(BaseOpenAI):
     def build_messages(cls, input_data):
         question = input_data.prompt
         response = input_data.content
-        # cls.prompt is a string (not a class with .content attribute) in subclasses
-        prompt_template = cls.prompt if isinstance(cls.prompt, str) else getattr(cls.prompt, 'content', cls.prompt)
+        # cls.prompt may be a string or a class with .content attribute
+        prompt_template = getattr(cls.prompt, 'content', cls.prompt)
         prompt_content = prompt_template % (question, response)
 
         messages = [{"role": "user", "content": prompt_content}]
@@ -40,17 +40,15 @@ class LLMText3H(BaseOpenAI):
 
         result = EvalDetail(metric=cls.__name__)
 
-        # Get the quality dimension name from class name (e.g., LLMText3HHelpful -> HELPFUL)
-        # When prompt is a string, we derive the name from the class name instead
-        if hasattr(cls.prompt, '__name__'):
-            quality_name = cls.prompt.__name__[8:].upper()  # e.g., PromptTextHelpful -> HELPFUL
+        # Get the quality dimension name
+        # If prompt has __name__ (e.g., PromptTextHelpful), extract from it; otherwise from class name
+        prompt_name = getattr(cls.prompt, '__name__', None)
+        if prompt_name:
+            quality_name = prompt_name[8:].upper()  # e.g., PromptTextHelpful -> HELPFUL
+        elif cls.__name__.startswith("LLMText3H"):
+            quality_name = cls.__name__[9:].upper()  # LLMText3HHelpful -> HELPFUL
         else:
-            # Derive from class name: LLMText3HHelpful -> HELPFUL
-            class_name = cls.__name__
-            if class_name.startswith("LLMText3H"):
-                quality_name = class_name[9:].upper()  # LLMText3HHelpful -> HELPFUL
-            else:
-                quality_name = class_name.upper()
+            quality_name = cls.__name__.upper()
 
         # eval_status
         if response_model.score == 1:

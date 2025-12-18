@@ -297,9 +297,9 @@ Dingo provides **70+ evaluation metrics** across multiple dimensions, combining 
 | **Multimodal** | Image-text relevance, VLM quality | Vision-language data |
 | **Security** | PII detection, Perspective API toxicity | Privacy and safety |
 
-📊 **[View Complete Metrics Documentation →](docs/metrics.md)**
-📖 **[RAG Evaluation Guide (中文) →](docs/rag_evaluation_metrics_zh.md)**
-🔍 **[Hallucination Detection Guide (中文) →](docs/hallucination_guide.md)**
+📊 **[View Complete Metrics Documentation →](docs/metrics.md)**  
+📖 **[RAG Evaluation Guide (中文) →](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[Hallucination Detection Guide (中文) →](docs/hallucination_guide.md)**  
 ✅ **[Factuality Assessment Guide (中文) →](docs/factcheck_guide.md)**
 
 Most metrics are backed by academic research to ensure scientific rigor.

@@ -294,9 +294,9 @@ Dingo は **70以上の評価メトリクス**を提供し、複数の次元に�
 | **マルチモーダル** | 画像テキスト関連性、VLM 品質 | ビジュアル言語データ |
 | **セキュリティ** | PII 検出、Perspective API 毒性 | プライバシーと安全性 |
 
-📊 **[完全なメトリクス文書を表示 →](docs/metrics.md)**
-📖 **[RAG 評価ガイド →](docs/rag_evaluation_metrics_zh.md)**
-🔍 **[幻覚検出ガイド →](docs/hallucination_guide.md)**
+📊 **[完全なメトリクス文書を表示 →](docs/metrics.md)**  
+📖 **[RAG 評価ガイド →](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[幻覚検出ガイド →](docs/hallucination_guide.md)**  
 ✅ **[事実性評価ガイド →](docs/factcheck_guide.md)**
 
 大部分のメトリクスは学術研究に裏付けられており、科学的厳密性を確保しています。

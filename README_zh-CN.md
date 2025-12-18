@@ -296,9 +296,9 @@ Dingo 提供 **70+ 评估指标**，跨多个维度，结合基于规则的速�
 | **多模态** | 图文相关性、VLM 质量 | 视觉语言数据 |
 | **安全性** | PII 检测、Perspective API 毒性 | 隐私和安全 |
 
-📊 **[查看完整指标文档 →](docs/metrics.md)**
-📖 **[RAG 评估指南 →](docs/rag_evaluation_metrics_zh.md)**
-🔍 **[幻觉检测指南 →](docs/hallucination_guide.md)**
+📊 **[查看完整指标文档 →](docs/metrics.md)**  
+📖 **[RAG 评估指南 →](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[幻觉检测指南 →](docs/hallucination_guide.md)**  
 ✅ **[事实性评估指南 →](docs/factcheck_guide.md)**
 
 大部分指标都有学术研究支持，以确保科学严谨性。
@@ -392,45 +392,45 @@ input_data = {
 
 ## 🚀 灵活执行与集成
 
-**多种接口**
-✅ CLI 用于快速检查
-✅ Python SDK 用于集成
+**多种接口**  
+✅ CLI 用于快速检查  
+✅ Python SDK 用于集成  
 ✅ MCP（模型上下文协议）服务器用于 IDE（Cursor 等）
 
-**可扩展执行**
-✅ 本地执行器用于快速迭代
-✅ Spark 执行器用于分布式处理
+**可扩展执行**  
+✅ 本地执行器用于快速迭代  
+✅ Spark 执行器用于分布式处理  
 ✅ 可配置并发和批处理
 
-**数据源**
-✅ **本地文件**：JSONL、CSV、TXT、Parquet 格式
-✅ **Hugging Face**：直接与 HF 数据集中心集成
-✅ **S3 存储**：AWS S3 和 S3 兼容存储
+**数据源**  
+✅ **本地文件**：JSONL、CSV、TXT、Parquet 格式  
+✅ **Hugging Face**：直接与 HF 数据集中心集成  
+✅ **S3 存储**：AWS S3 和 S3 兼容存储  
 ✅ **SQL 数据库**：PostgreSQL、MySQL、SQLite、Oracle、SQL Server（大规模数据流式处理）
 
-**模态**
-✅ 文本（聊天、文档、代码）
-✅ 图像（支持 VLM）
+**模态**  
+✅ 文本（聊天、文档、代码）  
+✅ 图像（支持 VLM）  
 ✅ 多模态（文本+图像一致性）
 
 ---
 
 ## 📈 丰富的报告和可视化
 
-**多层级报告**
-✅ 带有总体评分的 Summary JSON
-✅ 字段级分解
-✅ 每条规则违规的详细信息
+**多层级报告**  
+✅ 带有总体评分的 Summary JSON  
+✅ 字段级分解  
+✅ 每条规则违规的详细信息  
 ✅ 类型和名称分布
 
-**GUI 可视化**
-✅ 内置 Web 界面
-✅ 交互式数据探索
+**GUI 可视化**  
+✅ 内置 Web 界面  
+✅ 交互式数据探索  
 ✅ 异常追踪
 
-**指标聚合**
-✅ 自动统计（avg、min、max、std_dev）
-✅ 按字段分组的指标
+**指标聚合**  
+✅ 自动统计（avg、min、max、std_dev）  
+✅ 按字段分组的指标  
 ✅ 总体质量评分
 
 # 📖 用户指南

@@ -1,10 +1,14 @@
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
+
+SCRIPT_DIR = Path(__file__).parent
 
 
 def image_repeat():
     input_data = {
-        "input_path": "../../test/data/test_img_repeat.jsonl",
+        "input_path": str(SCRIPT_DIR.joinpath("../../test/data/test_img_repeat.jsonl").resolve()),
         "dataset": {
             "source": "local",
             "format": "jsonl",

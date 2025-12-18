@@ -1,8 +1,12 @@
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+SCRIPT_DIR = Path(__file__).parent
+
 input_data = {
-    'input_path': '../../test/data/compare/WebMainBench_test_1011_dataset_with_results_clean.jsonl',
+    'input_path': str(SCRIPT_DIR.joinpath('../../test/data/compare/WebMainBench_test_1011_dataset_with_results_clean.jsonl').resolve()),
     'dataset': {
         'source': 'local',
         'format': 'jsonl',

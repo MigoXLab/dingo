@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -30,7 +31,7 @@ if __name__ == '__main__':
     from dingo.exec import Executor
 
     input_data = {
-        "input_path": "../../test/data/test_local_jsonl.jsonl",
+        "input_path": str(Path(__file__).parent.joinpath("../../test/data/test_local_jsonl.jsonl").resolve()),
         "dataset": {
             "source": "local",
             "format": "jsonl",

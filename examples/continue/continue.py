@@ -1,10 +1,14 @@
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
+
+SCRIPT_DIR = Path(__file__).parent
 
 
 def exec_first():
     input_data = {
-        "input_path": "../../test/data/test_local_jsonl.jsonl",
+        "input_path": str(SCRIPT_DIR.joinpath("../../test/data/test_local_jsonl.jsonl").resolve()),
         "dataset": {
             "source": "local",
             "format": "jsonl"
@@ -35,7 +39,7 @@ def exec_first():
 
 def exec_second():
     input_data = {
-        "input_path": "../../test/data/test_local_jsonl.jsonl",
+        "input_path": str(SCRIPT_DIR.joinpath("../../test/data/test_local_jsonl.jsonl").resolve()),
         "dataset": {
             "source": "local",
             "format": "jsonl",

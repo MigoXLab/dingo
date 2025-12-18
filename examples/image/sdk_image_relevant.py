@@ -1,10 +1,14 @@
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
+
+SCRIPT_DIR = Path(__file__).parent
 
 
 def image_relevant():
     input_data = {
-        "input_path": "../../test/data/test_img_jsonl.jsonl",
+        "input_path": str(SCRIPT_DIR.joinpath("../../test/data/test_img_jsonl.jsonl").resolve()),
         "output_path": "output/hallucination_evaluation/",
         "dataset": {
             "source": "local",

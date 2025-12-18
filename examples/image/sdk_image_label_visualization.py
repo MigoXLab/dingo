@@ -1,10 +1,14 @@
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
+
+SCRIPT_DIR = Path(__file__).parent
 
 
 def image_label_overlap():
     input_data = {
-        "input_path": "../../test/data/img_label/test_img_label_visualization.jsonl",
+        "input_path": str(SCRIPT_DIR.joinpath("../../test/data/img_label/test_img_label_visualization.jsonl").resolve()),
         "dataset": {
             "source": "local",
             "format": "image",

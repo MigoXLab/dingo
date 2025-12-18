@@ -24,11 +24,13 @@ class CommonPatternDemo(BaseRule):
 
 
 if __name__ == '__main__':
+    from pathlib import Path
+
     from dingo.config import InputArgs
     from dingo.exec import Executor
 
     input_data = {
-        "input_path": "../../test/data/test_local_json.json",
+        "input_path": str(Path(__file__).parent.joinpath("../../test/data/test_local_json.json").resolve()),
         "dataset": {
             "source": "local",
             "format": "json",

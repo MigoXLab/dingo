@@ -262,8 +262,19 @@ outputs/
 class MyCustomRule(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
-        # 你的逻辑
-        return EvalDetail(status=False, label=['QUALITY_GOOD'])
+        # 示例：检查内容是否为空
+        if not input_data.content:
+            return EvalDetail(
+                metric=cls.__name__,
+                status=True,  # 发现问题
+                label=[f'{cls.metric_type}.{cls.__name__}'],
+                reason=["内容为空"]
+            )
+        return EvalDetail(
+            metric=cls.__name__,
+            status=False,  # 未发现问题
+            label=['QUALITY_GOOD']
+        )
 ```
 **为什么重要**：适应特定领域需求而无需分叉代码库。
 
@@ -437,22 +448,26 @@ Dingo 提供灵活的扩展机制来满足特定领域需求。
 ```python
 from dingo.model import Model
 from dingo.model.rule.base import BaseRule
-from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
 from dingo.io.output.eval_detail import EvalDetail
 
-
-@Model.rule_register('QUALITY_BAD_RELEVANCE', ['default'])
-class MyCustomRule(BaseRule):
-    """检查文本中的自定义模式"""
-
-    dynamic_config = EvaluatorRuleArgs(pattern=r'your_pattern_here')
+@Model.rule_register('QUALITY_BAD_CUSTOM', ['default'])
+class DomainSpecificRule(BaseRule):
+    """检查特定领域的模式"""
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
-        res = EvalDetail()
-        # 您的规则实现
-        return res
+        text = input_data.content
+
+        # 你的自定义逻辑
+        is_valid = your_validation_logic(text)
+
+        return EvalDetail(
+            metric=cls.__name__,
+            status=not is_valid,  # False = 良好, True = 有问题
+            label=['QUALITY_GOOD' if is_valid else 'QUALITY_BAD_CUSTOM'],
+            reason=["验证详情..."]
+        )
 ```
 
 ### 自定义LLM集成

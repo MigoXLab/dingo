@@ -263,8 +263,19 @@ Clean plugin architecture for custom rules, prompts, and models:
 class MyCustomRule(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
-        # Your logic here
-        return EvalDetail(status=False, label=['QUALITY_GOOD'])
+        # Example: check if content is empty
+        if not input_data.content:
+            return EvalDetail(
+                metric=cls.__name__,
+                status=True,  # Found an issue
+                label=[f'{cls.metric_type}.{cls.__name__}'],
+                reason=["Content is empty"]
+            )
+        return EvalDetail(
+            metric=cls.__name__,
+            status=False,  # No issue found
+            label=['QUALITY_GOOD']
+        )
 ```
 **Why It Matters**: Adapt to domain-specific requirements without forking the codebase.
 
@@ -287,9 +298,9 @@ Dingo provides **70+ evaluation metrics** across multiple dimensions, combining 
 | **Security** | PII detection, Perspective API toxicity | Privacy and safety |
 
 📊 **[View Complete Metrics Documentation →](docs/metrics.md)**
-📖 **[RAG Evaluation Guide →](docs/rag_evaluation_metrics_zh.md)**
-🔍 **[Hallucination Detection Guide →](docs/hallucination_guide.md)**
-✅ **[Factuality Assessment Guide →](docs/factcheck_guide.md)**
+📖 **[RAG Evaluation Guide (中文) →](docs/rag_evaluation_metrics_zh.md)**
+🔍 **[Hallucination Detection Guide (中文) →](docs/hallucination_guide.md)**
+✅ **[Factuality Assessment Guide (中文) →](docs/factcheck_guide.md)**
 
 Most metrics are backed by academic research to ensure scientific rigor.
 
@@ -451,6 +462,7 @@ class DomainSpecificRule(BaseRule):
         is_valid = your_validation_logic(text)
 
         return EvalDetail(
+            metric=cls.__name__,
             status=not is_valid,  # False = good, True = bad
             label=['QUALITY_GOOD' if is_valid else 'QUALITY_BAD_CUSTOM'],
             reason=["Validation details..."]

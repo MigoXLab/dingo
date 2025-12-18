@@ -17,7 +17,7 @@ Pillow>=9.4.0
 prettytable
 pyahocorasick
 nltk
-numpy==1.26.4
+numpy>=1.26.4
 pydantic
 requests
 textstat

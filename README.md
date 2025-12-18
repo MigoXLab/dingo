@@ -297,9 +297,9 @@ Dingo provides **70+ evaluation metrics** across multiple dimensions, combining 
 | **Multimodal** | Image-text relevance, VLM quality | Vision-language data |
 | **Security** | PII detection, Perspective API toxicity | Privacy and safety |
 
-📊 **[View Complete Metrics Documentation →](docs/metrics.md)**
-📖 **[RAG Evaluation Guide (中文) →](docs/rag_evaluation_metrics_zh.md)**
-🔍 **[Hallucination Detection Guide (中文) →](docs/hallucination_guide.md)**
+📊 **[View Complete Metrics Documentation →](docs/metrics.md)**  
+📖 **[RAG Evaluation Guide (中文) →](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[Hallucination Detection Guide (中文) →](docs/hallucination_guide.md)**  
 ✅ **[Factuality Assessment Guide (中文) →](docs/factcheck_guide.md)**
 
 Most metrics are backed by academic research to ensure scientific rigor.
@@ -333,38 +333,38 @@ input_data = {
 
 ## 📊 Multi-Source Data Integration
 
-**Diverse Data Sources** - Connect to where your data lives
-✅ **Local Files**: JSONL, CSV, TXT, Parquet
-✅ **SQL Databases**: PostgreSQL, MySQL, SQLite, Oracle, SQL Server (with stream processing)
-✅ **Cloud Storage**: S3 and S3-compatible storage
+**Diverse Data Sources** - Connect to where your data lives  
+✅ **Local Files**: JSONL, CSV, TXT, Parquet  
+✅ **SQL Databases**: PostgreSQL, MySQL, SQLite, Oracle, SQL Server (with stream processing)  
+✅ **Cloud Storage**: S3 and S3-compatible storage  
 ✅ **ML Platforms**: Direct HuggingFace datasets integration
 
-**Enterprise-Ready SQL Support** - Production database integration
-✅ Memory-efficient streaming for billion-scale datasets
-✅ Connection pooling and automatic resource cleanup
-✅ Complex SQL queries (JOIN, WHERE, aggregations)
+**Enterprise-Ready SQL Support** - Production database integration  
+✅ Memory-efficient streaming for billion-scale datasets  
+✅ Connection pooling and automatic resource cleanup  
+✅ Complex SQL queries (JOIN, WHERE, aggregations)  
 ✅ Multiple dialect support with SQLAlchemy
 
-**Multi-Field Quality Checks** - Different rules for different fields
-✅ Parallel evaluation pipelines (e.g., ISBN validation + text quality simultaneously)
-✅ Field aliasing and nested field extraction (`user.profile.name`)
-✅ Independent result reports per field
+**Multi-Field Quality Checks** - Different rules for different fields  
+✅ Parallel evaluation pipelines (e.g., ISBN validation + text quality simultaneously)  
+✅ Field aliasing and nested field extraction (`user.profile.name`)  
+✅ Independent result reports per field  
 ✅ ETL pipeline architecture for flexible data transformation
 
 ---
 
 ## 🤖 RAG System Evaluation
 
-**5 Academic-Backed Metrics** - Based on RAGAS, DeepEval, TruLens research
-✅ **Faithfulness**: Answer-context consistency (hallucination detection)
-✅ **Answer Relevancy**: Answer-query alignment
-✅ **Context Precision**: Retrieval precision
-✅ **Context Recall**: Retrieval recall
+**5 Academic-Backed Metrics** - Based on RAGAS, DeepEval, TruLens research  
+✅ **Faithfulness**: Answer-context consistency (hallucination detection)  
+✅ **Answer Relevancy**: Answer-query alignment  
+✅ **Context Precision**: Retrieval precision  
+✅ **Context Recall**: Retrieval recall  
 ✅ **Context Relevancy**: Context-query relevance
 
-**Comprehensive Reporting** - Auto-aggregated statistics
-✅ Average, min, max, standard deviation for each metric
-✅ Field-grouped results
+**Comprehensive Reporting** - Auto-aggregated statistics  
+✅ Average, min, max, standard deviation for each metric  
+✅ Field-grouped results  
 ✅ Batch and single evaluation modes
 
 📖 **[View RAG Evaluation Guide →](docs/rag_evaluation_metrics_zh.md)**
@@ -373,65 +373,65 @@ input_data = {
 
 ## 🧠 Hybrid Evaluation System
 
-**Rule-Based** - Fast, deterministic, cost-effective
-✅ 30+ built-in rules (text quality, format, PII detection)
-✅ Regex, heuristics, statistical checks
+**Rule-Based** - Fast, deterministic, cost-effective  
+✅ 30+ built-in rules (text quality, format, PII detection)  
+✅ Regex, heuristics, statistical checks  
 ✅ Custom rule registration
 
-**LLM-Based** - Deep semantic understanding
-✅ OpenAI (GPT-4o, GPT-3.5), DeepSeek, Kimi
-✅ Local models (Llama3, Qwen)
-✅ Vision-Language Models (InternVL, Gemini)
+**LLM-Based** - Deep semantic understanding  
+✅ OpenAI (GPT-4o, GPT-3.5), DeepSeek, Kimi  
+✅ Local models (Llama3, Qwen)  
+✅ Vision-Language Models (InternVL, Gemini)  
 ✅ Custom prompt registration
 
-**Extensible Architecture**
-✅ Plugin-based rule/prompt/model registration
-✅ Clean separation of concerns (agents, tools, orchestration)
+**Extensible Architecture**  
+✅ Plugin-based rule/prompt/model registration  
+✅ Clean separation of concerns (agents, tools, orchestration)  
 ✅ Domain-specific customization
 
 ---
 
 ## 🚀 Flexible Execution & Integration
 
-**Multiple Interfaces**
-✅ CLI for quick checks
-✅ Python SDK for integration
+**Multiple Interfaces**  
+✅ CLI for quick checks  
+✅ Python SDK for integration  
 ✅ MCP (Model Context Protocol) server for IDEs (Cursor, etc.)
 
-**Scalable Execution**
-✅ Local executor for rapid iteration
-✅ Spark executor for distributed processing
+**Scalable Execution**  
+✅ Local executor for rapid iteration  
+✅ Spark executor for distributed processing  
 ✅ Configurable concurrency and batching
 
-**Data Sources**
-✅ **Local Files**: JSONL, CSV, TXT, Parquet formats
-✅ **Hugging Face**: Direct integration with HF datasets hub
-✅ **S3 Storage**: AWS S3 and S3-compatible storage
+**Data Sources**  
+✅ **Local Files**: JSONL, CSV, TXT, Parquet formats  
+✅ **Hugging Face**: Direct integration with HF datasets hub  
+✅ **S3 Storage**: AWS S3 and S3-compatible storage  
 ✅ **SQL Databases**: PostgreSQL, MySQL, SQLite, Oracle, SQL Server (stream processing for large-scale data)
 
-**Modalities**
-✅ Text (chat, documents, code)
-✅ Images (with VLM support)
+**Modalities**  
+✅ Text (chat, documents, code)  
+✅ Images (with VLM support)  
 ✅ Multimodal (text + image consistency)
 
 ---
 
 ## 📈 Rich Reporting & Visualization
 
-**Multi-Level Reports**
-✅ Summary JSON with overall scores
-✅ Field-level breakdown
-✅ Per-rule violation details
+**Multi-Level Reports**  
+✅ Summary JSON with overall scores  
+✅ Field-level breakdown  
+✅ Per-rule violation details  
 ✅ Type and name distribution
 
-**GUI Visualization**
-✅ Built-in web interface
-✅ Interactive data exploration
+**GUI Visualization**  
+✅ Built-in web interface  
+✅ Interactive data exploration  
 ✅ Anomaly tracking
 
-**Metric Aggregation**
-✅ Automatic statistics (avg, min, max, std_dev)
-✅ Field-grouped metrics
+**Metric Aggregation**  
+✅ Automatic statistics (avg, min, max, std_dev)  
+✅ Field-grouped metrics  
 ✅ Overall quality score
 
 ---

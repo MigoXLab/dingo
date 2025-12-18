@@ -5,6 +5,7 @@ repos:
     rev: v5.0.0
     hooks:
     -   id: trailing-whitespace
+        exclude: '^README.*\.md$'
     -   id: end-of-file-fixer
         exclude: 'docs/metrics\.md'
     -   id: check-yaml

@@ -236,9 +236,9 @@ class LLMRAGContextPrecision(BaseOpenAI):
 
                 context_verdicts.append(verdict)
                 all_verdicts.append(verdict)
-                all_reasons.append(f"上下文{i+1}: {'相关' if verdict else '不相关'}\n理由: {reason}")
+                all_reasons.append(f"上下文{i + 1}: {'相关' if verdict else '不相关'}\n理由: {reason}")
             except json.JSONDecodeError:
-                raise ConvertJsonError(f"Convert to JSON format failed for response {i+1}: {response}")
+                raise ConvertJsonError(f"Convert to JSON format failed for response {i + 1}: {response}")
 
         # 计算平均精度
         avg_precision = cls._calculate_average_precision(context_verdicts)
@@ -304,7 +304,7 @@ class LLMRAGContextPrecision(BaseOpenAI):
                 # }
                 res.status = True
                 res.label = ["QUALITY_BAD.REQUEST_FAILED"]
-                res.reason = [f"为上下文{item['context_index']+1}发送请求失败"]
+                res.reason = [f"为上下文{item['context_index'] + 1}发送请求失败"]
                 return res
 
             responses.append(response)

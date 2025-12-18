@@ -17,12 +17,12 @@ def dingo_demo(
         dataset_source, data_format, input_path, max_workers, batch_size,
         fields_data,
         rule_list, llm_list,
-        # rule_config_data, 
+        # rule_config_data,
         llm_config_data
 ):
     if not data_format:
         raise gr.Error('ValueError: data_format can not be empty, please input.')
-    
+
     if not rule_list and not llm_list:
         raise gr.Error('ValueError: rule_list and llm_list can not be empty at the same time.')
 
@@ -53,7 +53,7 @@ def dingo_demo(
             for row in fields_data.values.tolist():
                 if len(row) >= 2 and row[0] and row[1]:  # Both key and value are not empty
                     fields[row[0]] = row[1]
-        
+
         # Parse rule configs from dataframe
         rule_configs = {}
         # if rule_config_data is not None and len(rule_config_data) > 0:
@@ -61,18 +61,18 @@ def dingo_demo(
         #         if len(row) >= 6 and row[0]:  # Rule name exists
         #             rule_name = row[0]
         #             config = {}
-        #             
+        #
         #             # threshold
         #             if row[1] is not None and str(row[1]).strip():
         #                 try:
         #                     config['threshold'] = float(row[1])
         #                 except:
         #                     pass
-        #             
+        #
         #             # pattern
         #             if row[2] and str(row[2]).strip():
         #                 config['pattern'] = str(row[2])
-        #             
+        #
         #             # key_list
         #             if row[3] and str(row[3]).strip():
         #                 try:
@@ -80,7 +80,7 @@ def dingo_demo(
         #                     config['key_list'] = json.loads(val) if val.startswith('[') else [k.strip() for k in val.split(',') if k.strip()]
         #                 except:
         #                     config['key_list'] = [k.strip() for k in str(row[3]).split(',') if k.strip()]
-        #             
+        #
         #             # refer_path
         #             if row[4] and str(row[4]).strip():
         #                 try:
@@ -88,17 +88,17 @@ def dingo_demo(
         #                     config['refer_path'] = json.loads(val) if val.startswith('[') else [p.strip() for p in val.split(',') if p.strip()]
         #                 except:
         #                     config['refer_path'] = [p.strip() for p in str(row[4]).split(',') if p.strip()]
-        #             
+        #
         #             # parameters
         #             if row[5] and str(row[5]).strip():
         #                 try:
         #                     config['parameters'] = json.loads(str(row[5]))
         #                 except:
         #                     pass
-        #             
+        #
         #             if config:
         #                 rule_configs[rule_name] = config
-        
+
         # Parse llm configs from dataframe
         llm_configs = {}
         if llm_config_data is not None and len(llm_config_data) > 0:
@@ -106,46 +106,46 @@ def dingo_demo(
                 if len(row) >= 5 and row[0]:  # LLM name exists
                     llm_name = row[0]
                     config = {}
-                    
+
                     # model
                     if row[1] and str(row[1]).strip():
                         config['model'] = str(row[1])
-                    
+
                     # key
                     if row[2] and str(row[2]).strip():
                         config['key'] = str(row[2])
-                    
+
                     # api_url
                     if row[3] and str(row[3]).strip():
                         config['api_url'] = str(row[3])
-                    
+
                     # parameters
                     if row[4] and str(row[4]).strip():
                         try:
                             config['parameters'] = json.loads(str(row[4]))
-                        except:
+                        except Exception:
                             pass
-                    
+
                     if config:
                         llm_configs[llm_name] = config
-        
+
         # Build evals array
         evals = []
-        
+
         # Add rule evaluators and their configurations
         for rule in rule_list:
             eval_item = {"name": rule}
             if rule in rule_configs:
                 eval_item["config"] = rule_configs[rule]
             evals.append(eval_item)
-        
+
         # Add LLM evaluators and their configurations
         for llm in llm_list:
             eval_item = {"name": llm}
             if llm in llm_configs:
                 eval_item["config"] = llm_configs[llm]
             evals.append(eval_item)
-        
+
         input_data = {
             "input_path": final_input_path,
             "output_path": "" if dataset_source == 'hugging_face' else os.path.dirname(final_input_path),
@@ -212,19 +212,17 @@ def update_rule_list(rule_type_mapping, rule_type):
     )
 
 
-
-
 # Generate configuration dataframes based on selected evaluators
 # def generate_rule_config_dataframe(rule_list):
 #     """Generate rule configuration dataframe based on selected rules"""
 #     if not rule_list:
 #         return gr.update(value=[], visible=False)
-#     
+#
 #     # Create rows for each rule
 #     rows = []
 #     for rule in rule_list:
 #         rows.append([rule, None, "", "", "", ""])
-#     
+#
 #     return gr.update(value=rows, visible=True)
 
 
@@ -232,23 +230,23 @@ def generate_llm_config_dataframe(llm_list):
     """Generate LLM configuration dataframe based on selected LLMs"""
     if not llm_list:
         return gr.update(value=[], visible=False)
-    
+
     # Create rows for each LLM
     rows = []
     for llm in llm_list:
         rows.append([llm, "deepseek-chat", "your-api-key", "https://api.deepseek.com/v1", ""])
-    
+
     return gr.update(value=rows, visible=True)
 
 
 def suggest_fields_dataframe(rule_list, llm_list):
     """Suggest required field mappings based on selected evaluators"""
     suggested_fields = set()
-    
+
     # Fields required by rule evaluators
     rule_type_mapping = get_rule_type_mapping()
     data_column_mapping = get_data_column_mapping()
-    
+
     for rule in rule_list:
         # Find which type this rule belongs to
         for rule_type, rules in rule_type_mapping.items():
@@ -256,18 +254,18 @@ def suggest_fields_dataframe(rule_list, llm_list):
                 if rule_type in data_column_mapping:
                     suggested_fields.update(data_column_mapping[rule_type])
                 break
-    
+
     # Fields required by LLM evaluators
     llm_column_mapping = get_llm_column_mapping()
     for llm in llm_list:
         if llm in llm_column_mapping:
             suggested_fields.update(llm_column_mapping[llm])
-    
+
     # Generate suggested fields rows
     rows = []
     for field in sorted(suggested_fields):
         rows.append([field, field])
-    
+
     return gr.update(value=rows if rows else [["content", "content"]])
 
 
@@ -386,10 +384,10 @@ if __name__ == '__main__':
                         choices=llm_options,
                         label="LLM List"
                     )
-                    
+
                     gr.Markdown("### EvalPipline Configuration")
                     gr.Markdown("Configure field mappings and evaluator parameters based on selected evaluators ([Examples](https://github.com/MigoXLab/dingo/tree/main/examples))")
-                    
+
                     # Field mapping configuration
                     gr.Markdown("**EvalPipline.fields** - Field Mapping")
                     fields_dataframe = gr.Dataframe(
@@ -401,7 +399,7 @@ if __name__ == '__main__':
                         label="Field Mappings (add/remove rows as needed)",
                         interactive=True
                     )
-                    
+
                     # Rule configuration
                     # gr.Markdown("**Rule Config** - EvalPiplineConfig.config for Rules")
                     # rule_config_dataframe = gr.Dataframe(
@@ -414,7 +412,7 @@ if __name__ == '__main__':
                     #     interactive=True,
                     #     visible=False
                     # )
-                    
+
                     # LLM configuration
                     gr.Markdown("**LLM Config** - EvalPiplineConfig.config for LLMs")
                     llm_config_dataframe = gr.Dataframe(
@@ -457,14 +455,14 @@ if __name__ == '__main__':
         #     inputs=rule_list,
         #     outputs=rule_config_dataframe
         # )
-        
+
         # Auto-generate configuration dataframes when llm_list changes
         llm_list.change(
             fn=generate_llm_config_dataframe,
             inputs=llm_list,
             outputs=llm_config_dataframe
         )
-        
+
         # Suggest field mappings when evaluators change
         for comp in [rule_list, llm_list]:
             comp.change(
@@ -480,7 +478,7 @@ if __name__ == '__main__':
                 dataset_source, data_format, input_path, max_workers, batch_size,
                 fields_dataframe,
                 rule_list, llm_list,
-                # rule_config_dataframe, 
+                # rule_config_dataframe,
                 llm_config_dataframe
             ],
             outputs=[summary_output, detail_output]

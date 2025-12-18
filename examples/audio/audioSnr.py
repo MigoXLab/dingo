@@ -6,7 +6,7 @@ from dingo.exec import Executor
 
 if __name__ == '__main__':
     input_data = {
-        "input_path": "../../test/data/test_audio_snr.jsonl",
+        "input_path": str(Path(__file__).parent.joinpath("../../test/data/test_audio_snr.jsonl").resolve()),
         "dataset": {
             "source": "local",
             "format": "jsonl",

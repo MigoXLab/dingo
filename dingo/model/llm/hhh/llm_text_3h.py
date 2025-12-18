@@ -43,10 +43,12 @@ class LLMText3H(BaseOpenAI):
         # Get the quality dimension name
         # If prompt has __name__ (e.g., PromptTextHelpful), extract from it; otherwise from class name
         prompt_name = getattr(cls.prompt, '__name__', None)
-        if prompt_name:
-            quality_name = prompt_name[8:].upper()  # e.g., PromptTextHelpful -> HELPFUL
-        elif cls.__name__.startswith("LLMText3H"):
-            quality_name = cls.__name__[9:].upper()  # LLMText3HHelpful -> HELPFUL
+        prompt_prefix = "PromptText"
+        class_prefix = "LLMText3H"
+        if prompt_name and prompt_name.startswith(prompt_prefix):
+            quality_name = prompt_name[len(prompt_prefix):].upper()  # PromptTextHelpful -> HELPFUL
+        elif cls.__name__.startswith(class_prefix):
+            quality_name = cls.__name__[len(class_prefix):].upper()  # LLMText3HHelpful -> HELPFUL
         else:
             quality_name = cls.__name__.upper()
 

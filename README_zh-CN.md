@@ -332,38 +332,38 @@ input_data = {
 
 ## 📊 多源数据集成
 
-**多样化数据源** - 连接到你的数据所在之处
-✅ **本地文件**：JSONL、CSV、TXT、Parquet
-✅ **SQL 数据库**：PostgreSQL、MySQL、SQLite、Oracle、SQL Server（支持流式处理）
-✅ **云存储**：S3 和 S3 兼容存储
+**多样化数据源** - 连接到你的数据所在之处  
+✅ **本地文件**：JSONL、CSV、TXT、Parquet  
+✅ **SQL 数据库**：PostgreSQL、MySQL、SQLite、Oracle、SQL Server（支持流式处理）  
+✅ **云存储**：S3 和 S3 兼容存储  
 ✅ **ML 平台**：直接集成 HuggingFace 数据集
 
-**企业级 SQL 支持** - 生产数据库集成
-✅ 数十亿级数据集的内存高效流式处理
-✅ 连接池和自动资源清理
-✅ 复杂 SQL 查询（JOIN、WHERE、聚合）
+**企业级 SQL 支持** - 生产数据库集成  
+✅ 数十亿级数据集的内存高效流式处理  
+✅ 连接池和自动资源清理  
+✅ 复杂 SQL 查询（JOIN、WHERE、聚合）  
 ✅ 通过 SQLAlchemy 支持多种方言
 
-**多字段质量检查** - 不同字段使用不同规则
-✅ 并行评估流水线（例如：ISBN 验证 + 文本质量同时进行）
-✅ 字段别名和嵌套字段提取（`user.profile.name`）
-✅ 每个字段独立结果报告
+**多字段质量检查** - 不同字段使用不同规则  
+✅ 并行评估流水线（例如：ISBN 验证 + 文本质量同时进行）  
+✅ 字段别名和嵌套字段提取（`user.profile.name`）  
+✅ 每个字段独立结果报告  
 ✅ 灵活数据转换的 ETL 流水线架构
 
 ---
 
 ## 🤖 RAG 系统评估
 
-**5 个学术支持的指标** - 基于 RAGAS、DeepEval、TruLens 研究
-✅ **忠实度（Faithfulness）**：答案-上下文一致性（幻觉检测）
-✅ **答案相关性（Answer Relevancy）**：答案-查询对齐
-✅ **上下文精度（Context Precision）**：检索精度
-✅ **上下文召回（Context Recall）**：检索召回
+**5 个学术支持的指标** - 基于 RAGAS、DeepEval、TruLens 研究  
+✅ **忠实度（Faithfulness）**：答案-上下文一致性（幻觉检测）  
+✅ **答案相关性（Answer Relevancy）**：答案-查询对齐  
+✅ **上下文精度（Context Precision）**：检索精度  
+✅ **上下文召回（Context Recall）**：检索召回  
 ✅ **上下文相关性（Context Relevancy）**：上下文-查询相关性
 
-**全面报告** - 自动聚合统计
-✅ 每个指标的平均值、最小值、最大值、标准差
-✅ 按字段分组的结果
+**全面报告** - 自动聚合统计  
+✅ 每个指标的平均值、最小值、最大值、标准差  
+✅ 按字段分组的结果  
 ✅ 批量和单次评估模式
 
 📖 **[查看 RAG 评估指南 →](docs/rag_evaluation_metrics_zh.md)**
@@ -372,20 +372,20 @@ input_data = {
 
 ## 🧠 混合评估系统
 
-**基于规则** - 快速、确定性、成本效益高
-✅ 30+ 内置规则（文本质量、格式、PII 检测）
-✅ 正则表达式、启发式、统计检查
+**基于规则** - 快速、确定性、成本效益高  
+✅ 30+ 内置规则（文本质量、格式、PII 检测）  
+✅ 正则表达式、启发式、统计检查  
 ✅ 自定义规则注册
 
-**基于 LLM** - 深度语义理解
-✅ OpenAI（GPT-4o、GPT-3.5）、DeepSeek、Kimi
-✅ 本地模型（Llama3、Qwen）
-✅ 视觉语言模型（InternVL、Gemini）
+**基于 LLM** - 深度语义理解  
+✅ OpenAI（GPT-4o、GPT-3.5）、DeepSeek、Kimi  
+✅ 本地模型（Llama3、Qwen）  
+✅ 视觉语言模型（InternVL、Gemini）  
 ✅ 自定义 prompt 注册
 
-**可扩展架构**
-✅ 基于插件的规则/prompt/模型注册
-✅ 清晰的关注点分离（agents、tools、orchestration）
+**可扩展架构**  
+✅ 基于插件的规则/prompt/模型注册  
+✅ 清晰的关注点分离（agents、tools、orchestration）  
 ✅ 特定领域定制
 
 ---

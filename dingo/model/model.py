@@ -154,21 +154,23 @@ class Model:
         cls.module_loaded = True
 
     @classmethod
-    def set_config_rule(self, rule: BaseRule, rule_config: EvaluatorRuleArgs):
+    def set_config_rule(cls, rule: BaseRule, rule_config: EvaluatorRuleArgs):
         if not rule_config:
             return
         config_default = getattr(rule, 'dynamic_config')
-        for k, v in rule_config:
+        # Iterate over rule_config fields using Pydantic's model_dump()
+        for k, v in rule_config.model_dump().items():
             if v is not None:
                 setattr(config_default, k, v)
         setattr(rule, 'dynamic_config', config_default)
 
     @classmethod
-    def set_config_llm(self, llm: BaseLLM, llm_config: EvaluatorLLMArgs):
+    def set_config_llm(cls, llm: BaseLLM, llm_config: EvaluatorLLMArgs):
         if not llm_config:
             return
         config_default = getattr(llm, 'dynamic_config')
-        for k, v in llm_config:
+        # Iterate over llm_config fields using Pydantic's model_dump()
+        for k, v in llm_config.model_dump().items():
             if v is not None:
                 setattr(config_default, k, v)
         setattr(llm, 'dynamic_config', config_default)

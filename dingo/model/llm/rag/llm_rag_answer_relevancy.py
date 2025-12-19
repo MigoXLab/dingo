@@ -77,24 +77,8 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
     }}
     Output: """
 
-    # 默认的embedding模型
-    embedding_model = None
-
     # 配置参数
     strictness = 3  # 生成的问题数量
-
-    @classmethod
-    def init_embedding_model(cls, model_name: str = "text-embedding-3-large"):
-        """初始化embedding模型"""
-        # 确保LLM客户端已经创建
-        if not hasattr(cls, 'client') or cls.client is None:
-            cls.create_client()
-
-        # 直接使用OpenAI的Embedding API
-        cls.embedding_model = {
-            'model_name': model_name,
-            'client': cls.client
-        }
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
@@ -162,8 +146,14 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
     @classmethod
     def calculate_similarity(cls, question: str, generated_questions: List[str]) -> np.ndarray:
         """计算原始问题与生成问题的相似度"""
+        # 检查 Embedding 模型是否已初始化
         if cls.embedding_model is None:
-            cls.init_embedding_model()
+            raise ValueError(
+                "Embedding model not initialized. Please configure 'embedding_config' in your LLM config with:\n"
+                "  - model: embedding model name (e.g., 'BAAI/bge-m3')\n"
+                "  - api_url: embedding service URL\n"
+                "  - key: API key (optional for local services)"
+            )
 
         # 检查生成的问题是否为空列表或全为空字符串
         if not generated_questions or all(q == "" for q in generated_questions):
@@ -229,9 +219,6 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         """评估答案相关性"""
-        # 初始化embedding模型（如果尚未初始化）
-        if cls.embedding_model is None:
-            cls.init_embedding_model()
         raw_data = getattr(input_data, 'raw_data', {})
         # 提取原始问题
         original_question = input_data.prompt or raw_data.get("question", "")
@@ -245,7 +232,6 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
                     cls.dynamic_config.parameters['temperature'] = 0.7
             else:
                 # 如果没有parameters，创建一个包含temperature的parameters
-                from dingo.config.input_args import EvaluatorLLMArgs
                 current_params = cls.dynamic_config.parameters or {}
                 current_params['temperature'] = 0.7
                 cls.dynamic_config.parameters = current_params
@@ -266,11 +252,6 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
                 threshold = cls.dynamic_config.parameters.get('threshold', 5)
                 # 检查是否有自定义的strictness参数
                 cls.strictness = cls.dynamic_config.parameters.get('strictness', 3)
-
-                # 检查是否有自定义的embedding模型
-                embedding_model_name = cls.dynamic_config.parameters.get('embedding_model', None)
-                if embedding_model_name:
-                    cls.init_embedding_model(embedding_model_name)
 
             # 构建详细的reason文本
             all_reasons = []

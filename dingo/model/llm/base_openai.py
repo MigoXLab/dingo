@@ -16,12 +16,16 @@ from dingo.utils.exception import ConvertJsonError, ExceedMaxTokens
 class BaseOpenAI(BaseLLM):
     dynamic_config = EvaluatorLLMArgs()
 
+    # Embedding 模型配置（用于 RAG 相关评估器）
+    embedding_model = None
+
     # @classmethod
     # def set_prompt(cls, prompt: BasePrompt):
     #     cls.prompt = prompt
 
     @classmethod
     def create_client(cls):
+        """创建 LLM 客户端，如果配置了 embedding_config 则同时初始化 Embedding 客户端"""
         from openai import OpenAI
 
         if not cls.dynamic_config.key:
@@ -29,9 +33,31 @@ class BaseOpenAI(BaseLLM):
         elif not cls.dynamic_config.api_url:
             raise ValueError("api_url cannot be empty in llm config.")
         else:
+            # 创建主 LLM 客户端
             cls.client = OpenAI(
                 api_key=cls.dynamic_config.key, base_url=cls.dynamic_config.api_url
             )
+
+            # 如果配置了 embedding_config，初始化 Embedding 客户端
+            if cls.dynamic_config.embedding_config:
+                embedding_cfg = cls.dynamic_config.embedding_config
+                if not embedding_cfg.api_url:
+                    raise ValueError("embedding_config must provide api_url")
+
+                if not embedding_cfg.model:
+                    raise ValueError("embedding_config must provide model")
+
+                # 创建独立的 Embedding 客户端
+                cls.embedding_client = OpenAI(
+                    api_key=embedding_cfg.key or 'dummy-key',
+                    base_url=embedding_cfg.api_url
+                )
+
+                cls.embedding_model = {
+                    'model_name': embedding_cfg.model,
+                    'client': cls.embedding_client
+                }
+                log.info(f"Initialized independent embedding client: {embedding_cfg.model} @ {embedding_cfg.api_url}")
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:

@@ -34,7 +34,7 @@ python examples/rag/e2e_RAG_eval_with_mockRAG_fiqa.py
 
 ```python
 import os
-from dingo.config.input_args import EvaluatorLLMArgs
+from dingo.config.input_args import EvaluatorLLMArgs, EmbeddingConfigArgs
 from dingo.io.input import Data
 from dingo.model.llm.rag.llm_rag_faithfulness import LLMRAGFaithfulness
 
@@ -118,8 +118,12 @@ input_data = {
                         "model": OPENAI_MODEL,
                         "key": OPENAI_KEY,
                         "api_url": OPENAI_URL,
+                        "embedding_config": {  # ⭐ 必需配置
+                            "model": EMBEDDING_MODEL,
+                            "api_url": OPENAI_URL,
+                            "key": OPENAI_KEY
+                        },
                         "parameters": {
-                            "embedding_model": EMBEDDING_MODEL,
                             "strictness": 3,
                             "threshold": 5
                         }
@@ -465,13 +469,18 @@ LLMRAGFaithfulness.dynamic_config = EvaluatorLLMArgs(
     parameters={"threshold": 7}  # 自定义阈值
 )
 
-# Answer Relevancy 特殊配置（需要 embedding）
+# Answer Relevancy 特殊配置（需要 embedding）⭐
+# 注意：必须配置 embedding_config
 LLMRAGAnswerRelevancy.dynamic_config = EvaluatorLLMArgs(
     key="YOUR_API_KEY",
     api_url="https://api.openai.com/v1",
     model="gpt-4o-mini",
+    embedding_config=EmbeddingConfigArgs(  # ⭐ 必需
+        model="text-embedding-3-large",
+        api_url="https://api.openai.com/v1",
+        key="YOUR_API_KEY"
+    ),
     parameters={
-        "embedding_model": "text-embedding-3-large",
         "strictness": 3,  # 生成问题数量
         "threshold": 5    # 通过阈值
     }
@@ -499,8 +508,12 @@ LLMRAGAnswerRelevancy.dynamic_config = EvaluatorLLMArgs(
                     "model": "gpt-4o-mini",
                     "key": "YOUR_API_KEY",
                     "api_url": "https://api.openai.com/v1",
+                    "embedding_config": {  # ⭐ 必需配置
+                        "model": "text-embedding-3-large",
+                        "api_url": "https://api.openai.com/v1",
+                        "key": "YOUR_API_KEY"
+                    },
                     "parameters": {
-                        "embedding_model": "text-embedding-3-large",
                         "strictness": 3,
                         "threshold": 5
                     }
@@ -515,9 +528,9 @@ LLMRAGAnswerRelevancy.dynamic_config = EvaluatorLLMArgs(
 
 | 参数 | 适用指标 | 默认值 | 说明 |
 |------|---------|--------|------|
-| `threshold` | 所有指标 | 5.0 | 通过阈值（0-10） |
-| `embedding_model` | Answer Relevancy | text-embedding-3-large | Embedding 模型名称 |
-| `strictness` | Answer Relevancy | 3 | 生成问题数量（1-5） |
+| `threshold` | 所有指标 | 5.0 | 通过阈值（0-10），在 `parameters` 中配置 |
+| `strictness` | Answer Relevancy | 3 | 生成问题数量（1-5），在 `parameters` 中配置 |
+| `embedding_config` | Answer Relevancy | - | **必需配置**，包含 `model`（模型名）、`api_url`（服务地址）、`key`（API密钥） |
 
 ## 📊 指标详细说明
 
@@ -581,7 +594,10 @@ Answer Relevancy = (1/N) × Σ cosine_sim(E_gi, E_o)
 - `user_input`: 用户问题
 - `response`: RAG系统生成的答案
 
-**注意**: 此指标需要 embedding API（如 OpenAI 的 text-embedding-3-large）
+**⚠️ 重要**: 此指标**必须配置 `embedding_config`**，包含：
+- `model`: Embedding 模型名（如 `text-embedding-3-large`、`BAAI/bge-m3`）
+- `api_url`: Embedding 服务地址
+- `key`: API 密钥（可选，本地服务可用任意值）
 
 **评分标准**:
 - `9-10分`: 生成的问题与原始问题高度相似，答案完全切题
@@ -600,7 +616,9 @@ Answer Relevancy = (1/N) × Σ cosine_sim(E_gi, E_o)
 **技术细节**:
 - 使用 `strictness` 参数控制生成问题数量（默认3个）
 - 使用 `threshold` 参数设置通过阈值（默认5.0）
-- 需要 embedding 模型（如 `text-embedding-3-large`）
+- **必须**在 `embedding_config` 中配置 embedding 服务：
+  - 云端选项：OpenAI、DeepSeek 等
+  - 本地选项：vLLM、Xinference 部署的 bge-m3、multilingual-e5 等
 
 ---
 
@@ -819,7 +837,10 @@ Context Precision = Σ(Precision@k × v_k) / top K 中相关项总数
   - 字段组名由评估器配置中的 `fields` 值拼接生成，如 `"user_input,response"`
   - 如果不确定字段组名，可遍历 `summary.metrics_score_stats.items()` 获取所有字段组
 - **LLM依赖**: 所有指标都依赖 LLM API，需要配置正确的 API key 和 endpoint
-- **Embedding 依赖**: Answer Relevancy 需要 embedding API（如 OpenAI 的 text-embedding-3-large）
+- **Embedding 依赖**:
+  - Answer Relevancy **必须配置 `embedding_config`**，包含 `model`、`api_url`、`key`
+  - 可使用云端服务（OpenAI、DeepSeek）或本地部署（vLLM、Xinference）
+  - 如不配置会抛出异常：`ValueError: Embedding model not initialized...`
 - **成本考虑**: 评估会产生 API 调用成本，建议：
   - 开发阶段：小样本抽样评估（如 50-100 条）
   - 生产阶段：只使用关键指标（Faithfulness, Answer Relevancy, Context Relevancy）

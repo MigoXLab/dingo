@@ -78,11 +78,19 @@ class EvaluatorRuleArgs(BaseModel):
     parameters: Optional[dict] = None
 
 
+class EmbeddingConfigArgs(BaseModel):
+    """Embedding 模型独立配置"""
+    model: Optional[str] = None
+    key: Optional[str] = None
+    api_url: Optional[str] = None
+
+
 class EvaluatorLLMArgs(BaseModel):
     model: Optional[str] = None
     key: Optional[str] = None
     api_url: Optional[str] = None
     parameters: Optional[dict] = None
+    embedding_config: Optional[EmbeddingConfigArgs] = None
 
 
 class EvalPiplineConfig(BaseModel):

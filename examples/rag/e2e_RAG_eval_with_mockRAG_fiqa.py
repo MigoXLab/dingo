@@ -20,7 +20,11 @@
     OPENAI_API_KEY: OpenAI API 密钥
     OPENAI_BASE_URL: (可选) OpenAI API 基础 URL
     OPENAI_MODEL: (可选) 使用的模型名称，默认为 deepseek-chat
-    EMBEDDING_MODEL: (可选) Embedding 模型，默认为 text-embedding-3-large
+
+本地 Embedding 模型配置:
+    如需使用本地 Embedding 模型（如 BAAI/bge-m3），请修改 run_dingo_evaluation() 函数中的
+    llm_config_embedding 配置，使用 embedding_config 指定独立的 Embedding 服务地址。
+    详见代码中的"方式2"注释示例。
 
 使用方法:
     # 评测所有 648 个问题（可能需要较长时间）
@@ -313,12 +317,17 @@ def run_dingo_evaluation(rag_output_path: str) -> SummaryModel:
         "api_url": OPENAI_BASE_URL,
     }
 
+    # ⚠️ 注意：LLMRAGAnswerRelevancy 必须配置 embedding_config
     llm_config_embedding = {
         "model": OPENAI_MODEL,
         "key": OPENAI_API_KEY,
-        "api_url": OPENAI_BASE_URL,
+        "api_url": OPENAI_BASE_URL,  # LLM 服务地址
+        "embedding_config": {  # ⭐ 必需：Embedding 配置
+            "model": EMBEDDING_MODEL,
+            "api_url": OPENAI_BASE_URL,  # 如果同一服务提供 embedding
+            "key": OPENAI_API_KEY
+        },
         "parameters": {
-            "embedding_model": EMBEDDING_MODEL,
             "strictness": 3,
             "threshold": 5
         }

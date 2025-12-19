@@ -13,6 +13,8 @@ declare global {
                 primaryName: string,
                 secondaryNameList: string[]
             ) => Promise<any[]>;
+            readAllJsonlFiles: (dirPath: string) => Promise<any[]>;
+            getAllJsonlFilePaths: (dirPath: string) => Promise<string[]>;
             getInputPath: () => Promise<string>;
         };
     }

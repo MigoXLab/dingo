@@ -35,16 +35,45 @@ def get_summary_data(summary_path):
 
 
 def get_evaluation_details(root_path):
+    """
+    递归读取所有层级的 jsonl 文件（支持任意深度）
+    返回格式: { "相对路径/文件.jsonl": [数据数组] }
+    """
     details = {}
-    for item in os.listdir(root_path):
-        item_path = os.path.join(root_path, item)
-        if os.path.isdir(item_path):
-            for subitem in os.listdir(item_path):
-                if subitem.endswith('.jsonl'):
-                    file_path = os.path.join(item_path, subitem)
-                    key = f"{item}/{subitem}"
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        details[key] = [json.loads(line) for line in file]
+    
+    def traverse_directory(current_path, relative_path=""):
+        """递归遍历目录"""
+        try:
+            for item in os.listdir(current_path):
+                item_path = os.path.join(current_path, item)
+                new_relative_path = f"{relative_path}/{item}" if relative_path else item
+                
+                if os.path.isdir(item_path):
+                    # 递归遍历子目录
+                    traverse_directory(item_path, new_relative_path)
+                elif os.path.isfile(item_path) and item.endswith('.jsonl') and item != 'summary.json':
+                    # 读取 jsonl 文件（排除 summary.json）
+                    try:
+                        with open(item_path, 'r', encoding='utf-8') as file:
+                            # 为每行数据添加 _filePath 属性
+                            parsed_data = []
+                            for line in file:
+                                line = line.strip()
+                                if line:
+                                    try:
+                                        data = json.loads(line)
+                                        # 添加文件路径信息（与 Electron 应用保持一致）
+                                        data['_filePath'] = new_relative_path
+                                        parsed_data.append(data)
+                                    except json.JSONDecodeError as e:
+                                        print(f"Warning: Error parsing line in {item_path}: {e}")
+                            details[new_relative_path] = parsed_data
+                    except Exception as e:
+                        print(f"Warning: Error reading file {item_path}: {e}")
+        except Exception as e:
+            print(f"Warning: Error reading directory {current_path}: {e}")
+    
+    traverse_directory(root_path)
     return details
 
 

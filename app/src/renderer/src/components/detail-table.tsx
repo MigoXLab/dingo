@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Tooltip, Pagination, Switch } from 'antd';
+import { Table } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { useDALStore } from '@/store/dal';
 import { FormattedMessage } from 'react-intl';
 import { SummaryData } from '@/pages/main-home/components/summary-data-table';
-import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { uniqBy } from 'lodash';
 import FilterCascader from './filter-cascader';
-import DetailCard from './detail-card';
-import Empty from '@/components/empty';
-import IconFont from './icon-font';
-import cls from 'classnames';
 import HighlightText from './HightLightText';
 
 interface DetailTableProps {
@@ -29,61 +24,45 @@ interface DetailTableProps {
 }
 
 interface DataItem {
-    data_id: string;
-    prompt: string;
-    content: string;
-    type_list: string[];
-    name_list: string[];
-    reason_list: (string | string[])[];
+    [key: string]: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
-const DetailTable: React.FC<DetailTableProps> = ({
-    summary,
-    currentPath,
-    detailPathList,
-    allDataPath,
-    defaultErrorTypes,
-    defaultErrorNames,
-}) => {
+const DetailTable: React.FC<DetailTableProps> = ({ currentPath }) => {
     const [data, setData] = useState<DataItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [errorTypes, setErrorTypes] = useState<string[]>([]);
-    const [selectedErrorTypes, setSelectedErrorTypes] = useState<string[]>([]);
-    const [selectedErrorNames, setSelectedErrorNames] = useState<string[]>([]);
-    const [errorNames, setErrorNames] = useState<string[]>([]);
-    const [showHighlight, setShowHighlight] = useState(true);
+    const [jsonlFilePaths, setJsonlFilePaths] = useState<string[]>([]);
     const dal = useDALStore(state => state.dal);
-    const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
     const [current, setCurrent] = useState({
         currentPage: 1,
-        pageSize: 10,
+        pageSize: 20,
     });
     const [filter, setFilter] = useState<{
-        primaryName?: string;
-        secondaryName?: string;
+        filePath?: string;
     }>({});
 
-    // console.log('test-data', summary, detailPathList, allDataPath);
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
 
-                setErrorNames(Object.keys(summary.name_ratio));
-                setErrorTypes(Object.keys(summary.type_ratio));
-                let allData: DataItem[] = [];
-                for (const { primaryName, secondaryNameList } of allDataPath) {
-                    const result = await dal?.getEvaluationDetail?.({
+                // 获取所有 jsonl 文件路径列表
+                const filePaths =
+                    (await dal?.getAllJsonlFilePaths?.({
                         currentPath,
-                        primaryName,
-                        secondaryNameList,
-                    });
-                    if (result) {
-                        allData = allData.concat(result);
-                    }
-                }
+                    })) || [];
+                setJsonlFilePaths(filePaths);
 
-                setData(uniqBy(allData, 'data_id'));
+                // 直接读取所有 jsonl 文件（排除 summary.json）
+                const allData: DataItem[] =
+                    ((await dal?.getAllJsonlFiles?.({
+                        currentPath,
+                    })) as DataItem[]) || [];
+
+                console.log(allData, 'allData');
+                console.log(filePaths, 'jsonlFilePaths');
+
+                // 使用 id 作为唯一标识
+                setData(uniqBy(allData, 'id'));
                 setCurrent({
                     ...current,
                     currentPage: 1,
@@ -96,195 +75,121 @@ const DetailTable: React.FC<DetailTableProps> = ({
         };
 
         loadData();
-    }, [currentPath, detailPathList]);
+    }, [currentPath]);
 
-    const columns: ColumnsType<DataItem> = [
-        {
-            title: '数据 ID',
-            dataIndex: 'data_id',
-            key: 'data_id',
-            minWidth: 100,
-        },
-        {
-            title: <span className="font-semibold">一级维度</span>,
-            dataIndex: 'type_list',
-            key: 'type_list',
-            render: types => JSON.stringify(types),
-            // filters: errorTypes.map(type => ({ text: type, value: type })),
-            // onFilter: (value, record) =>
-            //     record.type_list.includes(value.toString()),
-            // filterIcon: filtered => (
-            //     <FilterFilled
-            //         style={{ color: filtered ? '#1890ff' : undefined }}
-            //     />
-            // ),
-            // filteredValue: selectedErrorTypes,
-        },
-        {
-            title: () => <span className="font-semibold">二级维度</span>,
-            dataIndex: 'name_list',
-            key: 'name_list',
-            render: names => JSON.stringify(names),
-            // filters: errorNames.map(name => ({ text: name, value: name })),
-            // onFilter: (value, record) =>
-            //     record.name_list.includes(value.toString()),
-            // filteredValue: selectedErrorNames,
-            // filterIcon: filtered => (
-            //     <FilterFilled
-            //         style={{
-            //             color: filtered ? '#1890ff' : undefined,
-            //         }}
-            //     />
-            // ),
-        },
-        {
-            title: (
-                <span className="flex justify-between font-semibold">内容</span>
-            ),
-            dataIndex: 'content',
-            key: 'content',
-            render: (text, record) => {
-                return (
-                    <HighlightText
-                        text={text?.slice?.(0, 10000) || '-'}
-                        highlight={record.reason_list}
-                        showHighlight={showHighlight}
-                    />
-                );
-            },
-        },
-
-        {
-            title: '原因',
-            dataIndex: 'reason_list',
-            key: 'reason_list',
-            minWidth: 300,
-            render: reasons => (
-                <span className="select-text">{JSON.stringify(reasons)}</span>
-            ),
-        },
-    ];
-
-    const handleFilter = (primaryName: string, secondaryName: string) => {
-        setFilter({ primaryName, secondaryName });
+    const handleFilter = (filePath: string) => {
+        setFilter({ filePath });
         setCurrent({
             ...current,
             currentPage: 1,
         });
     };
 
-    const hiddenClass = 'w-0 h-0 z-[-1] overflow-hidden';
-
-    useEffect(() => {
-        setSelectedErrorTypes(defaultErrorTypes || []);
-    }, [defaultErrorTypes]);
-    useEffect(() => {
-        setSelectedErrorNames(defaultErrorNames || []);
-    }, [defaultErrorNames]);
-
     const filterData = useMemo(() => {
-        const _primaryName = filter?.primaryName;
-        if (_primaryName) {
-            const _secondaryName = filter?.secondaryName;
-            const _res = data?.filter(i =>
-                i?.type_list?.includes(_primaryName)
-            );
-            return _secondaryName
-                ? _res?.filter(i => i?.name_list?.includes(_secondaryName))
-                : _res;
+        const selectedFilePath = filter?.filePath;
+        if (selectedFilePath && selectedFilePath !== 'all') {
+            // 根据文件路径筛选数据
+            return data?.filter(i => {
+                const itemFilePath = i?._filePath;
+                return itemFilePath === selectedFilePath;
+            });
         } else {
+            // 显示全部数据
             return data;
         }
     }, [data, filter]);
 
-    const filterCardListData = useMemo(() => {
-        const startIndex = (current.currentPage - 1) * current.pageSize;
-        const endIndex = startIndex + current.pageSize;
-        return filterData.slice(startIndex, endIndex);
-    }, [filterData, current.currentPage, current.pageSize]);
+    // 动态生成列配置
+    const columns: ColumnsType<DataItem> = useMemo(() => {
+        if (!filterData || filterData.length === 0) {
+            return [];
+        }
+
+        // 收集所有唯一的键，排除 _filePath 字段
+        const allKeys = new Set<string>();
+        filterData.forEach(item => {
+            Object.keys(item).forEach(key => {
+                // 过滤掉 _filePath 字段
+                if (key !== '_filePath') {
+                    allKeys.add(key);
+                }
+            });
+        });
+
+        // 生成列配置
+        const generatedColumns: ColumnsType<DataItem> = Array.from(allKeys).map(
+            key => {
+                return {
+                    title: key,
+                    dataIndex: key,
+                    key: key,
+                    minWidth: 100,
+                    render: (value: unknown, record) => {
+                        if (key === 'content') {
+                            return (
+                                <HighlightText
+                                    text={
+                                        typeof value === 'string'
+                                            ? value.slice(0, 10000)
+                                            : '-'
+                                    }
+                                    highlight={record.reason_list || ''}
+                                    showHighlight={false}
+                                />
+                            );
+                        }
+                        // 如果是对象，显示为格式化的 JSON
+                        if (
+                            typeof value === 'object' &&
+                            value !== null &&
+                            !Array.isArray(value)
+                        ) {
+                            return (
+                                <span className="select-text">
+                                    {JSON.stringify(value, null, 2)}
+                                </span>
+                            );
+                        }
+                        // 如果是数组，显示为 JSON
+                        if (Array.isArray(value)) {
+                            return (
+                                <span className="select-text">
+                                    {JSON.stringify(value)}
+                                </span>
+                            );
+                        }
+                        // 如果是字符串，直接显示
+                        if (typeof value === 'string') {
+                            return <span>{value || '-'}</span>;
+                        }
+                        // 其他类型直接显示
+                        return <span>{String(value ?? '-')}</span>;
+                    },
+                };
+            }
+        );
+
+        return generatedColumns;
+    }, [filterData]);
 
     return (
         <>
             <div className="flex items-center">
-                <FilterCascader summary={summary} onFilter={handleFilter} />
+                <FilterCascader
+                    jsonlFilePaths={jsonlFilePaths}
+                    onFilter={handleFilter}
+                />
                 <span className="text-[#121316]/[0.8] text-base ml-2">{`${filterData?.length || 0} 条数据`}</span>
-                <span className="ml-auto mr-2 text-[#121316]/[0.8] text-[14px]">
-                    命中内容高亮
-                </span>
-                <Switch
-                    className="mr-8"
-                    checked={showHighlight}
-                    onChange={setShowHighlight}
-                />
-                <div
-                    className="flex items-center text-lg gap-2 bg-blue/[0.05] p-1 px-2 rounded-md cursor-pointer"
-                    onClick={e => e.stopPropagation()}
-                >
-                    {[
-                        { value: 'table', icon: 'icon-listViewOutlined' },
-                        {
-                            value: 'grid',
-                            icon: 'icon-SwitchViewOutlined',
-                        },
-                    ]?.map(i => (
-                        <span
-                            key={i.value}
-                            className={cls(
-                                'p-1 flex text-[#121316]',
-                                viewMode === i.value &&
-                                    '!text-[#0D53DE] rounded bg-blue/[0.1]'
-                            )}
-                        >
-                            <IconFont
-                                type={i.icon}
-                                onClick={() => setViewMode(i.value)}
-                            />
-                        </span>
-                    ))}
-                </div>
-            </div>
-            <div
-                className={cls(
-                    'mt-1 flex flex-col inline',
-                    viewMode !== 'grid' && hiddenClass
-                )}
-            >
-                {filterCardListData?.length ? (
-                    filterCardListData?.map(i => {
-                        return (
-                            <DetailCard
-                                data={i}
-                                key={i?.data_id}
-                                showHighlight={showHighlight}
-                            />
-                        );
-                    })
-                ) : (
-                    <Empty className="mt-[8rem]" title={'暂无数据'}></Empty>
-                )}
-                <Pagination
-                    total={filterData?.length}
-                    className="self-end mt-2"
-                    current={current?.currentPage}
-                    pageSize={current?.pageSize}
-                    showQuickJumper
-                    showTotal={total => (
-                        <FormattedMessage id="total.data" values={{ total }} />
-                    )}
-                    onChange={(_page, _pageSize) => {
-                        setCurrent({
-                            currentPage: _page,
-                            pageSize: _pageSize,
-                        });
-                    }}
-                />
             </div>
             <Table<DataItem>
                 columns={columns}
                 dataSource={filterData}
                 loading={loading}
-                className={cls('mt-4', viewMode !== 'table' && hiddenClass)}
-                rowKey={record => `${record?.data_id}_${record?.content}`}
+                className="mt-4"
+                rowKey={(record, index) => {
+                    return `${record?._filePath}_${index}`;
+                }}
+                sticky={{offsetHeader: -30}}
                 pagination={{
                     pageSize: current?.pageSize,
                     showQuickJumper: true,
@@ -293,7 +198,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
                         <FormattedMessage id="total.data" values={{ total }} />
                     ),
                 }}
-                onChange={(pagination, filters) => {
+                onChange={pagination => {
                     if (current?.pageSize !== pagination.pageSize) {
                         setCurrent({
                             currentPage: 1,

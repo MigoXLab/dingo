@@ -9,7 +9,7 @@ class BaseLLM:
     client = None
 
     prompt: str | List = None
-    dynamic_config: EvaluatorLLMArgs
+    dynamic_config: EvaluatorLLMArgs = EvaluatorLLMArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:

@@ -1,5 +1,5 @@
-import os
 import json
+import os
 from typing import Any, Dict, Generator, List, Optional
 
 from dingo.config import InputArgs
@@ -72,10 +72,10 @@ class LocalDataSource(DataSource):
         try:
             # 使用只读模式加载工作簿，节省内存
             wb = load_workbook(filename=path, read_only=True, data_only=True)
-            
+
             sheet_name = self.input_args.dataset.excel_config.sheet_name
             has_header = self.input_args.dataset.excel_config.has_header
-            
+
             # 选择工作表
             if isinstance(sheet_name, str):
                 if sheet_name not in wb.sheetnames:
@@ -90,7 +90,7 @@ class LocalDataSource(DataSource):
 
             # 获取所有行的迭代器
             rows = ws.iter_rows(values_only=True)
-            
+
             # 处理标题行
             if has_header:
                 # 读取第一行作为标题
@@ -98,7 +98,7 @@ class LocalDataSource(DataSource):
                 if headers is None:
                     wb.close()
                     raise RuntimeError(f'Excel file "{path}" is empty')
-                
+
                 # 将标题转换为列表，处理 None 值
                 headers = [str(h) if h is not None else f'Column_{i}' for i, h in enumerate(headers)]
             else:
@@ -107,34 +107,34 @@ class LocalDataSource(DataSource):
                 if first_row is None:
                     wb.close()
                     raise RuntimeError(f'Excel file "{path}" is empty')
-                
+
                 # 使用列序号作为列名
                 headers = [str(i) for i in range(len(first_row))]
-                
+
                 # 处理第一行数据
                 if not all(cell is None for cell in first_row):
                     row_dict = {}
                     for i, (header, value) in enumerate(zip(headers, first_row)):
                         row_dict[header] = value if value is not None else ""
                     yield json.dumps(row_dict, ensure_ascii=False) + '\n'
-            
+
             # 逐行读取数据并转换为 JSON
             for row in rows:
                 # 跳过空行
                 if all(cell is None for cell in row):
                     continue
-                
+
                 # 将行数据与标题组合成字典
                 row_dict = {}
                 for i, (header, value) in enumerate(zip(headers, row)):
                     # 处理值为 None 的情况
                     row_dict[header] = value if value is not None else ""
-                
+
                 # 转换为 JSON 字符串并 yield
                 yield json.dumps(row_dict, ensure_ascii=False) + '\n'
-            
+
             wb.close()
-            
+
         except Exception as e:
             raise RuntimeError(
                 f'Failed to read .xlsx file "{path}": {str(e)}. '
@@ -161,10 +161,10 @@ class LocalDataSource(DataSource):
         try:
             # 打开工作簿
             wb = xlrd.open_workbook(path, on_demand=True)
-            
+
             sheet_name = self.input_args.dataset.excel_config.sheet_name
             has_header = self.input_args.dataset.excel_config.has_header
-            
+
             # 选择工作表
             if isinstance(sheet_name, str):
                 try:
@@ -180,38 +180,38 @@ class LocalDataSource(DataSource):
 
             if ws.nrows == 0:
                 raise RuntimeError(f'Excel file "{path}" is empty')
-            
+
             # 处理标题行
             start_row = 0
             if has_header:
                 # 读取第一行作为标题
-                headers = [str(cell.value) if cell.value is not None else f'Column_{i}' 
+                headers = [str(cell.value) if cell.value is not None else f'Column_{i}'
                           for i, cell in enumerate(ws.row(0))]
                 start_row = 1
             else:
                 # 使用列序号作为列名
                 headers = [str(i) for i in range(ws.ncols)]
                 start_row = 0
-            
+
             # 逐行读取数据并转换为 JSON
             for row_idx in range(start_row, ws.nrows):
                 row = ws.row(row_idx)
-                
+
                 # 跳过空行
                 if all(cell.value is None or cell.value == '' for cell in row):
                     continue
-                
+
                 # 将行数据与标题组合成字典
                 row_dict = {}
                 for i, (header, cell) in enumerate(zip(headers, row)):
                     # 处理值为 None 或空的情况
                     row_dict[header] = cell.value if cell.value is not None else ""
-                
+
                 # 转换为 JSON 字符串并 yield
                 yield json.dumps(row_dict, ensure_ascii=False) + '\n'
-            
+
             wb.release_resources()
-            
+
         except Exception as e:
             raise RuntimeError(
                 f'Failed to read .xls file "{path}": {str(e)}. '
@@ -229,7 +229,7 @@ class LocalDataSource(DataSource):
 
         if not os.path.exists(self.path):
             raise RuntimeError(f'"{self.path}" is not a valid path')
-        
+
         f_list = []
         if os.path.exists(self.path) and os.path.isfile(self.path):
             f_list = [self.path]
@@ -284,4 +284,3 @@ class LocalDataSource(DataSource):
                         f'Unexpected error reading file "{f}": {str(e)}. '
                         f'Please check if the file exists and is readable.'
                     )
-

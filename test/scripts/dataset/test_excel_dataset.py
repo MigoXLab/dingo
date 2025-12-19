@@ -152,13 +152,14 @@ def test_xlsx_with_header():
 
             # 验证数据格式
             if idx == 0:
-                # 第一行数据应该有 "姓名", "年龄", "城市", "分数" 这些键
-                assert hasattr(data, 'content'), "数据缺少 content 属性"
-                data_dict = json.loads(data.content)
+                # 第一行数据应该有 "姓名", "年龄", "城市", "分数" 这些字段
+                data_dict = data.to_dict()
                 assert "姓名" in data_dict, "数据缺少 '姓名' 字段"
                 assert "年龄" in data_dict, "数据缺少 '年龄' 字段"
                 assert "城市" in data_dict, "数据缺少 '城市' 字段"
                 assert "分数" in data_dict, "数据缺少 '分数' 字段"
+                # 也可以直接通过属性访问
+                assert hasattr(data, '姓名'), "数据对象缺少 '姓名' 属性"
                 print("✓ 数据格式验证通过")
 
         assert count == 4, f"期望读取 4 行数据，实际读取了 {count} 行"
@@ -228,11 +229,13 @@ def test_xlsx_without_header():
 
             # 验证数据格式（使用数字作为列名）
             if idx == 0:
-                data_dict = json.loads(data.content)
+                data_dict = data.to_dict()
                 assert "0" in data_dict, "数据缺少 '0' 字段"
                 assert "1" in data_dict, "数据缺少 '1' 字段"
                 assert "2" in data_dict, "数据缺少 '2' 字段"
                 assert "3" in data_dict, "数据缺少 '3' 字段"
+                # 也可以直接通过属性访问(字符串形式的数字)
+                assert hasattr(data, '0'), "数据对象缺少 '0' 属性"
                 print("✓ 数据格式验证通过（使用列序号作为键）")
 
         assert count == 4, f"期望读取 4 行数据，实际读取了 {count} 行"
@@ -302,9 +305,11 @@ def test_xlsx_sheet_by_name():
 
             # 验证数据格式
             if idx == 0:
-                data_dict = json.loads(data.content)
+                data_dict = data.to_dict()
                 assert "ID" in data_dict, "数据缺少 'ID' 字段"
                 assert "名称" in data_dict, "数据缺少 '名称' 字段"
+                # 也可以直接通过属性访问
+                assert hasattr(data, 'ID'), "数据对象缺少 'ID' 属性"
                 print("✓ 数据格式验证通过")
 
         assert count == 2, f"期望读取 2 行数据，实际读取了 {count} 行"
@@ -377,9 +382,11 @@ def test_xls_with_header():
 
             # 验证数据格式
             if idx == 0:
-                data_dict = json.loads(data.content)
+                data_dict = data.to_dict()
                 assert "姓名" in data_dict, "数据缺少 '姓名' 字段"
                 assert "年龄" in data_dict, "数据缺少 '年龄' 字段"
+                # 也可以直接通过属性访问
+                assert hasattr(data, '姓名'), "数据对象缺少 '姓名' 属性"
                 print("✓ 数据格式验证通过")
 
         assert count == 4, f"期望读取 4 行数据，实际读取了 {count} 行"

@@ -274,9 +274,7 @@ class ExcelConverter(BaseConverter):
             j = raw
             if isinstance(raw, str):
                 j = json.loads(raw)
-            # 将 Excel 行数据作为 JSON 字符串放入 content 属性
-            # 这样可以与其他数据格式保持一致的数据结构
-            data_dict = {"content": json.dumps(j, ensure_ascii=False)}
+            data_dict = j
             return Data(**data_dict)
 
         return _convert

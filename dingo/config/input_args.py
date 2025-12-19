@@ -27,6 +27,11 @@ class DatasetSqlArgs(BaseModel):
     connect_args: str = ''  # 连接参数，如 ?charset=utf8mb4
 
 
+class DatasetExcelArgs(BaseModel):
+    sheet_name: str | int = 0  # 默认读取第一个工作表
+    has_header: bool = True  # 第一行是否为列名，False 则使用列序号作为列名
+
+
 class DatasetFieldArgs(BaseModel):
     id: str = ''
     prompt: str = ''
@@ -43,6 +48,7 @@ class DatasetArgs(BaseModel):
     hf_config: DatasetHFConfigArgs = DatasetHFConfigArgs()
     s3_config: DatasetS3ConfigArgs = DatasetS3ConfigArgs()
     sql_config: DatasetSqlArgs = DatasetSqlArgs()
+    excel_config: DatasetExcelArgs = DatasetExcelArgs()
 
 
 class ExecutorResultSaveArgs(BaseModel):

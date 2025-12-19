@@ -261,6 +261,27 @@ class JsonLineConverter(BaseConverter):
         return _convert
 
 
+@BaseConverter.register("excel")
+class ExcelConverter(BaseConverter):
+    """Excel file converter."""
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def convertor(cls, input_args: InputArgs) -> Callable:
+        def _convert(raw: Union[str, Dict]):
+            j = raw
+            if isinstance(raw, str):
+                j = json.loads(raw)
+            # 将 Excel 行数据作为 JSON 字符串放入 content 属性
+            # 这样可以与其他数据格式保持一致的数据结构
+            data_dict = {"content": json.dumps(j, ensure_ascii=False)}
+            return Data(**data_dict)
+
+        return _convert
+
+
 @BaseConverter.register("listjson")
 class ListJsonConverter(BaseConverter):
     """List json file converter."""

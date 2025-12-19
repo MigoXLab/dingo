@@ -188,7 +188,7 @@ const PieChart = ({ data }: { data: SummaryData }) => {
     const [activeFirstLevel, setActiveFirstLevel] = useState<string>('');
     // 我要取得data.type_ratio的第一个key
     const [selected, setSelected] = useState<string>(Object.keys(data.type_ratio || {})[0] || '');
-    
+
 
     // 安全获取 type_ratio，支持 content 属性或直接使用 type_ratio
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -198,7 +198,7 @@ const PieChart = ({ data }: { data: SummaryData }) => {
         value: key,
         label: key,
     }));
-    
+
     // 获取二级数据的函数
     const getSecondLevelData = (firstLevelType: string) => {
         console.log(firstLevelType, 'firstLevelType');
@@ -380,7 +380,7 @@ const PieChart = ({ data }: { data: SummaryData }) => {
                     value={selected}
                 />
             </div>
-            
+
             <ReactECharts
                 option={option}
                 style={{

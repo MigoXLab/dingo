@@ -201,4 +201,3 @@ python examples/ats_resume/sdk_keyword_matcher.py
 # 运行简历优化示例
 python examples/ats_resume/sdk_resume_optimizer.py
 ```
-

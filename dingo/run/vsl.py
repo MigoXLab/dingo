@@ -40,14 +40,14 @@ def get_evaluation_details(root_path):
     返回格式: { "相对路径/文件.jsonl": [数据数组] }
     """
     details = {}
-    
+
     def traverse_directory(current_path, relative_path=""):
         """递归遍历目录"""
         try:
             for item in os.listdir(current_path):
                 item_path = os.path.join(current_path, item)
                 new_relative_path = f"{relative_path}/{item}" if relative_path else item
-                
+
                 if os.path.isdir(item_path):
                     # 递归遍历子目录
                     traverse_directory(item_path, new_relative_path)
@@ -72,7 +72,7 @@ def get_evaluation_details(root_path):
                         print(f"Warning: Error reading file {item_path}: {e}")
         except Exception as e:
             print(f"Warning: Error reading directory {current_path}: {e}")
-    
+
     traverse_directory(root_path)
     return details
 

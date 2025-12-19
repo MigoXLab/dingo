@@ -123,8 +123,8 @@ def dingo_demo(
                     if row[4] and str(row[4]).strip():
                         try:
                             config['parameters'] = json.loads(str(row[4]))
-                        except Exception:
-                            pass
+                        except json.JSONDecodeError as e:
+                            raise gr.Error(f"Invalid JSON in 'parameters' for LLM '{llm_name}': {e}")
 
                     if config:
                         llm_configs[llm_name] = config

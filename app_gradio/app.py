@@ -14,7 +14,7 @@ from dingo.model import Model
 
 def dingo_demo(
         uploaded_file,
-        dataset_source, data_format, input_path, max_workers, batch_size,
+        dataset_source, data_format, save_data, input_path, max_workers, batch_size,
         fields_data,
         rule_list, llm_list,
         # rule_config_data,
@@ -180,7 +180,9 @@ def dingo_demo(
         for item in detail:
             new_detail.append(item)
         if summary['output_path']:
-            shutil.rmtree(summary['output_path'])
+            if save_data == "false":
+                shutil.rmtree(summary['output_path'])
+                summary['output_path'] = ""
 
         # Return summary and detail information
         return json.dumps(summary, indent=4), new_detail
@@ -350,10 +352,16 @@ if __name__ == '__main__':
                         visible=False
                     )
 
-                    data_format = gr.Dropdown(
-                        ["jsonl", "json", "plaintext", "listjson","image"],
-                        label="data_format"
-                    )
+                    with gr.Row():
+                        data_format = gr.Dropdown(
+                            ["jsonl", "json", "plaintext", "listjson","image"],
+                            label="data_format"
+                        )
+                        save_data = gr.Dropdown(
+                            ["true", "false"],
+                            value="false",
+                            label="save_data"
+                        )
                     with gr.Row():
                         max_workers = gr.Number(
                             value=1,
@@ -475,7 +483,7 @@ if __name__ == '__main__':
             fn=dingo_demo,
             inputs=[
                 uploaded_file,
-                dataset_source, data_format, input_path, max_workers, batch_size,
+                dataset_source, data_format, save_data, input_path, max_workers, batch_size,
                 fields_dataframe,
                 rule_list, llm_list,
                 # rule_config_dataframe,

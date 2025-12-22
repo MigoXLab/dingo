@@ -3,9 +3,12 @@ from pathlib import Path
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 if __name__ == '__main__':
     input_data = {
-        "input_path": str(Path(__file__).parent.joinpath("../../test/data/test_layout_quality.jsonl").resolve()),
+        "input_path": str(PROJECT_ROOT / "test/data/test_layout_quality.jsonl"),
         "dataset": {
             "source": "local",
             "format": "image",

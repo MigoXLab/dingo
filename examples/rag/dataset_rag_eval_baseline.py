@@ -32,6 +32,9 @@ from dingo.config import InputArgs
 from dingo.exec import Executor
 from dingo.io.output.summary_model import SummaryModel
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 # 配置（从环境变量读取）
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
@@ -39,7 +42,7 @@ OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
 
 # 数据文件路径
-INPUT_DATA_PATH = str(Path("test/data/fiqa.jsonl"))  # 或 "test/data/ragflow_eval_data_50.jsonl"
+INPUT_DATA_PATH = str(PROJECT_ROOT / "test/data/fiqa.jsonl")  # 或 "test/data/ragflow_eval_data_50.jsonl"
 
 
 def print_metrics_summary(summary: SummaryModel):

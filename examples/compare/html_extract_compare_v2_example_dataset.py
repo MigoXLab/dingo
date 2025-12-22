@@ -27,6 +27,9 @@ from pathlib import Path
 from dingo.config.input_args import InputArgs
 from dingo.exec.base import Executor
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 # API 配置
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = os.getenv("OPENAI_BASE_URL")
@@ -53,7 +56,7 @@ def evaluate_html_extract_compare_dataset():
     # 配置参数
     input_data = {
         "task_name": "html_extract_compare_v2_evaluation",
-        "input_path": str(Path("test/data/html_extract_compare_test.jsonl")),
+        "input_path": str(PROJECT_ROOT / "test/data/html_extract_compare_test.jsonl"),
         "output_path": "output/html_extract_compare_evaluation/",
         # "log_level": "INFO",
 

@@ -4,6 +4,9 @@ from pathlib import Path
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 if __name__ == '__main__':
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
     OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
@@ -15,7 +18,7 @@ if __name__ == '__main__':
     }
 
     input_data = {
-        "input_path": str(Path(__file__).parent.joinpath("../../test/data/test_mtbench101_jsonl.jsonl").resolve()),
+        "input_path": str(PROJECT_ROOT / "test/data/test_mtbench101_jsonl.jsonl"),
         "dataset": {
             "source": "local",
             "format": "multi_turn_dialog",

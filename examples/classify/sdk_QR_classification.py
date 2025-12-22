@@ -3,10 +3,13 @@ from pathlib import Path
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 
 def classify_QR():
     input_data = {
-        "input_path": str(Path(__file__).parent.joinpath("../../test/data/test_imgQR_jsonl.jsonl").resolve()),
+        "input_path": str(PROJECT_ROOT / "test/data/test_imgQR_jsonl.jsonl"),
         "dataset": {
             "source": "local",
             "format": "jsonl",

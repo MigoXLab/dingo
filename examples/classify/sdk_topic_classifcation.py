@@ -4,6 +4,9 @@ from pathlib import Path
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 # Configure LLM (set your API key via environment variable OPENAI_KEY)
 LLM_CONFIG = {
     "key": os.getenv("OPENAI_KEY", "YOUR_API_KEY"),
@@ -13,11 +16,8 @@ LLM_CONFIG = {
 
 
 def classify_topic():
-    script_dir = Path(__file__).parent
-    data_path = script_dir / "../../test/data/test_sft_jsonl.jsonl"
-
     input_data = {
-        "input_path": str(data_path.resolve()),
+        "input_path": str(PROJECT_ROOT / "test/data/test_sft_jsonl.jsonl"),
         "dataset": {
             "source": "local",
             "format": "jsonl"

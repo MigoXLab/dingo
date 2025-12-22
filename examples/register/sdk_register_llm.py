@@ -4,6 +4,9 @@ from pathlib import Path
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
 OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
@@ -31,7 +34,7 @@ if __name__ == '__main__':
     from dingo.exec import Executor
 
     input_data = {
-        "input_path": str(Path(__file__).parent.joinpath("../../test/data/test_local_jsonl.jsonl").resolve()),
+        "input_path": str(PROJECT_ROOT / "test/data/test_local_jsonl.jsonl"),
         "dataset": {
             "source": "local",
             "format": "jsonl",

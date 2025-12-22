@@ -3,10 +3,11 @@ from pathlib import Path
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
-SCRIPT_DIR = Path(__file__).parent
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 input_data = {
-    'input_path': str(SCRIPT_DIR.joinpath('../../test/data/compare/WebMainBench_test_1011_dataset_with_results_clean.jsonl').resolve()),
+    'input_path': str(PROJECT_ROOT / 'test/data/compare/WebMainBench_test_1011_dataset_with_results_clean.jsonl'),
     'dataset': {
         'source': 'local',
         'format': 'jsonl',

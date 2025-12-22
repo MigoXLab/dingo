@@ -4,6 +4,9 @@ from pathlib import Path
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 if __name__ == '__main__':
     # Configure LLM (set your API key via environment variable OPENAI_KEY)
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
@@ -15,12 +18,8 @@ if __name__ == '__main__':
         "api_url": OPENAI_URL,
     }
 
-    # Get the path relative to this script
-    script_dir = Path(__file__).parent
-    data_path = script_dir / "../../test/data/test_3h_jsonl.jsonl"
-
     input_data = {
-        "input_path": str(data_path.resolve()),
+        "input_path": str(PROJECT_ROOT / "test/data/test_3h_jsonl.jsonl"),
         "dataset": {
             "source": "local",
             "format": "jsonl"

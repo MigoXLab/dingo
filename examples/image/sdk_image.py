@@ -3,12 +3,13 @@ from pathlib import Path
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
-SCRIPT_DIR = Path(__file__).parent
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
 def image():
     input_data = {
-        "input_path": str(SCRIPT_DIR.joinpath("../../test/data/test_local_img.jsonl").resolve()),
+        "input_path": str(PROJECT_ROOT / "test/data/test_local_img.jsonl"),
         "dataset": {
             "source": "local",
             "format": "image",

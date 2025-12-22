@@ -133,13 +133,14 @@ class LocalDataSource(DataSource):
                 # 转换为 JSON 字符串并 yield
                 yield json.dumps(row_dict, ensure_ascii=False) + '\n'
 
-            wb.close()
-
         except Exception as e:
             raise RuntimeError(
                 f'Failed to read .xlsx file "{path}": {str(e)}. '
                 f'Please ensure the file is a valid Excel file (.xlsx).'
             )
+        finally:
+            if wb:
+                wb.close()
 
     def _load_excel_file_xls(self, path: str) -> Generator[str, None, None]:
         """
@@ -210,13 +211,14 @@ class LocalDataSource(DataSource):
                 # 转换为 JSON 字符串并 yield
                 yield json.dumps(row_dict, ensure_ascii=False) + '\n'
 
-            wb.release_resources()
-
         except Exception as e:
             raise RuntimeError(
                 f'Failed to read .xls file "{path}": {str(e)}. '
                 f'Please ensure the file is a valid Excel file (.xls).'
             )
+        finally:
+            if wb:
+                wb.release_resources()
 
     def _load_local_file(self) -> Generator[str, None, None]:
         """

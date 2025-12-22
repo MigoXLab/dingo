@@ -1,11 +1,14 @@
 import os
+from pathlib import Path
 
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
 if __name__ == '__main__':
+    # 获取项目根目录
+    root_dir = Path(__file__).parent.parent.parent
     input_data = {
-        "input_path": "../../test/data/test_local_excel.xlsx",
+        "input_path": str(root_dir / "test/data/test_local_excel.xlsx"),
         "dataset": {
             "source": "local",
             "format": "excel",

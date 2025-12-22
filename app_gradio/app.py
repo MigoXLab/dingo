@@ -405,7 +405,7 @@ if __name__ == '__main__':
                         value=[["content", "content"]],
                         headers=["Field Key", "Dataset Column"],
                         datatype=["str", "str"],
-                        col_count=(2, "fixed"),
+                        column_count=(2, "fixed"),
                         row_count=(1, "dynamic"),
                         label="Field Mappings (add/remove rows as needed)",
                         interactive=True
@@ -417,7 +417,7 @@ if __name__ == '__main__':
                     #     value=[],
                     #     headers=["Rule Name", "threshold", "pattern", "key_list", "refer_path", "parameters"],
                     #     datatype=["str", "number", "str", "str", "str", "str"],
-                    #     col_count=(6, "fixed"),
+                    #     column_count=(6, "fixed"),
                     #     row_count=(0, "dynamic"),
                     #     label="Rule Configurations (auto-generated based on rule_list selection)",
                     #     interactive=True,
@@ -430,7 +430,7 @@ if __name__ == '__main__':
                         value=[],
                         headers=["LLM Name", "model", "key", "api_url", "parameters"],
                         datatype=["str", "str", "str", "str", "str"],
-                        col_count=(5, "fixed"),
+                        column_count=(5, "fixed"),
                         row_count=(0, "dynamic"),
                         label="LLM Configurations (auto-generated based on llm_list selection)",
                         interactive=True,
@@ -496,4 +496,4 @@ if __name__ == '__main__':
         )
 
     # Launch interface
-    demo.launch(share=True)
+    demo.launch(share=False)

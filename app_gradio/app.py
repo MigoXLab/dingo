@@ -213,7 +213,8 @@ def update_rule_list(rule_type_mapping, rule_type):
     return gr.CheckboxGroup(
         choices=rule_type_mapping.get(rule_type, []),
         value=[],
-        label="rule_list"
+        label="rule_list",
+        elem_classes="limited-height-checkboxgroup"
     )
 
 
@@ -388,12 +389,14 @@ if __name__ == '__main__':
                     )
                     rule_list = gr.CheckboxGroup(
                         choices=rule_type_mapping.get(rule_type_options[0], []),
-                        label="Rule List"
+                        label="Rule List",
+                        elem_classes="limited-height-checkboxgroup"
                     )
                     # LLM evaluator list
                     llm_list = gr.CheckboxGroup(
                         choices=llm_options,
-                        label="LLM List"
+                        label="LLM List",
+                        elem_classes="limited-height-checkboxgroup"
                     )
 
                     gr.Markdown("### EvalPipline Configuration")

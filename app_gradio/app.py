@@ -156,7 +156,7 @@ def dingo_demo(
             "executor": {
                 "result_save": {
                     "bad": True,
-                    "good": True
+                    # "raw": True
                 },
                 "max_workers": max_workers,
                 "batch_size": batch_size,
@@ -176,9 +176,12 @@ def dingo_demo(
         executor = Executor.exec_map["local"](input_args)
         summary = executor.execute().to_dict()
         detail = executor.get_bad_info_list()
+        dingo_id_list = []
         new_detail = []
         for item in detail:
-            new_detail.append(item)
+            if item['dingo_id'] not in dingo_id_list:
+                dingo_id_list.append(item['dingo_id'])
+                new_detail.append(item)
         if summary['output_path']:
             if remove_output == "true":
                 shutil.rmtree(summary['output_path'])

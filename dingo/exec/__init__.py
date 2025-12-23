@@ -1,3 +1,4 @@
+from dingo.exec.base import ExecProto, Executor  # noqa E402.
 from dingo.exec.local import LocalExecutor  # noqa E402.
 from dingo.utils import log
 
@@ -6,5 +7,3 @@ try:
 except Exception as e:
     log.warning("Spark Executor not imported. Open debug log for more details.")
     log.debug(str(e))
-
-from dingo.exec.base import ExecProto, Executor  # noqa E402.

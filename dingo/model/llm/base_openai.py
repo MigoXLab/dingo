@@ -40,7 +40,15 @@ class BaseOpenAI(BaseLLM):
 
             # 如果配置了 embedding_config，初始化 Embedding 客户端
             if cls.dynamic_config.embedding_config:
+                from dingo.config.input_args import EmbeddingConfigArgs
+
                 embedding_cfg = cls.dynamic_config.embedding_config
+
+                # 处理 embedding_config 可能是字典或对象的情况
+                if isinstance(embedding_cfg, dict):
+                    # 如果是字典，转换为 EmbeddingConfigArgs 对象
+                    embedding_cfg = EmbeddingConfigArgs(**embedding_cfg)
+
                 if not embedding_cfg.api_url:
                     raise ValueError("embedding_config must provide api_url")
 

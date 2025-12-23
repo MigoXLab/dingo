@@ -1,0 +1,10 @@
+# Agent-specific dependencies (optional)
+# Install with: pip install -r requirements/agent.txt
+# Or: pip install dingo-python[agent]
+
+# LangChain 1.0 for agent-based evaluation
+langchain>=1.0.0
+langchain-openai>=1.0.0
+
+# Tavily for web search tool
+tavily-python>=0.3.0

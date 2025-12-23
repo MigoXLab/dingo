@@ -180,7 +180,7 @@ class LocalDataSource(DataSource):
 
                 # 处理标题行
                 headers = None
-                first_row_data = None
+                # first_row_data = None
 
                 try:
                     first_row = next(csv_reader)

@@ -38,7 +38,8 @@ class LLMTaskDifficulty(BaseOpenAI):
         "metric_name": "LLMTaskDifficulty",
         "description": "Evaluates task difficulty across cognitive complexity, step complexity, domain knowledge, and constraint density",
         "paper_source": "OpenAI Math Problem Difficulty (2024), Google DeepMind Task Complexity (2023)",
-        "evaluation_results": "Returns difficulty level (1-10) with detailed breakdown"
+        "evaluation_results": "Returns difficulty level (1-10) with detailed breakdown",
+        "examples": "examples/sft/evaluate_instruction_quality.py"
     }
 
     prompt = """

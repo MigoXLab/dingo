@@ -73,8 +73,8 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
 
     # 表格头部
     table = f"### {title}\n\n"
-    table += "| Type | Metric | Description | Paper Source | Evaluation Results |\n"
-    table += "|------|--------|-------------|--------------|-------------------|\n"
+    table += "| Type | Metric | Description | Paper Source | Evaluation Results | Examples |\n"
+    table += "|------|--------|-------------|--------------|-------------------|----------|\n"
 
     # 对于rule类，按type分组合并；对于llm类，保持原有逻辑
     if title.startswith("Rule-Based") and "Quality Metrics" in title:
@@ -134,8 +134,20 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
             else:
                 eval_results = "N/A"
 
+            # 处理示例链接
+            if first_metric.get('examples'):
+                # 修正相对路径
+                example_path = first_metric['examples']
+                if example_path.startswith('docs/'):
+                    example_path = example_path[5:]
+                elif example_path.startswith('examples/'):
+                    example_path = f"../{example_path}"
+                examples = f"[📝 View Example]({example_path})"
+            else:
+                examples = "N/A"
+
             table += f"| {type_name} | {combined_metrics} | " \
-                f"{combined_description} | {paper_source} | {eval_results} |\n"
+                f"{combined_description} | {paper_source} | {eval_results} | {examples} |\n"
     else:
         # 对于llm类，按类名排序；对于其他类型保持原有逻辑
         sort_key = lambda x: x.get('class_name', '')  # noqa: E731
@@ -182,8 +194,20 @@ def generate_table_section(title: str, metrics: List[Dict[str, Any]]) -> str:
             else:
                 eval_results = "N/A"
 
+            # 处理示例链接
+            if metric.get('examples'):
+                # 修正相对路径
+                example_path = metric['examples']
+                if example_path.startswith('docs/'):
+                    example_path = example_path[5:]
+                elif example_path.startswith('examples/'):
+                    example_path = f"../{example_path}"
+                examples = f"[📝 View Example]({example_path})"
+            else:
+                examples = "N/A"
+
             table += f"| {type_name} | {metric_name} | {description} | " \
-                f"{paper_source} | {eval_results} |\n"
+                f"{paper_source} | {eval_results} | {examples} |\n"
 
     table += "\n"
     return table

@@ -39,6 +39,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         "description": "评估答案是否直接回答问题，检测无关和冗余信息",
         "paper_title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation",
         "paper_url": "https://arxiv.org/abs/2309.15217",
+        "examples": "examples/rag/dataset_rag_eval_baseline.py",
         "source_frameworks": "Ragas"
     }
 

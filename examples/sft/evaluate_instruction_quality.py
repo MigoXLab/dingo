@@ -110,7 +110,7 @@ def evaluate_task_difficulty():
         "executor": {
             "max_workers": 5,
             "result_save": {
-                "bad": False,  # 难度评估通常不需要保存"bad"
+                "bad": True,
                 "good": True,  # 保存所有评估结果
                 "all_labels": True
             }
@@ -172,7 +172,7 @@ def evaluate_both():
 
     input_data = {
         "task_name": "comprehensive_instruction_evaluation",
-        "input_path": "test/data/instructions.jsonl",
+        "input_path": str(Path("test/data/instructions.jsonl")),
         "output_path": "outputs/instruction_comprehensive/",
         "dataset": {
             "source": "local",
@@ -246,101 +246,6 @@ def evaluate_both():
     return summary
 
 
-def analyze_difficulty_distribution():
-    """分析任务难度分布（用于数据集平衡）"""
-    print("=" * 80)
-    print("  任务难度分布分析")
-    print("=" * 80 + "\n")
-
-    input_data = {
-        "task_name": "difficulty_distribution_analysis",
-        "input_path": "test/data/instructions.jsonl",
-        "output_path": "outputs/difficulty_distribution/",
-        "dataset": {
-            "source": "local",
-            "format": "jsonl"
-        },
-        "executor": {
-            "max_workers": 10,
-            "result_save": {
-                "bad": False,
-                "good": True,
-                "all_labels": True
-            }
-        },
-        "evaluator": [
-            {
-                "fields": {"content": "instruction"},
-                "evals": [
-                    {
-                        "name": "LLMTaskDifficulty",
-                        "config": {
-                            "model": OPENAI_MODEL,
-                            "key": OPENAI_API_KEY,
-                            "api_url": OPENAI_BASE_URL
-                        }
-                    }
-                ]
-            }
-        ]
-    }
-
-    input_args = InputArgs(**input_data)
-    executor = Executor.exec_map["local"](input_args)
-    summary = executor.execute()
-
-    # 分析结果
-    good_list = executor.get_good_info_list()
-
-    # 统计难度分布
-    difficulty_counts = {
-        "Easy (0-3)": 0,
-        "Moderate (4-6)": 0,
-        "Hard (7-8)": 0,
-        "Expert (9-10)": 0
-    }
-
-    total_score = 0
-    for item in good_list:
-        eval_details = item.get('eval_details', {})
-        for field, details in eval_details.items():
-            for detail in details:
-                if detail.get('metric') == 'LLMTaskDifficulty':
-                    score = detail.get('score', 0)
-                    total_score += score
-
-                    if score <= 3:
-                        difficulty_counts["Easy (0-3)"] += 1
-                    elif score <= 6:
-                        difficulty_counts["Moderate (4-6)"] += 1
-                    elif score <= 8:
-                        difficulty_counts["Hard (7-8)"] += 1
-                    else:
-                        difficulty_counts["Expert (9-10)"] += 1
-
-    print("\n" + "=" * 80)
-    print("  难度分布分析")
-    print("=" * 80)
-    print(f"总数: {len(good_list)}")
-    if good_list:
-        print(f"平均难度: {total_score / len(good_list):.2f}/10")
-    print("\n难度级别分布:")
-    for level, count in difficulty_counts.items():
-        percentage = (count / len(good_list) * 100) if good_list else 0
-        print(f"  {level}: {count} ({percentage:.1f}%)")
-
-    print("\n💡 数据集平衡建议:")
-    # 理想分布: Easy 20%, Moderate 50%, Hard 25%, Expert 5%
-    if difficulty_counts["Easy (0-3)"] / len(good_list) > 0.3:
-        print("  ⚠️  简单任务过多，考虑增加难度或过滤部分简单任务")
-    if difficulty_counts["Moderate (4-6)"] / len(good_list) < 0.3:
-        print("  ⚠️  中等难度任务不足，这是 SFT 的核心部分")
-    if difficulty_counts["Hard (7-8)"] / len(good_list) > 0.4:
-        print("  ⚠️  困难任务过多，可能影响训练效率")
-
-    return summary
-
-
 if __name__ == "__main__":
     import sys
 
@@ -361,8 +266,6 @@ if __name__ == "__main__":
         evaluate_instruction_clarity()
     elif mode == "difficulty":
         evaluate_task_difficulty()
-    elif mode == "distribution":
-        analyze_difficulty_distribution()
     else:
         evaluate_both()
 

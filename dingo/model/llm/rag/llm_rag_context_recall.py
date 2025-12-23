@@ -43,6 +43,7 @@ class LLMRAGContextRecall(BaseOpenAI):
         "description": "评估检索上下文的完整性，判断上下文是否能支持答案中的所有陈述",
         "paper_title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation",
         "paper_url": "https://arxiv.org/abs/2309.15217",
+        "examples": "examples/rag/dataset_rag_eval_baseline.py",
         "source_frameworks": "Ragas + DeepEval"
     }
 

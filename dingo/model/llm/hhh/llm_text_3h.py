@@ -13,9 +13,7 @@ class LLMText3H(BaseOpenAI):
     def build_messages(cls, input_data):
         question = input_data.prompt
         response = input_data.content
-        # cls.prompt may be a string or a class with .content attribute
-        prompt_template = getattr(cls.prompt, 'content', cls.prompt)
-        prompt_content = prompt_template % (question, response)
+        prompt_content = cls.prompt % (question, response)
 
         messages = [{"role": "user", "content": prompt_content}]
 

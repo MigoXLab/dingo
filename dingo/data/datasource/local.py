@@ -188,36 +188,28 @@ class LocalDataSource(DataSource):
                     raise RuntimeError(f'CSV file "{path}" is empty')
 
                 if has_header:
-                    # 第一行作为列名
+                    # The first row is the header
                     headers = [str(h).strip() if h else f'column_{i}' for i, h in enumerate(first_row)]
+                    data_rows = csv_reader
                 else:
-                    # 不使用标题行，使用 column_x 格式
+                    # Generate headers and treat the first row as data
+                    from itertools import chain
                     headers = [f'column_{i}' for i in range(len(first_row))]
-                    first_row_data = first_row  # 保存第一行数据，稍后处理
+                    data_rows = chain([first_row], csv_reader)
 
-                # 如果第一行是数据（has_header=False），先处理它
-                if first_row_data is not None:
-                    row_dict = {}
-                    for i, (header, value) in enumerate(zip(headers, first_row_data)):
-                        row_dict[header] = value.strip() if value else ""
-                    yield json.dumps(row_dict, ensure_ascii=False) + '\n'
-
-                # 逐行读取并转换为 JSON
-                for row in csv_reader:
-                    # 跳过空行
+                # Process all data rows in a single loop
+                for row in data_rows:
+                    # Skip empty rows
                     if not row or all(not cell.strip() for cell in row):
                         continue
 
-                    # 将行数据与标题组合成字典
-                    row_dict = {}
-                    for i, header in enumerate(headers):
-                        # 如果当前行的列数少于标题数，用空字符串填充
-                        if i < len(row):
-                            row_dict[header] = row[i].strip() if row[i] else ""
-                        else:
-                            row_dict[header] = ""
+                    # Combine row data with headers into a dictionary, handling rows with fewer columns
+                    row_dict = {
+                        header: (row[i].strip() if row[i] else "") if i < len(row) else ""
+                        for i, header in enumerate(headers)
+                    }
 
-                    # 转换为 JSON 字符串并 yield
+                    # Yield the JSON string
                     yield json.dumps(row_dict, ensure_ascii=False) + '\n'
 
         except UnicodeDecodeError as e:

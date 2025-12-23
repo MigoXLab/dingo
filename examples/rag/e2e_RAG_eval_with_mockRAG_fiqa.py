@@ -406,6 +406,8 @@ async def main():
     print("FiQA 端到端 RAG 系统评测")
     print("=" * 80)
     print(f"数据集: {FIQA_DATASET} (从 HuggingFace 自动下载)")
+    print(f"API Key: {('sk-...' + OPENAI_API_KEY[-4:]) if OPENAI_API_KEY else 'Not set'}")
+    print(f"API Base URL: {OPENAI_BASE_URL}")
     print(f"模型: {OPENAI_MODEL}")
     print(f"Top-K: {args.top_k}")
     print("=" * 80)

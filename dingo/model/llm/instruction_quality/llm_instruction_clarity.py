@@ -38,7 +38,8 @@ class LLMInstructionClarity(BaseOpenAI):
         "metric_name": "LLMInstructionClarity",
         "description": "Evaluates instruction clarity across four dimensions: self-descriptiveness, consistency, specificity, and completeness",
         "paper_source": "IFEval (Google, 2023), Self-Instruct (UW, 2023)",
-        "evaluation_results": "Returns clarity score (0-10) and detailed analysis"
+        "evaluation_results": "Returns clarity score (0-10) and detailed analysis",
+        "examples": "examples/sft/evaluate_instruction_quality.py"
     }
 
     prompt = """

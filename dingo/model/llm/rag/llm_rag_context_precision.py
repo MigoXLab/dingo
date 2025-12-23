@@ -39,6 +39,7 @@ class LLMRAGContextPrecision(BaseOpenAI):
         "description": "评估检索上下文的精确度，包括相关性和排序质量",
         "paper_title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation",
         "paper_url": "https://arxiv.org/abs/2309.15217",
+        "examples": "examples/rag/dataset_rag_eval_baseline.py",
         "source_frameworks": "Ragas"
     }
 

@@ -146,22 +146,22 @@ class LocalDataSource(DataSource):
         """
         Load a CSV file and return its contents row by row as JSON strings.
         Supports streaming for large files, different encodings, and various CSV formats.
-        
+
         Args:
             path (str): The path to the CSV file.
-        
+
         Returns:
             Generator[str]: Each row as a JSON string with header keys.
         """
         import csv
-        
+
         # 获取 CSV 配置
         has_header = self.input_args.dataset.csv_config.has_header
         encoding = self.input_args.dataset.csv_config.encoding
         dialect = self.input_args.dataset.csv_config.dialect
         delimiter = self.input_args.dataset.csv_config.delimiter
         quotechar = self.input_args.dataset.csv_config.quotechar
-        
+
         try:
             # 尝试使用指定的编码打开文件
             with open(path, 'r', encoding=encoding, newline='') as csvfile:
@@ -170,23 +170,23 @@ class LocalDataSource(DataSource):
                     'dialect': dialect,
                     'quotechar': quotechar,
                 }
-                
+
                 # 如果指定了自定义分隔符，覆盖 dialect 的默认值
                 if delimiter is not None:
                     reader_kwargs['delimiter'] = delimiter
-                
+
                 # 创建 CSV reader（流式读取）
                 csv_reader = csv.reader(csvfile, **reader_kwargs)
-                
+
                 # 处理标题行
                 headers = None
                 first_row_data = None
-                
+
                 try:
                     first_row = next(csv_reader)
                 except StopIteration:
                     raise RuntimeError(f'CSV file "{path}" is empty')
-                
+
                 if has_header:
                     # 第一行作为列名
                     headers = [str(h).strip() if h else f'column_{i}' for i, h in enumerate(first_row)]
@@ -194,20 +194,20 @@ class LocalDataSource(DataSource):
                     # 不使用标题行，使用 column_x 格式
                     headers = [f'column_{i}' for i in range(len(first_row))]
                     first_row_data = first_row  # 保存第一行数据，稍后处理
-                
+
                 # 如果第一行是数据（has_header=False），先处理它
                 if first_row_data is not None:
                     row_dict = {}
                     for i, (header, value) in enumerate(zip(headers, first_row_data)):
                         row_dict[header] = value.strip() if value else ""
                     yield json.dumps(row_dict, ensure_ascii=False) + '\n'
-                
+
                 # 逐行读取并转换为 JSON
                 for row in csv_reader:
                     # 跳过空行
                     if not row or all(not cell.strip() for cell in row):
                         continue
-                    
+
                     # 将行数据与标题组合成字典
                     row_dict = {}
                     for i, header in enumerate(headers):
@@ -216,10 +216,10 @@ class LocalDataSource(DataSource):
                             row_dict[header] = row[i].strip() if row[i] else ""
                         else:
                             row_dict[header] = ""
-                    
+
                     # 转换为 JSON 字符串并 yield
                     yield json.dumps(row_dict, ensure_ascii=False) + '\n'
-                    
+
         except UnicodeDecodeError as e:
             # 编码错误提示
             raise RuntimeError(

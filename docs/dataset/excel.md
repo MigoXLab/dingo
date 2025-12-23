@@ -6,12 +6,12 @@ Dingo 现已支持 Excel 文件的流式读取，同时支持 `.xlsx` 和 `.xls`
 
 ## 主要特性
 
-✅ **流式读取** - 使用只读模式加载工作簿，逐行处理，适合大文件  
-✅ **多种格式** - 同时支持 `.xlsx`（使用 openpyxl）和 `.xls`（使用 xlrd）格式  
-✅ **多工作表** - 支持通过索引或名称选择指定工作表  
-✅ **灵活列名** - 支持带/不带列名的 Excel，自动使用数字索引格式  
-✅ **自动类型** - 自动处理数字、文本、日期等多种数据类型  
-✅ **空值处理** - 正确处理空单元格、空行等特殊情况  
+✅ **流式读取** - 使用只读模式加载工作簿，逐行处理，适合大文件
+✅ **多种格式** - 同时支持 `.xlsx`（使用 openpyxl）和 `.xls`（使用 xlrd）格式
+✅ **多工作表** - 支持通过索引或名称选择指定工作表
+✅ **灵活列名** - 支持带/不带列名的 Excel，自动使用数字索引格式
+✅ **自动类型** - 自动处理数字、文本、日期等多种数据类型
+✅ **空值处理** - 正确处理空单元格、空行等特殊情况
 
 ## 配置参数
 
@@ -247,7 +247,7 @@ pip install openpyxl xlrd
 ```
 RuntimeError: openpyxl is missing. Please install it using: pip install openpyxl
 ```
-**解决方案：** 
+**解决方案：**
 ```bash
 pip install openpyxl  # 用于 .xlsx 文件
 pip install xlrd      # 用于 .xls 文件
@@ -275,7 +275,7 @@ RuntimeError: Excel file "data.xlsx" is empty
 ```
 RuntimeError: Failed to read .xlsx file "data.xlsx": ...
 ```
-**解决方案：** 
+**解决方案：**
 1. 确认文件是有效的 Excel 文件
 2. 尝试在 Excel 中打开并另存为新文件
 3. 检查文件是否损坏
@@ -290,4 +290,3 @@ RuntimeError: Failed to read .xlsx file "data.xlsx": ...
 完整的示例代码可以在以下位置找到：
 - `examples/dataset/excel.py` - 基本使用示例
 - `test/scripts/dataset/test_excel_dataset.py` - 完整测试用例
-

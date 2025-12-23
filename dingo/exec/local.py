@@ -125,7 +125,7 @@ class LocalExecutor(ExecProto):
                             label_list = eval_detail.label if eval_detail.label else []
                             for label in label_list:
                                 label_set.add(label)
-                        
+
                         for label in label_set:
                             self.summary.type_ratio[field_key].setdefault(label, 0)
                             self.summary.type_ratio[field_key][label] += 1

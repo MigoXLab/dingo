@@ -19,17 +19,17 @@ def create_test_csv_file(file_path: str, has_header: bool = True, encoding: str 
     try:
         with open(file_path, 'w', encoding=encoding, newline='') as f:
             writer = csv.writer(f, delimiter=delimiter)
-            
+
             if has_header:
                 # 添加表头
                 writer.writerow(["姓名", "年龄", "城市", "分数"])
-            
+
             # 添加数据
             writer.writerow(["张三", "25", "北京", "95.5"])
             writer.writerow(["李四", "30", "上海", "88.0"])
             writer.writerow(["王五", "28", "广州", "92.3"])
             writer.writerow(["赵六", "35", "深圳", "87.8"])
-        
+
         return True
     except Exception as e:
         print(f"⚠ 创建 CSV 文件失败: {e}")
@@ -41,17 +41,17 @@ def create_test_csv_with_special_chars(file_path: str, encoding: str = 'utf-8'):
     try:
         with open(file_path, 'w', encoding=encoding, newline='') as f:
             writer = csv.writer(f)
-            
+
             # 添加表头
             writer.writerow(["id", "content", "label"])
-            
+
             # 添加包含特殊字符的数据
             writer.writerow(["1", "这是第一条测试数据，用于检查CSV读取功能。", "good"])
             writer.writerow(["2", "第二条数据包含特殊字符：@#$%！", "bad"])
             writer.writerow(["3", "第三条数据测试多行\n内容的处理", "good"])
             writer.writerow(["4", '测试引号内的"双引号"', "good"])
             writer.writerow(["5", "测试逗号,在内容中", "bad"])
-        
+
         return True
     except Exception as e:
         print(f"⚠ 创建特殊字符 CSV 文件失败: {e}")
@@ -523,10 +523,10 @@ def test_stream_large_csv():
         # 创建包含较多数据的测试文件
         with open(csv_file, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
-            
+
             # 添加表头
             writer.writerow(["ID", "名称", "数值"])
-            
+
             # 添加 1000 行数据
             for i in range(1, 1001):
                 writer.writerow([str(i), f"项目_{i}", str(i * 1.5)])
@@ -588,7 +588,7 @@ def test_csv_comprehensive():
     print("\n" + "=" * 60)
     print("综合测试 - CSV 功能完整性验证")
     print("=" * 60)
-    
+
     print("\n功能列表:")
     print("  1. ✓ 标准 CSV 格式（逗号分隔）")
     print("  2. ✓ 无列名的 CSV（column_x 格式）")
@@ -597,14 +597,14 @@ def test_csv_comprehensive():
     print("  5. ✓ 流式读取（适合大文件）")
     print("  6. ✓ 多行内容和特殊字符")
     print("  7. ✓ 自定义编码（utf-8, gbk 等）")
-    
+
     print("\n配置参数说明:")
     print("  - has_header: 第一行是否为列名（默认 True）")
     print("  - encoding: 文件编码（默认 utf-8）")
     print("  - dialect: CSV 格式（默认 excel）")
     print("  - delimiter: 自定义分隔符（默认 None，根据 dialect 自动选择）")
     print("  - quotechar: 引号字符（默认双引号）")
-    
+
     print("\n" + "=" * 60)
     print("✓ 综合测试完成!")
     print("=" * 60)
@@ -619,23 +619,23 @@ if __name__ == "__main__":
 
     # 测试标准 CSV
     test_csv_with_header()
-    
+
     # 测试无列名 CSV
     test_csv_without_header()
-    
+
     # 测试不同分隔符
     test_csv_tab_delimiter()
     test_csv_custom_delimiter()
-    
+
     # 测试不同编码
     test_csv_gbk_encoding()
-    
+
     # 测试特殊字符
     test_csv_special_characters()
-    
+
     # 测试流式读取
     test_stream_large_csv()
-    
+
     # 综合测试
     test_csv_comprehensive()
 

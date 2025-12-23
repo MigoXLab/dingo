@@ -245,6 +245,6 @@ RuntimeError: CSV file is empty
 
 ## 相关文档
 
-- [Excel 读取文档](../README_EXCEL.md)
-- [数据集配置文档](../../docs/dataset_config.md)
-- [评估器配置文档](../../docs/evaluator_config.md)
+- [Excel 读取文档](excel.md)
+- [数据集配置文档](../config.md)
+- [评估器配置文档](../rules.md)

@@ -89,7 +89,7 @@ const CustomLegend = ({
 
     // 检查是否有二级数据
     const hasSecondLevel = firstLevelType => {
-        return Object.keys(data.type_ratio.content).some(key =>
+        return Object.keys(data.type_ratio?.content||{}).some(key =>
             key.startsWith(firstLevelType + '-')
         );
     };
@@ -106,7 +106,6 @@ const CustomLegend = ({
             <div className="space-y-1 max-h-[60vh] overflow-y-auto scrollbar-thin">
                 {firstLevelData?.map((item, index) => {
                     const hasChildren = hasSecondLevel(item?.name);
-                    console.log(hasChildren, 'hasChildren')
                     return (
                         <div
                             key={index}
@@ -201,7 +200,6 @@ const PieChart = ({ data }: { data: SummaryData }) => {
 
     // 获取二级数据的函数
     const getSecondLevelData = (firstLevelType: string) => {
-        console.log(firstLevelType, 'firstLevelType');
         if (!typeRatioData || typeof typeRatioData !== 'object') {
             return [];
         }
@@ -221,7 +219,7 @@ const PieChart = ({ data }: { data: SummaryData }) => {
 
     //根据筛选获得扇形图的右侧展示的一级目录
     const firstLevelData = useMemo(()=>{
-        return Object.entries(typeRatio[selected]).map(
+        return Object.entries(typeRatio[selected] || {}).map(
             ([key, value], index) => ({
                 name: key,
                 value,

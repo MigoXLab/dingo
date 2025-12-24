@@ -58,9 +58,6 @@ const DetailTable: React.FC<DetailTableProps> = ({ currentPath }) => {
                         currentPath,
                     })) as DataItem[]) || [];
 
-                console.log(allData, 'allData');
-                console.log(filePaths, 'jsonlFilePaths');
-
                 // 使用 id 作为唯一标识
                 setData(uniqBy(allData, 'id'));
                 setCurrent({

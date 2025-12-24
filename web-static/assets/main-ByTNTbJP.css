@@ -578,10 +578,6 @@ video {
   position: relative;
 }
 
-.sticky {
-  position: sticky;
-}
-
 .left-4 {
   left: 1rem;
 }

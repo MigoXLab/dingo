@@ -4,7 +4,6 @@ import { ColumnsType } from 'antd/es/table';
 import { useDALStore } from '@/store/dal';
 import { FormattedMessage } from 'react-intl';
 import { SummaryData } from '@/pages/main-home/components/summary-data-table';
-import { uniqBy } from 'lodash';
 import FilterCascader from './filter-cascader';
 import HighlightText from './HightLightText';
 
@@ -58,8 +57,7 @@ const DetailTable: React.FC<DetailTableProps> = ({ currentPath }) => {
                         currentPath,
                     })) as DataItem[]) || [];
 
-                // 使用 id 作为唯一标识
-                setData(uniqBy(allData, 'id'));
+                setData(allData);
                 setCurrent({
                     ...current,
                     currentPage: 1,
@@ -120,7 +118,6 @@ const DetailTable: React.FC<DetailTableProps> = ({ currentPath }) => {
                     title: key,
                     dataIndex: key,
                     key: key,
-                    minWidth: 100,
                     render: (value: unknown, record) => {
                         if (key === 'content') {
                             return (
@@ -142,25 +139,51 @@ const DetailTable: React.FC<DetailTableProps> = ({ currentPath }) => {
                             !Array.isArray(value)
                         ) {
                             return (
-                                <span className="select-text">
-                                    {JSON.stringify(value, null, 2)}
-                                </span>
+                                <HighlightText
+                                    text={JSON.stringify(value).slice(0, 10000)}
+                                    highlight={record.reason_list || ''}
+                                    showHighlight={false}
+                                />
                             );
                         }
                         // 如果是数组，显示为 JSON
                         if (Array.isArray(value)) {
                             return (
-                                <span className="select-text">
+                                <span
+                                    className="select-text"
+                                    style={{
+                                        wordBreak: 'break-word',
+                                        whiteSpace: 'pre-wrap',
+                                    }}
+                                >
                                     {JSON.stringify(value)}
                                 </span>
                             );
                         }
                         // 如果是字符串，直接显示
                         if (typeof value === 'string') {
-                            return <span>{value || '-'}</span>;
+                            return (
+                                <span
+                                    style={{
+                                        wordBreak: 'break-word',
+                                        whiteSpace: 'pre-wrap',
+                                    }}
+                                >
+                                    {value || '-'}
+                                </span>
+                            );
                         }
                         // 其他类型直接显示
-                        return <span>{String(value ?? '-')}</span>;
+                        return (
+                            <span
+                                style={{
+                                    wordBreak: 'break-word',
+                                    whiteSpace: 'pre-wrap',
+                                }}
+                            >
+                                {String(value ?? '-')}
+                            </span>
+                        );
                     },
                 };
             }
@@ -186,7 +209,6 @@ const DetailTable: React.FC<DetailTableProps> = ({ currentPath }) => {
                 rowKey={(record, index) => {
                     return `${record?._filePath}_${index}`;
                 }}
-                sticky={{offsetHeader: -30}}
                 pagination={{
                     pageSize: current?.pageSize,
                     showQuickJumper: true,
@@ -208,7 +230,25 @@ const DetailTable: React.FC<DetailTableProps> = ({ currentPath }) => {
                         });
                     }
                 }}
-                scroll={{ x: '100%' }}
+                scroll={{ x: 'max-content' }}
+                components={{
+                    body: {
+                        cell: (
+                            props: React.TdHTMLAttributes<HTMLTableCellElement>
+                        ) => (
+                            <td
+                                {...props}
+                                style={{
+                                    ...props.style,
+                                    whiteSpace: 'normal',
+                                    wordBreak: 'break-word',
+                                    maxWidth: '500px',
+                                    minWidth: '100px',
+                                }}
+                            />
+                        ),
+                    },
+                }}
             />
         </>
     );

@@ -68,7 +68,7 @@
 
 🤖 **RAG 系统评估** - 使用 5 个学术支持的指标全面评估检索和生成质量
 
-🧠 **LLM 与规则混合** - 结合快速启发式规则（30+ 内置规则）和基于 LLM 的深度评估
+🧠 **LLM、规则和智能体混合** - 结合快速启发式规则（30+ 内置规则）和基于 LLM 的深度评估
 
 🚀 **灵活执行** - 本地运行快速迭代，或使用 Spark 扩展到数十亿级数据集
 
@@ -497,6 +497,8 @@ class MyCustomModel(BaseOpenAI):
 Dingo 支持基于智能体的评估器，可以使用外部工具进行多步推理和自适应上下文收集：
 
 ```python
+from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.agent.base_agent import BaseAgent
 
@@ -532,6 +534,7 @@ class MyAgent(BaseAgent):
         "model": "gpt-4",
         "parameters": {
           "agent_config": {
+            "max_iterations": 5,
             "tools": {
               "tavily_search": {"api_key": "tavily-key"}
             }

@@ -69,7 +69,7 @@
 
 🤖 **RAG System Assessment** - Comprehensive evaluation of retrieval and generation quality with 5 academic-backed metrics
 
-🧠 **LLM & Rule Hybrid** - Combine fast heuristic rules (30+ built-in) with LLM-based deep assessment
+🧠 **LLM & Rule & Agent Hybrid** - Combine fast heuristic rules (30+ built-in) with LLM-based deep assessment
 
 🚀 **Flexible Execution** - Run locally for rapid iteration or scale with Spark for billion-scale datasets
 
@@ -503,6 +503,8 @@ class CustomEvaluator(BaseOpenAI):
 Dingo supports agent-based evaluators that can use external tools for multi-step reasoning and adaptive context gathering:
 
 ```python
+from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.agent.base_agent import BaseAgent
 

@@ -26,6 +26,7 @@ jobs:
         pip install pytest
         if [ -f requirements/runtime.txt ]; then pip install -r requirements/runtime.txt; fi
         pip install pyspark
+        pip install tavily-python
         pip install -e .
 
     - name: Check Python syntax and imports

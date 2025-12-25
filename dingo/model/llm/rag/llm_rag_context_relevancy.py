@@ -41,6 +41,7 @@ class LLMRAGContextRelevancy(BaseOpenAI):
         "description": "评估检索上下文与问题的相关性，检测噪声信息",
         "paper_title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation",
         "paper_url": "https://arxiv.org/abs/2309.15217",
+        "examples": "examples/rag/dataset_rag_eval_baseline.py",
         "source_frameworks": "Ragas + DeepEval + TruLens"
     }
 

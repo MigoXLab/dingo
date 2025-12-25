@@ -95,6 +95,12 @@ export interface DataAccessLayer {
         primaryName: string;
         secondaryNameList: string[];
     }): Promise<EvaluationDetailItem[]>;
+    getAllJsonlFiles(params: {
+        currentPath: string;
+    }): Promise<EvaluationDetailItem[]>;
+    getAllJsonlFilePaths(params: {
+        currentPath: string;
+    }): Promise<string[]>;
 }
 
 // Electron 环境的实现
@@ -110,7 +116,8 @@ export class ElectronDAL implements DataAccessLayer {
             return this.cache.get(cacheKey);
         }
 
-        const data = await this[dataType](params);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await (this as any)[dataType](params);
         this.cache.set(cacheKey, data);
         return data;
     }
@@ -151,6 +158,32 @@ export class ElectronDAL implements DataAccessLayer {
             params.primaryName,
             params.secondaryNameList
         )) as EvaluationDetailItem[];
+    }
+
+    async getAllJsonlFiles(params: {
+        currentPath: string;
+    }): Promise<EvaluationDetailItem[]> {
+        if (!window.electronAPI?.readAllJsonlFiles) {
+            throw new Error(
+                'readAllJsonlFiles is not available. Please restart the application.'
+            );
+        }
+        return (await window.electronAPI.readAllJsonlFiles(
+            params.currentPath
+        )) as EvaluationDetailItem[];
+    }
+
+    async getAllJsonlFilePaths(params: {
+        currentPath: string;
+    }): Promise<string[]> {
+        if (!window.electronAPI?.getAllJsonlFilePaths) {
+            throw new Error(
+                'getAllJsonlFilePaths is not available. Please restart the application.'
+            );
+        }
+        return (await window.electronAPI.getAllJsonlFilePaths(
+            params.currentPath
+        )) as string[];
     }
 }
 
@@ -203,7 +236,8 @@ export class WebDAL implements DataAccessLayer {
         dataType: K,
         params: DataTypeParams[K]
     ): Promise<any> {
-        return this[dataType](params);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (this as any)[dataType](params);
     }
 
     async preloadData(dataTypes: (keyof DataTypeParams)[]): Promise<void> {
@@ -241,6 +275,35 @@ export class WebDAL implements DataAccessLayer {
             });
         }
         return res;
+    }
+
+    async getAllJsonlFiles(params: {
+        currentPath: string;
+    }): Promise<EvaluationDetailItem[]> {
+        // 在 Web 环境中，返回所有 evaluationDetailList 中的数据
+        let res = [] as EvaluationDetailItem[];
+        if (this.dataSource?.data?.evaluationDetailList) {
+            Object.entries(this.dataSource.data.evaluationDetailList).forEach(
+                ([key, items]) => {
+                    const itemsWithPath = items.map(item => ({
+                        ...item,
+                        _filePath: key,
+                    }));
+                    res = res.concat(itemsWithPath);
+                }
+            );
+        }
+        return res;
+    }
+
+    async getAllJsonlFilePaths(params: {
+        currentPath: string;
+    }): Promise<string[]> {
+        // 在 Web 环境中，返回所有 evaluationDetailList 的键
+        if (this.dataSource?.data?.evaluationDetailList) {
+            return Object.keys(this.dataSource.data.evaluationDetailList);
+        }
+        return [];
     }
 }
 

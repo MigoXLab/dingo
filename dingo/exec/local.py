@@ -115,6 +115,7 @@ class LocalExecutor(ExecProto):
                             self.summary.type_ratio[field_key] = {}
 
                         # 遍历 List[EvalDetail]，同时收集指标分数和标签
+                        label_set = set()
                         for eval_detail in eval_detail_list:
                             # 收集指标分数（按 field_key 分组）
                             if eval_detail.score is not None and eval_detail.metric:
@@ -123,8 +124,11 @@ class LocalExecutor(ExecProto):
                             # 收集标签统计
                             label_list = eval_detail.label if eval_detail.label else []
                             for label in label_list:
-                                self.summary.type_ratio[field_key].setdefault(label, 0)
-                                self.summary.type_ratio[field_key][label] += 1
+                                label_set.add(label)
+
+                        for label in label_set:
+                            self.summary.type_ratio[field_key].setdefault(label, 0)
+                            self.summary.type_ratio[field_key][label] += 1
 
                     if result_info.eval_status:
                         self.summary.num_bad += 1

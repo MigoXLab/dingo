@@ -39,6 +39,7 @@ class LLMRAGFaithfulness(BaseOpenAI):
         "description": "评估生成答案是否忠实于给定上下文，检测幻觉和编造信息",
         "paper_title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation",
         "paper_url": "https://arxiv.org/abs/2309.15217",
+        "examples": "examples/rag/dataset_rag_eval_baseline.py",
         "source_frameworks": "Ragas + DeepEval"
     }
 

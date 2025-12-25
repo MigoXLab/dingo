@@ -181,6 +181,140 @@ app.whenReady().then(() => {
         }
     );
 
+    // 通用的递归遍历 jsonl 文件的辅助函数
+    async function traverseJsonlFiles<T>(
+        dirPath: string,
+        processFile: (
+            fullPath: string,
+            relativePath: string
+        ) => Promise<T | null>
+    ): Promise<T[]> {
+        const results: T[] = [];
+
+        async function traverseDirectory(
+            currentPath: string,
+            relativePath: string = ''
+        ): Promise<void> {
+            try {
+                const items = await fs.readdir(currentPath, {
+                    withFileTypes: true,
+                });
+
+                for (const item of items) {
+                    const fullPath = path.join(currentPath, item.name);
+                    const newRelativePath = relativePath
+                        ? `${relativePath}/${item.name}`
+                        : item.name;
+
+                    if (item.isDirectory()) {
+                        // 递归遍历子目录
+                        await traverseDirectory(fullPath, newRelativePath);
+                    } else if (
+                        item.isFile() &&
+                        item.name.endsWith('.jsonl') &&
+                        item.name !== 'summary.json'
+                    ) {
+                        // 处理 jsonl 文件
+                        try {
+                            const result = await processFile(
+                                fullPath,
+                                newRelativePath
+                            );
+                            if (result !== null) {
+                                results.push(result);
+                            }
+                        } catch (error) {
+                            console.error(
+                                `Error processing file ${fullPath}:`,
+                                error
+                            );
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`Error reading directory ${currentPath}:`, error);
+            }
+        }
+
+        await traverseDirectory(dirPath);
+        return results;
+    }
+
+    // 递归获取所有 jsonl 文件的路径列表（相对路径）
+    async function getAllJsonlFilePathsRecursive(
+        dirPath: string
+    ): Promise<string[]> {
+        const filePaths = await traverseJsonlFiles<string>(
+            dirPath,
+            async (_, relativePath) => relativePath
+        );
+        return filePaths.sort();
+    }
+
+    ipcMain.handle(
+        'get-all-jsonl-file-paths',
+        async (event, dirPath: string) => {
+            try {
+                return await getAllJsonlFilePathsRecursive(dirPath);
+            } catch (error) {
+                console.error('Error getting all JSONL file paths:', error);
+                throw error;
+            }
+        }
+    );
+
+    // 修改 readAllJsonlFilesRecursive，为每个数据项添加文件路径信息
+    async function readAllJsonlFilesRecursiveWithPath(
+        dirPath: string
+    ): Promise<any[]> {
+        const allDataArrays = await traverseJsonlFiles<any[]>(
+            dirPath,
+            async (fullPath, relativePath) => {
+                try {
+                    const fileContent = await fs.readFile(fullPath, 'utf-8');
+                    const lines = fileContent
+                        .trim()
+                        .split('\n')
+                        .filter(line => line.trim());
+                    const parsedData = lines
+                        .map(line => {
+                            try {
+                                const data = JSON.parse(line);
+                                // 为每个数据项添加文件路径信息
+                                return {
+                                    ...data,
+                                    _filePath: relativePath,
+                                };
+                            } catch (e) {
+                                console.error(
+                                    `Error parsing line in ${fullPath}:`,
+                                    e
+                                );
+                                return null;
+                            }
+                        })
+                        .filter(item => item !== null);
+                    return parsedData;
+                } catch (error) {
+                    console.error(`Error reading file ${fullPath}:`, error);
+                    return null;
+                }
+            }
+        );
+
+        // 展平所有数组
+        return allDataArrays.flat();
+    }
+
+    ipcMain.handle('read-all-jsonl-files', async (event, dirPath: string) => {
+        try {
+            return await readAllJsonlFilesRecursiveWithPath(dirPath);
+        } catch (error) {
+            console.error('Error reading all JSONL files:', error);
+            throw error;
+        }
+    });
+
     ipcMain.handle('get-input-path', () => {
         const argv = minimist(process?.argv?.slice(2));
         const inputPath = argv.input;

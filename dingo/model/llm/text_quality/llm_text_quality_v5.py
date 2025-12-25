@@ -12,6 +12,7 @@ class LLMTextQualityV5(BaseTextQuality):
         "paper_title": "WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages",
         "paper_url": "https://arxiv.org/abs/2501.14506",
         "paper_authors": "Yu et al., 2025",
+        "examples": "examples/llm_and_rule/llm_local.py",
         "evaluation_results": "docs/eval/prompt/redpajama_data_evaluated_by_prompt.md"
     }
     prompt = """

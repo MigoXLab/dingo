@@ -32,6 +32,14 @@ class DatasetExcelArgs(BaseModel):
     has_header: bool = True  # 第一行是否为列名，False 则使用列序号作为列名
 
 
+class DatasetCsvArgs(BaseModel):
+    has_header: bool = True  # 第一行是否为列名，False 则使用 column_x 作为列名
+    encoding: str = 'utf-8'  # 文件编码，默认 utf-8，支持 gbk, gb2312, latin1 等
+    dialect: str = 'excel'  # CSV 格式方言：excel(默认), excel-tab, unix 等
+    delimiter: str | None = None  # 分隔符，None 表示根据 dialect 自动选择
+    quotechar: str = '"'  # 引号字符，默认双引号
+
+
 class DatasetFieldArgs(BaseModel):
     id: str = ''
     prompt: str = ''
@@ -49,6 +57,7 @@ class DatasetArgs(BaseModel):
     s3_config: DatasetS3ConfigArgs = DatasetS3ConfigArgs()
     sql_config: DatasetSqlArgs = DatasetSqlArgs()
     excel_config: DatasetExcelArgs = DatasetExcelArgs()
+    csv_config: DatasetCsvArgs = DatasetCsvArgs()
 
 
 class ExecutorResultSaveArgs(BaseModel):

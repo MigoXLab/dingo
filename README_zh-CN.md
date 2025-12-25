@@ -383,6 +383,12 @@ input_data = {
 ✅ 视觉语言模型（InternVL、Gemini）  
 ✅ 自定义 prompt 注册
 
+**基于智能体** - 多步推理与工具
+✅ 网络搜索集成（Tavily）
+✅ 自适应上下文收集
+✅ 多源事实验证
+✅ 自定义智能体与工具注册
+
 **可扩展架构**  
 ✅ 基于插件的规则/prompt/模型注册  
 ✅ 清晰的关注点分离（agents、tools、orchestration）  
@@ -485,6 +491,62 @@ class MyCustomModel(BaseOpenAI):
 查看更多示例：
 - [注册规则](examples/register/sdk_register_rule.py)
 - [注册模型](examples/register/sdk_register_llm.py)
+
+### 智能体评估与工具
+
+Dingo 支持基于智能体的评估器，可以使用外部工具进行多步推理和自适应上下文收集：
+
+```python
+from dingo.model import Model
+from dingo.model.llm.agent.base_agent import BaseAgent
+
+@Model.llm_register('MyAgent')
+class MyAgent(BaseAgent):
+    """支持工具的自定义智能体"""
+
+    available_tools = ["tavily_search", "my_custom_tool"]
+    max_iterations = 5
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        # 使用工具进行事实核查
+        search_result = cls.execute_tool('tavily_search', query=input_data.content)
+
+        # 使用LLM进行多步推理
+        result = cls.send_messages([...])
+
+        return EvalDetail(...)
+```
+
+**内置智能体：**
+- `AgentHallucination`: 增强的幻觉检测，支持网络搜索回退
+
+**配置示例：**
+```json
+{
+  "evaluator": [{
+    "evals": [{
+      "name": "AgentHallucination",
+      "config": {
+        "key": "openai-api-key",
+        "model": "gpt-4",
+        "parameters": {
+          "agent_config": {
+            "tools": {
+              "tavily_search": {"api_key": "tavily-key"}
+            }
+          }
+        }
+      }
+    }]
+  }]
+}
+```
+
+**了解更多：**
+- [智能体开发指南](docs/agent_development_guide.md)
+- [AgentHallucination 示例](examples/agent/agent_hallucination_example.py)
+- [AgentFactCheck LangChain示例](examples/agent/agent_executor_example.py)
 
 ## 执行引擎
 

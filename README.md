@@ -384,6 +384,12 @@ input_data = {
 ✅ Vision-Language Models (InternVL, Gemini)  
 ✅ Custom prompt registration
 
+**Agent-Based** - Multi-step reasoning with tools
+✅ Web search integration (Tavily)
+✅ Adaptive context gathering
+✅ Multi-source fact verification
+✅ Custom agent & tool registration
+
 **Extensible Architecture**  
 ✅ Plugin-based rule/prompt/model registration  
 ✅ Clean separation of concerns (agents, tools, orchestration)  
@@ -491,6 +497,63 @@ class CustomEvaluator(BaseOpenAI):
 **Examples:**
 - [Custom Rules](examples/register/sdk_register_rule.py)
 - [Custom Models](examples/register/sdk_register_llm.py)
+
+### Agent-Based Evaluation with Tools
+
+Dingo supports agent-based evaluators that can use external tools for multi-step reasoning and adaptive context gathering:
+
+```python
+from dingo.model import Model
+from dingo.model.llm.agent.base_agent import BaseAgent
+
+@Model.llm_register('MyAgent')
+class MyAgent(BaseAgent):
+    """Custom agent with tool support"""
+
+    available_tools = ["tavily_search", "my_custom_tool"]
+    max_iterations = 5
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        # Use tools for fact-checking
+        search_result = cls.execute_tool('tavily_search', query=input_data.content)
+
+        # Multi-step reasoning with LLM
+        result = cls.send_messages([...])
+
+        return EvalDetail(...)
+```
+
+**Built-in Agent:**
+- `AgentHallucination`: Enhanced hallucination detection with web search fallback
+
+**Configuration Example:**
+```json
+{
+  "evaluator": [{
+    "evals": [{
+      "name": "AgentHallucination",
+      "config": {
+        "key": "openai-api-key",
+        "model": "gpt-4",
+        "parameters": {
+          "agent_config": {
+            "max_iterations": 5,
+            "tools": {
+              "tavily_search": {"api_key": "tavily-key"}
+            }
+          }
+        }
+      }
+    }]
+  }]
+}
+```
+
+**Learn More:**
+- [Agent Development Guide](docs/agent_development_guide.md) - Comprehensive guide for creating custom agents and tools
+- [AgentHallucination Example](examples/agent/agent_hallucination_example.py) - Production agent example
+- [AgentFactCheck Example](examples/agent/agent_executor_example.py) - LangChain agent example
 
 ## ⚙️ Execution Modes
 

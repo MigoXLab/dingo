@@ -26,6 +26,7 @@
   <a href="https://github.com/DataEval/dingo/issues"><img src="https://img.shields.io/github/issues/DataEval/dingo" alt="GitHub issues"></a>
   <a href="https://mseep.ai/app/dataeval-dingo"><img src="https://mseep.net/pr/dataeval-dingo-badge.png" alt="MseeP.ai Security Assessment Badge" height="20"></a>
   <a href="https://deepwiki.com/MigoXLab/dingo"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://archestra.ai/mcp-catalog/dataeval__dingo"><img src="https://archestra.ai/mcp-catalog/api/badge/quality/DataEval/dingo" alt="Trust Score"></a>
 </p>
 
 </div>
@@ -55,7 +56,23 @@
 
 # はじめに
 
-Dingoは、データセット内のデータ品質問題を自動的に検出するデータ品質評価ツールです。Dingoは様々な組み込みルールとモデル評価手法を提供し、カスタム評価手法もサポートしています。Dingoは一般的に使用されるテキストデータセットとマルチモーダルデータセット（事前学習データセット、ファインチューニングデータセット、評価データセットを含む）をサポートしています。さらに、DingoはローカルCLIやSDKなど複数の使用方法をサポートし、[OpenCompass](https://github.com/open-compass/opencompass)などの様々な評価プラットフォームに簡単に統合できます。
+**Dingo は包括的な AI データ、モデル、アプリケーション品質評価ツール**であり、機械学習エンジニア、データエンジニア、AI 研究者向けに設計されています。トレーニングデータ、ファインチューニングデータセット、本番 AI システムの品質を体系的に評価・改善するのを支援します。
+
+## なぜ Dingo を選ぶのか？
+
+🎯 **本番グレードの品質チェック** - 事前学習データセットから RAG システムまで、AI に高品質なデータを提供
+
+🗄️ **マルチソースデータ統合** - ローカルファイル、SQL データベース（PostgreSQL/MySQL/SQLite）、HuggingFace データセット、S3 ストレージへのシームレスな接続
+
+🔍 **マルチフィールド評価** - 異なるフィールドに並行して異なる品質ルールを適用（例：`isbn` フィールドには ISBN 検証、`title` フィールドにはテキスト品質チェック）
+
+🤖 **RAG システム評価** - 5つの学術的裏付けのある指標で検索と生成品質を包括的に評価
+
+🧠 **LLM とルールのハイブリッド** - 高速ヒューリスティックルール（30以上の組み込みルール）と LLM ベースの深度評価を組み合わせ
+
+🚀 **柔軟な実行** - ローカルで実行して迅速に反復、または Spark で数十億規模のデータセットにスケール
+
+📊 **豊富なレポート** - GUI 可視化とフィールドレベルの洞察を備えた詳細な品質レポート
 
 ## アーキテクチャ図
 
@@ -76,7 +93,7 @@ pip install dingo-python
 ```python
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
-from dingo.model.llm.llm_text_quality_model_base import LLMTextQualityModelBase
+from dingo.model.llm.text_quality.llm_text_quality_v4 import LLMTextQualityV4
 from dingo.model.rule.rule_common import RuleEnterAndSpace
 
 data = Data(
@@ -85,13 +102,14 @@ data = Data(
     content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."
 )
 
+
 def llm():
-    LLMTextQualityModelBase.dynamic_config = EvaluatorLLMArgs(
+    LLMTextQualityV4.dynamic_config = EvaluatorLLMArgs(
         key='YOUR_API_KEY',
         api_url='https://api.openai.com/v1/chat/completions',
         model='gpt-4o',
     )
-    res = LLMTextQualityModelBase.eval(data)
+    res = LLMTextQualityV4.eval(data)
     print(res)
 
 
@@ -114,11 +132,18 @@ input_data = {
         "format": "plaintext"  # フォーマット: plaintext
     },
     "executor": {
-        "eval_group": "sft",  # SFTデータ用のルールセット
         "result_save": {
             "bad": True  # 評価結果を保存
         }
-    }
+    },
+    "evaluator": [
+        {
+            "evals": [
+                {"name": "RuleColonEnd"},
+                {"name": "RuleSpecialCharacter"}
+            ]
+        }
+    ]
 }
 
 input_args = InputArgs(**input_data)
@@ -185,138 +210,262 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 このビデオでは、Dingo MCPサーバーをCursorと一緒に使用する方法をステップバイステップで説明しています。
 
 
-# データ品質メトリクス
+# 🎓 実務者のための重要概念
 
-Dingoはルールベースおよびプロンプトベースの評価メトリクスを通じて包括的なデータ品質評価を提供します。これらのメトリクスは、効果性、完全性、類似性、セキュリティなどの複数の品質次元をカバーしています。
+## Dingo を本番環境で使用できる理由
 
-📊 **[完全なメトリクス文書を表示 →](docs/metrics.md)**
+### 1. **マルチフィールド評価パイプライン**
+1回の実行で異なるフィールドに異なる品質チェックを適用：
+```python
+"evaluator": [
+    {"fields": {"content": "isbn"}, "evals": [{"name": "RuleIsbn"}]},
+    {"fields": {"content": "title"}, "evals": [{"name": "RuleAbnormalChar"}]},
+    {"fields": {"content": "description"}, "evals": [{"name": "LLMTextQualityV5"}]}
+]
+```
+**重要性**：各フィールドごとに別々のスクリプトを書かずに構造化データ（データベーステーブルなど）を評価できます。
 
-評価システムには以下が含まれます：
-- **テキスト品質評価メトリクス**: DataMan手法と拡張された多次元評価を使用した事前学習データの品質評価
-- **SFTデータ評価メトリクス**: 教師ありファインチューニングデータの正直、有用、無害評価
-- **分類メトリクス**: トピック分類とコンテンツ分類
-- **マルチモーダル評価メトリクス**: 画像分類と関連性評価
-- **ルールベース品質メトリクス**: ヒューリスティックルールによる効果性と類似性検出を用いた自動品質チェック
-- **事実性評価メトリクス**: GPT-5 System Cardに基づく二段階事実性評価
-- など
+### 2. **大規模データセットのストリーミング処理**
+SQL データソースは SQLAlchemy のサーバーサイドカーソルを使用：
+```python
+# メモリオーバーフローなしで数十億行を処理
+for data in dataset.get_data():  # 1行ずつyield
+    result = evaluator.eval(data)
+```
+**重要性**：中間ファイルにエクスポートすることなく本番データベースを処理できます。
 
-大部分のメトリクスは学術的なソースによって支持されており、客観性と科学的厳密性を保証しています。
+### 3. **メモリ内フィールド分離**
+RAG 評価は異なるフィールド組み合わせ間のコンテキストリークを防止：
+```
+outputs/
+├── user_input,response,retrieved_contexts/  # Faithfulness グループ
+└── user_input,response/                     # Answer Relevancy グループ
+```
+**重要性**：複数のフィールド組み合わせを評価する際のメトリクス計算の正確性を保証。
 
-### 評価でのLLM評価の使用
+### 4. **ルール-LLM ハイブリッド戦略**
+高速ルール（100% カバレッジ）とサンプリング LLM チェック（10% カバレッジ）を組み合わせ：
+```python
+"evals": [
+    {"name": "RuleAbnormalChar"},        # 高速、全データで実行
+    {"name": "LLMTextQualityV5"}         # コスト高、必要に応じてサンプリング
+]
+```
+**重要性**：本番規模の評価でコストとカバレッジのバランスを取る。
 
-これらの評価プロンプトを評価で使用するには、設定で指定します：
+### 5. **登録による拡張性**
+カスタムルール、プロンプト、モデルのための明確なプラグインアーキテクチャ：
+```python
+@Model.rule_register('QUALITY_BAD_CUSTOM', ['default'])
+class MyCustomRule(BaseRule):
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        # 例：コンテンツが空かチェック
+        if not input_data.content:
+            return EvalDetail(
+                metric=cls.__name__,
+                status=True,  # 問題を発見
+                label=[f'{cls.metric_type}.{cls.__name__}'],
+                reason=["コンテンツが空です"]
+            )
+        return EvalDetail(
+            metric=cls.__name__,
+            status=False,  # 問題なし
+            label=['QUALITY_GOOD']
+        )
+```
+**重要性**：コードベースをフォークせずにドメイン固有のニーズに適応。
+
+---
+
+# 📚 データ品質メトリクス
+
+Dingo は **70以上の評価メトリクス**を提供し、複数の次元にわたってルールベースの速度と LLM ベースの深度を組み合わせます。
+
+## メトリクスカテゴリ
+
+| カテゴリ | 例 | 使用例 |
+|----------|----------|----------|
+| **事前学習テキスト品質** | 完全性、有効性、類似性、セキュリティ | LLM 事前学習データフィルタリング |
+| **SFT データ品質** | 正直、有用、無害 (3H) | 指示ファインチューニングデータ |
+| **RAG 評価** | 忠実度、コンテキスト精度、答え関連性 | RAG システム評価 |
+| **幻覚検出** | HHEM-2.1-Open、事実性チェック | 本番 AI 信頼性 |
+| **分類** | トピック分類、コンテンツラベリング | データ整理 |
+| **マルチモーダル** | 画像テキスト関連性、VLM 品質 | ビジュアル言語データ |
+| **セキュリティ** | PII 検出、Perspective API 毒性 | プライバシーと安全性 |
+
+📊 **[完全なメトリクス文書を表示 →](docs/metrics.md)**  
+📖 **[RAG 評価ガイド →](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[幻覚検出ガイド →](docs/hallucination_guide.md)**  
+✅ **[事実性評価ガイド →](docs/factcheck_guide.md)**
+
+大部分のメトリクスは学術研究に裏付けられており、科学的厳密性を確保しています。
+
+## メトリクスの迅速な使用
 
 ```python
+llm_config = {
+    "model": "gpt-4o",
+    "key": "YOUR_API_KEY",
+    "api_url": "https://api.openai.com/v1/chat/completions"
+}
+
 input_data = {
-    # Other parameters...
-    "executor": {
-        "prompt_list": ["QUALITY_BAD_SIMILARITY"],  # Specific prompt to use
-    },
-    "evaluator": {
-        "llm_config": {
-            "LLMTextQualityPromptBase": {  # LLM model to use
-                "model": "gpt-4o",
-                "key": "YOUR_API_KEY",
-                "api_url": "https://api.openai.com/v1/chat/completions"
-            }
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleAbnormalChar"},           # ルールベース（高速）
+                {"name": "LLMTextQualityV5", "config": llm_config}  # LLMベース（深度）
+            ]
         }
-    }
+    ]
 }
 ```
 
-これらのプロンプトは、特定の品質次元に焦点を当てたり、特定のドメイン要件に適応させるためにカスタマイズできます。適切なLLMモデルと組み合わせることで、これらのプロンプトは複数の次元にわたる包括的なデータ品質評価を可能にします。
+**カスタマイズ**：すべてのプロンプトは `dingo/model/llm/` ディレクトリに定義されています（カテゴリ別に整理：`text_quality/`、`rag/`、`hhh/` など）。ドメイン固有のニーズに合わせて拡張または変更できます。
 
-### 幻覚検出とRAGシステム評価
 
-HHEM-2.1-Openローカル推論とLLMベース評価を含む、Dingoの幻覚検出機能の使用に関する詳細なガイダンス：
+# 🌟 機能ハイライト
 
-📖 **[幻覚検出ガイドを見る →](docs/hallucination_guide.md)**
+## 📊 マルチソースデータ統合
 
-### 事実性評価
+**多様なデータソース** - データがある場所に接続  
+✅ **ローカルファイル**：JSONL、CSV、TXT、Parquet  
+✅ **SQL データベース**：PostgreSQL、MySQL、SQLite、Oracle、SQL Server（ストリーミング処理対応）  
+✅ **クラウドストレージ**：S3 および S3 互換ストレージ  
+✅ **ML プラットフォーム**：HuggingFace データセットの直接統合
 
-Dingoの二段階事実性評価システムの使用に関する詳細なガイダンス：
+**エンタープライズ対応 SQL サポート** - 本番データベース統合  
+✅ 数十億規模のデータセットのメモリ効率的なストリーミング  
+✅ 接続プールと自動リソースクリーンアップ  
+✅ 複雑な SQL クエリ（JOIN、WHERE、集計）  
+✅ SQLAlchemy による複数の方言サポート
 
-📖 **[事実性評価ガイドを見る →](docs/factcheck_guide.md)**
+**マルチフィールド品質チェック** - 異なるフィールドに異なるルール  
+✅ 並列評価パイプライン（例：ISBN 検証 + テキスト品質を同時実行）  
+✅ フィールドエイリアスとネストされたフィールド抽出（`user.profile.name`）  
+✅ フィールドごとに独立した結果レポート  
+✅ 柔軟なデータ変換のための ETL パイプラインアーキテクチャ
 
-# ルールグループ
+---
 
-Dingoは異なるタイプのデータセット用に事前設定されたルールグループを提供します：
+## 🤖 RAG システム評価
 
-| グループ | 使用例 | ルール例 |
-|----------|--------|----------|
-| `default` | 一般的なテキスト品質 | `RuleColonEnd`, `RuleContentNull`, `RuleDocRepeat`など |
-| `sft` | ファインチューニングデータセット | `default`のルールに加えて幻覚検出用の`RuleHallucinationHHEM` |
-| `rag` | RAGシステム評価 | 応答一貫性検出用の`RuleHallucinationHHEM`, `PromptHallucination` |
-| `hallucination` | 幻覚検出 | LLMベース評価の`PromptHallucination` |
-| `pretrain` | 事前学習データセット | `RuleAlphaWords`, `RuleCapitalWords`などを含む20以上のルールの包括的セット |
+**5つの学術的裏付けのある指標** - RAGAS、DeepEval、TruLens 研究に基づく  
+✅ **忠実度（Faithfulness）**：答え-コンテキストの一貫性（幻覚検出）  
+✅ **答え関連性（Answer Relevancy）**：答え-クエリの整合性  
+✅ **コンテキスト精度（Context Precision）**：検索精度  
+✅ **コンテキスト再現率（Context Recall）**：検索再現率  
+✅ **コンテキスト関連性（Context Relevancy）**：コンテキスト-クエリ関連性
 
-特定のルールグループを使用するには：
+**包括的なレポート** - 自動集計統計  
+✅ 各メトリクスの平均、最小、最大、標準偏差  
+✅ フィールド別にグループ化された結果  
+✅ バッチおよび単一評価モード
 
-```python
-input_data = {
-    "executor": {
-        "eval_group": "sft",  # Use "default", "sft", "rag", "hallucination", or "pretrain"
-    }
-    # other parameters...
-}
-```
+📖 **[RAG 評価ガイドを見る →](docs/rag_evaluation_metrics_zh.md)**
 
-# 機能ハイライト
+---
 
-## マルチソース・マルチモーダルサポート
+## 🧠 ハイブリッド評価システム
 
-- **データソース**: ローカルファイル、Hugging Faceデータセット、S3ストレージ
-- **データタイプ**: 事前学習、ファインチューニング、評価データセット
-- **データモダリティ**: テキストと画像
+**ルールベース** - 高速、決定論的、コスト効率  
+✅ 30以上の組み込みルール（テキスト品質、フォーマット、PII 検出）  
+✅ 正規表現、ヒューリスティック、統計チェック  
+✅ カスタムルール登録
 
-## ルールベース・モデルベース評価
+**LLM ベース** - 深い意味理解  
+✅ OpenAI（GPT-4o、GPT-3.5）、DeepSeek、Kimi  
+✅ ローカルモデル（Llama3、Qwen）  
+✅ ビジョン言語モデル（InternVL、Gemini）  
+✅ カスタムプロンプト登録
 
-評価システムには以下が含まれます：
-- **テキスト品質評価メトリクス**: DataMan手法と拡張された多次元評価を使用した事前学習データの品質評価
-- **SFTデータ評価メトリクス**: 教師ありファインチューニングデータの正直、有用、無害評価
-- **幻覚検出**: HHEM-2.1-OpenローカルモデルとGPTベースの評価
-- **RAGシステム評価**: 応答一貫性とコンテキスト整合性評価
-- **分類メトリクス**: トピック分類とコンテンツ分類
-- **マルチモーダル評価メトリクス**: 画像分類と関連性評価
-- **ルールベース品質メトリクス**: ヒューリスティックルールによる効果性と類似性検出を用いた自動品質チェック
+**拡張可能なアーキテクチャ**  
+✅ プラグインベースのルール/プロンプト/モデル登録  
+✅ 明確な関心の分離（エージェント、ツール、オーケストレーション）  
+✅ ドメイン固有のカスタマイズ
 
-## 柔軟な使用方法
+---
 
-- **インターフェース**: CLIとSDKオプション
-- **統合**: 他のプラットフォームとの簡単な統合
-- **実行エンジン**: ローカルとSpark
+## 🚀 柔軟な実行と統合
 
-## 包括的なレポート
+**複数のインターフェース**  
+✅ 迅速なチェックのための CLI  
+✅ 統合のための Python SDK  
+✅ IDE 用 MCP（モデルコンテキストプロトコル）サーバー（Cursor など）
 
-- **品質メトリクス**: 7次元品質評価
-- **トレーサビリティ**: 異常追跡のための詳細レポート
+**スケーラブルな実行**  
+✅ 迅速な反復のためのローカル実行  
+✅ 分散処理のための Spark 実行  
+✅ 設定可能な並行性とバッチ処理
 
-# ユーザーガイド
+**データソース**  
+✅ **ローカルファイル**：JSONL、CSV、TXT、Parquet フォーマット  
+✅ **Hugging Face**：HF データセットハブとの直接統合  
+✅ **S3 ストレージ**：AWS S3 および S3 互換ストレージ  
+✅ **SQL データベース**：PostgreSQL、MySQL、SQLite、Oracle、SQL Server（大規模データのストリーミング処理）
+
+**モダリティ**  
+✅ テキスト（チャット、ドキュメント、コード）  
+✅ 画像（VLM サポート）  
+✅ マルチモーダル（テキスト+画像の一貫性）
+
+---
+
+## 📈 豊富なレポートと可視化
+
+**多層レポート**  
+✅ 全体スコア付き Summary JSON  
+✅ フィールドレベルの内訳  
+✅ ルール違反ごとの詳細情報  
+✅ タイプと名前の分布
+
+**GUI 可視化**  
+✅ 組み込み Web インターフェース  
+✅ インタラクティブなデータ探索  
+✅ 異常追跡
+
+**メトリクス集計**  
+✅ 自動統計（avg、min、max、std_dev）  
+✅ フィールド別にグループ化されたメトリクス  
+✅ 全体品質スコア
+
+# 📖 ユーザーガイド
 
 ## カスタムルール、プロンプト、モデル
 
-組み込みルールが要件を満たさない場合、カスタムルールを作成できます：
+Dingo はドメイン固有のニーズに対応する柔軟な拡張メカニズムを提供します。
+
+**例：**
+- [カスタムルール](examples/register/sdk_register_rule.py)
+- [カスタムモデル](examples/register/sdk_register_llm.py)
 
 ### カスタムルール例
 
 ```python
 from dingo.model import Model
 from dingo.model.rule.base import BaseRule
-from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.model.modelres import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 
-@Model.rule_register('QUALITY_BAD_RELEVANCE', ['default'])
-class MyCustomRule(BaseRule):
-    """テキスト内のカスタムパターンをチェック"""
-
-    dynamic_config = EvaluatorRuleArgs(pattern=r'your_pattern_here')
+@Model.rule_register('QUALITY_BAD_CUSTOM', ['default'])
+class DomainSpecificRule(BaseRule):
+    """ドメイン固有のパターンをチェック"""
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
-        # ここにルール実装
-        return res
+    def eval(cls, input_data: Data) -> EvalDetail:
+        text = input_data.content
+
+        # あなたのカスタムロジック
+        is_valid = your_validation_logic(text)
+
+        return EvalDetail(
+            metric=cls.__name__,
+            status=not is_valid,  # False = 良好, True = 問題あり
+            label=['QUALITY_GOOD' if is_valid else 'QUALITY_BAD_CUSTOM'],
+            reason=["検証の詳細..."]
+        )
 ```
 
 ### カスタムLLM統合
@@ -333,7 +482,6 @@ class MyCustomModel(BaseOpenAI):
 
 詳細な例については以下をご覧ください：
 - [ルール登録](examples/register/sdk_register_rule.py)
-- [プロンプト登録](examples/register/sdk_register_prompt.py)
 - [モデル登録](examples/register/sdk_register_llm.py)
 
 ## 実行エンジン
@@ -363,13 +511,21 @@ from pyspark.sql import SparkSession
 
 # Sparkを初期化
 spark = SparkSession.builder.appName("Dingo").getOrCreate()
-spark_rdd = spark.sparkContext.parallelize([...])  # MetaDataオブジェクトとしてのデータ
+spark_rdd = spark.sparkContext.parallelize([...])  # Dataオブジェクトとしてのデータ
 
 input_data = {
     "executor": {
-        "eval_group": "default",
         "result_save": {"bad": True}
-    }
+    },
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleColonEnd"},
+                {"name": "RuleSpecialCharacter"}
+            ]
+        }
+    ]
 }
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["spark"](input_args, spark_session=spark, spark_rdd=spark_rdd)
@@ -386,7 +542,6 @@ result = executor.execute()
 レポートの説明：
 1. **score**: `num_good` / `total`
 2. **type_ratio**: タイプの数 / 総数, 例: `QUALITY_BAD_COMPLETENESS` / `total`
-3. **name_ratio**: 名前の数 / 総数, 例: `QUALITY_BAD_COMPLETENESS-RuleColonEnd` / `total`
 
 サマリー例：
 ```json
@@ -402,24 +557,24 @@ result = executor.execute()
     "num_bad": 1,
     "total": 2,
     "type_ratio": {
-        "QUALITY_BAD_COMPLETENESS": 0.5,
-        "QUALITY_BAD_RELEVANCE": 0.5
-    },
-    "name_ratio": {
-        "QUALITY_BAD_COMPLETENESS-RuleColonEnd": 0.5,
-        "QUALITY_BAD_RELEVANCE-RuleSpecialCharacter": 0.5
+        "content": {
+            "QUALITY_BAD_COMPLETENESS.RuleColonEnd": 0.5,
+            "QUALITY_BAD_RELEVANCE.RuleSpecialCharacter": 0.5
+        }
     }
 }
 ```
 
-# 今後の計画
+# 🔮 今後の計画
 
-- [ ] より豊富なグラフィックとテキスト評価指標
-- [ ] 音声・動画データモダリティ評価
-- [ ] 小規模モデル評価（fasttext、Qurating）
-- [ ] データ多様性評価
+**近日公開予定の機能**：
+- [ ] **Agent-as-a-Judge** - 多ラウンド反復評価
+- [ ] **SaaS プラットフォーム** - API アクセスとダッシュボードを備えたホスト型評価サービス
+- [ ] **音声・動画モダリティ** - テキスト/画像を超えた拡張
+- [ ] **多様性メトリクス** - 統計的多様性評価
+- [ ] **リアルタイム監視** - 本番パイプラインでの継続的品質チェック
 
-# 制限事項
+## 制限事項
 
 現在の組み込み検出ルールとモデル手法は、一般的なデータ品質問題に焦点を当てています。専門的な評価ニーズについては、検出ルールのカスタマイズを推奨します。
 
@@ -428,6 +583,7 @@ result = executor.execute()
 - [RedPajama-Data](https://github.com/togethercomputer/RedPajama-Data)
 - [mlflow](https://github.com/mlflow/mlflow)
 - [deepeval](https://github.com/confident-ai/deepeval)
+- [ragas](https://github.com/explodinggradients/ragas)
 
 # 貢献
 

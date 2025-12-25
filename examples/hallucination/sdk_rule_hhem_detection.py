@@ -33,13 +33,12 @@ def example_1_basic_rule_hhem_detection():
 
     result = RuleHallucinationHHEM.eval(data)
 
-    print(f"Error Status: {result.error_status}")
-    print(f"Type: {result.type}")
-    print(f"Name: {result.name}")
+    print(f"Error Status: {result.status}")  # True = hallucination detected, False = no hallucination
+    print(f"Label: {result.label}")
     print(f"HHEM Score: {getattr(result, 'score', 'N/A'):.3f}")
     print(f"Threshold: {RuleHallucinationHHEM.dynamic_config.threshold}")
     print("\nDetailed Analysis:")
-    print(result.reason[0])
+    print(result.reason[0] if result.reason else "N/A")
     print()
 
 
@@ -60,12 +59,11 @@ def example_2_no_hallucination_rule():
 
     result = RuleHallucinationHHEM.eval(data)
 
-    print(f"Error Status: {result.error_status}")
-    print(f"Type: {result.type}")
-    print(f"Name: {result.name}")
+    print(f"Error Status: {result.status}")  # True = hallucination detected, False = no hallucination
+    print(f"Label: {result.label}")
     print(f"HHEM Score: {getattr(result, 'score', 'N/A'):.3f}")
     print("\nDetailed Analysis:")
-    print(result.reason[0])
+    print(result.reason[0] if result.reason else "N/A")
     print()
 
 
@@ -89,12 +87,11 @@ def example_3_complex_scenario_rule():
 
     result = RuleHallucinationHHEM.eval(data)
 
-    print(f"Error Status: {result.error_status}")
-    print(f"Type: {result.type}")
-    print(f"Name: {result.name}")
+    print(f"Error Status: {result.status}")  # True = hallucination detected, False = no hallucination
+    print(f"Label: {result.label}")
     print(f"HHEM Score: {getattr(result, 'score', 'N/A'):.3f}")
     print("\nDetailed Analysis:")
-    print(result.reason[0])
+    print(result.reason[0] if result.reason else "N/A")
     print()
 
 
@@ -153,7 +150,7 @@ def example_5_batch_evaluation_rule():
 
     print("Batch Rule-based Evaluation Results:")
     for i, result in enumerate(results):
-        print(f"  Item {i + 1}: Error={result.error_status}, Score={getattr(result, 'score', 'N/A'):.3f}")
+        print(f"  Item {i + 1}: Error={result.status}, Score={getattr(result, 'score', 'N/A'):.3f}")
     print()
 
 
@@ -179,7 +176,7 @@ def example_6_threshold_comparison_rule():
         RuleHallucinationHHEM.dynamic_config.threshold = threshold
         result = RuleHallucinationHHEM.eval(data)
 
-        print(f"Threshold {threshold}: Error={result.error_status}, Score={getattr(result, 'score', 'N/A'):.3f}")
+        print(f"Threshold {threshold}: Error={result.status}, Score={getattr(result, 'score', 'N/A'):.3f}")
 
     # Restore original threshold
     RuleHallucinationHHEM.dynamic_config.threshold = original_threshold
@@ -208,7 +205,7 @@ def example_7_performance_benchmark_rule():
     end_time = time.time()
 
     print(f"Rule-based HHEM Inference Time: {end_time - start_time:.3f} seconds")
-    print(f"Result: Error={result.error_status}, Score={getattr(result, 'score', 'N/A'):.3f}")
+    print(f"Result: Error={result.status}, Score={getattr(result, 'score', 'N/A'):.3f}")
     print(f"Model Info: Local HHEM-2.1-Open (Rule-based)")
     print()
 

@@ -1,26 +1,35 @@
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
+
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
 def exec_first():
     input_data = {
-        "input_path": "../../test/data/test_local_jsonl.jsonl",
+        "input_path": str(PROJECT_ROOT / "test/data/test_local_jsonl.jsonl"),
         "dataset": {
             "source": "local",
-            "format": "jsonl",
-            "field": {
-                "id": "id",
-                "content": "content"
-            }
+            "format": "jsonl"
         },
         "executor": {
-            "eval_group": "sft",
             "end_index": 1,
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        }
+        },
+        "evaluator": [
+            {
+                "fields": {"id": "id", "content": "content"},
+                "evals": [
+                    {"name": "RuleColonEnd"},
+                    {"name": "RuleContentNull"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -31,23 +40,27 @@ def exec_first():
 
 def exec_second():
     input_data = {
-        "input_path": "../../test/data/test_local_jsonl.jsonl",
+        "input_path": str(PROJECT_ROOT / "test/data/test_local_jsonl.jsonl"),
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "id": "id",
-                "content": "content"
-            }
         },
         "executor": {
-            "eval_group": "sft",
             "start_index": 1,
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        }
+        },
+        "evaluator": [
+            {
+                "fields": {"id": "id", "content": "content"},
+                "evals": [
+                    {"name": "RuleColonEnd"},
+                    {"name": "RuleContentNull"}
+                ]
+            }
+        ]
     }
 
     input_args = InputArgs(**input_data)

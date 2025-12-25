@@ -2,8 +2,8 @@ import re
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model.model import Model
-from dingo.model.modelres import ModelRes
 from dingo.model.rule.base import BaseRule
 
 
@@ -13,33 +13,39 @@ class CommonPatternDemo(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern = "blue")
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         matches = re.findall(cls.dynamic_config.pattern, input_data.content)
         if matches:
-            res.error_status = True
-            res.type = cls.metric_type
-            res.name = cls.__name__
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
             res.reason = matches
         return res
 
 
 if __name__ == '__main__':
+    from pathlib import Path
+
     from dingo.config import InputArgs
     from dingo.exec import Executor
 
+    # 获取项目根目录
+    PROJECT_ROOT = Path(__file__).parent.parent.parent
+
     input_data = {
-        "input_path": "../../test/data/test_local_json.json",
+        "input_path": str(PROJECT_ROOT / "test/data/test_local_json.json"),
         "dataset": {
             "source": "local",
             "format": "json",
-            "field": {
-                "content": "prediction"
-            }
         },
-        "executor": {
-            "rule_list": ['CommonPatternDemo']
-        }
+        "evaluator": [
+            {
+                "fields": {"content": "prediction"},
+                "evals": [
+                    {"name": "CommonPatternDemo"},
+                ]
+            }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

@@ -1,31 +1,40 @@
+import os
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 if __name__ == '__main__':
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
+    OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
+    OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+
     input_data = {
-        "input_path": "../../test/data/test_meta_rater.jsonl",
+        "input_path": str(PROJECT_ROOT / "test/data/test_meta_rater.jsonl"),
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "content": "content"
-            }
         },
         "executor": {
-            "prompt_list": ["PromptMetaRaterProfessionalism"],  # options: "PromptMetaRaterReadability", "PromptMetaRaterReasoning", "PromptMetaRaterCleanliness"
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMMetaRaterEvaluation": {
-                    "key": "",
-                    "api_url": ""
-                }
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "LLMMetaRaterEvaluation", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL, "model": OPENAI_MODEL}},
+                    {"name": "PromptMetaRaterReadability", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL, "model": OPENAI_MODEL}},
+                    {"name": "PromptMetaRaterReasoning", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL, "model": OPENAI_MODEL}},
+                    {"name": "PromptMetaRaterCleanliness", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL, "model": OPENAI_MODEL}},
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

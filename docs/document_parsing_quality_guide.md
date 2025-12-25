@@ -1,4 +1,4 @@
-# VLMDocumentParsingQuality 文档解析评估工具 使用文档
+# VLMDocumentParsing 文档解析评估工具 使用文档
 
 Dingo 提供了一种基于VLM的文档解析质量评估与可视化工具，可帮助您：
 - 评估文档解析模型输出质量
@@ -6,7 +6,7 @@ Dingo 提供了一种基于VLM的文档解析质量评估与可视化工具，�
 
 ## 工具介绍
 
-### VLMDocumentParsingQuality：文档解析评估工具
+### VLMDocumentParsing：文档解析评估工具
 
 #### 功能说明
 该工具用于评估文档解析模型效果，具体功能包括：
@@ -22,9 +22,8 @@ Dingo 提供了一种基于VLM的文档解析质量评估与可视化工具，�
 dingo/
   ├── model/
   │   ├── llm/
-  │   │   └── vlm_document_parsing.py         # 评估器实现
-  │   └── prompt/
-  │       └── prompt_document_parsing.py      # 评估提示词
+  │   │   └── mineru/
+  │   │       └── vlm_document_parsing.py     # 评估器实现（含内嵌Prompt）
   │── examples/
   │   └── document_parser/
   │       └── vlm_document_parser_quality.py  # 单条评估示例
@@ -64,7 +63,7 @@ input_data = {
         },
         "evaluator": {
             "llm_config": {
-                "VLMDocumentParsingQuality": {
+                "VLMDocumentParsing": {
                     "key": "",
                     "api_url": "",
                 }
@@ -76,11 +75,11 @@ input_data = {
 #### 输出结果格式
 
 ```python
-# result 是 ModelRes 对象，包含以下字段：
-result.type          # 错误问题一级标签: prompt中定义的一级错误大类
-result.name          # 错误问题二级标签: 一级错误大类对应的详细错误标签 List[str]
-result.error_status  # 错误状态: False 或 True
-result.reason        # 评估原因: List[str]
+# result 是 EvalDetail 对象，包含以下字段：
+result.metric        # 指标名称: "VLMDocumentParsing"
+result.label         # 错误标签列表: ["公式相关问题.行内公式漏检", "表格相关问题.单元格内容错误"]
+result.status        # 错误状态: False (默认值，该类不设置)
+result.reason        # 评估原因: List[str]，包含完整的JSON分析结果
 ```
 
 
@@ -114,7 +113,7 @@ if __name__ == '__main__':
         },
         "evaluator": {
             "llm_config": {
-                "VLMDocumentParsingQuality": {
+                "VLMDocumentParsing": {
                     "key": "",
                     "api_url": "",
                 }

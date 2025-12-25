@@ -15,4 +15,10 @@ except Exception as e:
     log.warning("Spark Dataset not imported. Open debug log for more details.")
     log.debug(str(e))
 
+try:
+    from dingo.data.dataset.sql import SqlDataset  # noqa E402.
+except Exception as e:
+    log.warning("SQL Dataset not imported. Open debug log for more details.")
+    log.debug(str(e))
+
 dataset_map = Dataset.dataset_map

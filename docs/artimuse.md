@@ -24,7 +24,7 @@ RuleImageArtimuse 基于 ArtiMuse 在线服务对输入图片进行美学质量�
 
 ## 核心方法
 
-### `eval(cls, input_data: Data) -> ModelRes`
+### `eval(cls, input_data: Data) -> EvalDetail`
 
 这是规则的主要评估方法，接收包含图像 URL 的 `Data` 对象，返回评估结果。
 
@@ -50,20 +50,19 @@ RuleImageArtimuse 基于 ArtiMuse 在线服务对输入图片进行美学质量�
 
 #### 返回值
 
-返回 `ModelRes` 对象，包含以下属性：
+返回 `EvalDetail` 对象，包含以下属性：
 
-- `error_status`: 布尔值，表示图像质量是否不合格（低于阈值）
-- `type`: 评估结果类型（"Artimuse_Succeeded" 或 "Artimuse_Fail"）
-- `name`: 评估结果名称（"BadImage" 或 "GoodImage" 或 "Exception"）
+- `metric`: 指标名称（"RuleImageArtimuse"）
+- `status`: 布尔值，表示图像质量是否不合格（低于阈值）(True=不合格, False=合格)
+- `label`: 质量标签列表（如 ["Artimuse_Succeeded.BadImage"] 或 ["QUALITY_GOOD"]）
 - `reason`: 包含详细评估信息或异常信息的数组（字符串化 JSON）
 
 ## 异常处理
 
-当评估过程中发生异常时，返回的 `ModelRes` 对象将包含：
+当评估过程中发生异常时，返回的 `EvalDetail` 对象将包含：
 
-- `error_status`: `False`
-- `type`: `"Artimuse_Fail"`
-- `name`: `"Exception"`
+- `status`: `False`
+- `label`: `["Artimuse_Fail.Exception"]`
 - `reason`: 包含异常信息的数组
 
 ## 使用示例

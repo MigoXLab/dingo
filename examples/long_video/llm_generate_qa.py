@@ -1,32 +1,37 @@
+import os
+from pathlib import Path
+
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 if __name__ == '__main__':
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
+    OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
+    OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+
     input_data = {
-        "input_path": "../../test/data/test_long_video_qa.jsonl",
+        "input_path": str(PROJECT_ROOT / "test/data/test_long_video_qa.jsonl"),
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "id": "video_id",
-                "content": "summary"
-            }
         },
         "executor": {
-            "prompt_list": ["PromptLongVideoQa"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMLongVideoQa": {
-                    "key": "",
-                    "api_url": "",
-                }
+        "evaluator": [
+            {
+                "fields": {"id": "video_id", "content": "summary"},
+                "evals": [
+                    {"name": "LLMLongVideoQa", "config": {"key": OPENAI_KEY, "api_url": OPENAI_URL, "model": OPENAI_MODEL}}
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

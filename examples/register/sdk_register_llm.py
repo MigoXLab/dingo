@@ -1,52 +1,32 @@
-import json
 import os
+from pathlib import Path
 
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
-from dingo.model.modelres import ModelRes
-from dingo.model.prompt.prompt_text_quality import PromptTextQualityV2
-from dingo.model.response.response_class import ResponseScoreTypeNameReason
-from dingo.utils import log
-from dingo.utils.exception import ConvertJsonError
 
-OPENAI_MODEL = 'deepseek-chat'
-OPENAI_URL = 'https://api.deepseek.com/v1'
-OPENAI_KEY = os.getenv("OPENAI_KEY")
+# 获取项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
+OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+
+common_config = {
+    "model": OPENAI_MODEL,
+    "key": OPENAI_KEY,
+    "api_url": OPENAI_URL,
+}
 
 
 @Model.llm_register('LlmTextQualityRegister')
 class LlmTextQualityRegister(BaseOpenAI):
-    prompt = PromptTextQualityV2
-
-    @classmethod
-    def process_response(cls, response: str) -> ModelRes:
-        log.debug(response)
-
-        if response.startswith('```json'):
-            response = response[7:]
-        if response.startswith('```'):
-            response = response[3:]
-        if response.endswith('```'):
-            response = response[:-3]
-        try:
-            response_json = json.loads(response)
-        except json.JSONDecodeError:
-            raise ConvertJsonError(f'Convert to JSON format failed: {response}')
-
-        response_model = ResponseScoreTypeNameReason(**response_json)
-
-        result = ModelRes()
-        # error_status
-        if response_model.score == 1:
-            result.reason = [response_model.reason]
-            result.name = "Flawless"
-        else:
-            result.error_status = True
-            result.type = response_model.type
-            result.name = response_model.name
-            result.reason = [response_model.reason]
-
-        return result
+    prompt = """
+    请判断一下文本是否存在重复问题。
+    返回一个json，如{"score": 0, reason": "xxx"}.
+    如果存在重复，score是0，否则是1。当score是0时，type是REPEAT。reason是判断的依据。
+    除了json不要有其他内容。
+    以下是需要判断的文本：
+    """
 
 
 if __name__ == '__main__':
@@ -54,30 +34,25 @@ if __name__ == '__main__':
     from dingo.exec import Executor
 
     input_data = {
-        "input_path": "../../test/data/test_local_jsonl.jsonl",
+        "input_path": str(PROJECT_ROOT / "test/data/test_local_jsonl.jsonl"),
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "content": "content",
-            }
         },
         "executor": {
-            "prompt_list": ["PromptTextQualityV2"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LlmTextQualityRegister": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {"content": "content"},
+                "evals": [
+                    {"name": "LlmTextQualityRegister", "config": common_config}
+                ]
             }
-        }
+        ]
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

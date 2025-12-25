@@ -6,9 +6,8 @@ from pydantic import ValidationError
 
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.llm.base import BaseLLM
-from dingo.model.modelres import ModelRes
-from dingo.model.prompt.base import BasePrompt
 from dingo.model.response.response_class import ResponseScoreReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError, ExceedMaxTokens
@@ -17,12 +16,16 @@ from dingo.utils.exception import ConvertJsonError, ExceedMaxTokens
 class BaseOpenAI(BaseLLM):
     dynamic_config = EvaluatorLLMArgs()
 
-    @classmethod
-    def set_prompt(cls, prompt: BasePrompt):
-        cls.prompt = prompt
+    # Embedding 模型配置（用于 RAG 相关评估器）
+    embedding_model = None
+
+    # @classmethod
+    # def set_prompt(cls, prompt: BasePrompt):
+    #     cls.prompt = prompt
 
     @classmethod
     def create_client(cls):
+        """创建 LLM 客户端，如果配置了 embedding_config 则同时初始化 Embedding 客户端"""
         from openai import OpenAI
 
         if not cls.dynamic_config.key:
@@ -30,14 +33,44 @@ class BaseOpenAI(BaseLLM):
         elif not cls.dynamic_config.api_url:
             raise ValueError("api_url cannot be empty in llm config.")
         else:
+            # 创建主 LLM 客户端
             cls.client = OpenAI(
                 api_key=cls.dynamic_config.key, base_url=cls.dynamic_config.api_url
             )
 
+            # 如果配置了 embedding_config，初始化 Embedding 客户端
+            if cls.dynamic_config.embedding_config:
+                from dingo.config.input_args import EmbeddingConfigArgs
+
+                embedding_cfg = cls.dynamic_config.embedding_config
+
+                # 处理 embedding_config 可能是字典或对象的情况
+                if isinstance(embedding_cfg, dict):
+                    # 如果是字典，转换为 EmbeddingConfigArgs 对象
+                    embedding_cfg = EmbeddingConfigArgs(**embedding_cfg)
+
+                if not embedding_cfg.api_url:
+                    raise ValueError("embedding_config must provide api_url")
+
+                if not embedding_cfg.model:
+                    raise ValueError("embedding_config must provide model")
+
+                # 创建独立的 Embedding 客户端
+                cls.embedding_client = OpenAI(
+                    api_key=embedding_cfg.key or 'dummy-key',
+                    base_url=embedding_cfg.api_url
+                )
+
+                cls.embedding_model = {
+                    'model_name': embedding_cfg.model,
+                    'client': cls.embedding_client
+                }
+                log.info(f"Initialized independent embedding client: {embedding_cfg.model} @ {embedding_cfg.api_url}")
+
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
         messages = [
-            {"role": "user", "content": cls.prompt.content + input_data.content}
+            {"role": "user", "content": cls.prompt + input_data.content}
         ]
         return messages
 
@@ -112,7 +145,7 @@ class BaseOpenAI(BaseLLM):
             )
 
     @classmethod
-    def process_response(cls, response: str) -> ModelRes:
+    def process_response(cls, response: str) -> EvalDetail:
         log.info(response)
 
         if response.startswith("```json"):
@@ -128,20 +161,31 @@ class BaseOpenAI(BaseLLM):
 
         response_model = ResponseScoreReason(**response_json)
 
-        result = ModelRes()
-        # error_status
+        result = EvalDetail(metric=cls.__name__)
+        # eval_status
         if response_model.score == 1:
+            # result.eval_details = {
+            #     "label": [QualityLabel.QUALITY_GOOD],
+            #     "metric": [cls.__name__],
+            #     "reason": [response_model.reason]
+            # }
+            result.label = [QualityLabel.QUALITY_GOOD]
             result.reason = [response_model.reason]
         else:
-            result.error_status = True
-            result.type = cls.prompt.metric_type
-            result.name = cls.prompt.__name__
+            # result.eval_status = True
+            # result.eval_details = {
+            #     "label": [f"QUALITY_BAD.{cls.__name__}"],
+            #     "metric": [cls.__name__],
+            #     "reason": [response_model.reason]
+            # }
+            result.status = True
+            result.label = [f"QUALITY_BAD.{cls.__name__}"]
             result.reason = [response_model.reason]
 
         return result
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         if cls.client is None:
             cls.create_client()
 
@@ -153,7 +197,8 @@ class BaseOpenAI(BaseLLM):
         while attempts < 3:
             try:
                 response = cls.send_messages(messages)
-                return cls.process_response(response)
+                res: EvalDetail = cls.process_response(response)
+                return res
             except (ValidationError, ExceedMaxTokens, ConvertJsonError) as e:
                 except_msg = str(e)
                 except_name = e.__class__.__name__
@@ -164,6 +209,14 @@ class BaseOpenAI(BaseLLM):
                 except_msg = str(e)
                 except_name = e.__class__.__name__
 
-        return ModelRes(
-            error_status=True, type="QUALITY_BAD", name=except_name, reason=[except_msg]
-        )
+        res = EvalDetail(metric=cls.__name__)
+        # res.eval_status = True
+        # res.eval_details = {
+        #     "label": [f"QUALITY_BAD.{except_name}"],
+        #     "metric": [cls.__name__],
+        #     "reason": [except_msg]
+        # }
+        res.status = True
+        res.label = [f"QUALITY_BAD.{except_name}"]
+        res.reason = [except_msg]
+        return res

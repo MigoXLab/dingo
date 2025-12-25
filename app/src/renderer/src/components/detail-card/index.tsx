@@ -20,7 +20,7 @@ interface DetailCardProps {
     data: DataItem;
     showHighlight?: boolean;
 }
-
+//该组件此次迭代该组件暂时不用了
 const DetailCard: React.FC<DetailCardProps> = ({ data, showHighlight }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const textRef = useRef<any>(null);

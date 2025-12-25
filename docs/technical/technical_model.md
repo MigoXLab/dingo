@@ -357,7 +357,7 @@ class CustomRule(BaseRule):
         return ModelRes(
             type="CUSTOM",
             name="CustomRule",
-            error_status=result.is_error,
+            eval_status=result.is_error,
             reason=result.reasons
         )
 ```

@@ -2,13 +2,14 @@
     "input_path": "chupei/format-listjson",
     "dataset": {
         "source": "hugging_face",
-        "format": "listjson",
-        "field": {
-            "prompt": "instruction",
-            "content": "output"
-        }
+        "format": "listjson"
     },
-    "executor": {
-        "eval_group": "default"
-    }
+    "evaluator": [
+        {
+            "fields": {"prompt": "instruction", "content": "output"},
+            "evals": [
+                {"name": "RuleColonEnd"}
+            ]
+        }
+    ]
 }

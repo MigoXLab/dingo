@@ -15,11 +15,10 @@ from dingo.exec import Executor
 from dingo.io import Data
 # Force import factuality evaluation modules
 from dingo.model.llm.llm_factcheck_public import LLMFactCheckPublic
-from dingo.model.prompt.prompt_factcheck import PromptFactCheck
 
-OPENAI_MODEL = 'deepseek-chat'
-OPENAI_URL = 'https://api.deepseek.com/v1'
-OPENAI_KEY = os.getenv("OPENAI_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
+OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
 
 
 def evaluate_factuality_jsonl_dataset():
@@ -36,27 +35,21 @@ def evaluate_factuality_jsonl_dataset():
         "dataset": {
             "source": "local",
             "format": "jsonl",
-            "field": {
-                "prompt": "question",  # 注意这里使用 question 作为 prompt 字段
-                "content": "content"
-            }
         },
         "executor": {
-            "eval_group": "factuality",  # 使用 factuality 评估组
             "result_save": {
                 "bad": True,  # 保存不实信息
                 "good": True  # 保存真实信息
             }
         },
-        "evaluator": {
-            "llm_config": {
-                "LLMFactCheckPublic": {
-                    "model": OPENAI_MODEL,
-                    "key": OPENAI_KEY,
-                    "api_url": OPENAI_URL,
-                }
+        "evaluator": [
+            {
+                "fields": {"prompt": "question", "content": "content"},  # 注意这里使用 question 作为 prompt 字段
+                "evals": [
+                    {"name": "LLMFactCheckPublic", "config": {"model": OPENAI_MODEL, "key": OPENAI_KEY, "api_url": OPENAI_URL}},
+                ]
             }
-        }
+        ]
     }
 
     input_args = InputArgs(**input_data)
@@ -99,9 +92,8 @@ def evaluate_single_data_example():
     result = evaluator.eval(test_data)
 
     print("\n=== Evaluation Result ===")
-    print(f"Error Status: {result.error_status}")
-    print(f"Type: {result.type}")
-    print(f"Name: {result.name}")
+    print(f"Error Status: {result.status}")
+    print(f"Label: {result.label}")
     print(f"Reason: {result.reason}")
 
 

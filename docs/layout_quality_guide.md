@@ -21,9 +21,7 @@ Dingo 提供了一种基于VLM的Layout布局检测质量评估，可帮助您�
 dingo/
   ├── model/
   │   ├── llm/
-  │   │   └── vlm_layout_quality.py         # 评估器实现
-  │   └── prompt/
-  │       └── prompt_layout_quality.py      # 评估提示词
+  │   │   └── vlm_layout_quality.py         # 评估器实现（含内嵌Prompt）
   │── examples/
   │   └── document_parser/
   │       └── vlm_layout_quality.py         # 评估示例
@@ -36,7 +34,7 @@ dingo/
 ```
 
 ##### 评估提示词
-我们的评估效果依赖于精心设计的 Prompt。其核心思想是：
+我们的评估效果依赖于精心设计的 Prompt（内嵌在 `vlm_layout_quality.py` 中）。其核心思想是：
 
 1. Layout布局检测元素列别，我们基于Mineru的输出类型，来设定提示词。
 2. 分层错误标签：我们将布局检测问题分为5个大类：检测遗漏错误、检测不准错误、类别错误、阅读顺序错、其他错误。
@@ -79,11 +77,11 @@ input_data = {
 #### 输出结果格式
 
 ```python
-# result 是 ModelRes 对象，包含以下字段：
-result.type          # 错误问题一级标签: prompt中定义错误类别
-result.name          # 错误描述: 错误列别对应的详细错描述
-result.error_status  # 错误状态: False 或 True
-result.reason        # 评估原因: List[str]
+# result 是 EvalDetail 对象，包含以下字段：
+result.metric        # 指标名称: "VLMLayoutQuality"
+result.label         # 错误标签列表: 从JSON响应中提取的eval_details字段列表
+result.status        # 错误状态: False (默认值，该类不设置)
+result.reason        # 评估原因: List[str]，包含完整的JSON分析结果
 ```
 
 

@@ -324,7 +324,7 @@ class RuleColonEnd(BaseRule):
         if len(content) <= cls.dynamic_config.threshold:
             return res
         if content[-1] == ":":
-            res.error_status = True
+            res.eval_status = True
             res.type = cls.metric_type
             res.name = cls.__name__
             res.reason = [content[-100:]]
@@ -459,7 +459,7 @@ class BaseOpenAI(BaseLLM):
                 except_name = e.__class__.__name__
 
         return ModelRes(
-            error_status=True, type="QUALITY_BAD", name=except_name, reason=[except_msg]
+            eval_status=True, type="QUALITY_BAD", name=except_name, reason=[except_msg]
         )
 ```
 

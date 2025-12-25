@@ -16,7 +16,7 @@ python examples/compare/html_extract_compare_v2_example.py
 import os
 
 from dingo.io import Data
-from dingo.model.llm.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
+from dingo.model.llm.compare.llm_html_extract_compare_v2 import LLMHtmlExtractCompareV2
 
 OPENAI_MODEL = 'deepseek-chat'
 OPENAI_URL = 'https://api.deepseek.com/v1'
@@ -137,10 +137,11 @@ def run_comparison(data: Data, description: str):
     result = evaluator.eval(data)
 
     # 打印结果
-    print(f"评估结果类型: {result.type}")
-    print(f"判断名称: {result.name}")
-    print(f"是否存在问题: {result.error_status}")
-    print(f"\n推理过程:\n{result.reason[0]}")
+    # print(f"评估结果类型: {result.type}")
+    # print(f"判断名称: {result.name}")
+    print(f"是否存在问题: {result.eval_status}")
+    print(f"评估结果类型: {result.eval_details.label}")
+    print(f"\n推理过程:\n{result.eval_details.reason[0]}")
     print(f"\n{'=' * 60}\n")
 
 

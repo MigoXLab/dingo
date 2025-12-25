@@ -1,0 +1,10 @@
+{"instruction": "写个代码"}
+{"instruction": "将'Hello World'翻译成法语。"}
+{"instruction": "编写一个Python函数,接受一个整数列表,返回列表中所有质数的和。包含错误处理和单元测试。"}
+{"instruction": "Write a Python function named `calculate_discount` that takes two parameters: original_price (float) and discount_percentage (float, 0-100). Return the final price after applying the discount, rounded to 2 decimal places. Include input validation to ensure prices are positive and discounts are between 0-100. Add comprehensive docstring with examples."}
+{"instruction": "设计一个分布式系统架构,支持每秒10万次请求,保证99.99%可用性,具有水平扩展能力。需要包括:1)服务拆分方案 2)数据一致性策略 3)故障恢复机制 4)性能监控方案。画出架构图并详细说明每个组件的职责和交互方式。考虑CAP定理的权衡。"}
+{"instruction": "Prove or disprove: For any continuous function f: [0,1] → ℝ satisfying ∫₀¹ f(x)² dx < ∞, there exists a sequence of polynomials {pₙ} such that ||f - pₙ||₂ → 0 as n → ∞. Provide rigorous proof using measure theory and functional analysis."}
+{"instruction": "写一个关于猫的故事"}
+{"instruction": "Summarize this article in a few sentences."}
+{"instruction": "解释一下量子纠缠的原理"}
+{"instruction": "创建一个Web应用,用户可以上传图片并进行基本的图像处理(裁剪、旋转、滤镜)。要求使用React前端和Python后端,支持批量处理,并提供API文档。"}

@@ -1,19 +1,16 @@
+from typing import List
+
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io import Data
-from dingo.model.modelres import ModelRes
-from dingo.model.prompt.base import BasePrompt
+from dingo.io.output.eval_detail import EvalDetail
 
 
 class BaseLLM:
     client = None
 
-    prompt: str
-    dynamic_config: EvaluatorLLMArgs
+    prompt: str | List = None
+    dynamic_config: EvaluatorLLMArgs = EvaluatorLLMArgs()
 
     @classmethod
-    def set_prompt(cls, prompt: BasePrompt):
-        raise NotImplementedError()
-
-    @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
+    def eval(cls, input_data: Data) -> EvalDetail:
         raise NotImplementedError()

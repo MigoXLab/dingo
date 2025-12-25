@@ -17,7 +17,7 @@ Pillow>=9.4.0
 prettytable
 pyahocorasick
 nltk
-numpy==1.26.4
+numpy>=1.26.4
 pydantic
 requests
 textstat
@@ -29,3 +29,9 @@ fastmcp>=2.0.0
 twine==6.0.1
 pkginfo==1.12.0
 diff_match_patch
+sqlalchemy
+openpyxl
+xlrd
+xlwt
+pytest
+pyarrow

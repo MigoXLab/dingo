@@ -178,35 +178,35 @@ Style configurations can be found in `setup.cfg` and `.pre-commit-config.yaml`.
 from typing import List, Optional
 
 from dingo.io.input import Data
-from dingo.model.modelres import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
 
 
 class ExampleRule:
-    """Example rule for demonstration purposes.
+  """Example rule for demonstration purposes.
 
-    This rule checks for specific patterns in text data.
+  This rule checks for specific patterns in text data.
+
+  Args:
+      pattern: Regular expression pattern to match
+      threshold: Minimum threshold for rule activation
+  """
+
+  def __init__(self, pattern: str, threshold: float = 0.5) -> None:
+    self.pattern = pattern
+    self.threshold = threshold
+
+  def eval(self, input_data: Data) -> EvalDetail:
+    """Evaluate input data against the rule.
 
     Args:
-        pattern: Regular expression pattern to match
-        threshold: Minimum threshold for rule activation
+        input_data: Input data to evaluate
+
+    Returns:
+        EvalDetail: Evaluation result
     """
-
-    def __init__(self, pattern: str, threshold: float = 0.5) -> None:
-        self.pattern = pattern
-        self.threshold = threshold
-
-    def eval(self, input_data: Data) -> ModelRes:
-        """Evaluate input data against the rule.
-
-        Args:
-            input_data: Input data to evaluate
-
-        Returns:
-            ModelRes: Evaluation result
-        """
-        res = ModelRes()
-        # Implementation here
-        return res
+    res = EvalDetail()
+    # Implementation here
+    return res
 ```
 
 ## Contributing Guidelines
@@ -227,24 +227,26 @@ class ExampleRule:
 4. **Document the rule** with clear docstrings and examples
 
 Example:
+
 ```python
 from dingo.model import Model
 from dingo.model.rule.base import BaseRule
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
-from dingo.model.modelres import ModelRes
+from dingo.io.output.eval_detail import EvalDetail
+
 
 @Model.rule_register('QUALITY_BAD_CUSTOM', ['default'])
 class CustomRule(BaseRule):
-    """Custom rule for specific quality check."""
+  """Custom rule for specific quality check."""
 
-    dynamic_config = EvaluatorRuleArgs(pattern=r'custom_pattern')
+  dynamic_config = EvaluatorRuleArgs(pattern=r'custom_pattern')
 
-    @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
-        # Implementation
-        return res
+  @classmethod
+  def eval(cls, input_data: Data) -> EvalDetail:
+    res = EvalDetail()
+    # Implementation
+    return res
 ```
 
 ### Adding New LLM Models

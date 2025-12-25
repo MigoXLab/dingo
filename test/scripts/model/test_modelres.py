@@ -1,11 +1,9 @@
-import os
-import re
 from typing import List
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model.model import Model
-from dingo.model.modelres import ModelRes
 from dingo.model.rule.base import BaseRule
 
 
@@ -15,15 +13,23 @@ class RegisterRuleColon(BaseRule):
     dynamic_config = EvaluatorRuleArgs(pattern = "blue")
 
     @classmethod
-    def eval(cls, input_data: Data) -> ModelRes:
-        res = ModelRes()
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
         content = input_data.content
         if len(content) <= 0:
             return res
         if content[-1] == ":":
-            res.error_status = True
-            res.type = [cls.metric_type, 'TestType']
-            res.name = [cls.__name__, 'TestName']
+            # res.eval_status = True
+            # res.type = [cls.metric_type, 'TestType']
+            # res.name = [cls.__name__, 'TestName']
+            # res.reason = [content[-100:]]
+            # res.eval_details = {
+            #     "label": [cls.metric_type, 'TestType'],
+            #     "metric": [cls.__name__],
+            #     "reason": [content[-100:]]
+            # }
+            res.status = True
+            res.label = [cls.metric_type, 'TestType']
             res.reason = [content[-100:]]
         return res
 
@@ -39,9 +45,7 @@ class TestModelRes:
 
         res = RegisterRuleColon().eval(data)
         # print(res)
-        assert isinstance(res.type, List)
-        assert isinstance(res.name, List)
-        assert len(res.type) == 2
-        assert len(res.name) == 2
-        assert 'TestType' in res.type
-        assert 'TestName' in res.name
+        assert isinstance(res.label, List)
+        assert isinstance(res.reason, List)
+        assert len(res.label) == 2
+        assert 'TestType' in res.label

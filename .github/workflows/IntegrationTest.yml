@@ -25,7 +25,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest
         if [ -f requirements/runtime.txt ]; then pip install -r requirements/runtime.txt; fi
+        pip install pyspark
+        pip install tavily-python
         pip install -e .
+
+    - name: Check Python syntax and imports
+      run: |
+        python .github/scripts/check_imports.py
 
     - name: Integration Test(local plaintext)
       run: |
@@ -45,7 +51,7 @@ jobs:
         python -m dingo.run.cli --input .github/env/hf_plaintext.json
     - name: Integration Test(huggingface json)
       run: |
-        python -m dingo.run.cli --input .github/env/hf_plaintext.json
+        python -m dingo.run.cli --input .github/env/hf_json.json
     - name: Integration Test(huggingface jsonl)
       run: |
         python -m dingo.run.cli --input .github/env/hf_jsonl.json

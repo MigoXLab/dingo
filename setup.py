@@ -1,5 +1,4 @@
 import os
-
 from setuptools import find_packages, setup
 
 with open("README.md", "r", encoding='utf-8') as fh:
@@ -10,6 +9,17 @@ with open("./requirements/runtime.txt", "r", encoding='utf-8') as f:
 
 with open("./requirements/web.txt", "r", encoding='utf-8') as f:
     requirements.extend(f.readlines())
+
+# Read optional dependencies
+with open("./requirements/agent.txt", "r", encoding='utf-8') as f:
+    agent_requirements = [line.strip() for line in f.readlines()
+                         if line.strip() and not line.strip().startswith('#')]
+
+# Define extras for optional features
+extras_require = {
+    'agent': agent_requirements,
+    'all': agent_requirements,  # 'all' includes all optional features
+}
 
 
 # 获取 app 和 web-static 目录下的所有文件
@@ -26,7 +36,7 @@ web_static_files = get_data_files('web-static')
 
 setup(
     name="dingo-python",
-    version="1.11.1",
+    version="2.0.0",
     author="Dingo",
     description="A Comprehensive AI Data Quality Evaluation Tool for Large Models",
     long_description=long_description,
@@ -42,5 +52,6 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[i.strip() for i in requirements],
+    extras_require=extras_require,
     python_requires='>=3.10',
 )

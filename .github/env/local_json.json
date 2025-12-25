@@ -2,12 +2,14 @@
     "input_path": "test/data/test_local_json.json",
     "dataset": {
         "source": "local",
-        "format": "json",
-        "field": {
-            "content": "prediction"
-        }
+        "format": "json"
     },
-    "executor": {
-        "eval_group": "default"
-    }
+    "evaluator": [
+        {
+            "fields": {"content": "prediction"},
+            "evals": [
+                {"name": "RuleColonEnd"}
+            ]
+        }
+    ]
 }

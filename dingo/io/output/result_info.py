@@ -2,35 +2,43 @@ from typing import Dict, List
 
 from pydantic import BaseModel
 
+from dingo.io.output.eval_detail import EvalDetail
+
 
 class ResultInfo(BaseModel):
-    data_id: str = ''
-    prompt: str = ''
-    content: str = ''
-    error_status: bool = False
-    type_list: List[str] = []
-    name_list: List[str] = []
-    reason_list: List[str] = []
+    dingo_id: str = ''
     raw_data: Dict = {}
+    eval_status: bool = False
+    eval_details: Dict[str, List[EvalDetail]] = {}
 
     def to_dict(self):
+        """将ResultInfo转换为字典格式
+
+        Returns:
+            包含所有字段的字典，其中eval_details被转换为嵌套字典结构
+        """
         return {
-            'data_id': self.data_id,
-            'prompt': self.prompt,
-            'content': self.content,
-            'error_status': self.error_status,
-            'type_list': self.type_list,
-            'name_list': self.name_list,
-            'reason_list': self.reason_list,
-            'raw_data': self.raw_data
+            'dingo_id': self.dingo_id,
+            'raw_data': self.raw_data,
+            'eval_status': self.eval_status,
+            'eval_details': {
+                k: [model_res.model_dump() for model_res in v]
+                for k, v in self.eval_details.items()
+            },
         }
 
     def to_raw_dict(self):
+        """将ResultInfo合并到raw_data中
+
+        Returns:
+            包含原始数据和dingo_result的字典
+        """
         dingo_result = {
-            'error_status': self.error_status,
-            'type_list': self.type_list,
-            'name_list': self.name_list,
-            'reason_list': self.reason_list,
+            'eval_status': self.eval_status,
+            'eval_details': {
+                k: [model_res.model_dump() for model_res in v]
+                for k, v in self.eval_details.items()
+            },
         }
         self.raw_data['dingo_result'] = dingo_result
         return self.raw_data

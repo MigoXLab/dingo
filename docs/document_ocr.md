@@ -22,9 +22,7 @@ Dingo 提供了一种基于LLM的文档OCR解析质量评估工具，可帮助�
 dingo/
   ├── model/
   │   ├── llm/
-  │   │   └── vlm_document_parsing.py         # 评估器实现
-  │   └── prompt/
-  │       └── prompt_mineru_recognize.py      # 评估提示词
+  │   │   └── llm_document_parsing_ocr.py     # 评估器实现（含内嵌Prompt）
   │── examples/
   │   └── document_parser/
   │       └── document_parsing_quality_ocr.py  # 单条评估示例
@@ -75,11 +73,11 @@ input_data = {
 #### 输出结果格式
 
 ```python
-# result 是 ModelRes 对象，包含以下字段：
-result.type          # 错误问题一级标签: prompt中定义的一级错误大类
-result.name          # 错误问题二级标签: 一级错误大类对应的详细错误标签 List[str]
-result.error_status  # 错误状态: False 或 True
-result.reason        # 评估原因: List[str]
+# result 是 EvalDetail 对象，包含以下字段：
+result.metric        # 指标名称: "LLMMinerURecognizeQuality"
+result.label         # 错误标签列表: ["error_category1.error_category2.error_label1.error_label2"]
+result.status        # 错误状态: False (默认值)
+result.reason        # 评估原因: List[str]，包含完整的JSON分析结果
 ```
 
 

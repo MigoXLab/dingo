@@ -5,9 +5,15 @@
         "format": "plaintext"
     },
     "executor": {
-        "eval_group": "default",
         "result_save": {
             "bad": true
         }
-    }
+    },
+    "evaluator": [
+        {
+            "evals": [
+                {"name": "RuleColonEnd"}
+            ]
+        }
+    ]
 }

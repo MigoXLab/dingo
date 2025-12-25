@@ -23,6 +23,10 @@ const api = {
             primaryName,
             secondaryNameList
         ),
+    readAllJsonlFiles: (dirPath: string): Promise<any[]> =>
+        ipcRenderer.invoke('read-all-jsonl-files', dirPath),
+    getAllJsonlFilePaths: (dirPath: string): Promise<string[]> =>
+        ipcRenderer.invoke('get-all-jsonl-file-paths', dirPath),
     getInputPath: (): Promise<string | null> =>
         ipcRenderer.invoke('get-input-path'),
     openExternal: (url: string) => ipcRenderer.invoke('open-external', url),

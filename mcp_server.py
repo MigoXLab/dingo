@@ -10,7 +10,7 @@ import json  # noqa: E402
 import logging  # noqa: E402
 import sys  # noqa: E402
 import uuid  # noqa: E402
-from contextlib import redirect_stdout, redirect_stderr  # noqa: E402
+from contextlib import redirect_stderr, redirect_stdout  # noqa: E402
 from typing import Any, Dict, List, Literal, Optional, Tuple  # noqa: E402
 
 from fastmcp import FastMCP  # noqa: E402

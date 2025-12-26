@@ -4,20 +4,20 @@ os.environ["TQDM_DISABLE"] = "1"           # 禁用 tqdm 进度条，防止污�
 os.environ["TQDM_NCOLS"] = "0"             # 备用：禁用 tqdm 自动宽度检测
 os.environ["LOCAL_DEPLOYMENT_MODE"] = "true"  # 🔑 关键：强制 Dingo 使用 ThreadPool 而非 ProcessPool
 
-import io
-import json
-import logging
-import sys
-import uuid
-from contextlib import redirect_stdout, redirect_stderr
-from typing import Any, Dict, List, Literal, Optional, Tuple
+import io  # noqa: E402
+import json  # noqa: E402
+import logging  # noqa: E402
+import sys  # noqa: E402
+import uuid  # noqa: E402
+from contextlib import redirect_stdout, redirect_stderr  # noqa: E402
+from typing import Any, Dict, List, Literal, Optional, Tuple  # noqa: E402
 
-from fastmcp import FastMCP
+from fastmcp import FastMCP  # noqa: E402
 
-from dingo.config import InputArgs
-from dingo.exec import Executor
-from dingo.model import Model
-from dingo.utils import log
+from dingo.config import InputArgs  # noqa: E402
+from dingo.exec import Executor  # noqa: E402
+from dingo.model import Model  # noqa: E402
+from dingo.utils import log  # noqa: E402
 
 # For MCP stdio mode, suppress all logging to avoid interfering with JSON-RPC
 # Cherry Studio and other MCP clients communicate via stdin/stdout
@@ -59,7 +59,7 @@ SELF_CONTAINED_LLM_EVALUATORS = {
     "LLMTextQualityV2",       # Text quality assessment
     "LLMDatamanAssessment",   # Dataman assessment
     "LLMMetaRaterEvaluation", # Meta rater evaluation
-    "LLMHtmlExtractCompareV2", # HTML extract comparison
+    "LLMHtmlExtractCompareV2",  # HTML extract comparison
     # Add other self-contained LLM evaluators here
 }
 
@@ -819,7 +819,7 @@ def run_dingo_evaluation(
         try:
             with redirect_stdout(f_buffer), redirect_stderr(f_buffer):
                 result = executor.execute()
-        except Exception as inner_e:
+        except Exception:
             # 哪怕报错了，也能看到 Dingo 到底吐槽了啥
             captured_output = f_buffer.getvalue()
             if captured_output:
@@ -1269,7 +1269,7 @@ def get_prompt_for_llm(llm_name: str) -> Optional[str]:
         # --- FIX START: 防御性检查 ---
         # Check if the llm_name is actually a prompt name
         if hasattr(Model, 'prompt_name_map') and llm_name in Model.prompt_name_map:
-        # --- FIX END ---
+            # --- FIX END ---
             log.info(f"'{llm_name}' is already a valid prompt name")
             return llm_name
 

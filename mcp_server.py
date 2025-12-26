@@ -1,5 +1,6 @@
 # === 环境变量配置：必须在所有 import 之前设置 ===
 import os
+
 os.environ["TQDM_DISABLE"] = "1"           # 禁用 tqdm 进度条，防止污染 stdio
 os.environ["TQDM_NCOLS"] = "0"             # 备用：禁用 tqdm 自动宽度检测
 os.environ["LOCAL_DEPLOYMENT_MODE"] = "true"  # 🔑 关键：强制 Dingo 使用 ThreadPool 而非 ProcessPool

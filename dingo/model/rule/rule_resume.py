@@ -404,16 +404,11 @@ class RuleResumeDateFormat(BaseRule):
         if matches:
             separators = set([re.search(r'[-./年]', m).group(0) for m in matches])
             if len(separators) > 1:
-                res.eval_status = True
-                res.eval_details = {
-                    "label": [f"{cls.metric_type}.{cls.__name__}"],
-                    "metric": [cls.__name__],
-                    "reason": ["Inconsistent date formats found: " + ", ".join(matches[:3])]
-                }
+                res.status = True
+                res.label = [f"{cls.metric_type}.{cls.__name__}"]
+                res.reason = ["Inconsistent date formats found: " + ", ".join(matches[:3])]
             else:
-                res.eval_details = {
-                    "label": [QualityLabel.QUALITY_GOOD]
-                }
+                res.label = [QualityLabel.QUALITY_GOOD]
         else:
             res.label = [QualityLabel.QUALITY_GOOD]
         return res

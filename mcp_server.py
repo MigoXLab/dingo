@@ -1,6 +1,15 @@
-import json
+# === 环境变量配置：必须在所有 import 之前设置 ===
 import os
+os.environ["TQDM_DISABLE"] = "1"           # 禁用 tqdm 进度条，防止污染 stdio
+os.environ["TQDM_NCOLS"] = "0"             # 备用：禁用 tqdm 自动宽度检测
+os.environ["LOCAL_DEPLOYMENT_MODE"] = "true"  # 🔑 关键：强制 Dingo 使用 ThreadPool 而非 ProcessPool
+
+import io
+import json
+import logging
+import sys
 import uuid
+from contextlib import redirect_stdout, redirect_stderr
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from fastmcp import FastMCP
@@ -10,10 +19,25 @@ from dingo.exec import Executor
 from dingo.model import Model
 from dingo.utils import log
 
-# Configure logging based on environment variable
-log_level = os.environ.get("LOG_LEVEL", "info").upper()
-log.setLevel(log_level)
-log.info(f"Setting Dingo log level to: {log_level}")
+# For MCP stdio mode, suppress all logging to avoid interfering with JSON-RPC
+# Cherry Studio and other MCP clients communicate via stdin/stdout
+if os.environ.get("MCP_TRANSPORT", "stdio") == "stdio":
+    # Redirect all logging to a file instead of stderr
+    log_file = os.path.join(os.path.dirname(__file__), "mcp_server.log")
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    file_handler.setFormatter(logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s'))
+    log.handlers.clear()
+    log.addHandler(file_handler)
+    log.setLevel(logging.INFO)
+    # Also suppress warnings from other libraries
+    import warnings
+    warnings.filterwarnings("ignore")
+else:
+    # Configure logging based on environment variable
+    log_level = os.environ.get("LOG_LEVEL", "info").upper()
+    log.setLevel(log_level)
+
+log.info(f"MCP Server starting, transport={os.environ.get('MCP_TRANSPORT', 'stdio')}")
 
 # Constants
 PROMPT_PREVIEW_MAX_LENGTH = 100  # Maximum length for prompt content preview
@@ -25,6 +49,20 @@ DEFAULT_LLM_PROMPTS = {
     # Add other default mappings as needed
 }
 
+# Self-contained LLM evaluators that have built-in prompts and don't need external prompt configuration
+# These evaluators build their own prompts in their build_messages() method
+SELF_CONTAINED_LLM_EVALUATORS = {
+    "LLMKeywordMatcher",      # ATS Resume keyword matching
+    "LLMResumeOptimizer",     # Resume optimization
+    "LLMFactCheckPublic",     # Fact checking
+    "LLMHallucination",       # Hallucination detection
+    "LLMTextQualityV2",       # Text quality assessment
+    "LLMDatamanAssessment",   # Dataman assessment
+    "LLMMetaRaterEvaluation", # Meta rater evaluation
+    "LLMHtmlExtractCompareV2", # HTML extract comparison
+    # Add other self-contained LLM evaluators here
+}
+
 # Read environment variables for defaults
 DEFAULT_OUTPUT_DIR = os.environ.get("DEFAULT_OUTPUT_DIR")
 DEFAULT_MAX_WORKERS = int(os.environ.get("DEFAULT_MAX_WORKERS", "1"))
@@ -34,10 +72,22 @@ DEFAULT_SAVE_CORRECT = os.environ.get("DEFAULT_SAVE_CORRECT", "true").lower() ==
 DEFAULT_DATA_FORMAT = os.environ.get("DEFAULT_DATA_FORMAT")
 DEFAULT_DATASET_TYPE = os.environ.get("DEFAULT_DATASET_TYPE", "local")
 
+# Read LLM API configuration from environment
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4")
+
 log.info(f"Environment settings: MAX_WORKERS={DEFAULT_MAX_WORKERS}, BATCH_SIZE={DEFAULT_BATCH_SIZE}, "
          f"SAVE_DATA={DEFAULT_SAVE_DATA}, SAVE_CORRECT={DEFAULT_SAVE_CORRECT}, "
          f"DATA_FORMAT={DEFAULT_DATA_FORMAT}, DATASET_TYPE={DEFAULT_DATASET_TYPE}, "
          f"OUTPUT_DIR={DEFAULT_OUTPUT_DIR}")
+
+# Log LLM config status (mask the key for security)
+if OPENAI_API_KEY:
+    masked_key = OPENAI_API_KEY[:8] + "..." + OPENAI_API_KEY[-4:] if len(OPENAI_API_KEY) > 12 else "***"
+    log.info(f"LLM Config: API_KEY={masked_key}, BASE_URL={OPENAI_BASE_URL}, MODEL={OPENAI_MODEL}")
+else:
+    log.warning("OPENAI_API_KEY not set! LLM evaluation will fail. Please set it in MCP env config.")
 
 mcp = FastMCP("Dingo Evaluator")
 
@@ -304,6 +354,14 @@ def prepare_llm_configuration(evaluation_type: str, eval_group_name: str, kwargs
             kwargs["custom_config"] = update_llm_config_with_env(kwargs["custom_config"])
 
     # Ensure prompt_list exists in custom_config for LLM evaluation
+    # Skip this check for self-contained LLM evaluators that have built-in prompts
+    if eval_group_name and eval_group_name in SELF_CONTAINED_LLM_EVALUATORS:
+        log.info(f"'{eval_group_name}' is a self-contained LLM evaluator with built-in prompt. Skipping prompt validation.")
+        # Set the evaluator name in prompt_list for compatibility
+        kwargs["custom_config"] = kwargs.get("custom_config", {})
+        kwargs["custom_config"]["prompt_list"] = [eval_group_name]
+        return kwargs
+
     if not kwargs.get("custom_config", {}).get("prompt_list"):
         if eval_group_name:
             # Try to find associated prompt if eval_group_name is an LLM name
@@ -324,20 +382,29 @@ def prepare_llm_configuration(evaluation_type: str, eval_group_name: str, kwargs
                     kwargs["custom_config"]["prompt_list"] = [default_prompt]
                     log.info(f"Setting default prompt '{default_prompt}' for LLM '{eval_group_name}'")
                 else:
-                    # Get available prompts for better error message
+                    # Check if it's a valid LLM in the registry
                     try:
                         Model.load_model()
-                        available_prompts = list(Model.prompt_name_map.keys())
-                        prompt_examples = ", ".join(available_prompts[:5]) + "..." if len(
-                            available_prompts) > 5 else ", ".join(available_prompts)
+                        if eval_group_name in Model.llm_name_map:
+                            # It's a valid LLM, use it directly
+                            kwargs["custom_config"] = kwargs.get("custom_config", {})
+                            kwargs["custom_config"]["prompt_list"] = [eval_group_name]
+                            log.info(f"'{eval_group_name}' is a registered LLM. Using it directly.")
+                        else:
+                            # Get available prompts for better error message
+                            available_prompts = list(Model.prompt_name_map.keys())
+                            prompt_examples = ", ".join(available_prompts[:5]) + "..." if len(
+                                available_prompts) > 5 else ", ".join(available_prompts)
 
-                        error_msg = (
-                            f"No valid prompt found for '{eval_group_name}'. For LLM evaluation, please provide "
-                            f"a valid prompt name. Available prompts include: {prompt_examples}. "
-                            f"Use 'list_dingo_components(component_type=\"prompts\")' to see all available prompts."
-                        )
-                        log.error(error_msg)
-                        raise ValueError(error_msg)
+                            error_msg = (
+                                f"No valid prompt found for '{eval_group_name}'. For LLM evaluation, please provide "
+                                f"a valid prompt name. Available prompts include: {prompt_examples}. "
+                                f"Use 'list_dingo_components(component_type=\"prompts\")' to see all available prompts."
+                            )
+                            log.error(error_msg)
+                            raise ValueError(error_msg)
+                    except ValueError:
+                        raise
                     except Exception as e:
                         log.error(f"Failed to get available prompts: {e}", exc_info=True)
                         raise ValueError(
@@ -539,7 +606,7 @@ def run_dingo_evaluation(
     abs_output_dir = determine_output_dir(abs_input_path, task_name_for_path, output_dir_from_kwargs)
 
     # --- Prepare Dingo InputArgs Data ---
-    final_dataset_type = kwargs.get('dataset', DEFAULT_DATASET_TYPE if 'dataset' not in kwargs else None)
+    final_dataset_source = kwargs.get('dataset_source', DEFAULT_DATASET_TYPE if DEFAULT_DATASET_TYPE else "local")
     final_data_format = kwargs.get('data_format', inferred_data_format if inferred_data_format else DEFAULT_DATA_FORMAT)
     final_task_name = task_name_from_kwargs if task_name_from_kwargs else task_name_for_path
     final_save_data = kwargs.get('save_data') if kwargs.get('save_data') is not None else DEFAULT_SAVE_DATA
@@ -548,51 +615,179 @@ def run_dingo_evaluation(
     final_batch_size = kwargs.get('batch_size', DEFAULT_BATCH_SIZE)
 
     log.info(
-        f"Final dataset='{final_dataset_type}', data_format='{final_data_format if final_data_format else '(Dingo default)'}', "
+        f"Final dataset_source='{final_dataset_source}', data_format='{final_data_format if final_data_format else '(Dingo default)'}', "
         f"save_data={final_save_data}, save_correct={final_save_correct}, "
         f"max_workers={final_max_workers}, batch_size={final_batch_size}")
 
-    # Start with fixed args + defaults + derived values
+    # --- REFACTOR: Construct structured dictionaries ---
+
+    # 1. Construct Dataset Dictionary (DatasetArgs structure)
+    dataset_config = {
+        "source": final_dataset_source,
+        "format": final_data_format if final_data_format else "jsonl"
+    }
+    log.info(f"Dataset config: {dataset_config}")
+
+    # 2. Construct Evaluator List (List[EvalPipline] structure)
+    # Each EvalPipline has "fields" and "evals"
+    valid_rule_groups = {'default', 'sft', 'pretrain', 'rag', 'hallucination', 'benchmark', 'text_base_all'}
+
+    evaluator_list = []
+
+    if evaluation_type == "rule":
+        # Determine rule group - use 'sft' as default to avoid buggy Resume rules in 'default'
+        fallback_group = "sft" if "sft" in valid_rule_groups else "default"
+        rule_group = eval_group_name if eval_group_name and eval_group_name in valid_rule_groups else fallback_group
+        if eval_group_name and eval_group_name not in valid_rule_groups:
+            log.warning(f"Invalid rule group '{eval_group_name}'. Valid options: {valid_rule_groups}. Using '{fallback_group}'.")
+        log.info(f"Using rule group: {rule_group}")
+
+        # Get rules from the specified group
+        try:
+            Model.load_model()
+            rule_groups = Model.get_rule_groups()
+            if rule_group in rule_groups:
+                rule_group_data = rule_groups[rule_group]
+
+                # 1. 统一拿到规则列表
+                if isinstance(rule_group_data, list):
+                    rules_iterable = rule_group_data
+                elif hasattr(rule_group_data, 'rules'):
+                    rules_iterable = rule_group_data.rules
+                else:
+                    rules_iterable = []
+                    log.warning(f"Unknown structure for rule group '{rule_group}'")
+
+                # 2. 智能提取名字 (修复 'type' 问题)
+                evals_list = []
+                for rule in rules_iterable:
+                    # 如果 rule 是个类 (type)，直接取 __name__
+                    # 如果 rule 是个实例，取 __class__.__name__
+                    if isinstance(rule, type):
+                        r_name = rule.__name__
+                    else:
+                        r_name = rule.__class__.__name__
+
+                    evals_list.append({"name": r_name})
+
+                log.info(f"Found {len(evals_list)} rules in group '{rule_group}'")
+            else:
+                # Fallback to common rules
+                evals_list = [{"name": "RuleColonEnd"}, {"name": "RuleContentNull"}, {"name": "RuleDocRepeat"}]
+                log.warning(f"Rule group '{rule_group}' not found. Using fallback rules.")
+        except Exception as e:
+            log.warning(f"Failed to load rule group '{rule_group}': {e}. Using fallback rules.")
+            evals_list = [{"name": "RuleColonEnd"}, {"name": "RuleContentNull"}, {"name": "RuleDocRepeat"}]
+
+        evaluator_list.append({
+            "fields": {"content": "content"},
+            "evals": evals_list
+        })
+
+    elif evaluation_type == "llm":
+        log.info("LLM evaluation type selected.")
+
+        # Use global LLM config (read at startup) or re-read from env
+        openai_key = OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
+        openai_base_url = OPENAI_BASE_URL or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        openai_model = OPENAI_MODEL or os.environ.get("OPENAI_MODEL", "gpt-4")
+
+        log.info(f"Checking LLM config: key_exists={bool(openai_key)}, model={openai_model}, url={openai_base_url}")
+
+        llm_eval_config = None
+        if openai_key:
+            llm_eval_config = {
+                "key": openai_key,
+                "api_url": openai_base_url,
+                "model": openai_model,
+            }
+            log.info(f"LLM config loaded: model={openai_model}, api_url={openai_base_url}")
+        elif loaded_custom_config and "llm_config" in loaded_custom_config:
+            # Fallback to custom_config
+            llm_config = loaded_custom_config["llm_config"]
+            first_llm_name = next(iter(llm_config), None)
+            if first_llm_name:
+                llm_eval_config = llm_config[first_llm_name]
+                log.info(f"LLM config loaded from custom_config: {first_llm_name}")
+
+        if not llm_eval_config:
+            error_msg = (
+                "No LLM API key found! Please configure one of the following:\n"
+                "1. Set OPENAI_API_KEY environment variable in Cherry Studio MCP config\n"
+                "2. Or provide custom_config with llm_config\n\n"
+                "Example Cherry Studio MCP config (in mcp.json or settings):\n"
+                '{\n'
+                '  "mcpServers": {\n'
+                '    "dingo": {\n'
+                '      "command": "python",\n'
+                '      "args": ["path/to/mcp_server.py"],\n'
+                '      "env": {\n'
+                '        "OPENAI_API_KEY": "sk-your-api-key",\n'
+                '        "OPENAI_BASE_URL": "https://api.deepseek.com/v1",\n'
+                '        "OPENAI_MODEL": "deepseek-chat"\n'
+                '      }\n'
+                '    }\n'
+                '  }\n'
+                '}'
+            )
+            log.error(error_msg)
+            raise ValueError(error_msg)
+
+        # Determine which LLM evaluator to use
+        llm_evaluator_name = eval_group_name if eval_group_name else "LLMTextQualityV2"
+
+        # Handle prompt_list from custom_config
+        if loaded_custom_config and "prompt_list" in loaded_custom_config:
+            prompt_list = loaded_custom_config["prompt_list"]
+            evals_list = []
+            for p in prompt_list:
+                eval_item = {"name": p}
+                if llm_eval_config:
+                    eval_item["config"] = llm_eval_config
+                evals_list.append(eval_item)
+            log.info(f"Using prompts for LLM evaluation: {prompt_list}")
+        else:
+            # Single evaluator
+            eval_item = {"name": llm_evaluator_name}
+            if llm_eval_config:
+                eval_item["config"] = llm_eval_config
+            evals_list = [eval_item]
+            log.info(f"Using LLM evaluator: {llm_evaluator_name}")
+
+        evaluator_list.append({
+            "fields": {"content": "content", "prompt": "prompt"},
+            "evals": evals_list
+        })
+
+    log.info(f"Evaluator config: {evaluator_list}")
+
+    # 3. Construct Executor Dictionary
+    executor_config = {
+        "max_workers": final_max_workers,
+        "batch_size": final_batch_size,
+        "result_save": {
+            "bad": final_save_data,
+            "good": final_save_correct
+        }
+    }
+
+    # 4. Construct Final Input Data
     input_data = {
         "output_path": abs_output_dir,
         "task_name": final_task_name,
-        "save_data": final_save_data,
-        "save_correct": final_save_correct,
         "input_path": abs_input_path,
-        "dataset": final_dataset_type,
-        "custom_config": loaded_custom_config,
-        "data_format": final_data_format,
-        "max_workers": final_max_workers,
-        "batch_size": final_batch_size,
+        "dataset": dataset_config,
+        "executor": executor_config,
+        "evaluator": evaluator_list,
     }
 
-    # --- Handle eval_group_name based on evaluation type ---
-    input_data["eval_group"] = None  # Initialize to None
-    valid_rule_groups = {'default', 'sft', 'pretrain'}
-
-    if evaluation_type == "rule":
-        # Check if eval_group_name is provided and valid, otherwise default
-        if eval_group_name and eval_group_name in valid_rule_groups:
-            input_data["eval_group"] = eval_group_name
-            log.info(f"Using provided rule group: {eval_group_name}")
-        elif eval_group_name:  # Provided but invalid
-            log.warning(
-                f"Invalid rule group name '{eval_group_name}'. Valid options: {valid_rule_groups}. Defaulting to 'default'.")
-            input_data["eval_group"] = "default"
-        else:  # Not provided (eval_group_name is "")
-            log.info("No rule group name provided. Defaulting to 'default'.")
-            input_data["eval_group"] = "default"
-    elif evaluation_type == "llm":
-        log.info("LLM evaluation type selected. 'eval_group_name' handled by Dingo based on custom_config.")
-        if eval_group_name:
-            log.warning(f"'eval_group_name' ('{eval_group_name}') provided for LLM evaluation, but it will be ignored.")
-
-    # Merge valid InputArgs fields from kwargs, logging ignored keys
-    processed_args = set(input_data.keys())
+    # Merge additional valid InputArgs fields from kwargs
+    processed_args = {'output_path', 'task_name', 'input_path', 'dataset', 'executor', 'evaluator',
+                      'save_data', 'save_correct', 'data_format', 'max_workers', 'batch_size',
+                      'custom_config', 'dataset_source'}
     log.debug(f"Checking kwargs for additional InputArgs: {list(kwargs.keys())}")
     for k, v in kwargs.items():
         if k in processed_args:
-            log.warning(f"Argument '{k}' from kwargs ignored (already handled). Value provided: {v}")
             continue
         if k in InputArgs.model_fields:
             log.debug(f"Adding '{k}={v}' from kwargs to InputArgs data.")
@@ -601,10 +796,14 @@ def run_dingo_evaluation(
             log.warning(f"Argument '{k}' from kwargs is not a valid Dingo InputArgs field; ignored. Value: {v}")
 
     # Final checks
-    if input_data.get("dataset") == 'local' and not input_data.get("input_path"):
-        raise ValueError("input_path is required when dataset is 'local'.")
+    if dataset_config.get("source") == 'local' and not input_data.get("input_path"):
+        raise ValueError("input_path is required when dataset source is 'local'.")
 
     input_data = {k: v for k, v in input_data.items() if v is not None}
+
+    # === 方案 D: 强制单线程，绕过 ProcessPoolExecutor 的 fd 继承问题 ===
+    input_data["max_workers"] = 1
+    log.info(f"Forced max_workers=1 to use ThreadPool mode (avoiding ProcessPool fd inheritance)")
 
     # --- Execute Dingo ---
     try:
@@ -612,8 +811,26 @@ def run_dingo_evaluation(
         input_args = InputArgs(**input_data)
 
         executor = Executor.exec_map['local'](input_args)
-        log.info(f"Executing Dingo evaluation...")
-        result = executor.execute()
+        log.info(f"Executing Dingo evaluation with StringIO redirection...")
+
+        # === 方案 D+E: Python 层温柔重定向到 StringIO ===
+        # 使用 StringIO 捕获输出，万一报错可以查看 Dingo 内部日志
+        f_buffer = io.StringIO()
+        try:
+            with redirect_stdout(f_buffer), redirect_stderr(f_buffer):
+                result = executor.execute()
+        except Exception as inner_e:
+            # 哪怕报错了，也能看到 Dingo 到底吐槽了啥
+            captured_output = f_buffer.getvalue()
+            if captured_output:
+                log.error(f"Dingo inner output before crash:\n{captured_output[:2000]}")
+            raise
+
+        # 记录捕获的输出（调试用）
+        captured_output = f_buffer.getvalue()
+        if captured_output:
+            log.debug(f"Captured Dingo output ({len(captured_output)} chars): {captured_output[:500]}...")
+
         log.info(f"Dingo execution finished.")
 
         if not hasattr(result, 'output_path') or not result.output_path:
@@ -644,6 +861,58 @@ def run_dingo_evaluation(
         raise RuntimeError(f"Dingo evaluation failed: {e}") from e
 
 
+def _get_rule_details_logic(rule_name: str) -> Dict:
+    """Private helper function containing the actual logic for getting rule details.
+
+    This is called by both the MCP tool and internal functions.
+    """
+    try:
+        Model.load_model()
+        rule_groups = Model.get_rule_groups()
+
+        if rule_name in rule_groups:
+            rule_group_data = rule_groups[rule_name]
+
+            # Handle both list and object structures
+            if isinstance(rule_group_data, list):
+                rules_list = rule_group_data
+            elif hasattr(rule_group_data, 'rules'):
+                rules_list = rule_group_data.rules
+            else:
+                rules_list = []
+
+            # Extract basic info
+            details = {
+                "name": rule_name,
+                "rule_count": len(rules_list),
+                "rules": []
+            }
+
+            # Get information about each rule in the group
+            for rule in rules_list:
+                # Handle both class and instance
+                if isinstance(rule, type):
+                    rule_info = {
+                        "id": getattr(rule, 'rule_id', rule.__name__),
+                        "description": getattr(rule, 'description', rule.__doc__ or "No description"),
+                        "category": getattr(rule, 'category', "Unknown")
+                    }
+                else:
+                    rule_info = {
+                        "id": getattr(rule, 'rule_id', rule.__class__.__name__),
+                        "description": getattr(rule, 'description', "No description"),
+                        "category": getattr(rule, 'category', "Unknown")
+                    }
+                details["rules"].append(rule_info)
+
+            return details
+        else:
+            return {"error": f"Rule '{rule_name}' not found."}
+    except Exception as e:
+        log.error(f"Error retrieving rule details: {e}", exc_info=True)
+        return {"error": f"Failed to retrieve rule details: {str(e)}"}
+
+
 def _get_rule_groups_info(include_details: bool = False) -> Dict[str, List]:
     """Helper function to get rule groups information.
 
@@ -659,7 +928,7 @@ def _get_rule_groups_info(include_details: bool = False) -> Dict[str, List]:
     if include_details:
         rule_details = []
         for rg in rule_groups:
-            details = get_rule_details(rg)
+            details = _get_rule_details_logic(rg)
             rule_details.append(details)
         return {"rule_groups": rule_details}
     else:
@@ -789,35 +1058,7 @@ def get_rule_details(rule_name: str) -> Dict:
         A dictionary containing details about the rule.
     """
     log.info(f"Received request for rule details: {rule_name}")
-    try:
-        Model.load_model()
-        rule_groups = Model.get_rule_groups()
-
-        if rule_name in rule_groups:
-            rule_group = rule_groups[rule_name]
-
-            # Extract basic info
-            details = {
-                "name": rule_name,
-                "rule_count": len(rule_group.rules),
-                "rules": []
-            }
-
-            # Get information about each rule in the group
-            for rule in rule_group.rules:
-                rule_info = {
-                    "id": rule.rule_id,
-                    "description": rule.description,
-                    "category": rule.category if hasattr(rule, "category") else "Unknown"
-                }
-                details["rules"].append(rule_info)
-
-            return details
-        else:
-            return {"error": f"Rule '{rule_name}' not found."}
-    except Exception as e:
-        log.error(f"Error retrieving rule details: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve rule details: {str(e)}"}
+    return _get_rule_details_logic(rule_name)
 
 
 @mcp.tool()
@@ -1025,8 +1266,10 @@ def get_prompt_for_llm(llm_name: str) -> Optional[str]:
     try:
         Model.load_model()  # Ensure models are loaded
 
+        # --- FIX START: 防御性检查 ---
         # Check if the llm_name is actually a prompt name
-        if llm_name in Model.prompt_name_map:
+        if hasattr(Model, 'prompt_name_map') and llm_name in Model.prompt_name_map:
+        # --- FIX END ---
             log.info(f"'{llm_name}' is already a valid prompt name")
             return llm_name
 
@@ -1068,7 +1311,13 @@ def get_prompt_for_llm(llm_name: str) -> Optional[str]:
 
 
 if __name__ == "__main__":
-    if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
-        mcp.run()
-    else:
+    # 传输模式选择：
+    # - stdio: Cherry Studio / Claude Desktop 默认模式
+    # - sse: 网页端或 HTTP 服务模式
+    transport_mode = os.environ.get("MCP_TRANSPORT", "stdio")
+
+    if transport_mode == "sse":
         mcp.run(transport="sse")
+    else:
+        # 默认使用 stdio，兼容 Cherry Studio
+        mcp.run(transport="stdio")

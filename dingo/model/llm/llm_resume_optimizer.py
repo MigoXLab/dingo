@@ -9,18 +9,11 @@ import re
 from typing import List, Tuple
 
 from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
-
-# Import EvalDetail for dev branch compatibility, fallback to ModelRes for main branch
-try:
-    from dingo.io.output.eval_detail import EvalDetail, QualityLabel
-    USE_EVAL_DETAIL = True
-except ImportError:
-    from dingo.model.modelres import ModelRes
-    USE_EVAL_DETAIL = False
 
 
 @Model.llm_register("LLMResumeOptimizer")
@@ -191,7 +184,7 @@ class LLMResumeOptimizer(BaseOpenAI):
 
     @classmethod
     def process_response(cls, response: str):
-        """Process LLM response. Returns EvalDetail (dev) or ModelRes (main)."""
+        """Process LLM response. Returns EvalDetail."""
         log.info(f"Raw LLM response length: {len(response)} chars")
 
         # Clean response
@@ -210,22 +203,13 @@ class LLMResumeOptimizer(BaseOpenAI):
         # Generate reason text
         reason = cls._generate_reason(optimization_summary, section_changes, overall_improvement)
 
-        # Return appropriate result type based on branch
-        if USE_EVAL_DETAIL:
-            result = EvalDetail(metric=cls.__name__)
-            result.status = False
-            result.label = [QualityLabel.QUALITY_GOOD]
-            result.reason = [reason]
-            # Store full response for downstream use (using extra field)
-            result.optimized_content = response_json
-        else:
-            result = ModelRes()
-            result.error_status = False
-            result.type = "RESUME_OPTIMIZED"
-            result.name = "OPTIMIZATION_COMPLETE"
-            result.reason = [reason]
-            # Store full response for downstream use
-            result.optimized_content = response_json
+        # Return EvalDetail result
+        result = EvalDetail(metric=cls.__name__)
+        result.status = False
+        result.label = [QualityLabel.QUALITY_GOOD]
+        result.reason = [reason]
+        # Store full response for downstream use (using extra field)
+        result.optimized_content = response_json
 
         return result
 
@@ -287,22 +271,14 @@ class LLMResumeOptimizer(BaseOpenAI):
 
     @classmethod
     def eval(cls, input_data: Data):
-        """Override eval to validate inputs. Returns EvalDetail (dev) or ModelRes (main)."""
+        """Override eval to validate inputs. Returns EvalDetail."""
         # Validate that content (resume) is provided
         if not input_data.content:
-            if USE_EVAL_DETAIL:
-                result = EvalDetail(metric=cls.__name__)
-                result.status = True
-                result.label = [f"QUALITY_BAD.{cls.__name__}"]
-                result.reason = ["Resume text (content) is required but was not provided"]
-                return result
-            else:
-                return ModelRes(
-                    error_status=True,
-                    type="RESUME_OPTIMIZER_ERROR",
-                    name="MISSING_RESUME",
-                    reason=["Resume text (content) is required but was not provided"]
-                )
+            result = EvalDetail(metric=cls.__name__)
+            result.status = True
+            result.label = [f"QUALITY_BAD.{cls.__name__}"]
+            result.reason = ["Resume text (content) is required but was not provided"]
+            return result
 
         # Call parent eval method
         return super().eval(input_data)

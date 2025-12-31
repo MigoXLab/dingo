@@ -9,18 +9,11 @@ import re
 from typing import List
 
 from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
-
-# Import EvalDetail for dev branch compatibility, fallback to ModelRes for main branch
-try:
-    from dingo.io.output.eval_detail import EvalDetail, QualityLabel
-    USE_EVAL_DETAIL = True
-except ImportError:
-    from dingo.model.modelres import ModelRes
-    USE_EVAL_DETAIL = False
 
 # Complete synonym mapping for keyword normalization
 SYNONYM_MAP = {
@@ -185,7 +178,7 @@ Please analyze and return the JSON result:
 
     @classmethod
     def process_response(cls, response: str):
-        """Process LLM response. Returns EvalDetail (dev) or ModelRes (main)."""
+        """Process LLM response. Returns EvalDetail."""
         log.info(f"Raw LLM response: {response}")
 
         # Extract think content and clean response
@@ -213,29 +206,16 @@ Please analyze and return the JSON result:
 
         log.info(f"Keyword match score: {score:.1%}, threshold: {cls.threshold:.0%}")
 
-        # Return appropriate result type based on branch
-        if USE_EVAL_DETAIL:
-            result = EvalDetail(metric=cls.__name__)
-            result.score = score
-            result.reason = [reason]
-            if score >= cls.threshold:
-                result.status = False
-                result.label = [QualityLabel.QUALITY_GOOD]
-            else:
-                result.status = True
-                result.label = [f"QUALITY_BAD.{cls.__name__}"]
+        # Return EvalDetail result
+        result = EvalDetail(metric=cls.__name__)
+        result.score = score
+        result.reason = [reason]
+        if score >= cls.threshold:
+            result.status = False
+            result.label = [QualityLabel.QUALITY_GOOD]
         else:
-            result = ModelRes()
-            result.score = score
-            result.reason = [reason]
-            if score >= cls.threshold:
-                result.error_status = False
-                result.type = "KEYWORD_MATCH_GOOD"
-                result.name = "MATCH_GOOD"
-            else:
-                result.error_status = True
-                result.type = "KEYWORD_MATCH_LOW"
-                result.name = "MATCH_LOW"
+            result.status = True
+            result.label = [f"QUALITY_BAD.{cls.__name__}"]
 
         return result
 
@@ -346,38 +326,22 @@ Please analyze and return the JSON result:
 
     @classmethod
     def eval(cls, input_data: Data):
-        """Override eval to validate inputs. Returns EvalDetail (dev) or ModelRes (main)."""
+        """Override eval to validate inputs. Returns EvalDetail."""
         # Validate that content (resume) is provided
         if not input_data.content:
-            if USE_EVAL_DETAIL:
-                result = EvalDetail(metric=cls.__name__)
-                result.status = True
-                result.label = [f"QUALITY_BAD.{cls.__name__}"]
-                result.reason = ["Resume text (content) is required but was not provided"]
-                return result
-            else:
-                return ModelRes(
-                    error_status=True,
-                    type="KEYWORD_MATCH_ERROR",
-                    name="MISSING_RESUME",
-                    reason=["Resume text (content) is required but was not provided"]
-                )
+            result = EvalDetail(metric=cls.__name__)
+            result.status = True
+            result.label = [f"QUALITY_BAD.{cls.__name__}"]
+            result.reason = ["Resume text (content) is required but was not provided"]
+            return result
 
         # Validate that prompt (JD) is provided
         if not input_data.prompt:
-            if USE_EVAL_DETAIL:
-                result = EvalDetail(metric=cls.__name__)
-                result.status = True
-                result.label = [f"QUALITY_BAD.{cls.__name__}"]
-                result.reason = ["Job description (prompt) is required but was not provided"]
-                return result
-            else:
-                return ModelRes(
-                    error_status=True,
-                    type="KEYWORD_MATCH_ERROR",
-                    name="MISSING_JD",
-                    reason=["Job description (prompt) is required but was not provided"]
-                )
+            result = EvalDetail(metric=cls.__name__)
+            result.status = True
+            result.label = [f"QUALITY_BAD.{cls.__name__}"]
+            result.reason = ["Job description (prompt) is required but was not provided"]
+            return result
 
         # Call parent eval method
         return super().eval(input_data)

@@ -1,44 +1,54 @@
-# === 环境变量配置：必须在所有 import 之前设置 ===
+import json
+import logging
 import os
+import sys
+import uuid
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
-os.environ["TQDM_DISABLE"] = "1"           # 禁用 tqdm 进度条，防止污染 stdio
-os.environ["TQDM_NCOLS"] = "0"             # 备用：禁用 tqdm 自动宽度检测
-os.environ["LOCAL_DEPLOYMENT_MODE"] = "true"  # 🔑 关键：强制 Dingo 使用 ThreadPool 而非 ProcessPool
+from fastmcp import FastMCP
 
-import io  # noqa: E402
-import json  # noqa: E402
-import logging  # noqa: E402
-import sys  # noqa: E402
-import uuid  # noqa: E402
-from contextlib import redirect_stderr, redirect_stdout  # noqa: E402
-from typing import Any, Dict, List, Literal, Optional, Tuple  # noqa: E402
+import io
+from contextlib import redirect_stderr, redirect_stdout
 
-from fastmcp import FastMCP  # noqa: E402
+from dingo.config import InputArgs
+from dingo.exec import Executor
+from dingo.model import Model
+from dingo.utils import log
 
-from dingo.config import InputArgs  # noqa: E402
-from dingo.exec import Executor  # noqa: E402
-from dingo.model import Model  # noqa: E402
-from dingo.utils import log  # noqa: E402
+# Configure logging based on environment variable
+log_level = os.environ.get("LOG_LEVEL", "info").upper()
+log.setLevel(log_level)
 
-# For MCP stdio mode, suppress all logging to avoid interfering with JSON-RPC
-# Cherry Studio and other MCP clients communicate via stdin/stdout
-if os.environ.get("MCP_TRANSPORT", "stdio") == "stdio":
-    # Redirect all logging to a file instead of stderr
-    log_file = os.path.join(os.path.dirname(__file__), "mcp_server.log")
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setFormatter(logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s'))
-    log.handlers.clear()
-    log.addHandler(file_handler)
-    log.setLevel(logging.INFO)
-    # Also suppress warnings from other libraries
-    import warnings
-    warnings.filterwarnings("ignore")
-else:
-    # Configure logging based on environment variable
-    log_level = os.environ.get("LOG_LEVEL", "info").upper()
-    log.setLevel(log_level)
+# Add file handler for MCP Server logs
+# Use absolute path based on the script's location
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_mcp_log_file = os.path.join(_script_dir, "mcp_server.log")
+_file_handler = None
 
-log.info(f"MCP Server starting, transport={os.environ.get('MCP_TRANSPORT', 'stdio')}")
+def _flush_log():
+    """Force flush log file handler."""
+    global _file_handler
+    if _file_handler:
+        _file_handler.flush()
+
+# Ensure log file can be created
+try:
+    _file_handler = logging.FileHandler(_mcp_log_file, encoding="utf-8", mode="a")
+    _file_handler.setFormatter(logging.Formatter("[%(asctime)s][%(levelname)s] %(pathname)s[line:%(lineno)d] -: %(message)s"))
+    _file_handler.setLevel(logging.DEBUG)  # Capture all levels to file
+    log.addHandler(_file_handler)
+
+    # Force flush to ensure logs are written
+    log.info(f"=== MCP Server Starting ===")
+    log.info(f"Script directory: {_script_dir}")
+    log.info(f"Log file: {_mcp_log_file}")
+    log.info(f"Log level: {log_level}")
+    log.info(f"Python: {sys.executable}")
+    log.info(f"Working directory: {os.getcwd()}")
+    _flush_log()
+except Exception as e:
+    # If file logging fails, print to stderr
+    print(f"WARNING: Could not set up file logging to {_mcp_log_file}: {e}", file=sys.stderr)
 
 # Constants
 PROMPT_PREVIEW_MAX_LENGTH = 100  # Maximum length for prompt content preview
@@ -50,20 +60,6 @@ DEFAULT_LLM_PROMPTS = {
     # Add other default mappings as needed
 }
 
-# Self-contained LLM evaluators that have built-in prompts and don't need external prompt configuration
-# These evaluators build their own prompts in their build_messages() method
-SELF_CONTAINED_LLM_EVALUATORS = {
-    "LLMKeywordMatcher",      # ATS Resume keyword matching
-    "LLMResumeOptimizer",     # Resume optimization
-    "LLMFactCheckPublic",     # Fact checking
-    "LLMHallucination",       # Hallucination detection
-    "LLMTextQualityV2",       # Text quality assessment
-    "LLMDatamanAssessment",   # Dataman assessment
-    "LLMMetaRaterEvaluation", # Meta rater evaluation
-    "LLMHtmlExtractCompareV2",  # HTML extract comparison
-    # Add other self-contained LLM evaluators here
-}
-
 # Read environment variables for defaults
 DEFAULT_OUTPUT_DIR = os.environ.get("DEFAULT_OUTPUT_DIR")
 DEFAULT_MAX_WORKERS = int(os.environ.get("DEFAULT_MAX_WORKERS", "1"))
@@ -73,22 +69,10 @@ DEFAULT_SAVE_CORRECT = os.environ.get("DEFAULT_SAVE_CORRECT", "true").lower() ==
 DEFAULT_DATA_FORMAT = os.environ.get("DEFAULT_DATA_FORMAT")
 DEFAULT_DATASET_TYPE = os.environ.get("DEFAULT_DATASET_TYPE", "local")
 
-# Read LLM API configuration from environment
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4")
-
 log.info(f"Environment settings: MAX_WORKERS={DEFAULT_MAX_WORKERS}, BATCH_SIZE={DEFAULT_BATCH_SIZE}, "
          f"SAVE_DATA={DEFAULT_SAVE_DATA}, SAVE_CORRECT={DEFAULT_SAVE_CORRECT}, "
          f"DATA_FORMAT={DEFAULT_DATA_FORMAT}, DATASET_TYPE={DEFAULT_DATASET_TYPE}, "
          f"OUTPUT_DIR={DEFAULT_OUTPUT_DIR}")
-
-# Log LLM config status (mask the key for security)
-if OPENAI_API_KEY:
-    masked_key = OPENAI_API_KEY[:8] + "..." + OPENAI_API_KEY[-4:] if len(OPENAI_API_KEY) > 12 else "***"
-    log.info(f"LLM Config: API_KEY={masked_key}, BASE_URL={OPENAI_BASE_URL}, MODEL={OPENAI_MODEL}")
-else:
-    log.warning("OPENAI_API_KEY not set! LLM evaluation will fail. Please set it in MCP env config.")
 
 mcp = FastMCP("Dingo Evaluator")
 
@@ -156,16 +140,20 @@ def get_llm_config_from_env(eval_group_name: str = "") -> Dict:
             config["prompt_list"] = [prompt_name]
             log.info(f"Using prompt '{prompt_name}' for evaluation with LLM '{eval_group_name}'")
         else:
-            # Check if it's directly a valid prompt name
+            # In the new architecture, prompts are embedded directly in LLM classes
+            # Check if the eval_group_name is a valid LLM name with an embedded prompt
             try:
                 Model.load_model()
-                if eval_group_name in Model.prompt_name_map:
-                    config["prompt_list"] = [eval_group_name]
-                    log.info(f"Using prompt '{eval_group_name}' for evaluation")
+                if eval_group_name in Model.llm_name_map:
+                    llm_class = Model.llm_name_map[eval_group_name]
+                    if hasattr(llm_class, 'prompt') and llm_class.prompt:
+                        log.info(f"LLM '{eval_group_name}' has embedded prompt, will use directly")
+                    else:
+                        log.warning(f"LLM '{eval_group_name}' has no embedded prompt")
                 else:
-                    log.warning(f"'{eval_group_name}' is not a valid prompt name and no associated prompt found")
+                    log.warning(f"'{eval_group_name}' is not a valid LLM name")
             except Exception as e:
-                log.warning(f"Failed to check if '{eval_group_name}' is a valid prompt: {e}")
+                log.warning(f"Failed to check LLM '{eval_group_name}': {e}")
 
     return config
 
@@ -355,14 +343,6 @@ def prepare_llm_configuration(evaluation_type: str, eval_group_name: str, kwargs
             kwargs["custom_config"] = update_llm_config_with_env(kwargs["custom_config"])
 
     # Ensure prompt_list exists in custom_config for LLM evaluation
-    # Skip this check for self-contained LLM evaluators that have built-in prompts
-    if eval_group_name and eval_group_name in SELF_CONTAINED_LLM_EVALUATORS:
-        log.info(f"'{eval_group_name}' is a self-contained LLM evaluator with built-in prompt. Skipping prompt validation.")
-        # Set the evaluator name in prompt_list for compatibility
-        kwargs["custom_config"] = kwargs.get("custom_config", {})
-        kwargs["custom_config"]["prompt_list"] = [eval_group_name]
-        return kwargs
-
     if not kwargs.get("custom_config", {}).get("prompt_list"):
         if eval_group_name:
             # Try to find associated prompt if eval_group_name is an LLM name
@@ -383,33 +363,60 @@ def prepare_llm_configuration(evaluation_type: str, eval_group_name: str, kwargs
                     kwargs["custom_config"]["prompt_list"] = [default_prompt]
                     log.info(f"Setting default prompt '{default_prompt}' for LLM '{eval_group_name}'")
                 else:
-                    # Check if it's a valid LLM in the registry
+                    # Check if eval_group_name is a valid LLM that has custom build_messages
+                    # (these LLMs don't need prompt attribute as they build prompts internally)
                     try:
                         Model.load_model()
                         if eval_group_name in Model.llm_name_map:
-                            # It's a valid LLM, use it directly
-                            kwargs["custom_config"] = kwargs.get("custom_config", {})
-                            kwargs["custom_config"]["prompt_list"] = [eval_group_name]
-                            log.info(f"'{eval_group_name}' is a registered LLM. Using it directly.")
+                            llm_class = Model.llm_name_map[eval_group_name]
+                            # Check if LLM has custom build_messages (not inherited from base)
+                            has_custom_build_messages = (
+                                hasattr(llm_class, 'build_messages') and
+                                'build_messages' in llm_class.__dict__
+                            )
+                            if has_custom_build_messages:
+                                log.info(f"LLM '{eval_group_name}' has custom build_messages, will use directly")
+                                # No prompt_list needed for LLMs with custom build_messages
+                            else:
+                                # LLM exists but has no prompt and no custom build_messages
+                                llms_with_prompts = [
+                                    name for name, cls in Model.llm_name_map.items()
+                                    if (hasattr(cls, 'prompt') and cls.prompt) or
+                                       ('build_messages' in cls.__dict__)
+                                ]
+                                llm_examples = ", ".join(llms_with_prompts[:5]) + "..." if len(
+                                    llms_with_prompts) > 5 else ", ".join(llms_with_prompts)
+
+                                error_msg = (
+                                    f"LLM '{eval_group_name}' has no embedded prompt or custom build_messages. "
+                                    f"Available LLMs include: {llm_examples}. "
+                                    f"Use 'list_dingo_components(component_type=\"llm_models\")' to see all available LLMs."
+                                )
+                                log.error(error_msg)
+                                raise ValueError(error_msg)
                         else:
-                            # Get available prompts for better error message
-                            available_prompts = list(Model.prompt_name_map.keys())
-                            prompt_examples = ", ".join(available_prompts[:5]) + "..." if len(
-                                available_prompts) > 5 else ", ".join(available_prompts)
+                            # LLM name not found
+                            llms_with_prompts = [
+                                name for name, cls in Model.llm_name_map.items()
+                                if (hasattr(cls, 'prompt') and cls.prompt) or
+                                   ('build_messages' in cls.__dict__)
+                            ]
+                            llm_examples = ", ".join(llms_with_prompts[:5]) + "..." if len(
+                                llms_with_prompts) > 5 else ", ".join(llms_with_prompts)
 
                             error_msg = (
-                                f"No valid prompt found for '{eval_group_name}'. For LLM evaluation, please provide "
-                                f"a valid prompt name. Available prompts include: {prompt_examples}. "
-                                f"Use 'list_dingo_components(component_type=\"prompts\")' to see all available prompts."
+                                f"No valid LLM found for '{eval_group_name}'. "
+                                f"Available LLMs include: {llm_examples}. "
+                                f"Use 'list_dingo_components(component_type=\"llm_models\")' to see all available LLMs."
                             )
                             log.error(error_msg)
                             raise ValueError(error_msg)
                     except ValueError:
                         raise
                     except Exception as e:
-                        log.error(f"Failed to get available prompts: {e}", exc_info=True)
+                        log.error(f"Failed to get available LLMs: {e}", exc_info=True)
                         raise ValueError(
-                            f"No valid prompt found for '{eval_group_name}'. For LLM evaluation, please provide a valid prompt name.")
+                            f"No valid LLM with prompt found for '{eval_group_name}'. For LLM evaluation, please provide a valid LLM name.")
         else:
             log.error("No prompt_list found in custom_config and no eval_group_name provided")
             raise ValueError(
@@ -422,25 +429,56 @@ def prepare_llm_configuration(evaluation_type: str, eval_group_name: str, kwargs
 
 def resolve_input_path(input_path: str) -> Optional[str]:
     """
-    Resolve and validate input file path.
+    Resolve and validate input file/directory path with CWD priority.
+
+    Search order:
+    1. Absolute path (strict - no fallback if not found)
+    2. Relative to os.getcwd() (standard UX)
+    3. Relative to PROJECT_ROOT (legacy support)
 
     Args:
-        input_path: Relative or absolute path to input file.
+        input_path: Path to input file or directory.
 
     Returns:
-        Absolute path to input file or None if path doesn't exist.
+        Resolved absolute path. If not found, returns CWD-resolved path.
     """
     if not input_path:
         return None
 
-    abs_input_path = os.path.join(PROJECT_ROOT, input_path)
-    if not os.path.exists(abs_input_path):
-        log.warning(f"Input path relative to script dir not found. Trying relative to CWD or absolute.")
-        abs_input_path = os.path.abspath(input_path)  # Fallback
-        if not os.path.exists(abs_input_path):
-            log.warning(f"Input path not found. Dingo validation may fail.")
+    # 1. Normalize input immediately for consistency across all checks
+    clean_input = input_path.replace("\\", "/")
 
-    return abs_input_path.replace("\\", "/")
+    # 2. Context Logging for troubleshooting
+    # (Shows exactly where we are looking, helpful for both local and Smithery modes)
+    log.debug(f"Resolving path: '{clean_input}' | CWD: '{os.getcwd()}' | Root: '{PROJECT_ROOT}'")
+
+    # 3. Absolute Path Check - Strict Mode
+    if os.path.isabs(clean_input):
+        if os.path.exists(clean_input):
+            log.info(f"Using existing absolute path: {clean_input}")
+            return clean_input
+
+        # If absolute path is given but missing, fail loudly (don't fallback)
+        # This prevents ambiguity if a user explicitly targets a specific file.
+        log.warning(f"Absolute path specified but not found: {clean_input}")
+        return clean_input
+
+    # 4. CWD Priority Check (Standard UX)
+    # Uses clean_input to ensure safe joining/resolution
+    cwd_path = os.path.abspath(clean_input).replace("\\", "/")
+    if os.path.exists(cwd_path):
+        log.info(f"Found path relative to CWD: {cwd_path}")
+        return cwd_path
+
+    # 5. Project Root Fallback (Legacy/Dev Environment Support)
+    project_path = os.path.join(PROJECT_ROOT, clean_input).replace("\\", "/")
+    if os.path.exists(project_path):
+        log.info(f"Found path relative to PROJECT_ROOT: {project_path}")
+        return project_path
+
+    # 6. Final Fallback (Default to CWD for clear error reporting)
+    log.warning(f"File not found in CWD or Project Root. Returning CWD path: {cwd_path}")
+    return cwd_path
 
 
 def infer_data_format(input_path: str) -> Optional[str]:
@@ -552,36 +590,18 @@ def find_result_file(result_output_dir: str) -> Tuple[Optional[str], Optional[st
 
 # --- MCP API Functions ---
 
-@mcp.tool()
-def run_dingo_evaluation(
+def _run_dingo_evaluation_internal(
         input_path: str,
         evaluation_type: Literal["rule", "llm"] = "rule",
         eval_group_name: str = "",
         kwargs: dict = {}
 ) -> str:
-    """Runs a Dingo evaluation (rule-based or LLM-based) on a file.
+    """Internal implementation of Dingo evaluation.
 
-    Infers data_format from input_path extension (.json, .jsonl, .txt) if not provided in kwargs.
-    Defaults dataset to 'local' if input_path is provided and dataset is not in kwargs.
-    If output_dir is not specified via kwargs or environment variables, creates output relative to input_path.
-    API keys for LLMs should be set via environment variables in mcp.json or system environment.
-
-    Args:
-        input_path: Path to the input file or directory.
-        evaluation_type: Type of evaluation ('rule' or 'llm'), defaults to 'rule'.
-        eval_group_name: The specific rule group or LLM model name.
-                         Defaults to empty, Dingo will use 'default' for rules or infer from custom_config for LLMs.
-                         (Optional when custom_config is provided for LLM evaluations via kwargs)
-        kwargs: Dictionary containing additional arguments compatible with dingo.io.InputArgs.
-                Use for: output_dir, task_name, save_data, save_correct, dataset, data_format,
-                column_content, column_id, column_prompt, column_image, custom_config,
-                max_workers, batch_size, etc.
-
-    Returns:
-        For Smithery deployment: The content of the result file (summary.json or first .jsonl)
-        Otherwise: The absolute path to the primary output file (summary.json or first .jsonl).
+    This is the core logic, separated from the MCP tool decorator so it can be called
+    by other functions without going through the FunctionTool wrapper.
     """
-    log.info(f"Received Dingo request: type={evaluation_type}, group={eval_group_name}, input={input_path}")
+    log.info(f"Running Dingo evaluation: type={evaluation_type}, group={eval_group_name}, input={input_path}")
 
     # --- Handle Input Path ---
     abs_input_path = resolve_input_path(input_path)
@@ -607,7 +627,7 @@ def run_dingo_evaluation(
     abs_output_dir = determine_output_dir(abs_input_path, task_name_for_path, output_dir_from_kwargs)
 
     # --- Prepare Dingo InputArgs Data ---
-    final_dataset_source = kwargs.get('dataset_source', DEFAULT_DATASET_TYPE if DEFAULT_DATASET_TYPE else "local")
+    final_dataset_type = kwargs.get('dataset', DEFAULT_DATASET_TYPE if 'dataset' not in kwargs else None)
     final_data_format = kwargs.get('data_format', inferred_data_format if inferred_data_format else DEFAULT_DATA_FORMAT)
     final_task_name = task_name_from_kwargs if task_name_from_kwargs else task_name_for_path
     final_save_data = kwargs.get('save_data') if kwargs.get('save_data') is not None else DEFAULT_SAVE_DATA
@@ -616,179 +636,121 @@ def run_dingo_evaluation(
     final_batch_size = kwargs.get('batch_size', DEFAULT_BATCH_SIZE)
 
     log.info(
-        f"Final dataset_source='{final_dataset_source}', data_format='{final_data_format if final_data_format else '(Dingo default)'}', "
+        f"Final dataset='{final_dataset_type}', data_format='{final_data_format if final_data_format else '(Dingo default)'}', "
         f"save_data={final_save_data}, save_correct={final_save_correct}, "
         f"max_workers={final_max_workers}, batch_size={final_batch_size}")
 
-    # --- REFACTOR: Construct structured dictionaries ---
+    # --- Build field mapping from column_* parameters ---
+    field_mapping = {}
+    column_mapping_keys = ['column_content', 'column_id', 'column_prompt', 'column_image']
 
-    # 1. Construct Dataset Dictionary (DatasetArgs structure)
-    dataset_config = {
-        "source": final_dataset_source,
-        "format": final_data_format if final_data_format else "jsonl"
-    }
-    log.info(f"Dataset config: {dataset_config}")
+    # Map column_* parameters to evaluator.fields
+    if 'column_content' in kwargs and kwargs['column_content']:
+        field_mapping['content'] = kwargs['column_content']
+    else:
+        field_mapping['content'] = 'content'  # Default
 
-    # 2. Construct Evaluator List (List[EvalPipline] structure)
-    # Each EvalPipline has "fields" and "evals"
-    valid_rule_groups = {'default', 'sft', 'pretrain', 'rag', 'hallucination', 'benchmark', 'text_base_all'}
+    if 'column_id' in kwargs and kwargs['column_id']:
+        field_mapping['data_id'] = kwargs['column_id']
 
-    evaluator_list = []
+    if 'column_prompt' in kwargs and kwargs['column_prompt']:
+        field_mapping['prompt'] = kwargs['column_prompt']
+
+    if 'column_image' in kwargs and kwargs['column_image']:
+        field_mapping['image'] = kwargs['column_image']
+
+    log.info(f"Field mapping: {field_mapping}")
+
+    # Remove column_* keys from kwargs to avoid warnings (they're now handled)
+    for key in column_mapping_keys:
+        kwargs.pop(key, None)
+
+    # --- Build evaluator configuration ---
+    evals_list = []
 
     if evaluation_type == "rule":
-        # Determine rule group - use 'sft' as default to avoid buggy Resume rules in 'default'
-        fallback_group = "sft" if "sft" in valid_rule_groups else "default"
-        rule_group = eval_group_name if eval_group_name and eval_group_name in valid_rule_groups else fallback_group
-        if eval_group_name and eval_group_name not in valid_rule_groups:
-            log.warning(f"Invalid rule group '{eval_group_name}'. Valid options: {valid_rule_groups}. Using '{fallback_group}'.")
-        log.info(f"Using rule group: {rule_group}")
+        # For rule evaluation, use eval_group_name to determine which rules to use
+        valid_rule_groups = {'default', 'sft', 'pretrain'}
+        if not eval_group_name or eval_group_name not in valid_rule_groups:
+            if eval_group_name:
+                log.warning(f"Invalid rule group name '{eval_group_name}'. Valid options: {valid_rule_groups}. Using 'default'.")
+            else:
+                log.info("No rule group name provided. Using 'default'.")
+            eval_group_name = "default"
 
-        # Get rules from the specified group
+        log.info(f"Using rule group: {eval_group_name}")
+        # Get rules for this group from Model
         try:
             Model.load_model()
-            rule_groups = Model.get_rule_groups()
-            if rule_group in rule_groups:
-                rule_group_data = rule_groups[rule_group]
-
-                # 1. 统一拿到规则列表
-                if isinstance(rule_group_data, list):
-                    rules_iterable = rule_group_data
-                elif hasattr(rule_group_data, 'rules'):
-                    rules_iterable = rule_group_data.rules
-                else:
-                    rules_iterable = []
-                    log.warning(f"Unknown structure for rule group '{rule_group}'")
-
-                # 2. 智能提取名字 (修复 'type' 问题)
-                evals_list = []
-                for rule in rules_iterable:
-                    # 如果 rule 是个类 (type)，直接取 __name__
-                    # 如果 rule 是个实例，取 __class__.__name__
-                    if isinstance(rule, type):
-                        r_name = rule.__name__
-                    else:
-                        r_name = rule.__class__.__name__
-
-                    evals_list.append({"name": r_name})
-
-                log.info(f"Found {len(evals_list)} rules in group '{rule_group}'")
-            else:
-                # Fallback to common rules
-                evals_list = [{"name": "RuleColonEnd"}, {"name": "RuleContentNull"}, {"name": "RuleDocRepeat"}]
-                log.warning(f"Rule group '{rule_group}' not found. Using fallback rules.")
+            # rule_groups contains class objects, need to get their __name__
+            group_rule_classes = Model.rule_groups.get(eval_group_name, [])
+            for rule_cls in group_rule_classes:
+                evals_list.append({"name": rule_cls.__name__})
+            log.info(f"Loaded {len(evals_list)} rules from group '{eval_group_name}'")
         except Exception as e:
-            log.warning(f"Failed to load rule group '{rule_group}': {e}. Using fallback rules.")
-            evals_list = [{"name": "RuleColonEnd"}, {"name": "RuleContentNull"}, {"name": "RuleDocRepeat"}]
-
-        evaluator_list.append({
-            "fields": {"content": "content"},
-            "evals": evals_list
-        })
+            log.error(f"Failed to load rules: {e}")
+            raise ValueError(f"Failed to load rules for evaluation: {e}")
 
     elif evaluation_type == "llm":
         log.info("LLM evaluation type selected.")
+        # For LLM evaluation, the eval is determined by custom_config
+        # Get LLM evaluator name from custom_config's prompt_list
+        if loaded_custom_config and 'prompt_list' in loaded_custom_config:
+            for prompt_name in loaded_custom_config['prompt_list']:
+                # Find LLM class that uses this prompt
+                try:
+                    Model.load_model()
+                    for llm_name, llm_cls in Model.llm_name_map.items():
+                        if hasattr(llm_cls, 'prompt') and llm_cls.prompt == prompt_name:
+                            # Build config from custom_config's llm_config
+                            llm_config = None
+                            if loaded_custom_config.get('llm_config'):
+                                llm_config = loaded_custom_config['llm_config'].get(llm_name)
+                            eval_item = {"name": llm_name}
+                            if llm_config:
+                                eval_item["config"] = llm_config
+                            evals_list.append(eval_item)
+                            log.info(f"Added LLM evaluator: {llm_name}")
+                            break
+                except Exception as e:
+                    log.warning(f"Failed to find LLM for prompt '{prompt_name}': {e}")
 
-        # Use global LLM config (read at startup) or re-read from env
-        openai_key = OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
-        openai_base_url = OPENAI_BASE_URL or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        openai_model = OPENAI_MODEL or os.environ.get("OPENAI_MODEL", "gpt-4")
-
-        log.info(f"Checking LLM config: key_exists={bool(openai_key)}, model={openai_model}, url={openai_base_url}")
-
-        llm_eval_config = None
-        if openai_key:
-            llm_eval_config = {
-                "key": openai_key,
-                "api_url": openai_base_url,
-                "model": openai_model,
-            }
-            log.info(f"LLM config loaded: model={openai_model}, api_url={openai_base_url}")
-        elif loaded_custom_config and "llm_config" in loaded_custom_config:
-            # Fallback to custom_config
-            llm_config = loaded_custom_config["llm_config"]
-            first_llm_name = next(iter(llm_config), None)
-            if first_llm_name:
-                llm_eval_config = llm_config[first_llm_name]
-                log.info(f"LLM config loaded from custom_config: {first_llm_name}")
-
-        if not llm_eval_config:
-            error_msg = (
-                "No LLM API key found! Please configure one of the following:\n"
-                "1. Set OPENAI_API_KEY environment variable in Cherry Studio MCP config\n"
-                "2. Or provide custom_config with llm_config\n\n"
-                "Example Cherry Studio MCP config (in mcp.json or settings):\n"
-                '{\n'
-                '  "mcpServers": {\n'
-                '    "dingo": {\n'
-                '      "command": "python",\n'
-                '      "args": ["path/to/mcp_server.py"],\n'
-                '      "env": {\n'
-                '        "OPENAI_API_KEY": "sk-your-api-key",\n'
-                '        "OPENAI_BASE_URL": "https://api.deepseek.com/v1",\n'
-                '        "OPENAI_MODEL": "deepseek-chat"\n'
-                '      }\n'
-                '    }\n'
-                '  }\n'
-                '}'
-            )
-            log.error(error_msg)
-            raise ValueError(error_msg)
-
-        # Determine which LLM evaluator to use
-        llm_evaluator_name = eval_group_name if eval_group_name else "LLMTextQualityV2"
-
-        # Handle prompt_list from custom_config
-        if loaded_custom_config and "prompt_list" in loaded_custom_config:
-            prompt_list = loaded_custom_config["prompt_list"]
-            evals_list = []
-            for p in prompt_list:
-                eval_item = {"name": p}
-                if llm_eval_config:
-                    eval_item["config"] = llm_eval_config
-                evals_list.append(eval_item)
-            log.info(f"Using prompts for LLM evaluation: {prompt_list}")
-        else:
-            # Single evaluator
-            eval_item = {"name": llm_evaluator_name}
-            if llm_eval_config:
-                eval_item["config"] = llm_eval_config
-            evals_list = [eval_item]
-            log.info(f"Using LLM evaluator: {llm_evaluator_name}")
-
-        evaluator_list.append({
-            "fields": {"content": "content", "prompt": "prompt"},
+    # Build the evaluator configuration
+    evaluator_config = [
+        {
+            "fields": field_mapping,
             "evals": evals_list
-        })
-
-    log.info(f"Evaluator config: {evaluator_list}")
-
-    # 3. Construct Executor Dictionary
-    executor_config = {
-        "max_workers": final_max_workers,
-        "batch_size": final_batch_size,
-        "result_save": {
-            "bad": final_save_data,
-            "good": final_save_correct
         }
-    }
+    ]
 
-    # 4. Construct Final Input Data
+    log.info(f"Built evaluator config with {len(evals_list)} evaluators")
+
+    # Start with fixed args + defaults + derived values
     input_data = {
         "output_path": abs_output_dir,
         "task_name": final_task_name,
         "input_path": abs_input_path,
-        "dataset": dataset_config,
-        "executor": executor_config,
-        "evaluator": evaluator_list,
+        "dataset": {
+            "source": final_dataset_type if final_dataset_type else "local",
+            "format": final_data_format if final_data_format else "jsonl"
+        },
+        "executor": {
+            "max_workers": final_max_workers,
+            "batch_size": final_batch_size,
+            "result_save": {
+                "bad": True,
+                "good": final_save_correct
+            }
+        },
+        "evaluator": evaluator_config,
     }
 
-    # Merge additional valid InputArgs fields from kwargs
-    processed_args = {'output_path', 'task_name', 'input_path', 'dataset', 'executor', 'evaluator',
-                      'save_data', 'save_correct', 'data_format', 'max_workers', 'batch_size',
-                      'custom_config', 'dataset_source'}
+    # Merge valid InputArgs fields from kwargs, logging ignored keys
+    processed_args = set(input_data.keys())
     log.debug(f"Checking kwargs for additional InputArgs: {list(kwargs.keys())}")
     for k, v in kwargs.items():
         if k in processed_args:
+            log.warning(f"Argument '{k}' from kwargs ignored (already handled). Value provided: {v}")
             continue
         if k in InputArgs.model_fields:
             log.debug(f"Adding '{k}={v}' from kwargs to InputArgs data.")
@@ -797,14 +759,11 @@ def run_dingo_evaluation(
             log.warning(f"Argument '{k}' from kwargs is not a valid Dingo InputArgs field; ignored. Value: {v}")
 
     # Final checks
-    if dataset_config.get("source") == 'local' and not input_data.get("input_path"):
+    dataset_config = input_data.get("dataset", {})
+    if isinstance(dataset_config, dict) and dataset_config.get("source") == 'local' and not input_data.get("input_path"):
         raise ValueError("input_path is required when dataset source is 'local'.")
 
     input_data = {k: v for k, v in input_data.items() if v is not None}
-
-    # === 方案 D: 强制单线程，绕过 ProcessPoolExecutor 的 fd 继承问题 ===
-    input_data["max_workers"] = 1
-    log.info(f"Forced max_workers=1 to use ThreadPool mode (avoiding ProcessPool fd inheritance)")
 
     # --- Execute Dingo ---
     try:
@@ -812,26 +771,8 @@ def run_dingo_evaluation(
         input_args = InputArgs(**input_data)
 
         executor = Executor.exec_map['local'](input_args)
-        log.info(f"Executing Dingo evaluation with StringIO redirection...")
-
-        # === 方案 D+E: Python 层温柔重定向到 StringIO ===
-        # 使用 StringIO 捕获输出，万一报错可以查看 Dingo 内部日志
-        f_buffer = io.StringIO()
-        try:
-            with redirect_stdout(f_buffer), redirect_stderr(f_buffer):
-                result = executor.execute()
-        except Exception:
-            # 哪怕报错了，也能看到 Dingo 到底吐槽了啥
-            captured_output = f_buffer.getvalue()
-            if captured_output:
-                log.error(f"Dingo inner output before crash:\n{captured_output[:2000]}")
-            raise
-
-        # 记录捕获的输出（调试用）
-        captured_output = f_buffer.getvalue()
-        if captured_output:
-            log.debug(f"Captured Dingo output ({len(captured_output)} chars): {captured_output[:500]}...")
-
+        log.info(f"Executing Dingo evaluation...")
+        result = executor.execute()
         log.info(f"Dingo execution finished.")
 
         if not hasattr(result, 'output_path') or not result.output_path:
@@ -862,56 +803,52 @@ def run_dingo_evaluation(
         raise RuntimeError(f"Dingo evaluation failed: {e}") from e
 
 
-def _get_rule_details_logic(rule_name: str) -> Dict:
-    """Private helper function containing the actual logic for getting rule details.
+@mcp.tool()
+def run_dingo_evaluation(
+        input_path: str,
+        evaluation_type: Literal["rule", "llm"] = "rule",
+        eval_group_name: str = "",
+        kwargs: dict = {}
+) -> str:
+    """Runs a Dingo evaluation (rule-based or LLM-based) on a file.
 
-    This is called by both the MCP tool and internal functions.
+    Infers data_format from input_path extension (.json, .jsonl, .txt) if not provided in kwargs.
+    Defaults dataset to 'local' if input_path is provided and dataset is not in kwargs.
+    If output_dir is not specified via kwargs or environment variables, creates output relative to input_path.
+    API keys for LLMs should be set via environment variables in mcp.json or system environment.
+
+    Args:
+        input_path: Path to the input file or directory.
+        evaluation_type: Type of evaluation ('rule' or 'llm'), defaults to 'rule'.
+        eval_group_name: The specific rule group or LLM model name.
+                         Defaults to empty, Dingo will use 'default' for rules or infer from custom_config for LLMs.
+                         (Optional when custom_config is provided for LLM evaluations via kwargs)
+        kwargs: Dictionary containing additional arguments compatible with dingo.io.InputArgs.
+                Use for: output_dir, task_name, save_data, save_correct, dataset, data_format,
+                column_content, column_id, column_prompt, column_image, custom_config,
+                max_workers, batch_size, etc.
+
+    Returns:
+        For Smithery deployment: The content of the result file (summary.json or first .jsonl)
+        Otherwise: The absolute path to the primary output file (summary.json or first .jsonl).
     """
-    try:
-        Model.load_model()
-        rule_groups = Model.get_rule_groups()
+    return _run_dingo_evaluation_internal(input_path, evaluation_type, eval_group_name, kwargs)
 
-        if rule_name in rule_groups:
-            rule_group_data = rule_groups[rule_name]
 
-            # Handle both list and object structures
-            if isinstance(rule_group_data, list):
-                rules_list = rule_group_data
-            elif hasattr(rule_group_data, 'rules'):
-                rules_list = rule_group_data.rules
-            else:
-                rules_list = []
+def _get_rule_group_details_internal(rule_name: str) -> Dict:
+    """Internal helper to get rule group details without going through MCP tool decorator."""
+    rule_groups = Model.get_rule_groups()
 
-            # Extract basic info
-            details = {
-                "name": rule_name,
-                "rule_count": len(rules_list),
-                "rules": []
-            }
-
-            # Get information about each rule in the group
-            for rule in rules_list:
-                # Handle both class and instance
-                if isinstance(rule, type):
-                    rule_info = {
-                        "id": getattr(rule, 'rule_id', rule.__name__),
-                        "description": getattr(rule, 'description', rule.__doc__ or "No description"),
-                        "category": getattr(rule, 'category', "Unknown")
-                    }
-                else:
-                    rule_info = {
-                        "id": getattr(rule, 'rule_id', rule.__class__.__name__),
-                        "description": getattr(rule, 'description', "No description"),
-                        "category": getattr(rule, 'category', "Unknown")
-                    }
-                details["rules"].append(rule_info)
-
-            return details
-        else:
-            return {"error": f"Rule '{rule_name}' not found."}
-    except Exception as e:
-        log.error(f"Error retrieving rule details: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve rule details: {str(e)}"}
+    if rule_name in rule_groups:
+        rule_list = rule_groups[rule_name]
+        # rule_list is a list of rule classes
+        return {
+            "name": rule_name,
+            "rule_count": len(rule_list),
+            "rules": [cls.__name__ for cls in rule_list]
+        }
+    else:
+        return {"name": rule_name, "error": f"Rule group '{rule_name}' not found."}
 
 
 def _get_rule_groups_info(include_details: bool = False) -> Dict[str, List]:
@@ -929,11 +866,33 @@ def _get_rule_groups_info(include_details: bool = False) -> Dict[str, List]:
     if include_details:
         rule_details = []
         for rg in rule_groups:
-            details = _get_rule_details_logic(rg)
+            details = _get_rule_group_details_internal(rg)
             rule_details.append(details)
         return {"rule_groups": rule_details}
     else:
         return {"rule_groups": rule_groups}
+
+
+def _get_llm_details_internal(llm_name: str) -> Dict:
+    """Internal helper to get LLM details without going through MCP tool decorator."""
+    llm_map = Model.get_llm_name_map()
+
+    if llm_name in llm_map:
+        llm_class = llm_map[llm_name]
+        details = {
+            "name": llm_name,
+            "class": llm_class.__name__,
+        }
+
+        # Get description if available
+        if hasattr(llm_class, "DESCRIPTION"):
+            details["description"] = llm_class.DESCRIPTION
+        elif llm_class.__doc__:
+            details["description"] = llm_class.__doc__.strip().split('\n')[0]
+
+        return details
+    else:
+        return {"name": llm_name, "error": f"LLM '{llm_name}' not found."}
 
 
 def _get_llm_models_info(include_details: bool = False) -> Dict[str, List]:
@@ -952,59 +911,87 @@ def _get_llm_models_info(include_details: bool = False) -> Dict[str, List]:
 
     if include_details:
         llm_details = []
-        for lm in llm_models:
-            details = get_llm_details(lm)
+        llm_prompt_map = {}
 
-            # Add associated prompt information
-            prompt_name = get_prompt_for_llm(lm)
+        for lm in llm_models:
+            details = _get_llm_details_internal(lm)
+
+            # Add associated prompt information (use silent=True to avoid log spam)
+            prompt_name = get_prompt_for_llm(lm, silent=True)
             if prompt_name:
                 details["associated_prompt"] = prompt_name
+                llm_prompt_map[lm] = prompt_name
 
             llm_details.append(details)
         result["llm_models"] = llm_details
 
-        # Add LLM to Prompt mapping
-        llm_prompt_map = {}
-        for lm in llm_models:
-            prompt_name = get_prompt_for_llm(lm)
-            if prompt_name:
-                llm_prompt_map[lm] = prompt_name
-
+        # Add LLM to Prompt mapping as array of objects (for MCP compatibility)
         if llm_prompt_map:
-            result["llm_prompt_mappings"] = llm_prompt_map
+            result["llm_prompt_mappings"] = [
+                {"llm_name": k, "prompt_name": v} for k, v in llm_prompt_map.items()
+            ]
     else:
         result["llm_models"] = llm_models
 
     return result
 
 
+def _get_prompt_details_internal(llm_name: str) -> Dict:
+    """Internal helper to get LLM's embedded prompt details without going through MCP tool decorator.
+
+    In the new architecture, prompts are embedded directly in LLM classes.
+    This function retrieves the embedded prompt from the specified LLM.
+    """
+    if llm_name in Model.llm_name_map:
+        llm_class = Model.llm_name_map[llm_name]
+        if hasattr(llm_class, 'prompt') and llm_class.prompt:
+            prompt_content = str(llm_class.prompt)
+            return {
+                "llm_name": llm_name,
+                "prompt_preview": prompt_content[:200] + "..." if len(prompt_content) > 200 else prompt_content,
+                "prompt_length": len(prompt_content)
+            }
+        else:
+            return {"llm_name": llm_name, "error": f"LLM '{llm_name}' has no embedded prompt."}
+    else:
+        return {"llm_name": llm_name, "error": f"LLM '{llm_name}' not found."}
+
+
 def _get_prompts_info(include_details: bool = False) -> Dict[str, List]:
     """Helper function to get prompts information.
+
+    In the new architecture, prompts are embedded directly in LLM classes.
+    This function retrieves all LLMs that have embedded prompts.
 
     Args:
         include_details: Whether to include detailed information about each prompt.
 
     Returns:
-        Dictionary with prompts information.
+        Dictionary with prompts information (actually LLMs with embedded prompts).
     """
-    prompts = list(Model.prompt_name_map.keys())
-    log.info(f"Found prompts: {prompts}")
+    # Get all LLMs that have embedded prompts
+    llms_with_prompts = [
+        name for name, cls in Model.llm_name_map.items()
+        if hasattr(cls, 'prompt') and cls.prompt
+    ]
+    log.info(f"Found LLMs with embedded prompts: {llms_with_prompts}")
 
     if include_details:
         prompt_details = []
-        for p in prompts:
-            details = get_prompt_details(p)
+        for llm_name in llms_with_prompts:
+            details = _get_prompt_details_internal(llm_name)
+            details["note"] = "Prompts are now embedded in LLM classes"
             prompt_details.append(details)
         return {"prompts": prompt_details}
     else:
-        return {"prompts": prompts}
+        return {"prompts": llms_with_prompts}
 
 
 @mcp.tool()
 def list_dingo_components(
         component_type: Literal["rule_groups", "llm_models", "prompts", "all"] = "all",
         include_details: bool = False
-) -> Dict[str, List]:
+) -> Dict[str, Any]:
     """Lists available Dingo rule groups, registered LLM model identifiers, and prompt definitions.
 
     Ensures all models are loaded before retrieving the lists.
@@ -1053,13 +1040,58 @@ def get_rule_details(rule_name: str) -> Dict:
     and evaluation characteristics.
 
     Args:
-        rule_name: The name of the rule to get details for.
+        rule_name: The name of the rule to get details for (e.g., 'RuleContentNull', 'RuleDocRepeat').
 
     Returns:
         A dictionary containing details about the rule.
     """
     log.info(f"Received request for rule details: {rule_name}")
-    return _get_rule_details_logic(rule_name)
+    try:
+        Model.load_model()
+
+        # Use rule_name_map to look up individual rules by name
+        rule_name_map = Model.get_rule_name_map()
+
+        if rule_name in rule_name_map:
+            rule_class = rule_name_map[rule_name]
+
+            # Extract basic info from the rule class
+            details = {
+                "name": rule_name,
+                "class": rule_class.__name__,
+            }
+
+            # Get metric_type if available
+            if hasattr(rule_class, 'metric_type'):
+                details["metric_type"] = rule_class.metric_type
+
+            # Get groups if available
+            if hasattr(rule_class, 'group'):
+                details["groups"] = rule_class.group
+
+            # Get description from docstring
+            if rule_class.__doc__:
+                details["description"] = rule_class.__doc__.strip()
+
+            # Get dynamic_config if available
+            if hasattr(rule_class, 'dynamic_config') and rule_class.dynamic_config:
+                config = rule_class.dynamic_config
+                if hasattr(config, 'model_dump'):
+                    details["dynamic_config"] = config.model_dump()
+                elif hasattr(config, '__dict__'):
+                    details["dynamic_config"] = {k: v for k, v in config.__dict__.items() if not k.startswith('_')}
+
+            return details
+        else:
+            # Check if it's a rule group name instead
+            rule_groups = Model.get_rule_groups()
+            if rule_name in rule_groups:
+                return _get_rule_group_details_internal(rule_name)
+
+            return {"error": f"Rule '{rule_name}' not found."}
+    except Exception as e:
+        log.error(f"Error retrieving rule details: {e}", exc_info=True)
+        return {"error": f"Failed to retrieve rule details: {str(e)}"}
 
 
 @mcp.tool()
@@ -1113,54 +1145,50 @@ def get_llm_details(llm_name: str) -> Dict:
 
 
 @mcp.tool()
-def get_prompt_details(prompt_name: str) -> Dict:
-    """Get detailed information about a specific Dingo prompt.
+def get_prompt_details(llm_name: str) -> Dict:
+    """Get detailed information about an LLM's embedded prompt.
 
-    Retrieves information including the prompt's description, associated metric type,
-    and which groups it belongs to.
+    In the new architecture, prompts are embedded directly in LLM classes.
+    This function retrieves the embedded prompt details for the specified LLM.
 
     Args:
-        prompt_name: The name of the prompt to get details for.
+        llm_name: The name of the LLM to get prompt details for.
 
     Returns:
-        A dictionary containing details about the prompt.
+        A dictionary containing details about the LLM's embedded prompt.
     """
-    log.info(f"Received request for prompt details: {prompt_name}")
+    log.info(f"Received request for prompt details of LLM: {llm_name}")
     try:
         Model.load_model()
 
-        if prompt_name in Model.prompt_name_map:
-            prompt_class = Model.prompt_name_map[prompt_name]
+        if llm_name in Model.llm_name_map:
+            llm_class = Model.llm_name_map[llm_name]
 
-            # Extract basic info
-            details = {
-                "name": prompt_name,
-                "content_preview": getattr(prompt_class, 'content', '')[:PROMPT_PREVIEW_MAX_LENGTH] + '...' if hasattr(
-                    prompt_class, 'content') else ''
-            }
+            # Check if LLM has an embedded prompt
+            if hasattr(llm_class, 'prompt') and llm_class.prompt:
+                prompt_content = str(llm_class.prompt)
 
-            # Get metric type info if available
-            if hasattr(prompt_class, 'metric_type'):
-                details["metric_type"] = prompt_class.metric_type
+                # Extract basic info
+                details = {
+                    "llm_name": llm_name,
+                    "has_prompt": True,
+                    "prompt_preview": prompt_content[:PROMPT_PREVIEW_MAX_LENGTH] + '...' if len(prompt_content) > PROMPT_PREVIEW_MAX_LENGTH else prompt_content,
+                    "prompt_length": len(prompt_content)
+                }
 
-            # Get group info if available
-            if hasattr(prompt_class, 'group'):
-                details["groups"] = prompt_class.group
+                # Get metric info from LLM class if available
+                if hasattr(llm_class, '_metric_info'):
+                    details["metric_info"] = llm_class._metric_info
 
-            # Find which LLMs use this prompt
-            associated_llms = []
-            for llm_name, llm_class in Model.llm_name_map.items():
-                if (hasattr(llm_class, 'prompt') and
-                        llm_class.prompt and
-                        llm_class.prompt.__name__ == prompt_name):
-                    associated_llms.append(llm_name)
-
-            if associated_llms:
-                details["used_by_llms"] = associated_llms
-
-            return details
+                return details
+            else:
+                return {
+                    "llm_name": llm_name,
+                    "has_prompt": False,
+                    "error": f"LLM '{llm_name}' has no embedded prompt."
+                }
         else:
-            return {"error": f"Prompt '{prompt_name}' not found."}
+            return {"error": f"LLM '{llm_name}' not found."}
     except Exception as e:
         log.error(f"Error retrieving prompt details: {e}", exc_info=True)
         return {"error": f"Failed to retrieve prompt details: {str(e)}"}
@@ -1244,8 +1272,8 @@ def run_quick_evaluation(
         "task_name": f"quick_{evaluation_type}_{eval_group_name}_{uuid.uuid4().hex[:6]}"
     }
 
-    # Run the evaluation with inferred settings
-    return run_dingo_evaluation(
+    # Run the evaluation with inferred settings (use internal function to avoid FunctionTool issue)
+    return _run_dingo_evaluation_internal(
         input_path=input_path,
         evaluation_type=evaluation_type,
         eval_group_name=eval_group_name,
@@ -1253,72 +1281,42 @@ def run_quick_evaluation(
     )
 
 
-def get_prompt_for_llm(llm_name: str) -> Optional[str]:
+def get_prompt_for_llm(llm_name: str, silent: bool = False) -> Optional[str]:
     """
-    Find the associated prompt name for a given LLM.
+    DEPRECATED: In the new architecture, prompts are embedded directly in LLM classes.
+
+    This function is kept for backward compatibility but now simply checks if the LLM
+    has an embedded prompt and returns the LLM name itself if it does.
 
     Args:
         llm_name: The name of the LLM to look up.
+        silent: If True, suppress log messages (useful when called in a loop).
 
     Returns:
-        Associated prompt name if found, otherwise None.
+        The LLM name if it has an embedded prompt, otherwise None.
     """
-    log.info(f"Looking for prompt associated with LLM: '{llm_name}'")
     try:
         Model.load_model()  # Ensure models are loaded
 
-        # --- FIX START: 防御性检查 ---
-        # Check if the llm_name is actually a prompt name
-        if hasattr(Model, 'prompt_name_map') and llm_name in Model.prompt_name_map:
-            # --- FIX END ---
-            log.info(f"'{llm_name}' is already a valid prompt name")
-            return llm_name
-
-        # Check if it's a valid LLM
+        # Check if it's a valid LLM with an embedded prompt
         if llm_name in Model.llm_name_map:
             llm_class = Model.llm_name_map[llm_name]
 
-            # Strategy 1: Most LLM classes have a 'prompt' class attribute pointing to their default prompt
+            # Check if LLM has an embedded prompt
             if hasattr(llm_class, 'prompt') and llm_class.prompt:
-                prompt_class = llm_class.prompt
-                prompt_name = prompt_class.__name__
-                log.info(f"Found associated prompt '{prompt_name}' for LLM '{llm_name}' via prompt attribute")
-                return prompt_name
+                return llm_name  # Return the LLM name since it has its own prompt
 
-            # Strategy 2: Try to derive prompt name from naming patterns
-            if llm_name.startswith("LLM"):
-                # Strip "LLM" prefix and try with "Prompt" prefix
-                base_name = llm_name[3:]  # Remove "LLM"
-                potential_prompt_name = f"Prompt{base_name}"
-
-                # Check if derived name exists
-                if potential_prompt_name in Model.prompt_name_map:
-                    log.info(
-                        f"Found associated prompt '{potential_prompt_name}' for LLM '{llm_name}' via naming pattern")
-                    return potential_prompt_name
-
-                # Strategy 3: Try to find by suffix matching
-                for prompt_name in Model.prompt_name_map:
-                    if prompt_name.startswith("Prompt") and base_name.endswith(prompt_name[6:]):
-                        log.info(f"Found associated prompt '{prompt_name}' for LLM '{llm_name}' via suffix matching")
-                        return prompt_name
-
-        log.warning(f"No associated prompt found for LLM '{llm_name}'")
+        if not silent:
+            log.debug(f"LLM '{llm_name}' not found or has no embedded prompt")
         return None
 
     except Exception as e:
-        log.error(f"Error finding prompt for LLM '{llm_name}': {e}", exc_info=True)
+        log.error(f"Error checking prompt for LLM '{llm_name}': {e}", exc_info=True)
         return None
 
 
 if __name__ == "__main__":
-    # 传输模式选择：
-    # - stdio: Cherry Studio / Claude Desktop 默认模式
-    # - sse: 网页端或 HTTP 服务模式
-    transport_mode = os.environ.get("MCP_TRANSPORT", "stdio")
-
-    if transport_mode == "sse":
-        mcp.run(transport="sse")
+    if os.environ.get("LOCAL_DEPLOYMENT_MODE") == "true":
+        mcp.run()
     else:
-        # 默认使用 stdio，兼容 Cherry Studio
-        mcp.run(transport="stdio")
+        mcp.run(transport="sse")

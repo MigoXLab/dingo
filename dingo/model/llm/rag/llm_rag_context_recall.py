@@ -144,10 +144,10 @@ class LLMRAGContextRecall(BaseOpenAI):
             else:
                 contexts = [raw_contexts]
 
-        if not expected_output:
-            raise ValueError("Context Recall评估需要expected_output或answer字段")
         if not contexts:
             raise ValueError("Context Recall评估需要contexts字段")
+
+        # 注意: expected_output 为空的情况已在 eval() 方法中处理，这里假设 expected_output 非空
 
         # 拼接上下文
         combined_contexts = "\n\n".join([f"上下文{i + 1}:\n{ctx}" for i, ctx in enumerate(contexts)])
@@ -227,3 +227,29 @@ class LLMRAGContextRecall(BaseOpenAI):
             result.reason = [f"上下文召回评估未通过 (分数: {score:.2f}/10)\n{reason_text}"]
 
         return result
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        """重写父类的eval方法，添加对expected_output的检查"""
+        if cls.client is None:
+            cls.create_client()
+
+        # 检查 expected_output 或 answer 是否为空
+        raw_data = getattr(input_data, 'raw_data', {})
+        expected_output = raw_data.get("expected_output", "")
+        if not expected_output:
+            # 如果没有 expected_output，尝试使用 content 或 answer
+            expected_output = input_data.content or raw_data.get("answer", "")
+
+        if not expected_output:
+            # 如果 expected_output 和 answer 都为空，直接返回 0 分
+            log.warning("Context Recall 评估: expected_output 和 answer 字段均为空，直接返回 0 分")
+            result = EvalDetail(metric=cls.__name__)
+            result.score = 0.0
+            result.status = True
+            result.label = ["QUALITY_BAD.CONTEXT_RECALL_NO_REFERENCE"]
+            result.reason = ["expected_output 和 answer 字段均为空，无法评估上下文召回率，分数设为 0"]
+            return result
+
+        # 调用父类的 eval 方法
+        return super().eval(input_data)

@@ -1,14 +1,13 @@
+import io
 import json
 import logging
 import os
 import sys
 import uuid
+from contextlib import redirect_stderr, redirect_stdout
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from fastmcp import FastMCP
-
-import io
-from contextlib import redirect_stderr, redirect_stdout
 
 from dingo.config import InputArgs
 from dingo.exec import Executor

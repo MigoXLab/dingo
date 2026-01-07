@@ -109,6 +109,8 @@ def run_rag_evaluation():
     print(f"数据文件: {INPUT_DATA_PATH}")
     print(f"模型: {OPENAI_MODEL}")
     print(f"API: {OPENAI_URL}")
+    print(f"Embedding模型: {EMBEDDING_MODEL}")
+    print(f"Embedding API: {OPENAI_URL}")
     print("=" * 80)
 
     llm_config = {
@@ -120,9 +122,13 @@ def run_rag_evaluation():
     llm_config_embedding = {
         "model": OPENAI_MODEL,
         "key": OPENAI_KEY,
-        "api_url": OPENAI_URL,
+        "api_url": OPENAI_URL,  # LLM 服务地址
+        "embedding_config": {  # ⭐ 必需：Embedding 配置
+            "model": EMBEDDING_MODEL,
+            "api_url": OPENAI_URL,  # 如果同一服务提供 embedding
+            "key": OPENAI_KEY
+        },
         "parameters": {
-            "embedding_model": EMBEDDING_MODEL,
             "strictness": 3,
             "threshold": 5
         }

@@ -366,6 +366,17 @@ def prepare_llm_configuration(evaluation_type: str, eval_group_name: str, kwargs
                     # (these LLMs don't need prompt attribute as they build prompts internally)
                     try:
                         Model.load_model()
+
+                        def _get_available_llms_examples():
+                            """Helper to generate a string of available LLMs for error messages."""
+                            llms_with_prompts = [
+                                name for name, cls in Model.llm_name_map.items()
+                                if (hasattr(cls, 'prompt') and cls.prompt) or
+                                   ('build_messages' in cls.__dict__)
+                            ]
+                            return ", ".join(llms_with_prompts[:5]) + "..." if len(
+                                llms_with_prompts) > 5 else ", ".join(llms_with_prompts)
+
                         if eval_group_name in Model.llm_name_map:
                             llm_class = Model.llm_name_map[eval_group_name]
                             # Check if LLM has custom build_messages (not inherited from base)
@@ -378,14 +389,7 @@ def prepare_llm_configuration(evaluation_type: str, eval_group_name: str, kwargs
                                 # No prompt_list needed for LLMs with custom build_messages
                             else:
                                 # LLM exists but has no prompt and no custom build_messages
-                                llms_with_prompts = [
-                                    name for name, cls in Model.llm_name_map.items()
-                                    if (hasattr(cls, 'prompt') and cls.prompt) or
-                                       ('build_messages' in cls.__dict__)
-                                ]
-                                llm_examples = ", ".join(llms_with_prompts[:5]) + "..." if len(
-                                    llms_with_prompts) > 5 else ", ".join(llms_with_prompts)
-
+                                llm_examples = _get_available_llms_examples()
                                 error_msg = (
                                     f"LLM '{eval_group_name}' has no embedded prompt or custom build_messages. "
                                     f"Available LLMs include: {llm_examples}. "
@@ -395,14 +399,7 @@ def prepare_llm_configuration(evaluation_type: str, eval_group_name: str, kwargs
                                 raise ValueError(error_msg)
                         else:
                             # LLM name not found
-                            llms_with_prompts = [
-                                name for name, cls in Model.llm_name_map.items()
-                                if (hasattr(cls, 'prompt') and cls.prompt) or
-                                   ('build_messages' in cls.__dict__)
-                            ]
-                            llm_examples = ", ".join(llms_with_prompts[:5]) + "..." if len(
-                                llms_with_prompts) > 5 else ", ".join(llms_with_prompts)
-
+                            llm_examples = _get_available_llms_examples()
                             error_msg = (
                                 f"No valid LLM found for '{eval_group_name}'. "
                                 f"Available LLMs include: {llm_examples}. "

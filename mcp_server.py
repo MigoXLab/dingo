@@ -24,11 +24,12 @@ _script_dir = os.path.dirname(os.path.abspath(__file__))
 _mcp_log_file = os.path.join(_script_dir, "mcp_server.log")
 _file_handler = None
 
+
 def _flush_log():
     """Force flush log file handler."""
-    global _file_handler
     if _file_handler:
         _file_handler.flush()
+
 
 # Ensure log file can be created
 try:

@@ -1,0 +1,6 @@
+{"image": "test/data/img_OCR_iterative/simple_text/english.png", "content": "The quick brown fox jumps over the lazy dog.", "content_type": "text", "expected_result": "correct", "description": "完全正确的OCR结果"}
+{"image": "test/data/img_OCR_iterative/simple_text/english.png", "content": "The quick brown fox jumps over the lzy dog.", "content_type": "text", "expected_result": "incorrect", "description": "拼写错误：lzy->lazy"}
+{"image": "test/data/img_OCR_iterative/simple_text/numbers.png", "content": "Price: $123.45 (Discount: 20%)", "content_type": "text", "expected_result": "correct", "description": "完全正确的数字和符号识别"}
+{"image": "test/data/img_OCR_iterative/simple_text/numbers.png", "content": "Price: $12345 (Discount: 20%)", "content_type": "text", "expected_result": "incorrect", "description": "数字错误：12345->123.45"}
+{"image": "test/data/img_OCR_iterative/simple_text/mixed.png", "content": "Meeting at 3:00 PM in Room #405", "content_type": "text", "expected_result": "correct", "description": "完全正确的混合文本识别"}
+{"image": "test/data/img_OCR_iterative/simple_text/mixed.png", "content": "Meeting at 3:00 PM in Room #45", "content_type": "text", "expected_result": "incorrect", "description": "房间号错误：#45->#405"}

@@ -21,7 +21,7 @@ class VLMOCRUnderstanding(BaseOpenAI):
     _metric_info = {
         "category": "Multimodality Assessment Metrics",
         "quality_dimension": "VLM_OCR_UNDERSTANDING",
-        "metric_name": "PromptVLMOCRUnderstanding",
+        "metric_name": "VLMOCRUnderstanding",
         "description": "评估多模态模型对图片中文字内容的识别和理解能力，使用DeepSeek-OCR作为Ground Truth",
         "paper_title": "DeepSeek-OCR: Contexts Optical Compression",
         "paper_url": "https://github.com/deepseek-ai/DeepSeek-OCR",

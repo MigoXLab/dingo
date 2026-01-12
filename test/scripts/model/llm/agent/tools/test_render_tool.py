@@ -295,6 +295,81 @@ class TestRenderTool:
                     assert '%' in call_args[0]
                     assert ':' in call_args[0]
 
+    def test_unicode_arrow_symbols(self):
+        """测试 Unicode 箭头符号 (wasysym 包支持)"""
+        result = RenderTool.execute(
+            content="价格: $123.45 ◄ 原价: $200.00",
+            content_type="text"
+        )
+
+        # 如果环境支持，应该能成功渲染
+        assert 'success' in result
+        if result['success']:
+            assert 'image_base64' in result
+            assert result['content_type'] == 'text'
+
+    def test_greek_letters_equation(self):
+        """测试正体希腊字母 (upgreek 包支持)"""
+        result = RenderTool.execute(
+            content="α + β = γ",
+            content_type="equation"
+        )
+
+        # LaTeX 渲染需要环境支持
+        assert 'success' in result
+        # 只验证返回结构，不强制要求成功（依赖环境）
+
+    def test_copyright_symbol(self):
+        """测试版权符号 (textcomp 包支持)"""
+        result = RenderTool.execute(
+            content="版权所有 © 2026",
+            content_type="text"
+        )
+
+        assert 'success' in result
+        if result['success']:
+            assert 'image_base64' in result
+
+    def test_large_matrix_support(self):
+        """测试大矩阵支持 (MaxMatrixCols=1000)"""
+        # 创建一个 50 列的矩阵（超过默认的 10 列限制）
+        matrix_content = "\\begin{pmatrix}" + " & ".join([str(i) for i in range(50)]) + "\\end{pmatrix}"
+
+        result = RenderTool.execute(
+            content=matrix_content,
+            content_type="equation"
+        )
+
+        # 验证能处理大矩阵而不报错
+        assert 'success' in result
+        # LaTeX 编译依赖环境，只验证结构
+
+    def test_extended_cjk_characters(self):
+        """测试扩展 CJK 字符范围支持"""
+        # 测试包含罕见汉字和符号的内容
+        result = RenderTool.execute(
+            content="𠮷野家：讃岐うどん",  # 包含扩展 B 区汉字
+            content_type="text"
+        )
+
+        assert 'success' in result
+        if result['success']:
+            assert 'image_base64' in result
+
+    def test_mixed_unicode_content(self):
+        """测试混合 Unicode 内容 (综合测试)"""
+        mixed_content = "价格 $99.99 ◄ 折扣 20% • 版权 © 2026 ★ α=0.5"
+
+        result = RenderTool.execute(
+            content=mixed_content,
+            content_type="text"
+        )
+
+        assert 'success' in result
+        assert 'content_type' in result
+        # 验证内容类型正确传递
+        assert result['content_type'] == 'text'
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

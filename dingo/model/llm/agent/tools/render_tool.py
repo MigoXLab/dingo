@@ -89,7 +89,7 @@ class RenderTool(BaseTool):
     description = "Render text, equations, or tables as images for VLM comparison"
     config: RenderToolConfig = RenderToolConfig()
 
-    # LaTeX template for rendering
+    # LaTeX template for rendering (enhanced with MinerU_Metis symbol support)
     LATEX_TEMPLATE = r"""
 \documentclass[12pt]{article}
 \usepackage{geometry}
@@ -99,11 +99,24 @@ class RenderTool(BaseTool):
 \pagestyle{empty}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{wasysym}
 \usepackage{unicode-math}
+\usepackage{upgreek}
+\usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage{fontspec}
 \setmathfont{Latin Modern Math}
+\setcounter{MaxMatrixCols}{1000}
+\xeCJKDeclareCharClass{CJK}{"0080->"FFFF}
+\xeCJKDeclareCharClass{CJK}{"10000->"1FFFF}
+\xeCJKDeclareCharClass{CJK}{"20000->"2FFFF}
+\xeCJKDeclareCharClass{CJK}{"30000->"3FFFF}
 \setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
 \begin{document}
 \raggedright
+\makeatletter
+\makeatother
 [CONTENT]
 \end{document}
 """

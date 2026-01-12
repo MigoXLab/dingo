@@ -51,6 +51,7 @@ This document provides comprehensive information about all quality metrics used 
 |------|--------|-------------|--------------|-------------------|----------|
 | `LLMClassifyQR` | LLMClassifyQR | Identifies images as CAPTCHA, QR code, or normal images | Internal Implementation | N/A | N/A |
 | `VLMOCRUnderstanding` | VLMOCRUnderstanding | 评估多模态模型对图片中文字内容的识别和理解能力，使用DeepSeek-OCR作为Ground Truth | [DeepSeek-OCR: Contexts Optical Compression](https://github.com/deepseek-ai/DeepSeek-OCR) | [📊 See Results](通过对比VLM输出与OCR ground truth，识别文字遗漏、错误、幻觉等问题) | N/A |
+| `VLMRenderJudge` | VLMRenderJudge | VLM-based OCR quality evaluation through visual render-compare | Internal Implementation | N/A | N/A |
 
 ### Rule-Based TEXT Quality Metrics
 

@@ -32,7 +32,11 @@ class RenderToolConfig(BaseModel):
     """Configuration for RenderTool"""
     font_path: Optional[str] = Field(
         default=None,
-        description="Path to font file for rendering (e.g., simsun.ttc)"
+        description="Path to font file for text rendering (e.g., simsun.ttc)"
+    )
+    cjk_font: Optional[str] = Field(
+        default=None,
+        description="CJK font name for LaTeX rendering (e.g., 'SimSun' on Windows, 'PingFang SC' on macOS, 'Noto Sans CJK SC' on Linux)"
     )
     density: int = Field(
         default=150,
@@ -90,7 +94,7 @@ class RenderTool(BaseTool):
 \documentclass[12pt]{article}
 \usepackage{geometry}
 \usepackage[CJKmath]{xeCJK}
-\setCJKmainfont{SimSun}
+[CJKFONT]
 \geometry{paperwidth=[PAPERWIDTH], paperheight=5000cm, margin=1cm}
 \pagestyle{empty}
 \usepackage{amsmath}
@@ -289,8 +293,27 @@ class RenderTool(BaseTool):
             else:
                 paper_width = "60cm"
 
+            # Determine CJK font to use
+            cjk_font_line = ""
+            if cls.config.cjk_font:
+                cjk_font_line = f"\\setCJKmainfont{{{cls.config.cjk_font}}}"
+            else:
+                # Try to detect system and use appropriate default
+                import platform
+                system = platform.system()
+                if system == "Windows":
+                    cjk_font_line = "\\setCJKmainfont{SimSun}"
+                elif system == "Darwin":  # macOS
+                    cjk_font_line = "\\setCJKmainfont{PingFang SC}"
+                elif system == "Linux":
+                    cjk_font_line = "\\setCJKmainfont{Noto Sans CJK SC}"
+                else:
+                    # Fallback: try SimSun, may fail on non-Windows
+                    cjk_font_line = "\\setCJKmainfont{SimSun}"
+
             # Generate LaTeX file
             latex = cls.LATEX_TEMPLATE.replace("[PAPERWIDTH]", paper_width)
+            latex = latex.replace("[CJKFONT]", cjk_font_line)
             latex = latex.replace("[CONTENT]", processed_content)
 
             tex_file = os.path.join(temp_dir, "formula.tex")
@@ -300,11 +323,15 @@ class RenderTool(BaseTool):
             with open(tex_file, "w", encoding="utf-8") as f:
                 f.write(latex)
 
-            # Compile with xelatex
-            cmd = f"xelatex -interaction=nonstopmode -output-directory={temp_dir} {tex_file}"
+            # Compile with xelatex (use list args to prevent shell injection)
+            xelatex_cmd = [
+                "xelatex",
+                "-interaction=nonstopmode",
+                f"-output-directory={temp_dir}",
+                tex_file
+            ]
             result = subprocess.run(
-                cmd,
-                shell=True,
+                xelatex_cmd,
                 capture_output=True,
                 timeout=cls.config.timeout
             )
@@ -313,9 +340,17 @@ class RenderTool(BaseTool):
                 log.error(f"LaTeX compilation failed: {result.stderr.decode()}")
                 return None
 
-            # Convert PDF to PNG using ImageMagick
-            convert_cmd = f"magick -density {cls.config.density} {pdf_file} -background white -alpha remove -quality 100 {png_file}"
-            subprocess.run(convert_cmd, shell=True, timeout=30)
+            # Convert PDF to PNG using ImageMagick (use list args to prevent shell injection)
+            convert_cmd = [
+                "magick",
+                "-density", str(cls.config.density),
+                pdf_file,
+                "-background", "white",
+                "-alpha", "remove",
+                "-quality", "100",
+                png_file
+            ]
+            subprocess.run(convert_cmd, timeout=30)
 
             if not os.path.exists(png_file):
                 log.error("PDF to PNG conversion failed")

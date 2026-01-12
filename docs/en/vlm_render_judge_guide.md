@@ -118,8 +118,9 @@ args = InputArgs(
                     "max_tokens": 4000,
                     "temperature": 0,
                     "render_config": {
-                        "density": 150,  # LaTeX render DPI
-                        "pad": 20        # Image padding
+                        "density": 150,   # LaTeX render DPI
+                        "pad": 20,        # Image padding
+                        "cjk_font": None  # CJK font for LaTeX (auto-detect by default)
                     }
                 }
             }
@@ -167,7 +168,8 @@ VLMRenderJudge.set_config({
             "density": 150,      # LaTeX render DPI (72-300)
             "pad": 20,           # Image padding
             "timeout": 60,       # Render timeout (seconds)
-            "font_path": None    # Custom font path (optional)
+            "font_path": None,   # Custom font for text rendering (optional)
+            "cjk_font": None     # CJK font for LaTeX (auto-detect: SimSun/PingFang SC/Noto Sans CJK SC)
         }
     }
 })
@@ -222,30 +224,6 @@ args = InputArgs(
         }]
     }]
 )
-```
-
----
-
-## 🔍 Troubleshooting
-
-### Issue 1: Render Failed (score = 0.5)
-
-**Solution**:
-```bash
-# macOS
-brew install mactex-no-gui imagemagick
-
-# Ubuntu/Debian
-sudo apt-get install texlive-xetex imagemagick
-```
-
-### Issue 2: Font Rendering Inconsistency
-
-**Solution**: Specify a font with full symbol support
-```python
-"render_config": {
-    "font_path": "/System/Library/Fonts/Helvetica.ttc"
-}
 ```
 
 ---

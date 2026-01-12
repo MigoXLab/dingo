@@ -182,7 +182,8 @@ VLMRenderJudge.set_config({
             "density": 150,      # LaTeX 渲染 DPI (72-300)
             "pad": 20,           # 图像边距
             "timeout": 60,       # 渲染超时时间（秒）
-            "font_path": None    # 自定义字体路径（可选）
+            "font_path": None,   # 文本渲染自定义字体路径（可选）
+            "cjk_font": None     # LaTeX CJK 字体名称（可选，如 'SimSun'/'PingFang SC'/'Noto Sans CJK SC'）
         }
     }
 })
@@ -296,14 +297,21 @@ summary = executor.execute()
 
     "timeout": 60,        # 渲染超时时间（秒）(默认: 60)
 
-    "font_path": None     # 自定义字体路径（可选）
+    "font_path": None,    # 文本渲染自定义字体路径（可选）
                           # 例如: "/usr/share/fonts/SimSun.ttc"
+
+    "cjk_font": None      # LaTeX CJK 字体名称（可选）
+                          # - Windows: "SimSun", "Microsoft YaHei"
+                          # - macOS: "PingFang SC", "Heiti SC"
+                          # - Linux: "Noto Sans CJK SC", "WenQuanYi Micro Hei"
 }
 ```
 
 ### 字体选择逻辑
 
-渲染工具会按以下顺序尝试加载字体：
+#### 文本渲染字体（font_path）
+
+用于普通文本渲染，按以下顺序尝试：
 
 1. `render_config.font_path`（如果指定）
 2. `/System/Library/Fonts/Helvetica.ttc` (macOS)
@@ -313,10 +321,36 @@ summary = executor.execute()
 6. `SimSun` (中文字体)
 7. 系统默认字体（最后备选）
 
+#### LaTeX CJK 字体（cjk_font）
+
+用于 LaTeX 公式中的中文字符渲染，**自动跨平台适配**：
+
+- 如果指定 `cjk_font`：使用指定字体
+- 如果未指定：**自动检测操作系统**并使用默认字体
+  - Windows: `SimSun` (宋体)
+  - macOS: `PingFang SC` (苹方)
+  - Linux: `Noto Sans CJK SC`
+
+**跨平台配置示例**：
+
+```python
+# 方式 1: 明确指定字体（推荐，确保一致性）
+"render_config": {
+    "cjk_font": "SimSun"  # 确保所有平台都安装了此字体
+}
+
+# 方式 2: 自动检测（默认，方便但可能导致不同平台渲染结果不同）
+"render_config": {
+    "cjk_font": None  # 自动根据操作系统选择
+}
+```
+
 **建议**：
-- 英文文档：使用默认配置（Helvetica/Arial）
-- 中文文档：指定 `font_path` 为 SimSun 或其他中文字体
-- 混合文档：使用 Arial Unicode MS
+- **英文文档**：使用默认配置
+- **中文文档**：
+  - 团队协作：明确指定 `cjk_font`，确保所有成员安装相同字体
+  - 个人使用：使用自动检测（`cjk_font=None`）
+- **混合文档**：指定支持中英文的字体（如 `Arial Unicode MS` + `cjk_font="PingFang SC"`）
 
 ---
 
@@ -392,81 +426,6 @@ def ocr_with_quality_check(image_path, ocr_function):
         "quality_score": result.score,
         "is_reliable": result.score >= 0.8
     }
-```
-
----
-
-## 🔍 故障排查
-
-### 问题 1: 渲染失败 (score = 0.5)
-
-**症状**：
-```
-score: 0.5
-label: ['QUALITY_UNKNOWN.RENDER_FAILED']
-reason: ['Could not render OCR content for visual comparison']
-```
-
-**原因**：
-- LaTeX 环境未安装（equation 类型）
-- ImageMagick 未安装（equation 类型，PDF 转 PNG）
-- 内容格式错误
-
-**解决方案**：
-```bash
-# macOS
-brew install mactex-no-gui imagemagick
-
-# Ubuntu/Debian
-sudo apt-get install texlive-xetex imagemagick
-
-# 验证安装
-xelatex --version
-magick --version
-```
-
-### 问题 2: API 调用失败
-
-**症状**：
-```
-[ERROR] Judge failed: Error code: 401 - Invalid API key
-```
-
-**解决方案**：
-1. 检查 API key 是否正确
-2. 检查 API URL 是否正确（需要包含 `/v1` 后缀）
-3. 检查账户余额是否充足
-4. 检查网络连接和区域限制
-
-### 问题 3: 符号渲染不一致
-
-**症状**：
-```
-GT has "Price: $123.45 (Discount: 20%)"
-OCR has "Price: $123.45 (Discount 20%)"  # 冒号丢失
-```
-
-**原因**: 字体不支持某些符号
-
-**解决方案**：
-```python
-# 指定支持完整符号集的字体
-"render_config": {
-    "font_path": "/System/Library/Fonts/Helvetica.ttc"
-}
-```
-
-### 问题 4: 中文渲染为方框
-
-**症状**: 渲染后的图像中中文显示为 `□□□`
-
-**解决方案**：
-```python
-# 指定中文字体
-"render_config": {
-    "font_path": "/System/Library/Fonts/STHeiti Light.ttc"  # macOS
-    # 或 "C:\\Windows\\Fonts\\simhei.ttf"  # Windows
-}
 ```
 
 ---

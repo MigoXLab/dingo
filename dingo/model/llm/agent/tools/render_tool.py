@@ -89,7 +89,6 @@ class RenderTool(BaseTool):
     description = "Render text, equations, or tables as images for VLM comparison"
     config: RenderToolConfig = RenderToolConfig()
 
-    # LaTeX template for rendering (enhanced with MinerU_Metis symbol support)
     LATEX_TEMPLATE = r"""
 \documentclass[12pt]{article}
 \usepackage{geometry}

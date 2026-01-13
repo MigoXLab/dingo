@@ -9,7 +9,7 @@ from dingo.model.rule.base import BaseRule
 # ========== Privacy Issues ==========
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_PRIVACY", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_PRIVACY", ["resume"])
 class RuleResumeIDCard(BaseRule):
     """Check if the resume contains Chinese ID card number."""
 
@@ -41,7 +41,7 @@ class RuleResumeIDCard(BaseRule):
         return res
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_PRIVACY", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_PRIVACY", ["resume"])
 class RuleResumeDetailedAddress(BaseRule):
     """Check if the resume contains detailed address information."""
 
@@ -76,7 +76,7 @@ class RuleResumeDetailedAddress(BaseRule):
 # ========== Contact Information Issues ==========
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_CONTACT", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_CONTACT", ["resume"])
 class RuleResumeEmailMissing(BaseRule):
     """Check if the resume is missing email address."""
 
@@ -108,7 +108,7 @@ class RuleResumeEmailMissing(BaseRule):
         return res
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_CONTACT", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_CONTACT", ["resume"])
 class RuleResumePhoneMissing(BaseRule):
     """Check if the resume is missing phone number."""
 
@@ -140,7 +140,7 @@ class RuleResumePhoneMissing(BaseRule):
         return res
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_CONTACT", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_CONTACT", ["resume"])
 class RuleResumePhoneFormat(BaseRule):
     """Check if phone number format is invalid."""
 
@@ -176,7 +176,7 @@ class RuleResumePhoneFormat(BaseRule):
 # ========== Format Issues ==========
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_FORMAT", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_FORMAT", ["resume"])
 class RuleResumeExcessiveWhitespace(BaseRule):
     """Check if resume contains excessive whitespace."""
 
@@ -208,7 +208,7 @@ class RuleResumeExcessiveWhitespace(BaseRule):
         return res
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_FORMAT", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_FORMAT", ["resume"])
 class RuleResumeMarkdown(BaseRule):
     """Check if resume has Markdown syntax errors."""
 
@@ -243,7 +243,7 @@ class RuleResumeMarkdown(BaseRule):
 # ========== Structure Issues ==========
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_STRUCTURE", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_STRUCTURE", ["resume"])
 class RuleResumeNameMissing(BaseRule):
     """Check if resume is missing name in the first section."""
 
@@ -276,7 +276,7 @@ class RuleResumeNameMissing(BaseRule):
         return res
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_STRUCTURE", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_STRUCTURE", ["resume"])
 class RuleResumeSectionMissing(BaseRule):
     """Check if resume is missing required sections."""
 
@@ -311,7 +311,7 @@ class RuleResumeSectionMissing(BaseRule):
 # ========== Professionalism Issues ==========
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_PROFESSIONALISM", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_PROFESSIONALISM", ["resume"])
 class RuleResumeEmoji(BaseRule):
     """Check if resume contains emoji characters."""
 
@@ -343,7 +343,7 @@ class RuleResumeEmoji(BaseRule):
         return res
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_PROFESSIONALISM", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_PROFESSIONALISM", ["resume"])
 class RuleResumeInformal(BaseRule):
     """Check if resume contains informal language."""
 
@@ -378,7 +378,7 @@ class RuleResumeInformal(BaseRule):
 # ========== Date Issues ==========
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_DATE", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_DATE", ["resume"])
 class RuleResumeDateFormat(BaseRule):
     """Check if resume has inconsistent date formats."""
 
@@ -417,7 +417,7 @@ class RuleResumeDateFormat(BaseRule):
 # ========== Completeness Issues ==========
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_COMPLETENESS", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_COMPLETENESS", ["resume"])
 class RuleResumeEducationMissing(BaseRule):
     """Check if resume is missing education section."""
 
@@ -449,7 +449,7 @@ class RuleResumeEducationMissing(BaseRule):
         return res
 
 
-@Model.rule_register("RESUME_QUALITY_BAD_COMPLETENESS", ["default", "resume"])
+@Model.rule_register("RESUME_QUALITY_BAD_COMPLETENESS", ["resume"])
 class RuleResumeExperienceMissing(BaseRule):
     """Check if resume is missing work experience section."""
 

@@ -667,18 +667,19 @@ def _run_dingo_evaluation_internal(
 
     if evaluation_type == "rule":
         # For rule evaluation, use eval_group_name to determine which rules to use
-        valid_rule_groups = {'default', 'sft', 'pretrain'}
-        if not eval_group_name or eval_group_name not in valid_rule_groups:
-            if eval_group_name:
-                log.warning(f"Invalid rule group name '{eval_group_name}'. Valid options: {valid_rule_groups}. Using 'default'.")
-            else:
-                log.info("No rule group name provided. Using 'default'.")
-            eval_group_name = "default"
-
-        log.info(f"Using rule group: {eval_group_name}")
-        # Get rules for this group from Model
         try:
             Model.load_model()
+            # Get valid rule groups dynamically from Model
+            valid_rule_groups = set(Model.rule_groups.keys()) if Model.rule_groups else {'default'}
+
+            if not eval_group_name or eval_group_name not in valid_rule_groups:
+                if eval_group_name:
+                    log.warning(f"Invalid rule group name '{eval_group_name}'. Valid options: {valid_rule_groups}. Using 'default'.")
+                else:
+                    log.info("No rule group name provided. Using 'default'.")
+                eval_group_name = "default"
+
+            log.info(f"Using rule group: {eval_group_name}")
             # rule_groups contains class objects, need to get their __name__
             group_rule_classes = Model.rule_groups.get(eval_group_name, [])
             for rule_cls in group_rule_classes:

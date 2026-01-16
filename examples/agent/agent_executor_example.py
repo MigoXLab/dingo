@@ -21,132 +21,19 @@ Requirements:
 """
 
 import os
-from typing import Any, Dict, List
 
 from dingo.config import InputArgs
 from dingo.exec import Executor
-from dingo.io import Data
-from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
-from dingo.model.llm.agent.base_agent import BaseAgent
 
 # Ensure models are loaded
 Model.load_model()
 
 
-@Model.llm_register("AgentFactCheck")
-class AgentFactCheck(BaseAgent):
-    """
-    Fact-checking agent using LangChain 1.0 create_agent.
-
-    Workflow (automatic via LangChain agent):
-    1. Agent analyzes text for factual claims
-    2. Dynamically calls tavily_search tool to verify claims
-    3. Makes judgment based on evidence
-    4. Returns evaluation result
-
-    No manual orchestration needed - create_agent handles the ReAct loop.
-    """
-
-    use_agent_executor = True  # Enable AgentExecutor path
-    available_tools = ["tavily_search"]
-    max_iterations = 5
-
-    _metric_info = {
-        "metric_name": "AgentFactCheck",
-        "description": "Agent-based fact checking with web search"
-    }
-
-    @classmethod
-    def plan_execution(cls, input_data: Data) -> List[Dict[str, Any]]:
-        """
-        Not used with LangChain agent (can return empty list).
-
-        The LangChain agent handles planning dynamically.
-        """
-        return []
-
-    @classmethod
-    def _get_system_prompt(cls, input_data: Data) -> str:
-        """
-        Custom system prompt for the fact-checking agent.
-
-        This defines the agent's behavior and task.
-        """
-        return """You are a fact-checking agent. Your task is to verify factual claims in text.
-
-Process:
-1. Carefully read the text and identify any factual claims that can be verified
-2. For each significant claim, use the tavily_search tool to find evidence
-3. Compare the claims against the search results
-4. Make a final judgment: are there any factual errors or is the information accurate?
-
-Be thorough and objective. If you find errors, explain what is incorrect and what the correct information is.
-If the text is accurate, confirm that it aligns with the evidence you found."""
-
-    @classmethod
-    def aggregate_results(
-        cls,
-        input_data: Data,
-        results: List[Any]
-    ) -> EvalDetail:
-        """
-        Parse LangChain agent output → EvalDetail.
-
-        Args:
-            results: [{'output': str, 'tool_calls': List, 'messages': ...}]
-
-        Returns:
-            EvalDetail with evaluation result
-        """
-        if not results:
-            return EvalDetail(
-                metric=cls.__name__,
-                status=True,
-                label=[f"{QualityLabel.QUALITY_BAD_PREFIX}NO_RESULT"],
-                reason=["No evaluation result returned"]
-            )
-
-        agent_result = results[0]
-
-        # Check execution success
-        if not agent_result.get('success', True):
-            return EvalDetail(
-                metric=cls.__name__,
-                status=True,
-                label=[f"{QualityLabel.QUALITY_BAD_PREFIX}AGENT_ERROR"],
-                reason=[agent_result.get('error', 'Unknown error')]
-            )
-
-        # Parse agent output
-        output = agent_result.get('output', '')
-        tool_calls = agent_result.get('tool_calls', [])
-
-        # Detect factual errors based on agent's output
-        has_factual_error = any(
-            keyword in output.lower()
-            for keyword in ['incorrect', 'false', 'error', 'wrong', 'inaccurate', 'mistaken']
-        )
-
-        result = EvalDetail(metric=cls.__name__)
-        result.status = has_factual_error
-        result.label = [
-            f"{QualityLabel.QUALITY_BAD_PREFIX}FACTUAL_ERROR" if has_factual_error
-            else QualityLabel.QUALITY_GOOD
-        ]
-        result.reason = [
-            f"Agent Analysis: {output}",
-            f"🔍 Web searches performed: {len(tool_calls)}",
-            f"🤖 Reasoning steps: {agent_result.get('reasoning_steps', 0)}"
-        ]
-
-        return result
-
-
 def main():
     """Run the fact-checking agent example."""
     print("=" * 70)
-    print("AgentFactCheck Example (using LangChain 1.0 create_agent)")
+    print("AgentFactCheck Example")
     print("=" * 70)
     print()
 
@@ -171,6 +58,7 @@ def main():
         },
         "evaluator": [{
             "fields": {
+                "prompt": "question",
                 "content": "content"
             },
             "evals": [{

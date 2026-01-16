@@ -501,7 +501,27 @@ class CustomEvaluator(BaseOpenAI):
 
 ### Agent-Based Evaluation with Tools
 
-Dingo supports agent-based evaluators that can use external tools for multi-step reasoning and adaptive context gathering:
+Dingo supports agent-based evaluators that can use external tools for multi-step reasoning and adaptive context gathering. Two implementation patterns are available:
+
+**Pattern 1: LangChain-Based** (e.g., `AgentFactCheck`)
+- Framework-driven with autonomous multi-step reasoning
+- Uses LangChain 1.0's `create_agent` with ReAct pattern
+- Best for: Complex reasoning tasks, rapid prototyping
+- Less code, more declarative
+
+**Pattern 2: Custom Workflow** (e.g., `AgentHallucination`)
+- Developer-driven with explicit workflow control
+- Manual tool calls and LLM interactions
+- Best for: Composing existing evaluators, domain-specific workflows
+- Full control, explicit behavior
+
+Both patterns share the same configuration interface and are transparent to users.
+
+**Built-in Agents:**
+- `AgentFactCheck`: LangChain-based fact-checking with autonomous search control
+- `AgentHallucination`: Custom workflow hallucination detection with adaptive context gathering
+
+**Quick Example:**
 
 ```python
 from dingo.io import Data
@@ -527,8 +547,7 @@ class MyAgent(BaseAgent):
         return EvalDetail(...)
 ```
 
-**Built-in Agent:**
-- `AgentHallucination`: Enhanced hallucination detection with web search fallback
+For detailed guidance on choosing and implementing agent patterns, see [Agent Development Guide](docs/agent_development_guide.md).
 
 **Configuration Example:**
 ```json

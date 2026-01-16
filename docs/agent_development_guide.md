@@ -7,12 +7,13 @@ This guide explains how to create custom agent-based evaluators and tools in Din
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Creating Custom Tools](#creating-custom-tools)
-3. [Creating Custom Agents](#creating-custom-agents)
-4. [Configuration](#configuration)
-5. [Testing](#testing)
-6. [Best Practices](#best-practices)
-7. [Examples](#examples)
+2. [Agent Implementation Patterns](#agent-implementation-patterns)
+3. [Creating Custom Tools](#creating-custom-tools)
+4. [Creating Custom Agents](#creating-custom-agents)
+5. [Configuration](#configuration)
+6. [Testing](#testing)
+7. [Best Practices](#best-practices)
+8. [Examples](#examples)
 
 ---
 
@@ -42,6 +43,383 @@ Data → Agent → [Tool 1, Tool 2, ...] → LLM Reasoning → EvalDetail
 - Agents run in **ThreadPoolExecutor** (same as LLMs) for I/O-bound operations
 - Tools are called synchronously within the agent's execution
 - Configuration injected via `dynamic_config` attribute
+
+---
+
+## Agent Implementation Patterns
+
+Dingo supports two complementary patterns for implementing agent-based evaluators. Both patterns share the same configuration interface and are transparent to users, allowing you to choose the approach that best fits your needs.
+
+### Pattern Comparison
+
+| Aspect | LangChain-Based | Custom Workflow |
+|--------|-----------------|-----------------|
+| **Control** | Framework-driven | Developer-driven |
+| **Complexity** | Simple (declarative) | Moderate (imperative) |
+| **Flexibility** | Limited to LangChain patterns | Unlimited |
+| **Code Volume** | Low (~100 lines) | Medium (~200 lines) |
+| **Best For** | Multi-step reasoning | Workflow composition |
+| **Example** | AgentFactCheck | AgentHallucination |
+
+### Pattern 1: LangChain-Based Agents (Framework-Driven)
+
+**Philosophy**: Let the framework handle orchestration, you focus on the task.
+
+#### When to Use
+
+✅ **Complex multi-step reasoning required**
+   The agent needs to make multiple decisions and tool calls adaptively
+
+✅ **Benefit from LangChain's battle-tested patterns**
+   Leverage proven agent orchestration and error handling
+
+✅ **Prefer declarative over imperative style**
+   Define what the agent should do, not how to do it step-by-step
+
+✅ **Want rapid prototyping**
+   Get a working agent with minimal code
+
+#### When NOT to Use
+
+❌ **Need fine-grained control over every step**
+   You want to control exactly when and how tools are called
+
+❌ **Want to compose with existing Dingo evaluators**
+   You need to call other evaluators as part of the workflow
+
+❌ **Have domain-specific workflow requirements**
+   Your workflow doesn't fit the ReAct pattern well
+
+#### Key Implementation Steps
+
+1. Set `use_agent_executor = True` to enable LangChain path
+2. Override `_format_agent_input()` to structure input for the agent
+3. Override `_get_system_prompt()` to provide task-specific instructions
+4. Implement `aggregate_results()` to parse agent output into EvalDetail
+5. Return empty list in `plan_execution()` (not used with LangChain path)
+
+#### Example: AgentFactCheck
+
+```python
+from dingo.model import Model
+from dingo.model.llm.agent.base_agent import BaseAgent
+from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail
+from typing import Any, List
+
+@Model.llm_register("AgentFactCheck")
+class AgentFactCheck(BaseAgent):
+    """LangChain-based fact-checking agent."""
+
+    use_agent_executor = True  # Enable LangChain agent mode
+    available_tools = ["tavily_search"]
+    max_iterations = 5
+
+    @classmethod
+    def _format_agent_input(cls, input_data: Data) -> str:
+        """Structure input for the agent."""
+        parts = []
+
+        if hasattr(input_data, 'prompt') and input_data.prompt:
+            parts.append(f"**Question:**\\n{input_data.prompt}")
+
+        parts.append(f"**Response to Evaluate:**\\n{input_data.content}")
+
+        if hasattr(input_data, 'context') and input_data.context:
+            parts.append(f"**Context:**\\n{input_data.context}")
+        else:
+            parts.append("**Context:** None - use web search to verify")
+
+        return "\\n\\n".join(parts)
+
+    @classmethod
+    def _get_system_prompt(cls, input_data: Data) -> str:
+        """Provide task-specific instructions."""
+        has_context = hasattr(input_data, 'context') and input_data.context
+
+        base = """You are a fact-checking agent with web search capabilities.
+
+Your task:
+1. Analyze the Question and Response provided"""
+
+        context_instruction = (
+            "\\n2. Context is provided - evaluate the Response against it"
+            "\\n3. You MAY use web search for additional verification if needed"
+            if has_context else
+            "\\n2. NO Context is available - you MUST use web search to verify facts"
+            "\\n3. Search for reliable sources to fact-check the response"
+        )
+
+        output_format = """
+
+**Output Format:**
+HALLUCINATION_DETECTED: [YES or NO]
+EXPLANATION: [Your analysis]
+EVIDENCE: [Supporting facts]
+SOURCES: [URLs, one per line with - prefix]
+
+Be precise. Start with "HALLUCINATION_DETECTED:" followed by YES or NO."""
+
+        return base + context_instruction + output_format
+
+    @classmethod
+    def aggregate_results(cls, input_data: Data, results: List[Any]) -> EvalDetail:
+        """Parse agent output into EvalDetail."""
+        if not results:
+            return cls._create_error_result("No results from agent")
+
+        agent_result = results[0]
+        output = agent_result.get('output', '')
+
+        # Parse hallucination status
+        has_hallucination = cls._detect_hallucination_from_output(output)
+
+        # Build result
+        result = EvalDetail(metric=cls.__name__)
+        result.status = has_hallucination
+        result.label = ["BAD:HALLUCINATION" if has_hallucination else "GOOD"]
+        result.reason = [f"Agent Analysis:\\n{output}"]
+
+        return result
+
+    @classmethod
+    def plan_execution(cls, input_data: Data) -> List[Dict]:
+        """Not used with LangChain agent (agent handles planning)."""
+        return []
+```
+
+#### Pros and Cons
+
+**Pros:**
+- ✅ Less code to write and maintain
+- ✅ Framework handles tool orchestration automatically
+- ✅ Automatic retry and error handling
+- ✅ Battle-tested ReAct pattern from LangChain
+
+**Cons:**
+- ❌ Limited to LangChain's agent patterns
+- ❌ Less control over execution flow
+- ❌ Debugging can be harder (framework abstraction)
+- ❌ Cannot compose with existing Dingo evaluators
+
+---
+
+### Pattern 2: Custom Workflow Agents (Imperative)
+
+**Philosophy**: Explicit control over every step, compose with existing evaluators.
+
+#### When to Use
+
+✅ **Need fine-grained workflow control**
+   You want to control exactly what happens at each step
+
+✅ **Want to compose with existing Dingo evaluators**
+   Reuse evaluators like LLMHallucination within your workflow
+
+✅ **Prefer explicit over implicit behavior**
+   You want to see and control every tool call and LLM interaction
+
+✅ **Have domain-specific requirements**
+   Your workflow has unique steps that don't fit standard patterns
+
+✅ **Need conditional logic between steps**
+   Different paths based on intermediate results
+
+#### When NOT to Use
+
+❌ **Want framework-managed multi-step reasoning**
+   You prefer the agent to figure out the steps autonomously
+
+❌ **Prefer minimal code**
+   You want a quick solution without manual orchestration
+
+❌ **Need rapid prototyping**
+   You don't want to write explicit workflow logic
+
+❌ **Complex reasoning benefits from ReAct**
+   Your task requires adaptive multi-step reasoning
+
+#### Key Implementation Steps
+
+1. Implement custom `eval()` method with explicit workflow logic
+2. Manually call `execute_tool()` for each tool operation
+3. Manually call `send_messages()` for LLM interactions
+4. Optionally delegate to existing evaluators (e.g., LLMHallucination)
+5. Return `EvalDetail` directly from `eval()`
+
+#### Example: AgentHallucination
+
+```python
+from dingo.model import Model
+from dingo.model.llm.agent.base_agent import BaseAgent
+from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail
+from typing import List
+
+@Model.llm_register("AgentHallucination")
+class AgentHallucination(BaseAgent):
+    """Custom workflow hallucination detector."""
+
+    available_tools = ["tavily_search"]
+    max_iterations = 3
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        """Main evaluation method with custom workflow."""
+        cls.create_client()  # Initialize LLM client
+
+        # Step 1: Check if context is available
+        has_context = cls._has_context(input_data)
+
+        if has_context:
+            # Path A: Use existing evaluator
+            return cls._eval_with_context(input_data)
+        else:
+            # Path B: Custom workflow with web search
+            return cls._eval_with_web_search(input_data)
+
+    @classmethod
+    def _eval_with_web_search(cls, input_data: Data) -> EvalDetail:
+        """Execute custom workflow: extract claims → search → evaluate."""
+
+        # Step 2: Extract factual claims (manual LLM call)
+        claims = cls._extract_claims(input_data)
+
+        if not claims:
+            return cls._create_result(
+                status=False,
+                reason="No factual claims found to verify"
+            )
+
+        # Step 3: Search web for each claim (manual tool calls)
+        search_results = []
+        for claim in claims:
+            result = cls.execute_tool('tavily_search', query=claim)
+            if result.get('success'):
+                search_results.append(result['result'])
+
+        # Step 4: Synthesize context from search results
+        context = cls._synthesize_context(search_results)
+
+        # Step 5: Evaluate with synthesized context (delegate to evaluator)
+        data_with_context = Data(
+            content=input_data.content,
+            context=context
+        )
+        return cls._eval_with_context(data_with_context)
+
+    @classmethod
+    def _extract_claims(cls, input_data: Data) -> List[str]:
+        """Extract factual claims using LLM."""
+        prompt = f"""Extract all factual claims from this text:
+{input_data.content}
+
+Return a JSON list of claims."""
+
+        messages = [{"role": "user", "content": prompt}]
+        response = cls.send_messages(messages)
+
+        # Parse claims from response
+        import json
+        try:
+            claims = json.loads(response)
+            return claims if isinstance(claims, list) else []
+        except json.JSONDecodeError:
+            return []
+
+    @classmethod
+    def _synthesize_context(cls, search_results: List[Dict]) -> str:
+        """Synthesize context from search results using LLM."""
+        results_text = "\\n".join([
+            f"Source: {r.get('title', 'Unknown')}\\n{r.get('content', '')}"
+            for r in search_results
+        ])
+
+        prompt = f"""Synthesize the following search results into a coherent context:
+
+{results_text}
+
+Provide a concise summary of the key facts."""
+
+        messages = [{"role": "user", "content": prompt}]
+        return cls.send_messages(messages)
+
+    @classmethod
+    def plan_execution(cls, input_data: Data) -> List[Dict]:
+        """Not used with custom eval() method."""
+        return []
+```
+
+#### Pros and Cons
+
+**Pros:**
+- ✅ Full control over execution flow
+- ✅ Can compose with existing Dingo evaluators
+- ✅ Explicit error handling at each step
+- ✅ Easy to debug (no framework magic)
+- ✅ Can implement complex conditional logic
+
+**Cons:**
+- ❌ More code to write and maintain
+- ❌ Manual tool orchestration required
+- ❌ Need to handle retries and errors manually
+- ❌ More imperative, less declarative
+
+---
+
+### Decision Tree: Which Pattern Should I Use?
+
+```
+Start
+  │
+  ├─ Do you need to compose with existing Dingo evaluators?
+  │    ├─ Yes → Use Custom Pattern (AgentHallucination style)
+  │    └─ No → Continue
+  │
+  ├─ Is your workflow highly domain-specific?
+  │    ├─ Yes → Use Custom Pattern
+  │    └─ No → Continue
+  │
+  ├─ Do you prefer explicit control over every step?
+  │    ├─ Yes → Use Custom Pattern
+  │    └─ No → Continue
+  │
+  └─ Default → Use LangChain Pattern (AgentFactCheck style)
+       ✅ Simpler, less code, battle-tested
+```
+
+### Can I Mix Both Patterns?
+
+**Yes!** You can use both patterns in the same project:
+
+```json
+{
+  "evaluator": [{
+    "evals": [
+      {"name": "AgentFactCheck"},      // LangChain-based
+      {"name": "AgentHallucination"}   // Custom workflow
+    ]
+  }]
+}
+```
+
+Users don't need to know which pattern you used - both share the same configuration interface and are transparent at the user level.
+
+### Migration Path
+
+#### From Custom to LangChain
+
+1. Set `use_agent_executor = True`
+2. Move workflow logic from `eval()` to `_get_system_prompt()`
+3. Implement `aggregate_results()` to parse agent output
+4. Remove custom `eval()` implementation
+
+#### From LangChain to Custom
+
+1. Remove `use_agent_executor` flag (or set to False)
+2. Implement custom `eval()` method with workflow logic
+3. Manually call `execute_tool()` and `send_messages()`
+4. Keep `plan_execution()` returning empty list
 
 ---
 
@@ -487,6 +865,412 @@ class MyAgent(BaseAgent):
 - Range: 1-100 (adjust based on task complexity)
 
 **Note**: LangChain 1.0 uses "recursion_limit" internally, but Dingo maintains the `max_iterations` terminology for consistency across both execution paths.
+
+### Customizing Agent Input: The `_format_agent_input` Extension Point
+
+When using LangChain agents (`use_agent_executor = True`), you can customize how input data is formatted before being sent to the agent. This is essential for agents that need to work with structured data like prompt, content, and context together.
+
+#### Default Behavior
+
+By default, BaseAgent passes only `input_data.content` to LangChain agents:
+
+```python
+# Default implementation in BaseAgent
+@classmethod
+def _format_agent_input(cls, input_data: Data) -> str:
+    """Format input data into text for LangChain agent."""
+    return input_data.content
+```
+
+#### Overriding for Custom Formatting
+
+To include additional fields (prompt, context, etc.), override `_format_agent_input` in your agent:
+
+```python
+from dingo.model.llm.agent.base_agent import BaseAgent
+from dingo.io import Data
+
+class MyCustomAgent(BaseAgent):
+    use_agent_executor = True
+    available_tools = ["tavily_search"]
+
+    @classmethod
+    def _format_agent_input(cls, input_data: Data) -> str:
+        """Format prompt + content + context for agent."""
+        parts = []
+
+        # Include prompt if available
+        if hasattr(input_data, 'prompt') and input_data.prompt:
+            parts.append(f"**Question:**\n{input_data.prompt}")
+
+        # Always include content
+        parts.append(f"**Response to Evaluate:**\n{input_data.content}")
+
+        # Include context if available
+        if hasattr(input_data, 'context') and input_data.context:
+            if isinstance(input_data.context, list):
+                context_str = "\n".join(f"- {c}" for c in input_data.context)
+            else:
+                context_str = str(input_data.context)
+            parts.append(f"**Context:**\n{context_str}")
+        else:
+            parts.append("**Context:** None provided")
+
+        return "\n\n".join(parts)
+```
+
+#### Best Practices for Input Formatting
+
+1. **Safe Attribute Access**: Use `hasattr()` and check for truthiness
+   ```python
+   if hasattr(input_data, 'prompt') and input_data.prompt:
+       # Safe to use input_data.prompt
+   ```
+
+2. **Clear Structure**: Use markdown-style headers for readability
+   ```python
+   parts.append(f"**Section Name:**\n{content}")
+   ```
+
+3. **Handle Multiple Types**: Context might be string or list
+   ```python
+   if isinstance(input_data.context, list):
+       context_str = "\n".join(f"- {c}" for c in input_data.context)
+   else:
+       context_str = str(input_data.context)
+   ```
+
+4. **Provide Guidance**: Tell the agent what to do when data is missing
+   ```python
+   parts.append("**Context:** None provided - use web search to verify")
+   ```
+
+### Reference Implementation: AgentFactCheck
+
+AgentFactCheck demonstrates a production-ready implementation using `_format_agent_input` with structured output parsing following LangChain 2025 best practices.
+
+#### Key Features
+
+1. **Autonomous Search Control**: Agent decides when to use web search based on context availability
+2. **Structured Output**: Uses explicit format instructions for reliable parsing
+3. **Robust Error Handling**: Multi-layer fallback for parsing agent responses
+4. **Context-Aware Prompts**: System prompt adapts based on input data
+5. **Enhanced Evidence Citation**: Extracts and displays source URLs for verification (v1.1)
+
+#### Implementation Example
+
+```python
+from typing import Any, Dict, List
+import re
+from dingo.io import Data
+from dingo.io.input.required_field import RequiredField
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
+from dingo.model import Model
+from dingo.model.llm.agent.base_agent import BaseAgent
+
+@Model.llm_register("AgentFactCheck")
+class AgentFactCheck(BaseAgent):
+    """
+    LangChain-based fact-checking agent with autonomous search control.
+
+    - With context: Agent MAY use web search for additional verification
+    - Without context: Agent MUST use web search to verify facts
+    """
+
+    use_agent_executor = True  # Enable LangChain agent
+    available_tools = ["tavily_search"]
+    max_iterations = 5
+
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
+    # Note: CONTEXT is optional - agent adapts
+
+    @classmethod
+    def _format_agent_input(cls, input_data: Data) -> str:
+        """Format prompt + content + context for agent."""
+        parts = []
+
+        if hasattr(input_data, 'prompt') and input_data.prompt:
+            parts.append(f"**Question:**\n{input_data.prompt}")
+
+        parts.append(f"**Response to Evaluate:**\n{input_data.content}")
+
+        if hasattr(input_data, 'context') and input_data.context:
+            if isinstance(input_data.context, list):
+                context_str = "\n".join(f"- {c}" for c in input_data.context)
+            else:
+                context_str = str(input_data.context)
+            parts.append(f"**Context:**\n{context_str}")
+        else:
+            parts.append("**Context:** None provided - use web search to verify")
+
+        return "\n\n".join(parts)
+
+    @classmethod
+    def _get_system_prompt(cls, input_data: Data) -> str:
+        """System prompt adapts based on context availability."""
+        has_context = hasattr(input_data, 'context') and input_data.context
+
+        base_instructions = """You are a fact-checking agent with web search capabilities.
+
+Your task:
+1. Analyze the Question and Response provided"""
+
+        if has_context:
+            context_instruction = """
+2. Context is provided - evaluate the Response against it
+3. You MAY use web search for additional verification if needed
+4. Make your own decision about whether web search is necessary"""
+        else:
+            context_instruction = """
+2. NO Context is available - you MUST use web search to verify facts
+3. Search for reliable sources to fact-check the response"""
+
+        # Following LangChain best practices: explicit output format
+        output_format = """
+
+**IMPORTANT: You must return your analysis in exactly this format:**
+
+HALLUCINATION_DETECTED: [YES or NO]
+EXPLANATION: [Your detailed analysis]
+EVIDENCE: [Supporting sources or facts]
+SOURCES: [List of URLs consulted, one per line with - prefix]
+
+Example:
+HALLUCINATION_DETECTED: YES
+EXPLANATION: The response claims incorrect information.
+EVIDENCE: According to reliable sources, this is false.
+SOURCES:
+- https://example.com/source1
+- https://example.com/source2
+
+Be precise and clear. Start your response with "HALLUCINATION_DETECTED:" followed by YES or NO.
+Always include SOURCES with specific URLs when you perform web searches."""
+
+        return base_instructions + context_instruction + output_format
+
+    @classmethod
+    def aggregate_results(cls, input_data: Data, results: List[Any]) -> EvalDetail:
+        """Parse agent output to determine hallucination status."""
+        if not results:
+            return cls._create_error_result("No results from agent")
+
+        agent_result = results[0]
+
+        if not agent_result.get('success', True):
+            error_msg = agent_result.get('error', 'Unknown error')
+            return cls._create_error_result(error_msg)
+
+        output = agent_result.get('output', '')
+
+        if not output or not output.strip():
+            return cls._create_error_result("Agent returned empty output")
+
+        # Parse structured output
+        has_hallucination = cls._detect_hallucination_from_output(output)
+
+        result = EvalDetail(metric=cls.__name__)
+        result.status = has_hallucination
+        result.label = [
+            f"{QualityLabel.QUALITY_BAD_PREFIX}HALLUCINATION"
+            if has_hallucination
+            else QualityLabel.QUALITY_GOOD
+        ]
+        result.reason = [
+            f"Agent Analysis:\n{output}",
+            f"🔍 Web searches: {len(agent_result.get('tool_calls', []))}",
+            f"🤖 Reasoning steps: {agent_result.get('reasoning_steps', 0)}"
+        ]
+
+        return result
+
+    @classmethod
+    def _detect_hallucination_from_output(cls, output: str) -> bool:
+        """
+        Parse agent output using structured format.
+
+        Strategy:
+        1. Regex match for "HALLUCINATION_DETECTED: YES/NO"
+        2. Check response start for marker
+        3. Fallback to keyword detection
+        """
+        if not output:
+            return False
+
+        # Primary: Regex match
+        match = re.search(r'HALLUCINATION_DETECTED:\s*(YES|NO)', output, re.IGNORECASE)
+        if match:
+            return match.group(1).upper() == 'YES'
+
+        # Fallback: Keyword detection (check negatives first!)
+        output_lower = output.lower()
+
+        if any(kw in output_lower for kw in ['no hallucination detected', 'factually accurate']):
+            return False
+        if any(kw in output_lower for kw in ['hallucination detected', 'factual error']):
+            return True
+
+        return False  # Default to no hallucination
+
+    @classmethod
+    def _create_error_result(cls, error_message: str) -> EvalDetail:
+        """Create error result."""
+        result = EvalDetail(metric=cls.__name__)
+        result.status = True
+        result.label = [f"{QualityLabel.QUALITY_BAD_PREFIX}AGENT_ERROR"]
+        result.reason = [f"Agent evaluation failed: {error_message}"]
+        return result
+
+    @classmethod
+    def plan_execution(cls, input_data: Data) -> List[Dict[str, Any]]:
+        """Not used with LangChain agent (agent handles planning)."""
+        return []
+```
+
+#### Why This Pattern Works
+
+1. **Structured Output Format**: Explicitly defines expected format in system prompt
+2. **Regex Parsing**: Reliable primary parsing method
+3. **Fallback Layers**: Keyword detection as safety net
+4. **Error Handling**: Returns error status rather than crashing
+5. **Context Awareness**: Adapts behavior based on available data
+
+#### Configuration Example
+
+```json
+{
+  "name": "AgentFactCheck",
+  "config": {
+    "key": "your-openai-api-key",
+    "api_url": "https://api.openai.com/v1",
+    "model": "gpt-4-turbo",
+    "parameters": {
+      "temperature": 0.1,
+      "max_tokens": 16384,
+      "agent_config": {
+        "max_iterations": 5,
+        "tools": {
+          "tavily_search": {
+            "api_key": "your-tavily-api-key",
+            "max_results": 5,
+            "search_depth": "advanced"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### Testing AgentFactCheck
+
+```python
+from dingo.io import Data
+from dingo.model.llm.agent.agent_fact_check import AgentFactCheck
+
+# Test with context
+data_with_context = Data(
+    prompt="What is the capital of France?",
+    content="The capital is Berlin",
+    context="France's capital is Paris"
+)
+
+# Test without context
+data_without_context = Data(
+    prompt="What year was Python created?",
+    content="Python was created in 1995"
+)
+
+# Agent will adapt behavior automatically
+result1 = AgentFactCheck.eval(data_with_context)
+result2 = AgentFactCheck.eval(data_without_context)
+```
+
+**Full implementation**: `dingo/model/llm/agent/agent_fact_check.py`
+**Tests**: `test/scripts/model/llm/agent/test_agent_fact_check.py` (35 tests)
+
+#### Enhanced Evidence Citation (v1.1)
+
+AgentFactCheck includes a feature to extract and display source URLs from the agent's output, making fact-checking results more transparent and verifiable.
+
+**How it works**:
+
+1. **System Prompt**: Agent is instructed to include a SOURCES section with URLs
+2. **Extraction**: `_extract_sources_from_output()` parses the SOURCES section
+3. **Display**: Sources are appended to the result's reason field
+
+**Implementation**:
+
+```python
+@classmethod
+def _extract_sources_from_output(cls, output: str) -> List[str]:
+    """Extract source URLs from agent output."""
+    sources = []
+    in_sources_section = False
+
+    for line in output.split('\n'):
+        line = line.strip()
+
+        if line.upper().startswith('SOURCES:'):
+            in_sources_section = True
+            continue
+
+        if in_sources_section:
+            # Check if we've reached a new section
+            if line and ':' in line:
+                section_header = line.split(':')[0].upper()
+                if section_header in ['EXPLANATION', 'EVIDENCE', 'HALLUCINATION_DETECTED']:
+                    break
+
+            # Extract URL (with - or • prefix, or direct URL)
+            if line.startswith(('- ', '• ', 'http://', 'https://')):
+                url = line.lstrip('- •').strip()
+                if url:
+                    sources.append(url)
+
+    return sources
+```
+
+**Usage in aggregate_results**:
+
+```python
+# Extract sources from output
+sources = cls._extract_sources_from_output(output)
+
+# Add sources section to result
+result.reason.append("")
+if sources:
+    result.reason.append("📚 Sources consulted:")
+    for source in sources:
+        result.reason.append(f"   • {source}")
+else:
+    result.reason.append("📚 Sources: None explicitly cited")
+```
+
+**Benefits**:
+- ✅ Increases transparency of agent's fact-checking process
+- ✅ Allows users to verify the agent's judgment independently
+- ✅ Provides attribution for evidence used in evaluation
+- ✅ Meets academic and professional citation standards
+
+**Example Output**:
+
+```
+Agent Analysis:
+HALLUCINATION_DETECTED: YES
+EXPLANATION: The response claims the Eiffel Tower is 450 meters tall, but it is actually 330 meters.
+EVIDENCE: According to the official Eiffel Tower website, the height is 330 meters including antennas.
+SOURCES:
+- https://www.toureiffel.paris/en/the-monument
+- https://en.wikipedia.org/wiki/Eiffel_Tower
+
+🔍 Web searches performed: 2
+🤖 Reasoning steps: 4
+⚙️  Agent autonomously decided: Use web search
+
+📚 Sources consulted:
+   • https://www.toureiffel.paris/en/the-monument
+   • https://www.toureiffel.paris/en/the-monument
+```
 
 ---
 

@@ -358,6 +358,33 @@ class BaseAgent(BaseOpenAI):
         return f"You are a {cls.__name__} agent with access to tools."
 
     @classmethod
+    def _format_agent_input(cls, input_data: Data) -> str:
+        """
+        Format input data into text for LangChain agent.
+
+        Default implementation returns input_data.content for backward compatibility.
+        Subclasses can override to include additional fields (prompt, context, etc.)
+
+        Args:
+            input_data: Data object with content and optional fields
+
+        Returns:
+            Formatted input string to pass to agent
+
+        Example override:
+            @classmethod
+            def _format_agent_input(cls, input_data: Data) -> str:
+                parts = []
+                if input_data.prompt:
+                    parts.append(f"Question: {input_data.prompt}")
+                parts.append(f"Response: {input_data.content}")
+                if hasattr(input_data, 'context') and input_data.context:
+                    parts.append(f"Context: {input_data.context}")
+                return "\\n\\n".join(parts)
+        """
+        return input_data.content
+
+    @classmethod
     def _eval_with_langchain_agent(cls, input_data: Data) -> EvalDetail:
         """
         Evaluation using LangChain 1.0 create_agent (LangChain Agent PATH).
@@ -425,9 +452,13 @@ class BaseAgent(BaseOpenAI):
             # Step 4: Invoke agent with max_iterations
             max_iter = cls.get_max_iterations()
             log.info(f"{cls.__name__}: Invoking LangChain agent (max_iterations={max_iter})")
+
+            # Format input using overridable method (allows subclasses to customize)
+            input_text = cls._format_agent_input(input_data)
+
             agent_result = AgentWrapper.invoke_and_format(
                 agent,
-                input_text=input_data.content,
+                input_text=input_text,
                 input_data=input_data,
                 max_iterations=max_iter
             )

@@ -494,7 +494,27 @@ class MyCustomModel(BaseOpenAI):
 
 ### 智能体评估与工具
 
-Dingo 支持基于智能体的评估器，可以使用外部工具进行多步推理和自适应上下文收集：
+Dingo 支持基于智能体的评估器，可以使用外部工具进行多步推理和自适应上下文收集。提供两种实现模式：
+
+**模式 1：基于 LangChain**（如 `AgentFactCheck`）
+- 框架驱动，自主多步推理
+- 使用 LangChain 1.0 的 `create_agent` 和 ReAct 模式
+- 适用于：复杂推理任务，快速原型开发
+- 代码更少，更声明式
+
+**模式 2：自定义工作流**（如 `AgentHallucination`）
+- 开发者驱动，显式工作流控制
+- 手动调用工具和 LLM
+- 适用于：组合现有评估器，特定领域工作流
+- 完全控制，显式行为
+
+两种模式共享相同的配置接口，对用户透明。
+
+**内置智能体：**
+- `AgentFactCheck`: 基于 LangChain 的事实核查，自主搜索控制
+- `AgentHallucination`: 自定义工作流的幻觉检测，自适应上下文收集
+
+**快速示例：**
 
 ```python
 from dingo.io import Data
@@ -520,8 +540,7 @@ class MyAgent(BaseAgent):
         return EvalDetail(...)
 ```
 
-**内置智能体：**
-- `AgentHallucination`: 增强的幻觉检测，支持网络搜索回退
+有关选择和实现智能体模式的详细指导，请参阅[智能体开发指南](docs/agent_development_guide.md)。
 
 **配置示例：**
 ```json

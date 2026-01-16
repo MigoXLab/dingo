@@ -26,23 +26,60 @@ from dingo.utils import log
 @Model.llm_register("AgentHallucination")
 class AgentHallucination(BaseAgent):
     """
-    Agent-based hallucination detector with web search fallback.
+    Agent-based hallucination detector with adaptive context gathering.
 
-    Enhances standard hallucination detection by:
-    1. Using existing LLMHallucination when context is provided
-    2. Automatically gathering context via web search when missing
-    3. Extracting factual claims from responses
-    4. Verifying each claim independently
-    5. Providing transparent source attribution
+    Implementation Pattern: Imperative (Custom Workflow)
+    ===================================================
 
-    This agent bridges the gap between context-dependent and context-independent
-    hallucination detection, making evaluation more robust and practical.
+    This agent uses a fully custom workflow with explicit control over each step:
+    claim extraction → web search → context synthesis → evaluation. Unlike framework-
+    driven agents, this pattern provides complete control over the execution flow and
+    can compose with existing Dingo evaluators.
+
+    Key Characteristics:
+    -------------------
+    - Implements custom `eval()` method with explicit workflow logic
+    - Manually calls `execute_tool()` for web search operations
+    - Manually calls `send_messages()` for LLM interactions
+    - Can delegate to existing evaluators (e.g., LLMHallucination)
+    - Full control over execution flow and error handling
+
+    Workflow Steps:
+    --------------
+    1. Check if context is available in input data
+    2. If context exists: Delegate to LLMHallucination evaluator
+    3. If context missing:
+       a. Extract factual claims from response (LLM call)
+       b. Search web for each claim (Tavily tool)
+       c. Synthesize context from search results (LLM call)
+       d. Evaluate with synthesized context (LLMHallucination)
+
+    When to Use This Pattern:
+    ------------------------
+    ✅ Need fine-grained control over workflow steps
+    ✅ Want to compose with existing Dingo evaluators
+    ✅ Prefer explicit over implicit behavior
+    ✅ Have domain-specific workflow requirements
+    ✅ Need to implement conditional logic between steps
+
+    When NOT to Use:
+    ---------------
+    ❌ Want framework-managed multi-step reasoning
+    ❌ Prefer declarative agent configuration
+    ❌ Need rapid prototyping with minimal code
+    ❌ Complex reasoning that benefits from ReAct pattern
+
+    See Also:
+    --------
+    - docs/agent_development_guide.md - Comprehensive agent development guide
+    - AgentFactCheck - LangChain framework pattern for comparison
+    - LLMHallucination - Base evaluator used for delegation
 
     Configuration Example:
     {
         "name": "AgentHallucination",
         "config": {
-            "key": "openai-api-key",
+            "key": "your-openai-api-key",
             "api_url": "https://api.openai.com/v1",
             "model": "gpt-4.1-mini-2025-04-14",
             "parameters": {
@@ -50,8 +87,9 @@ class AgentHallucination(BaseAgent):
                     "max_iterations": 3,
                     "tools": {
                         "tavily_search": {
-                            "api_key": "tavily-api-key",
-                            "max_results": 5
+                            "api_key": "your-tavily-api-key",
+                            "max_results": 5,
+                            "search_depth": "advanced"
                         }
                     }
                 }

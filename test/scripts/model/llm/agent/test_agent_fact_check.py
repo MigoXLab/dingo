@@ -30,7 +30,7 @@ class TestAgentFactCheckRegistration:
         """Test agent configuration attributes."""
         assert AgentFactCheck.use_agent_executor is True
         assert "tavily_search" in AgentFactCheck.available_tools
-        assert AgentFactCheck.max_iterations == 5
+        assert AgentFactCheck.max_iterations == 10
 
 
 class TestFormatAgentInput:
@@ -423,8 +423,10 @@ class TestIntegration:
     @patch.object(AgentFactCheck, 'create_client')
     @patch.object(AgentFactCheck, 'get_langchain_tools')
     @patch.object(AgentFactCheck, 'get_langchain_llm')
+    @patch.object(AgentFactCheck, '_check_langchain_available', return_value=True)
     def test_eval_with_context_no_search(
         self,
+        mock_check_langchain,
         mock_get_llm,
         mock_get_tools,
         mock_create_client,
@@ -463,8 +465,10 @@ class TestIntegration:
     @patch.object(AgentFactCheck, 'create_client')
     @patch.object(AgentFactCheck, 'get_langchain_tools')
     @patch.object(AgentFactCheck, 'get_langchain_llm')
+    @patch.object(AgentFactCheck, '_check_langchain_available', return_value=True)
     def test_eval_without_context_must_search(
         self,
+        mock_check_langchain,
         mock_get_llm,
         mock_get_tools,
         mock_create_client,

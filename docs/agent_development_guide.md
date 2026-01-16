@@ -121,7 +121,7 @@ class AgentFactCheck(BaseAgent):
         parts = []
 
         if hasattr(input_data, 'prompt') and input_data.prompt:
-            parts.append(f"**Question:**\\n{input_data.prompt}")
+            parts.append(f"**Question:**\n{input_data.prompt}")
 
         parts.append(f"**Response to Evaluate:**\\n{input_data.content}")
 
@@ -1269,7 +1269,7 @@ SOURCES:
 
 📚 Sources consulted:
    • https://www.toureiffel.paris/en/the-monument
-   • https://www.toureiffel.paris/en/the-monument
+   • https://en.wikipedia.org/wiki/Eiffel_Tower
 ```
 
 ---

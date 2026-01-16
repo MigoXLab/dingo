@@ -305,7 +305,7 @@ Always include SOURCES with specific URLs when you perform web searches."""
                 # Check if we've reached a new section (ends SOURCES section)
                 if line and ':' in line:
                     section_header = line.split(':')[0].upper()
-                    if section_header in ['EXPLANATION', 'EVIDENCE', 'HALLUCINATION_DETECTED', 'CONFIDENCE']:
+                    if section_header in ['EXPLANATION', 'EVIDENCE', 'HALLUCINATION_DETECTED']:
                         break
 
                 # Extract URL (with - or • prefix, or direct URL)

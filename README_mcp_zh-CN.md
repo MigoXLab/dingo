@@ -251,9 +251,12 @@ Cursor 将提示你输入必要的参数。
 运行 Dingo 评估（基于规则或基于 LLM）。
 
 *   **参数**:
-    *   `input_path` (str): 输入文件或目录的路径（相对于项目根目录或绝对路径）。
+    *   `input_path` (str): 输入文件或目录的路径。支持：
+        *   **相对路径**（推荐）：相对于当前工作目录（CWD）解析，例如：`test_data.jsonl`
+        *   **绝对路径**：如果文件存在，直接使用
+        *   **项目相对路径**（兼容旧版）：如果在 CWD 中未找到，则回退到项目根目录
     *   `evaluation_type` (Literal["rule", "llm"]): 评估类型。
-    *   `eval_group_name` (str): 用于 `rule` 类型的规则组名称（默认：`""`，表示使用 'default'）。服务端逻辑仅验证 'default', 'sft', 'pretrain'。对于 `llm` 类型则忽略此参数。
+    *   `eval_group_name` (str): 用于 `rule` 类型的规则组名称（默认：`""`，表示使用 'default'）。有效的规则组从 Dingo 的 Model 注册表动态加载。使用 `list_dingo_components(component_type="rule_groups")` 查看可用的规则组。对于 `llm` 类型则忽略此参数。
     *   `output_dir` (Optional[str]): 保存输出的目录。默认为 `input_path` 父目录下的 `dingo_output_*` 子目录。
     *   `task_name` (Optional[str]): 任务名称（用于生成输出路径）。默认为 `mcp_eval_<uuid>`。
     *   `save_data` (bool): 是否保存详细的 JSONL 输出（默认：True）。

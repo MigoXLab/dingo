@@ -251,9 +251,12 @@ Cursorが必要な引数の入力を促します。
 Dingo評価（ルールベースまたはLLMベース）を実行します。
 
 *   **引数**:
-    *   `input_path` (str): 入力ファイルまたはディレクトリのパス（プロジェクトルートからの相対パスまたは絶対パス）。
+    *   `input_path` (str): 入力ファイルまたはディレクトリのパス。以下をサポート：
+        *   **相対パス**（推奨）：現在の作業ディレクトリ（CWD）からの相対パスで解決、例：`test_data.jsonl`
+        *   **絶対パス**：ファイルが存在する場合、直接使用
+        *   **プロジェクト相対パス**（レガシー）：CWDで見つからない場合、プロジェクトルートにフォールバック
     *   `evaluation_type` (Literal["rule", "llm"]): 評価のタイプ。
-    *   `eval_group_name` (str): `rule`タイプのルールグループ名（デフォルト：`""`、'default'を使用）。サーバーロジックでは'default'、'sft'、'pretrain'のみが検証されます。`llm`タイプでは無視されます。
+    *   `eval_group_name` (str): `rule`タイプのルールグループ名（デフォルト：`""`、'default'を使用）。有効なルールグループはDingoのModelレジストリから動的に読み込まれます。利用可能なグループを確認するには`list_dingo_components(component_type="rule_groups")`を使用してください。`llm`タイプでは無視されます。
     *   `output_dir` (Optional[str]): 出力を保存するディレクトリ。デフォルトは`input_path`の親ディレクトリ内の`dingo_output_*`サブディレクトリ。
     *   `task_name` (Optional[str]): タスクの名前（出力パス生成に使用）。デフォルトは`mcp_eval_<uuid>`。
     *   `save_data` (bool): 詳細なJSONL出力を保存するかどうか（デフォルト：True）。

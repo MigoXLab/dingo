@@ -251,9 +251,12 @@ Run a simplified Dingo evaluation based on a high-level goal.
 Runs a Dingo evaluation (rule-based or LLM-based).
 
 *   **Arguments**:
-    *   `input_path` (str): Path to the input file or directory (relative to the project root or absolute).
+    *   `input_path` (str): Path to the input file or directory. Supports:
+        *   **Relative paths** (recommended): Resolved relative to the current working directory (CWD), e.g., `test_data.jsonl`
+        *   **Absolute paths**: Used directly if the file exists
+        *   **Project-relative paths** (legacy): Falls back to project root if not found in CWD
     *   `evaluation_type` (Literal["rule", "llm"]): Type of evaluation.
-    *   `eval_group_name` (str): Rule group name for `rule` type (default: `""` which uses 'default'). Only 'default', 'sft', 'pretrain' are validated by the server logic. Ignored for `llm` type.
+    *   `eval_group_name` (str): Rule group name for `rule` type (default: `""` which uses 'default'). Valid rule groups are dynamically loaded from Dingo's Model registry. Use `list_dingo_components(component_type="rule_groups")` to see available groups. Ignored for `llm` type.
     *   `output_dir` (Optional[str]): Directory to save outputs. Defaults to a `dingo_output_*` subdirectory within the parent directory of `input_path`.
     *   `task_name` (Optional[str]): Name for the task (used in output path generation). Defaults to `mcp_eval_<uuid>`.
     *   `save_data` (bool): Whether to save detailed JSONL output (default: True).

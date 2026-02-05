@@ -135,27 +135,29 @@ print(f"推理: {result.reason[0]}")
 
 ```python
 from pathlib import Path
-
-from dingo.config import InputArgs
-from dingo.exec import Executor
-
-# 获取项目根目录
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+from dingo.config.input_args import InputArgs
+from dingo.exec.base import Executor
 
 # 配置参数
 input_data = {
     "task_name": "html_extract_compare_evaluation",
-    "input_path": str(PROJECT_ROOT / "test/data/html_extract_compare_test.jsonl"),
+    "input_path": str(Path("test/data/html_extract_compare_test.jsonl")),
     "output_path": "output/html_extract_compare_evaluation/",
 
     # 数据集配置
     "dataset": {
         "source": "local",
         "format": "jsonl",
+        "field": {
+            "id": "data_id",
+            "content": "content"
+            # magic_md 和 language 会自动放入 raw_data
+        }
     },
 
     # 执行器配置
     "executor": {
+        "eval_group": "html_extract_compare",  # 评估组
         "max_workers": 4,  # 并发数
         "result_save": {
             "bad": True,   # 保存问题样本
@@ -163,19 +165,16 @@ input_data = {
         }
     },
 
-    # 评估器配置
-    "evaluator": [
-        {
-            "fields": {"id": "data_id", "content": "content"},
-            "evals": [
-                {"name": "LLMHtmlExtractCompareV2", "config": {
-                    "model": "deepseek-chat",
-                    "key": "your_api_key",
-                    "api_url": "https://api.deepseek.com/v1"
-                }}
-            ]
+    # LLM 配置
+    "evaluator": {
+        "llm_config": {
+            "LLMHtmlExtractCompareV2": {
+                "model": "deepseek-chat",
+                "key": "your_api_key",
+                "api_url": "https://api.deepseek.com/v1"
+            }
         }
-    ]
+    }
 }
 
 # 执行评估

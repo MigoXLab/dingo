@@ -2,7 +2,7 @@ import base64
 import json
 from typing import List
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -11,6 +11,7 @@ from dingo.utils import log
 
 @Model.llm_register("VLMDocumentParsing")
 class VLMDocumentParsing(BaseOpenAI):
+    _required_fields = [RequiredField.CONTENT, RequiredField.IMAGE]
     prompt = r"""
             *角色*
         你是一名严谨细致的文档转换质量评估助手。

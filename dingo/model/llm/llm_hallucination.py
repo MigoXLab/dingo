@@ -1,7 +1,7 @@
 import json
 from typing import List
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -32,6 +32,7 @@ class LLMHallucination(BaseOpenAI):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT, RequiredField.CONTEXT]
     threshold = 0.5  # Default threshold for hallucination detection
     prompt = """
     For each context in the provided contexts, please generate a list of JSON objects to indicate whether the given 'actual output' agrees with EACH context. The JSON will have 2 fields: 'verdict' and 'reason'.

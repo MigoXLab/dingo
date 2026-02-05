@@ -1,7 +1,7 @@
 import re
 
 from dingo.config.input_args import EvaluatorRuleArgs
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
@@ -25,6 +25,7 @@ class RuleResumeIDCard(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'\b\d{17}[\dXx]\b')
 
     @classmethod
@@ -57,6 +58,7 @@ class RuleResumeDetailedAddress(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'(省|市|区|县|镇|街道|路|号|室|栋|单元|楼).{0,20}(省|市|区|县|镇|街道|路|号|室|栋|单元|楼)')
 
     @classmethod
@@ -92,6 +94,7 @@ class RuleResumeEmailMissing(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
 
     @classmethod
@@ -124,6 +127,7 @@ class RuleResumePhoneMissing(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}')
 
     @classmethod
@@ -156,6 +160,7 @@ class RuleResumePhoneFormat(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'\b\d{11}\b')
 
     @classmethod
@@ -192,6 +197,7 @@ class RuleResumeExcessiveWhitespace(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r' {3,}', threshold=3)
 
     @classmethod
@@ -224,6 +230,7 @@ class RuleResumeMarkdown(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'(#{7,}|(\*{3,})|(\_{3,}))')
 
     @classmethod
@@ -259,6 +266,7 @@ class RuleResumeNameMissing(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -292,6 +300,7 @@ class RuleResumeSectionMissing(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'(教育|学历|工作|经历|experience|education)', threshold=1)
 
     @classmethod
@@ -327,6 +336,7 @@ class RuleResumeEmoji(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]')
 
     @classmethod
@@ -359,6 +369,7 @@ class RuleResumeInformal(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'(搞定|牛逼|厉害|哈哈|嘿嘿|呵呵|啊|呀|吧|哦)')
 
     @classmethod
@@ -394,6 +405,7 @@ class RuleResumeDateFormat(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'\d{4}[-./年]\d{1,2}')
 
     @classmethod
@@ -433,6 +445,7 @@ class RuleResumeEducationMissing(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'(教育|学历|education|university|college|bachelor|master|phd)')
 
     @classmethod
@@ -465,6 +478,7 @@ class RuleResumeExperienceMissing(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'(工作|经历|experience|employment|position|职位)')
 
     @classmethod

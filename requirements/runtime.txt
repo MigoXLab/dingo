@@ -34,3 +34,4 @@ openpyxl
 xlrd
 xlwt
 pytest
+pyarrow

@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -39,8 +39,11 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         "description": "评估答案是否直接回答问题，检测无关和冗余信息",
         "paper_title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation",
         "paper_url": "https://arxiv.org/abs/2309.15217",
+        "examples": "examples/rag/dataset_rag_eval_baseline.py",
         "source_frameworks": "Ragas"
     }
+
+    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
 
     question_generation_prompt = """Task: Generate a question for the given answer and identify if the answer is noncommittal.
 
@@ -87,8 +90,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         raw_data = getattr(input_data, 'raw_data', {})
         answer = input_data.content or raw_data.get("answer", "")
 
-        if not answer:
-            raise ValueError("Answer Relevancy评估需要answer字段")
+        # 注意: answer 为空的情况已在 eval() 方法中处理，这里假设 answer 非空
 
         # 使用json.dumps()来安全转义响应字符串
         import json
@@ -220,6 +222,19 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
     def eval(cls, input_data: Data) -> EvalDetail:
         """评估答案相关性"""
         raw_data = getattr(input_data, 'raw_data', {})
+
+        # 检查 answer 是否为空
+        answer = input_data.content or raw_data.get("answer", "")
+        if not answer:
+            # 如果 answer 为空，直接返回 0 分
+            log.warning("Answer Relevancy 评估: answer 字段为空，直接返回 0 分")
+            result = EvalDetail(metric=cls.__name__)
+            result.score = 0.0
+            result.status = True
+            result.label = ["QUALITY_BAD.ANSWER_RELEVANCY_NO_ANSWER"]
+            result.reason = ["answer 字段为空，无法评估答案相关性，分数设为 0"]
+            return result
+
         # 提取原始问题
         original_question = input_data.prompt or raw_data.get("question", "")
         if not original_question:

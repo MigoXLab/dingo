@@ -19,10 +19,10 @@ This dataset aims to evaluate the accuracy of the built-in kaoti prompt words in
 | Negative Examples: <br/>1. ineffectiveness<br/>2. dissimilarity<br/>3. incompleteness | 100   |
 
 
-## LLM Evaluator Introduction
-The built-in **LLMTextQualityKaoti** is used as the LLM evaluator for this test.<br>
-Specific content can be referred to: [Introduction to LLMTextQualityKaoti](../../../dingo/model/llm/llm_text_quality_kaoti.py)<br>
-The built-in LLM evaluator collection can be referred to: [LLM Collection](../../../dingo/model/llm)
+## Prompt Introduction
+The built-in **PromptTextQualityV3Kaoti** is used as the prompt for this test.<br>
+Specific content can be referred to: [Introduction to PromptTextQualityV3Kaoti](../../../dingo/model/prompt/prompt_text_quality_kaoti.py)<br>
+The built-in prompt collection can be referred to: [Prompt Collection](../../../dingo/model/prompt)
 
 ## Evaluation Results
 ### Concept Introduction
@@ -49,31 +49,27 @@ from dingo.config import InputArgs
 from dingo.exec import Executor
 
 input_data = {
-    "input_path": "/your/dataset/path",  # s3 path: qa-huawei
-    "dataset": {
-        "source": "local",
-        "format": "jsonl",
-    },
-    "executor": {
-        "max_workers": 10,
-        "batch_size": 10,
-        "result_save": {
-            "bad": True,
-            "good": True,
-            "raw": True
-        }
-    },
-    "evaluator": [
+    "eval_group": "kaoti",
+    "input_path": "/your/dataset/path",# s3 path :qa-huawei
+    "save_data": True,
+    "save_correct": True,
+    "save_raw": True,
+    "max_workers": 10,
+    "batch_size": 10,
+    "data_format": "jsonl",
+    "column_content": "content",
+    "custom_config":
         {
-            "fields": {"content": "content"},
-            "evals": [
-                {"name": "LLMTextQualityKaoti", "config": {
-                    "key": "Your Key",
-                    "api_url": "Your Url"
-                }}
-            ]
+            "prompt_list": ["PromptTextQualityV3Kaoti"],
+            "llm_config":
+                {
+                    "detect_text_quality_detail":
+                        {
+                            "key": "Your Key",
+                            "api_url": "Your Url",
+                        }
+                }
         }
-    ]
 }
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["local"](input_args)

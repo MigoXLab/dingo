@@ -89,7 +89,8 @@ class SparkExecutor(ExecProto):
             if field_key not in acc['metric_scores']:
                 acc['metric_scores'][field_key] = {}
 
-            # 遍历 List[EvalDetail]
+            # 遍历 List[EvalDetail]，同时收集指标分数和标签
+            label_set = set()
             for eval_detail in eval_detail_list:
                 # 收集指标分数（用于RAG等评估场景，按 field_key 分组）
                 score = eval_detail.get('score') if isinstance(eval_detail, dict) else getattr(eval_detail, 'score', None)
@@ -100,15 +101,18 @@ class SparkExecutor(ExecProto):
                         acc['metric_scores'][field_key][metric] = []
                     acc['metric_scores'][field_key][metric].append(score)
 
-                # 收集标签统计
+                # 收集标签统计（使用 set 去重，避免同一 item 中重复 label 多次计数）
                 label_list = eval_detail.get('label', []) if isinstance(eval_detail, dict) else getattr(eval_detail, 'label', [])
                 if label_list:
-                    # 统计每个 label 的出现次数
                     for label in label_list:
-                        if label not in acc['label_counts'][field_key]:
-                            acc['label_counts'][field_key][label] = 1
-                        else:
-                            acc['label_counts'][field_key][label] += 1
+                        label_set.add(label)
+
+            # 对该 item 的每个唯一 label 计数 +1
+            for label in label_set:
+                if label not in acc['label_counts'][field_key]:
+                    acc['label_counts'][field_key][label] = 1
+                else:
+                    acc['label_counts'][field_key][label] += 1
 
         return acc
 
@@ -197,14 +201,14 @@ class SparkExecutor(ExecProto):
 
     def evaluate(self, data_rdd_item) -> Dict[str, Any]:
         """Evaluate a single data item using broadcast variables."""
-        data: Data = data_rdd_item
-        result_info = ResultInfo(raw_data = data.to_dict())
+        data: Data = data_rdd_item.asDict()
+        result_info = ResultInfo(raw_data = data)
 
         for e_p in self.input_args.evaluator:
             if e_p.fields:
-                map_data = {k: data.to_dict().get(v) for k, v in e_p.fields.items()}
+                map_data = {k: data.get(v) for k, v in e_p.fields.items()}
             else:
-                map_data = data.to_dict()
+                map_data = data
             eval_list_rule = [eval for eval in e_p.evals if eval.name in Model.rule_name_map]
             eval_list_llm = [eval for eval in e_p.evals if eval.name in Model.llm_name_map]
             for eval_type in ["rule", "llm"]:

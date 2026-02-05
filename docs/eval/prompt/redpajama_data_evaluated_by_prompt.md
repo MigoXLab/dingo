@@ -28,10 +28,10 @@ https://huggingface.co/datasets/chupei/redpajama_bad_model
 | Negative Examples: insecurity           | 16    |
 | Negative Examples: irrelevance          | 49    |
 
-## LLM Evaluator Introduction
-The built-in **LLMTextQualityV2** is used as the LLM evaluator for this test.<br>
-Specific content can be referred to: [Introduction to LLMTextQualityV2](../../../dingo/model/llm/llm_text_quality.py)<br>
-The built-in LLM evaluator collection can be referred to: [LLM Collection](../../../dingo/model/llm)
+## Prompt Introduction
+The built-in **PromptTextQualityV2** is used as the prompt for this test.<br>
+Specific content can be referred to: [Introduction to PromptTextQualityV2](../../../dingo/model/prompt/prompt_text_quality.py)<br>
+The built-in prompt collection can be referred to: [Prompt Collection](../../../dingo/model/prompt)
 
 ## Evaluation Results
 ### Concept Introduction
@@ -59,31 +59,27 @@ from dingo.config import InputArgs
 from dingo.exec import Executor
 
 input_data = {
+    "eval_group": "v2",
     "input_path": "chupei/redpajama_good_model",
-    "dataset": {
-        "source": "huggingface",
-        "format": "jsonl",
-    },
-    "executor": {
-        "max_workers": 10,
-        "batch_size": 10,
-        "result_save": {
-            "bad": True,
-            "good": True,
-            "raw": True
-        }
-    },
-    "evaluator": [
+    "save_data": True,
+    "save_correct": True,
+    "save_raw": True,
+    "max_workers": 10,
+    "batch_size": 10,
+    "data_format": "jsonl",
+    "column_content": "content",
+    "custom_config":
         {
-            "fields": {"content": "content"},
-            "evals": [
-                {"name": "LLMTextQualityV2", "config": {
-                    "key": "Your Key",
-                    "api_url": "Your Url"
-                }}
-            ]
+            "prompt_list": ["PromptTextQualityV2"],
+            "llm_config":
+                {
+                    "detect_text_quality_detail":
+                        {
+                            "key": "Your Key",
+                            "api_url": "Your Url",
+                        }
+                }
         }
-    ]
 }
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["local"](input_args)

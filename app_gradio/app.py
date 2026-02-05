@@ -247,32 +247,38 @@ def generate_llm_config_dataframe(llm_list):
 
 def suggest_fields_dataframe(rule_list, llm_list):
     """Suggest required field mappings based on selected evaluators"""
+    from dingo.io.input import RequiredField
+
     suggested_fields = set()
 
-    # Fields required by rule evaluators
-    rule_type_mapping = get_rule_type_mapping()
-    data_column_mapping = get_data_column_mapping()
+    # Get rule and llm name maps
+    rule_name_map = Model.get_rule_name_map()
+    llm_name_map = Model.get_llm_name_map()
 
+    # Fields required by rule evaluators
     for rule in rule_list:
-        # Find which type this rule belongs to
-        for rule_type, rules in rule_type_mapping.items():
-            if rule in rules:
-                if rule_type in data_column_mapping:
-                    suggested_fields.update(data_column_mapping[rule_type])
-                break
+        if rule in rule_name_map:
+            rule_class = rule_name_map[rule]
+            if hasattr(rule_class, '_required_fields'):
+                for field in rule_class._required_fields:
+                    if isinstance(field, RequiredField):
+                        suggested_fields.add(field.value)
 
     # Fields required by LLM evaluators
-    llm_column_mapping = get_llm_column_mapping()
     for llm in llm_list:
-        if llm in llm_column_mapping:
-            suggested_fields.update(llm_column_mapping[llm])
+        if llm in llm_name_map:
+            llm_class = llm_name_map[llm]
+            if hasattr(llm_class, '_required_fields'):
+                for field in llm_class._required_fields:
+                    if isinstance(field, RequiredField):
+                        suggested_fields.add(field.value)
 
-    # Generate suggested fields rows
+    # Generate suggested fields rows - Required Field and Dataset Column both with same value
     rows = []
     for field in sorted(suggested_fields):
         rows.append([field, field])
 
-    return gr.update(value=rows if rows else [["content", "content"]])
+    return gr.update(value=rows)
 
 
 def get_rule_type_mapping():
@@ -405,11 +411,11 @@ if __name__ == '__main__':
                     # Field mapping configuration
                     gr.Markdown("**EvalPipline.fields** - Field Mapping")
                     fields_dataframe = gr.Dataframe(
-                        value=[["content", "content"]],
-                        headers=["Field Key", "Dataset Column"],
+                        value=[],
+                        headers=["Required Field", "Dataset Column"],
                         datatype=["str", "str"],
                         column_count=(2, "fixed"),
-                        row_count=(1, "dynamic"),
+                        row_count=(0, "dynamic"),
                         label="Field Mappings (add/remove rows as needed)",
                         interactive=True
                     )

@@ -51,7 +51,7 @@ For prompt validation, we focus on the precision of identifying low-quality data
 | Precision of Low-Quality Data | TN / (TN + FN) , the ratio of low-quality data correctly identified as such among all data marked as low-quality. |
 
 
-## LLMTextQualityMultiLan Design
+## prompt_text_quality_multilan 设计
 When evaluating different languages, the Role should be set to correspond with the language being evaluated. For instance, when evaluating Serbian, the prompt would be as follows:
 <pre>
 ### Role
@@ -98,35 +98,32 @@ Below are the experimental results showcasing the performance of the prompt acro
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
+
 input_data = {
+    "eval_group": "detect_text_quality_th",
     "input_path": "/your/dataset/path",
-    "dataset": {
-        "source": "local",
-        "format": "jsonl",
-    },
-    "executor": {
-        "max_workers": 10,
-        "batch_size": 10,
-        "result_save": {
-            "bad": True,
-            "good": True,
-            "raw": True
+    "data_format": "jsonl",
+    "column_content": "content",
+    "save_data": True,
+    "save_correct": True,
+    "save_raw": True,
+    "max_workers": 10,
+    "batch_size": 10,
+    "custom_config": {
+            "prompt_list": ["PromptTextQualityTh"],
+            "llm_config":
+                {
+                    "detect_text_quality_detail":
+                        {
+                            "key": "EMPTY",
+                            "api_url": "your_model_api",
+                        }
+                }
         }
-    },
-    "evaluator": [
-        {
-            "fields": {"content": "content"},
-            "evals": [
-                {"name": "LLMTextQualityMultiLan", "config": {
-                    "key": "EMPTY",
-                    "api_url": "your_model_api"
-                }}
-            ]
-        }
-    ]
 }
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["local"](input_args)
 result = executor.execute()
 print(result)
+
 ```

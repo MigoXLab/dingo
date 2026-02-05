@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import cls from 'classnames';
 import IconFont from '@/components/icon-font';
 import { SummaryData } from './summary-data-table';
 import tinycolor from 'tinycolor2';
 import { TextTooltip } from '@/components/text-tooltip';
+import { Select } from 'antd';
 
 export const getColorByRatioHover = (_parentIndex: number) => {
     const colors = [
@@ -88,7 +89,7 @@ const CustomLegend = ({
 
     // 检查是否有二级数据
     const hasSecondLevel = firstLevelType => {
-        return Object.keys(data.name_ratio).some(key =>
+        return Object.keys(data.type_ratio?.content||{}).some(key =>
             key.startsWith(firstLevelType + '-')
         );
     };
@@ -184,24 +185,25 @@ const CustomLegend = ({
 const PieChart = ({ data }: { data: SummaryData }) => {
     // 存储当前选中的一级标签
     const [activeFirstLevel, setActiveFirstLevel] = useState<string>('');
+    // 我要取得data.type_ratio的第一个key
+    const [selected, setSelected] = useState<string>(Object.keys(data.type_ratio || {})[0] || '');
 
-    // 一级数据处理
-    const firstLevelData = Object.entries(data?.type_ratio).map(
-        ([key, value], index) => ({
-            name: key,
-            value,
-            itemStyle: {
-                color: tinycolor(getColorByRatio(index, false))
-                    ?.setAlpha(0.8)
-                    .toRgbString(),
-                hoverColor: getColorByRatioHover(index),
-            },
-        })
-    );
+
+    // 安全获取 type_ratio，支持 content 属性或直接使用 type_ratio
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const typeRatioData = (data.type_ratio as any)?.content || data.type_ratio || {};
+    const typeRatio = data.type_ratio || {};
+    const selectList = Object.keys(data.type_ratio || {}).map((key) => ({
+        value: key,
+        label: key,
+    }));
 
     // 获取二级数据的函数
-    const getSecondLevelData = firstLevelType => {
-        return Object.entries(data.name_ratio)
+    const getSecondLevelData = (firstLevelType: string) => {
+        if (!typeRatioData || typeof typeRatioData !== 'object') {
+            return [];
+        }
+        return Object.entries(typeRatioData)
             .filter(([key]) => key.startsWith(firstLevelType + '-'))
             .map(([key, value], idx) => ({
                 name: key.split('-')[1],
@@ -215,17 +217,33 @@ const PieChart = ({ data }: { data: SummaryData }) => {
             }));
     };
 
+    //根据筛选获得扇形图的右侧展示的一级目录
+    const firstLevelData = useMemo(()=>{
+        return Object.entries(typeRatio[selected] || {}).map(
+            ([key, value], index) => ({
+                name: key,
+                value,
+                itemStyle: {
+                    color: tinycolor(getColorByRatio(index, false))
+                        ?.setAlpha(0.8)
+                        .toRgbString(),
+                    hoverColor: getColorByRatioHover(index),
+                },
+            })
+        );
+    },[selected]);
+
     // 图例点击事件处理
     const onEvents = {
         legendselectchanged: params => {
             // 获取被点击的图例名称
             const clickedName = Object.entries(params.selected).find(
-                ([_, selected]) => selected
+                ([, selected]) => selected
             )?.[0];
 
             // 如果点击的是当前活动的一级标签，则关闭二级展示
             if (activeFirstLevel === clickedName) {
-                setActiveFirstLevel(null);
+                setActiveFirstLevel('');
             } else {
                 setActiveFirstLevel(clickedName!);
             }
@@ -350,6 +368,17 @@ const PieChart = ({ data }: { data: SummaryData }) => {
             style={{ height: '100%', width: '100%', minWidth: 800 }}
             className="flex justify-center"
         >
+            <div className="absolute top-4 left-4">
+                <Select
+                    placeholder="Underlined"
+                    variant="borderless"
+                    style={{ flex: 1 }}
+                    options={selectList}
+                    onChange={(value)=>{setSelected(value)}}
+                    value={selected}
+                />
+            </div>
+
             <ReactECharts
                 option={option}
                 style={{

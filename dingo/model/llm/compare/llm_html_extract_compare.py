@@ -2,7 +2,7 @@ import json
 import re
 from typing import List
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -13,6 +13,7 @@ from dingo.utils.exception import ConvertJsonError
 
 @Model.llm_register("LLMHtmlExtractCompare")
 class LLMHtmlExtractCompare(BaseOpenAI):
+    _required_fields = [RequiredField.CONTENT]
     prompt = r"""
     你是一位专业的 HTML 内容提取评估专家，擅长分析 HTML 代码和 Markdown 文本的转换质量。现在我会提供三段内容：
 

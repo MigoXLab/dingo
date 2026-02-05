@@ -12,7 +12,7 @@
 
 ### 输入与输出
 
-- **输入**：待评测的数据集（问答对形式）[数据示例](../../test/data/test_3h_jsonl.jsonl)
+- **输入**：待评测的数据集（问答对形式）[数据示例](../test/data/test_3h_jsonl.jsonl)
 - **输出**：
   - 数据在所选维度上评测的占比统计
   - 每条数据的评测结果
@@ -122,4 +122,4 @@
 
 
 ## 使用示例
-[示例文档](../../examples/classify/sdk_3h_evaluation.py)
+[示例文档](../examples/classify/sdk_3h_evaluation.py)

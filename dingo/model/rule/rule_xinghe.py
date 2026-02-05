@@ -1,7 +1,7 @@
 import re
 
 from dingo.config.input_args import EvaluatorRuleArgs
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
@@ -20,6 +20,7 @@ class RuleDoi(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r'^10\.\d{4,9}/([^A-Z\s]*)$')
 
     @classmethod
@@ -48,6 +49,7 @@ class RuleIsbn(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod

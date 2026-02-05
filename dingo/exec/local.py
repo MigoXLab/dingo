@@ -3,6 +3,8 @@ import copy
 import itertools
 import json
 import os
+import subprocess
+import sys
 import time
 import uuid
 from typing import Generator, List, Optional
@@ -115,6 +117,7 @@ class LocalExecutor(ExecProto):
                             self.summary.type_ratio[field_key] = {}
 
                         # 遍历 List[EvalDetail]，同时收集指标分数和标签
+                        label_set = set()
                         for eval_detail in eval_detail_list:
                             # 收集指标分数（按 field_key 分组）
                             if eval_detail.score is not None and eval_detail.metric:
@@ -123,8 +126,11 @@ class LocalExecutor(ExecProto):
                             # 收集标签统计
                             label_list = eval_detail.label if eval_detail.label else []
                             for label in label_list:
-                                self.summary.type_ratio[field_key].setdefault(label, 0)
-                                self.summary.type_ratio[field_key][label] += 1
+                                label_set.add(label)
+
+                        for label in label_set:
+                            self.summary.type_ratio[field_key].setdefault(label, 0)
+                            self.summary.type_ratio[field_key][label] += 1
 
                     if result_info.eval_status:
                         self.summary.num_bad += 1
@@ -147,6 +153,30 @@ class LocalExecutor(ExecProto):
         # Finalize summary
         self.summary = self.summarize(self.summary)
         self.write_summary(self.summary.output_path, self.input_args, self.summary)
+
+        # Open browser if use_browser is True
+        if self.input_args.use_browser:
+            try:
+                # 使用 sys.executable 获取当前 Python 解释器路径
+                # 将命令作为列表传递，避免 shell 注入风险
+                cmd = [sys.executable, "-m", "dingo.run.vsl", "--input", self.summary.output_path]
+                log.warning(f"Opening browser with command: {' '.join(cmd)}")
+
+                # 使用 subprocess.Popen 在后台启动服务器
+                # start_new_session=True 让子进程独立运行，不受父进程退出影响
+                # stdout/stderr=DEVNULL 避免管道缓冲区死锁问题
+                subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True
+                )
+
+                # 给服务器一点时间启动
+                time.sleep(1)
+                log.warning("Browser server started in background")
+            except Exception as e:
+                log.warning(f"Failed to open browser: {e}")
 
         return self.summary
 
@@ -193,8 +223,8 @@ class LocalExecutor(ExecProto):
         join_fields = ','.join(eval_fields.values()) if eval_fields else 'default'
 
         # 根据配置决定保存哪些结果
-        if self.input_args.executor.result_save.all_labels:
-            # 保存所有结果
+        if self.input_args.executor.result_save.all_labels or self.input_args.executor.result_save.merge:
+            # 保存所有结果（merge 模式也需要保存所有结果）
             if eval_detail_list:
                 result_info.eval_details = {join_fields: eval_detail_list}
         else:
@@ -251,6 +281,18 @@ class LocalExecutor(ExecProto):
         self, path: str, input_args: InputArgs, result_info: ResultInfo
     ):
         if not input_args.executor.result_save.bad:
+            return
+
+        # 如果启用 merge 模式，将所有数据写入同一个文件
+        if input_args.executor.result_save.merge:
+            f_n = os.path.join(path, "all_results.jsonl")
+            with open(f_n, "a", encoding="utf-8") as f:
+                # if input_args.executor.result_save.raw:
+                #     str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)
+                # else:
+                #     str_json = json.dumps(result_info.to_dict(), ensure_ascii=False)
+                str_json = json.dumps(result_info.to_raw_dict(), ensure_ascii=False)
+                f.write(str_json + "\n")
             return
 
         if not input_args.executor.result_save.good and not result_info.eval_status:

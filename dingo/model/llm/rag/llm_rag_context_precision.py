@@ -7,7 +7,7 @@ import json
 import time
 from typing import List
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -39,8 +39,11 @@ class LLMRAGContextPrecision(BaseOpenAI):
         "description": "评估检索上下文的精确度，包括相关性和排序质量",
         "paper_title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation",
         "paper_url": "https://arxiv.org/abs/2309.15217",
+        "examples": "examples/rag/dataset_rag_eval_baseline.py",
         "source_frameworks": "Ragas"
     }
+
+    _required_fields = [RequiredField.CONTENT, RequiredField.CONTEXT, RequiredField.PROMPT]
 
     @classmethod
     def context_precision_prompt(cls, question: str, context: str, answer: str) -> str:
@@ -163,8 +166,7 @@ class LLMRAGContextPrecision(BaseOpenAI):
         question = input_data.prompt or raw_data.get("question", "")
         answer = input_data.content or raw_data.get("answer", "")
 
-        if not answer:
-            raise ValueError("Context Precision评估需要answer字段")
+        # 注意: answer 为空的情况已在 eval() 方法中处理，这里假设 answer 非空
 
         # 处理contexts
         contexts = None
@@ -273,6 +275,20 @@ class LLMRAGContextPrecision(BaseOpenAI):
         """重写父类的eval方法，支持为每个上下文发送单独的请求"""
         if cls.client is None:
             cls.create_client()
+
+        # 检查 answer 是否为空
+        raw_data = getattr(input_data, 'raw_data', {})
+        answer = input_data.content or raw_data.get("answer", "")
+
+        if not answer:
+            # 如果 answer 为空，直接返回 0 分
+            log.warning("Context Precision 评估: answer 字段为空，直接返回 0 分")
+            result = EvalDetail(metric=cls.__name__)
+            result.score = 0.0
+            result.status = True
+            result.label = ["QUALITY_BAD.CONTEXT_PRECISION_NO_ANSWER"]
+            result.reason = ["answer 字段为空，无法评估上下文精度，分数设为 0"]
+            return result
 
         # 获取所有上下文的消息
         messages_list = cls.build_messages(input_data)

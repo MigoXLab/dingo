@@ -125,38 +125,28 @@ class RuleImageQuality(BaseRule):
 #### 执行示例：
 
 ```python
-from pathlib import Path
-
 from dingo.config import InputArgs
 from dingo.exec import Executor
-
-# 获取项目根目录
-PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
 def image_quality():
     input_data = {
-        "input_path": str(PROJECT_ROOT / "test/data/test_local_img.jsonl"),
+        "input_path": "../../test/data/test_local_img.jsonl",
         "dataset": {
             "source": "local",
             "format": "image",
+            "field": {
+                "id": "id",
+                "image": "img"
+            }
         },
         "executor": {
+            "rule_list": ["RuleImageValid", "RuleImageSizeValid", "RuleImageQuality"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        },
-        "evaluator": [
-            {
-                "fields": {"id": "id", "image": "img"},
-                "evals": [
-                    {"name": "RuleImageValid"},
-                    {"name": "RuleImageSizeValid"},
-                    {"name": "RuleImageQuality"}
-                ]
-            }
-        ]
+        }
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)
@@ -187,36 +177,28 @@ class RuleImageRepeat(BaseRule):
 #### 执行示例：
 
 ```python
-from pathlib import Path
-
 from dingo.config import InputArgs
 from dingo.exec import Executor
-
-# 获取项目根目录
-PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
 def image_repeat():
     input_data = {
-        "input_path": str(PROJECT_ROOT / "test/data/test_local_img_repeat.jsonl"),
+        "input_path": "../../test/data/test_local_img_repeat.jsonl",
         "dataset": {
             "source": "local",
             "format": "jsonl",
+            "field": {
+                "id": "id",
+                "content": "content"
+            }
         },
         "executor": {
+            "rule_list": ["RuleImageRepeat"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        },
-        "evaluator": [
-            {
-                "fields": {"id": "id", "content": "content"},
-                "evals": [
-                    {"name": "RuleImageRepeat"}
-                ]
-            }
-        ]
+        }
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)
@@ -247,36 +229,36 @@ class RuleImageTextSimilarity(BaseRule):
 #### 执行示例：
 
 ```python
-from pathlib import Path
-
 from dingo.config import InputArgs
 from dingo.exec import Executor
-
-# 获取项目根目录
-PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
 def image_text_similarity():
     input_data = {
-        "input_path": str(PROJECT_ROOT / "test/data/test_local_img_text.jsonl"),
+        "input_path": "../../test/data/test_local_img_text.jsonl",
         "dataset": {
             "source": "local",
             "format": "image",
+            "field": {
+                "id": "id",
+                "content": "content",
+                "image": "img"
+            }
         },
         "executor": {
+            "rule_list": ["RuleImageTextSimilarity"],
+            "evaluator": {
+                "rule_config": {
+                    "RuleImageTextSimilarity": {
+                        "threshold": 0.2  # 自定义阈值
+                    }
+                }
+            },
             "result_save": {
                 "bad": True,
                 "good": True
             }
-        },
-        "evaluator": [
-            {
-                "fields": {"id": "id", "content": "content", "image": "img"},
-                "evals": [
-                    {"name": "RuleImageTextSimilarity", "config": {"threshold": 0.2}}
-                ]
-            }
-        ]
+        }
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)

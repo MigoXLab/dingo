@@ -68,4 +68,4 @@ Below is an instruction:
 
 
 ## 使用示例
-[示例文档](../../examples/classify/sdk_topic_classifcation.py)
+[示例文档](../examples/classify/sdk_topic_classifcation.py)

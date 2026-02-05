@@ -1,3 +1,4 @@
+from dingo.io.input import RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -17,6 +18,7 @@ class LLMLongVideoQa(BaseOpenAI):
         "description": "Generate video-related question-answer pairs based on the summarized information of the input long video.",
     }
 
+    _required_fields = [RequiredField.CONTENT]
     prompt = """
             ### Background
             You will be given a video summary text that chronologically records the content of the video. Your task is to infer the complete story of events in the video based on the summary content and generate 6 multi-step reasoning Q&A pairs that satisfy the <Output Format>.

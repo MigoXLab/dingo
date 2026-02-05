@@ -15,9 +15,7 @@ if __name__ == '__main__':
         },
         "executor": {
             "result_save": {
-                "bad": True,
-                "good": True,
-                "raw": True,
+                "merge": True,
             }
         },
         "evaluator": [

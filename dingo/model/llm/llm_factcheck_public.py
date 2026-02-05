@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Literal
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -38,6 +38,7 @@ class LLMFactCheckPublic(BaseOpenAI):
         "paper_authors": "OpenAI"
     }
 
+    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
     threshold = 0.8
     batch_size = 10  # 默认批处理大小
     web_enabled = True  # 默认启用网络搜索

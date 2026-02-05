@@ -1,7 +1,7 @@
 import json
 from typing import List
 
-from dingo.io.input import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -20,6 +20,7 @@ class LLMClassifyQR(BaseOpenAI):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     prompt = """
     'Classify the image into one of the following categories: "CAPTCHA", "QR code", or "Normal image". '
     'Return the type as the image category (CAPTCHA or QR code or Normal image) and the reason as the specific type of CAPTCHA or QR code. '

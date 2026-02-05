@@ -1,0 +1,3 @@
+{"image": "test/data/img_OCR_iterative/text/input.png", "content": "Ths s a smple txt for OCR tstng.", "content_type": "text", "expected_iterations": 2, "description": "多处拼写错误，需要迭代修正"}
+{"image": "test/data/img_OCR_iterative/formula/input.png", "content": "E = m c 2", "content_type": "equation", "expected_iterations": 1, "description": "公式格式需要修正"}
+{"image": "test/data/img_OCR_iterative/text/input.png", "content": "This is a sample text for OCR testing.", "content_type": "text", "expected_iterations": 0, "description": "初始结果正确，无需迭代"}

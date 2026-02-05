@@ -49,19 +49,23 @@ result = detector.evaluate(
 ```python
 # 新的配置文件结构
 input_data = {
-    "evaluator": [
-        {
-            "fields": {"content": "response", "context": "retrieved_docs"},
-            "evals": [
-                {"name": "RuleHallucinationHHEM", "config": {"threshold": 0.5}},
-                {"name": "LLMTextQualityPromptBase", "config": {
-                    "model": "gpt-4o",
-                    "key": "YOUR_API_KEY",
-                    "api_url": "https://api.openai.com/v1/chat/completions"
-                }}
-            ]
+    "executor": {
+        "eval_group": "rag",  # 使用RAG评估组
+    },
+    "evaluator": {
+        "rule_config": {
+            "RuleHallucinationHHEM": {
+                "threshold": 0.5  # 幻觉检测阈值
+            }
+        },
+        "llm_config": {
+            "LLMTextQualityPromptBase": {
+                "model": "gpt-4o",
+                "key": "YOUR_API_KEY",
+                "api_url": "https://api.openai.com/v1/chat/completions"
+            }
         }
-    ]
+    }
 }
 ```
 

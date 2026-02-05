@@ -68,7 +68,7 @@
 
 🤖 **RAG 系统评估** - 使用 5 个学术支持的指标全面评估检索和生成质量
 
-🧠 **LLM 与规则混合** - 结合快速启发式规则（30+ 内置规则）和基于 LLM 的深度评估
+🧠 **LLM、规则和智能体混合** - 结合快速启发式规则（30+ 内置规则）和基于 LLM 的深度评估
 
 🚀 **灵活执行** - 本地运行快速迭代，或使用 Spark 扩展到数十亿级数据集
 
@@ -177,7 +177,7 @@ python -m dingo.run.vsl --input 输出目录
 
 其中`输出目录`包含评估结果和`summary.json`文件。
 
-![GUI output](docs/assets/dingo_gui.png)
+![GUI output](docs/assets/dingo_gui.jpg)
 
 ## 在线演示
 尝试我们的在线演示: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
@@ -383,6 +383,12 @@ input_data = {
 ✅ 视觉语言模型（InternVL、Gemini）  
 ✅ 自定义 prompt 注册
 
+**基于智能体** - 多步推理与工具
+✅ 网络搜索集成（Tavily）
+✅ 自适应上下文收集
+✅ 多源事实验证
+✅ 自定义智能体与工具注册
+
 **可扩展架构**  
 ✅ 基于插件的规则/prompt/模型注册  
 ✅ 清晰的关注点分离（agents、tools、orchestration）  
@@ -485,6 +491,84 @@ class MyCustomModel(BaseOpenAI):
 查看更多示例：
 - [注册规则](examples/register/sdk_register_rule.py)
 - [注册模型](examples/register/sdk_register_llm.py)
+
+### 智能体评估与工具
+
+Dingo 支持基于智能体的评估器，可以使用外部工具进行多步推理和自适应上下文收集。提供两种实现模式：
+
+**模式 1：基于 LangChain**（如 `AgentFactCheck`）
+- 框架驱动，自主多步推理
+- 使用 LangChain 1.0 的 `create_agent` 和 ReAct 模式
+- 适用于：复杂推理任务，快速原型开发
+- 代码更少，更声明式
+
+**模式 2：自定义工作流**（如 `AgentHallucination`）
+- 开发者驱动，显式工作流控制
+- 手动调用工具和 LLM
+- 适用于：组合现有评估器，特定领域工作流
+- 完全控制，显式行为
+
+两种模式共享相同的配置接口，对用户透明。
+
+**内置智能体：**
+- `AgentFactCheck`: 基于 LangChain 的事实核查，自主搜索控制
+- `AgentHallucination`: 自定义工作流的幻觉检测，自适应上下文收集
+
+**快速示例：**
+
+```python
+from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail
+from dingo.model import Model
+from dingo.model.llm.agent.base_agent import BaseAgent
+
+@Model.llm_register('MyAgent')
+class MyAgent(BaseAgent):
+    """支持工具的自定义智能体"""
+
+    available_tools = ["tavily_search", "my_custom_tool"]
+    max_iterations = 5
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        # 使用工具进行事实核查
+        search_result = cls.execute_tool('tavily_search', query=input_data.content)
+
+        # 使用LLM进行多步推理
+        result = cls.send_messages([...])
+
+        return EvalDetail(...)
+```
+
+有关选择和实现智能体模式的详细指导，请参阅[智能体开发指南](docs/agent_development_guide.md)。
+
+**配置示例：**
+```json
+{
+  "evaluator": [{
+    "evals": [{
+      "name": "AgentHallucination",
+      "config": {
+        "key": "openai-api-key",
+        "model": "gpt-4",
+        "parameters": {
+          "agent_config": {
+            "max_iterations": 5,
+            "tools": {
+              "tavily_search": {"api_key": "tavily-key"}
+            }
+          }
+        }
+      }
+    }]
+  }]
+}
+```
+
+**了解更多：**
+- [智能体开发指南](docs/agent_development_guide.md)
+- [AgentHallucination 示例](examples/agent/agent_hallucination_example.py)
+- [AgentFactCheck LangChain示例](examples/agent/agent_executor_example.py)
 
 ## 执行引擎
 

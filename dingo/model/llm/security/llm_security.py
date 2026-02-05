@@ -1,5 +1,6 @@
 import json
 
+from dingo.io.input import RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
@@ -8,6 +9,8 @@ from dingo.utils.exception import ConvertJsonError
 
 # @Model.llm_register("LLMSecurity")
 class LLMSecurity(BaseOpenAI):
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def process_response(cls, response: str) -> EvalDetail:
         log.info(response)

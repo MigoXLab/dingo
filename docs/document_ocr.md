@@ -42,28 +42,31 @@ dingo/
 
 ```python
 input_data = {
-        "input_path": "test/data/test_document_OCR_recognize.jsonl",
+        "input_path": "../../test/data/test_document_OCR_recognize.jsonl",
         "dataset": {
             "source": "local",
             "format": "jsonl",
+            "field": {
+                "id": "id",
+                "content": "pred_content",
+                "prompt": "gt_markdown",
+            }
         },
         "executor": {
+            "prompt_list": ["PromptMinerURecognizeQuality"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": [
-            {
-                "fields": {"id": "id", "content": "pred_content", "prompt": "gt_markdown"},
-                "evals": [
-                    {"name": "LLMMinerURecognizeQuality", "config": {
-                        "key": "",
-                        "api_url": ""
-                    }}
-                ]
+        "evaluator": {
+            "llm_config": {
+                "LLMMinerURecognizeQuality": {
+                    "key": "",
+                    "api_url": "",
+                }
             }
-        ]
+        }
     }
 ```
 
@@ -83,43 +86,42 @@ result.reason        # 评估原因: List[str]，包含完整的JSON分析结果
 ### 基础用法
 
 ```python
-from pathlib import Path
-
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
-# 获取项目根目录
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-
 if __name__ == '__main__':
     input_data = {
-        "input_path": str(PROJECT_ROOT / "test/data/test_document_OCR_recognize.jsonl"),
+        "input_path": "../../test/data/test_document_OCR_recognize.jsonl",
         "dataset": {
             "source": "local",
             "format": "jsonl",
+            "field": {
+                "id": "id",
+                "content": "pred_content",
+                "prompt": "gt_markdown",
+            }
         },
         "executor": {
+            "prompt_list": ["PromptMinerURecognizeQuality"],
             "result_save": {
                 "bad": True,
                 "good": True
             }
         },
-        "evaluator": [
-            {
-                "fields": {"id": "id", "content": "pred_content", "prompt": "gt_markdown"},
-                "evals": [
-                    {"name": "LLMMinerURecognizeQuality", "config": {
-                        "key": "",
-                        "api_url": ""
-                    }}
-                ]
+        "evaluator": {
+            "llm_config": {
+                "LLMMinerURecognizeQuality": {
+                    "key": "",
+                    "api_url": "",
+                }
             }
-        ]
+        }
     }
     input_args = InputArgs(**input_data)
     executor = Executor.exec_map["local"](input_args)
     result = executor.execute()
     print(result)
+
 ```
 
 ### JSONL数据格式

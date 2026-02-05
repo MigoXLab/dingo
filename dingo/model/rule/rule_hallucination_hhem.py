@@ -15,7 +15,7 @@ import json
 from typing import List
 
 from dingo.config.input_args import EvaluatorRuleArgs
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.rule.base import BaseRule
@@ -45,6 +45,7 @@ class RuleHallucinationHHEM(BaseRule):
         "paper_authors": "Forrest Bao, Miaoran Li, Rogger Luo, Ofer Mendelevitch"
     }
 
+    _required_fields = [RequiredField.CONTENT, RequiredField.CONTEXT]
     dynamic_config = EvaluatorRuleArgs(threshold=0.5)
     model = None
 

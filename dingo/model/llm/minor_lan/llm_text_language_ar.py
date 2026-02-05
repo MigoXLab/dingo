@@ -1,9 +1,11 @@
+from dingo.io.input import RequiredField
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 
 
 @Model.llm_register("LLMTextLanguageAr")
 class LLMTextLanguageAr(BaseOpenAI):
+    _required_fields = [RequiredField.CONTENT]
     prompt = """
 ### Role
 You are an Arabic linguistics expert

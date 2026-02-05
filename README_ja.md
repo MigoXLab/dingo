@@ -176,7 +176,7 @@ python -m dingo.run.vsl --input output_directory
 
 ここで`output_directory`は`summary.json`ファイルを含む評価結果が格納されているディレクトリです。
 
-![GUI output](docs/assets/dingo_gui.png)
+![GUI output](docs/assets/dingo_gui.jpg)
 
 ## オンラインデモ
 オンラインデモでDingoをお試しください: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)

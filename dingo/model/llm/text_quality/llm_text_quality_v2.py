@@ -1,9 +1,11 @@
+from dingo.io.input import RequiredField
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 
 
 @Model.llm_register("LLMTextQualityV2")
 class LLMTextQualityV2(BaseOpenAI):
+    _required_fields = [RequiredField.CONTENT]
     prompt = """
 ### Role
 You are an expert in language model.

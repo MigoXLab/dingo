@@ -130,79 +130,77 @@ print(f"详细原因: {result.reason[0]}")  # 包含幻觉分数等详细信息
 ### 使用 HHEM-2.1-Open（本地，免费）
 
 ```python
-from pathlib import Path
-
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
-# 获取项目根目录
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-
 input_data = {
-    "input_path": str(PROJECT_ROOT / "test/data/hallucination_test.jsonl"),
+    "input_path": str(Path("test/data/hallucination_test.jsonl")),
     "output_path": "output/hhem_evaluation/",
     "dataset": {
         "source": "local",
         "format": "jsonl",
+        "field": {
+            "prompt": "prompt",
+            "content": "content",
+            "context": "context",
+        }
     },
     "executor": {
+        "rule_list": ["RuleHallucinationHHEM"],  # Use HHEM rule instead of LLM
         "result_save": {
             "bad": True,
             "good": True  # Also save good examples for comparison
         }
     },
-    "evaluator": [
-        {
-            "fields": {"prompt": "prompt", "content": "content", "context": "context"},
-            "evals": [
-                {"name": "RuleHallucinationHHEM", "config": {"threshold": 0.5}}
-            ]
+    "evaluator": {
+        "rule_config": {
+            "RuleHallucinationHHEM": {
+                "threshold": 0.5  # Default threshold (0.0-1.0, higher = more strict)
+            }
         }
-    ]
+    }
 }
 
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["local"](input_args)
 result = executor.execute()
 
-print(f"HHEM 幻觉检测完成: 发现 {result.num_bad}/{result.total} 个问题")
+print(f"HHEM 幻觉检测完成: 发现 {result.bad_count}/{result.total_count} 个问题")
 ```
 
-### 使用 LLM（在线，需要 API）
+### 使用 GPT（在线，需要 API）
 
 ```python
-from pathlib import Path
-
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
-# 获取项目根目录
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-
 input_data = {
-    "input_path": str(PROJECT_ROOT / "test/data/hallucination_test.jsonl"),
+    "input_path": "test/data/hallucination_test.jsonl",  # Your JSONL file path
     "output_path": "output/hallucination_evaluation/",
     "dataset": {
         "source": "local",
         "format": "jsonl",
+        "field": {
+            "prompt": "prompt",
+            "content": "content",
+            "context": "context",
+        }
     },
     "executor": {
+        "prompt_list": ["PromptHallucination"],
         "result_save": {
             "bad": True
         }
     },
-    "evaluator": [
-        {
-            "fields": {"prompt": "prompt", "content": "content", "context": "context"},
-            "evals": [
-                {"name": "LLMHallucination", "config": {
-                    "model": "deepseek-chat",
-                    "key": "Your API Key",
-                    "api_url": "https://api.deepseek.com/v1"
-                }}
-            ]
+    "evaluator": {
+        "llm_config": {
+            "LLMHallucination": {
+                "model": "deepseek-chat",
+                "key": "Your API Key",
+                "api_url": "https://api.deepseek.com/v1"
+            }
         }
-    ]
+    }
 }
 
 input_args = InputArgs(**input_data)
@@ -210,7 +208,8 @@ executor = Executor.exec_map["local"](input_args)
 result = executor.execute()
 
 print(result)
-print(f"LLM 幻觉检测完成: 发现 {result.num_bad}/{result.total} 个问题")
+
+print(f"GPT 幻觉检测完成: 发现 {result.bad_count}/{result.total_count} 个问题")
 ```
 
 ## 🎛️ 高级配置
@@ -220,23 +219,23 @@ print(f"LLM 幻觉检测完成: 发现 {result.num_bad}/{result.total} 个问题
 ```python
 # 方式1: 直接设置类属性
 RuleHallucinationHHEM.dynamic_config.threshold = 0.3  # HHEM 更严格的检测
-LLMHallucination.dynamic_config.threshold = 0.3      # LLM 更严格的检测
+LLMHallucination.threshold = 0.3      # GPT 更严格的检测
 
 # 方式2: 通过配置文件
 {
-    "evaluator": [
-        {
-            "fields": {"prompt": "prompt", "content": "content", "context": "context"},
-            "evals": [
-                {"name": "RuleHallucinationHHEM", "config": {"threshold": 0.7}},
-                {"name": "LLMHallucination", "config": {
-                    "model": "gpt-4o",
-                    "key": "YOUR_API_KEY",
-                    "api_url": "https://api.openai.com/v1"
-                }}
-            ]
+    "rule_config": {
+        "RuleHallucinationHHEM": {
+            "threshold": 0.7  # 更宽松的检测
         }
-    ]
+        },
+    "llm_config": {
+        "LLMHallucination": {
+            "model": "gpt-4o",
+            "key": "YOUR_API_KEY",
+            "api_url": "https://api.openai.com/v1/chat/completions",
+            "threshold": 0.7  # 更宽松的检测
+        }
+    }
 }
 ```
 
@@ -246,29 +245,34 @@ LLMHallucination.dynamic_config.threshold = 0.3      # LLM 更严格的检测
 - **平衡检测** (0.4-0.6): 用于一般质量控制
 - **宽松检测** (0.7-0.8): 用于初步筛选或宽容场景
 
-### 多评估器配置
+### 性能优化配置
 
 ```python
-# 同时使用多个评估器
+# HHEM 批量处理优化
+RuleHallucinationHHEM.load_model()  # 预加载模型
+results = RuleHallucinationHHEM.batch_evaluate(data_list)  # 批量更高效
+
+# GPT 多模型配置
 {
-    "evaluator": [
-        {
-            "fields": {"prompt": "prompt", "content": "content", "context": "context"},
-            "evals": [
-                {"name": "RuleHallucinationHHEM", "config": {"threshold": 0.5}},
-                {"name": "LLMHallucination", "config": {
-                    "model": "gpt-4o",
-                    "key": "YOUR_API_KEY",
-                    "api_url": "https://api.openai.com/v1"
-                }},
-                {"name": "LLMText3HHelpful", "config": {
-                    "model": "gpt-4o-mini",
-                    "key": "YOUR_API_KEY",
-                    "api_url": "https://api.openai.com/v1"
-                }}
-            ]
+    "custom_config": {
+        "prompt_list": [
+            "QUALITY_BAD_HALLUCINATION",
+            "QUALITY_HELPFUL",
+            "QUALITY_HARMLESS"
+        ],
+        "llm_config": {
+            "LLMHallucination": {
+                "model": "gpt-4o",
+                "key": "YOUR_API_KEY",
+                "api_url": "https://api.openai.com/v1/chat/completions"
+            },
+            "LLMText3HHelpful": {
+                "model": "gpt-4o-mini",  # 使用不同模型
+                "key": "YOUR_API_KEY",
+                "api_url": "https://api.openai.com/v1/chat/completions"
+            }
         }
-    ]
+    }
 }
 ```
 
@@ -467,13 +471,15 @@ result = rag_system.generate_answer("什么是深度学习？")
 dingo/
 ├── model/
 │   ├── llm/
-│   │   └── llm_hallucination.py            # LLM-based 检测（含内嵌提示词）
-│   └── rule/
-│       └── rule_hallucination_hhem.py      # HHEM-2.1-Open 集成
+│   │   └── llm_hallucination.py            # GPT-based 检测（DeepEval风格）
+│   ├── rule/
+│   │   └── rule_hallucination_hhem.py      # HHEM-2.1-Open 集成
+│   ├── prompt/prompt_hallucination.py       # GPT 提示词模板
+│   └── response/response_hallucination.py   # 响应数据结构
 ├── io/input/Data.py                         # 扩展Data类支持context
 ├── examples/hallucination/                  # 使用示例
 │   ├── sdk_rule_hhem_detection.py          # Rule-based HHEM 使用示例
-│   ├── sdk_hallucination_detection.py      # LLM 使用示例
+│   ├── sdk_hallucination_detection.py      # GPT 使用示例
 │   └── dataset_hallucination_evaluation.py # 批量评估示例
 └── requirements/hhem_integration.txt        # HHEM 依赖
 ```

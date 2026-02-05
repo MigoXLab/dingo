@@ -2,13 +2,14 @@ import base64
 import os
 from typing import List
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 
 
 @Model.llm_register("VLMImageRelevant")
 class VLMImageRelevant(BaseOpenAI):
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
     prompt = """
     你是一个专业的图像对比分析系统。请对比分析两张图片的一致性和相关性。
 

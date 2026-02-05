@@ -40,7 +40,7 @@ https://huggingface.co/datasets/chupei/slimpajama_goodcase_rule
 | Negative examples: RuleWordNumber               | 7     |
 
 ## Rules Introduction
-This test uses the **pretrain** group rules explicitly configured in the evaluator. For specific rules included, please refer to: [Group Introduction](../../groups.md).<br>
+This test uses the built-in **pretrain** as the eval_group. For specific rules included, please refer to: [Group Introduction](../../groups.md).<br>
 For rules within the group, please refer to: [Rules Introduction](../../rules.md).
 
 ## Evaluation Results
@@ -63,55 +63,22 @@ After evaluation, both positive and negative data will generate corresponding su
 | slimpajama   | 78 | 5  | 103 | 4  | 94        | 95      | 94.5 |
 
 ## Evaluation Method
+Translate this markdown into English.
 
 ```python
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
 input_data = {
+    "eval_group": "pretrain",
     "input_path": "chupei/slimpajama_badcase_rule",
-    "dataset": {
-        "source": "huggingface",
-        "format": "jsonl",
-    },
-    "executor": {
-        "max_workers": 10,
-        "batch_size": 10,
-        "result_save": {
-            "bad": True,
-            "good": True,
-            "raw": True
-        }
-    },
-    "evaluator": [
-        {
-            "fields": {"content": "content"},
-            "evals": [
-                # Pretrain group rules - see docs/groups.md for full list
-                {"name": "RuleAlphaWords"},
-                {"name": "RuleCapitalWords"},
-                {"name": "RuleCharNumber"},
-                {"name": "RuleColonEnd"},
-                {"name": "RuleContentNull"},
-                {"name": "RuleDocRepeat"},
-                {"name": "RuleHtmlEntity"},
-                {"name": "RuleIDCard"},
-                {"name": "RuleLineEndWithEllipsis"},
-                {"name": "RuleLineEndWithTerminal"},
-                {"name": "RuleLineStartWithBulletpoint"},
-                {"name": "RuleLineJavascriptCount"},
-                {"name": "RuleLoremIpsum"},
-                {"name": "RuleMeanWordLength"},
-                {"name": "RuleNoPunc"},
-                {"name": "RuleSentenceNumber"},
-                {"name": "RuleSpecialCharacter"},
-                {"name": "RuleStopWord"},
-                {"name": "RuleSymbolWordRatio"},
-                {"name": "RuleUniqueWords"},
-                {"name": "RuleWordNumber"},
-            ]
-        }
-    ]
+    "save_data": True,
+    "save_correct": True,
+    "save_raw": True,
+    "max_workers": 10,
+    "batch_size": 10,
+    "data_format": "jsonl",
+    "column_content": "content",
 }
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["local"](input_args)

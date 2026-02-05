@@ -32,6 +32,19 @@ class DatasetExcelArgs(BaseModel):
     has_header: bool = True  # 第一行是否为列名，False 则使用列序号作为列名
 
 
+class DatasetCsvArgs(BaseModel):
+    has_header: bool = True  # 第一行是否为列名，False 则使用 column_x 作为列名
+    encoding: str = 'utf-8'  # 文件编码，默认 utf-8，支持 gbk, gb2312, latin1 等
+    dialect: str = 'excel'  # CSV 格式方言：excel(默认), excel-tab, unix 等
+    delimiter: str | None = None  # 分隔符，None 表示根据 dialect 自动选择
+    quotechar: str = '"'  # 引号字符，默认双引号
+
+
+class DatasetParquetArgs(BaseModel):
+    batch_size: int = 10000  # 每次读取的行数，用于流式读取大文件
+    columns: Optional[List[str]] = None  # 指定读取的列，None 表示读取所有列
+
+
 class DatasetFieldArgs(BaseModel):
     id: str = ''
     prompt: str = ''
@@ -49,6 +62,8 @@ class DatasetArgs(BaseModel):
     s3_config: DatasetS3ConfigArgs = DatasetS3ConfigArgs()
     sql_config: DatasetSqlArgs = DatasetSqlArgs()
     excel_config: DatasetExcelArgs = DatasetExcelArgs()
+    csv_config: DatasetCsvArgs = DatasetCsvArgs()
+    parquet_config: DatasetParquetArgs = DatasetParquetArgs()
 
 
 class ExecutorResultSaveArgs(BaseModel):
@@ -56,6 +71,7 @@ class ExecutorResultSaveArgs(BaseModel):
     good: bool = False
     all_labels: bool = False
     raw: bool = False
+    merge: bool = False  # 如果为True，所有数据写入同一个jsonl文件，不分文件夹
 
 
 class ExecutorArgs(BaseModel):

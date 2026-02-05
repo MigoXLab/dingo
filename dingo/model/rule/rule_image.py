@@ -11,7 +11,7 @@ import requests
 from PIL import Image, ImageDraw, ImageFont
 
 from dingo.config.input_args import EvaluatorRuleArgs
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
@@ -33,6 +33,7 @@ class RuleImageValid(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.IMAGE]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -69,6 +70,7 @@ class RuleImageSizeValid(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.IMAGE]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -108,6 +110,7 @@ class RuleImageQuality(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.IMAGE]
     dynamic_config = EvaluatorRuleArgs(threshold=5.5)
 
     @classmethod
@@ -152,6 +155,7 @@ class RuleImageRepeat(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -207,6 +211,7 @@ class RuleImageTextSimilarity(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.IMAGE, RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=0.17)
 
     @classmethod
@@ -260,6 +265,7 @@ class RuleImageArtimuse(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=6, refer_path=['https://artimuse.intern-ai.org.cn/'])
 
     @classmethod
@@ -334,6 +340,7 @@ class RuleImageLabelOverlap(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.IMAGE, RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(
         refer_path=['../../test/data/overlap_visual_image'],  # 用户保存图片路径
     )
@@ -534,6 +541,7 @@ class RuleImageLabelVisualization(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.IMAGE, RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(
         refer_path=['../../test/data/label_visual_image'],  # 用户保存图片路径
     )

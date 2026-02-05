@@ -1,5 +1,6 @@
 import json
 
+from dingo.io.input import RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -22,6 +23,7 @@ class LLMClassifyTopic(BaseOpenAI):
         "validation_dataset": "AlignBench (https://github.com/THUDM/AlignBench)"
     }
 
+    _required_fields = [RequiredField.CONTENT]
     prompt = """
     Assume you are a topic classifier, and your task is to categorize user-provided instructions.
     There are six options in the list provided. You are required to select one category from the following list: ["Language Understanding and Processing", "Writing Ability", "Code", "Mathematics & Reasoning", "Task-oriented Role Play", "Knowledge-based Question and Answering"].

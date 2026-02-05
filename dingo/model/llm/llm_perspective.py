@@ -1,7 +1,7 @@
 import time
 
 from dingo.config.input_args import EvaluatorLLMArgs
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base import BaseLLM
@@ -13,6 +13,8 @@ class LLMPerspective(BaseLLM):
     dynamic_config = EvaluatorLLMArgs(
         api_url="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1"
     )
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def create_client(cls):

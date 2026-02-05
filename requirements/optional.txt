@@ -1,3 +1,6 @@
+# Agent evaluation (optional)
+-r agent.txt
+
 ftfy
 imagededup
 google-api-python-client

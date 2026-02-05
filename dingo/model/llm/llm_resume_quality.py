@@ -1,5 +1,6 @@
 import json
 
+from dingo.io.input import RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -21,6 +22,7 @@ class LLMResumeQuality(BaseOpenAI):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     prompt = """
     # Role
     You are an expert in resume quality evaluation.

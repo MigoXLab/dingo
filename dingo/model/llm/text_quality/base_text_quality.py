@@ -4,6 +4,7 @@ Base class for text quality evaluators with shared response processing logic.
 
 import json
 
+from dingo.io.input import RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.response.response_class import ResponseScoreTypeNameReason
@@ -14,6 +15,8 @@ class BaseTextQuality(BaseOpenAI):
     Base class for text quality evaluators.
     Provides shared response processing logic for LLMTextQualityV4 and V5.
     """
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def process_response(cls, response: str) -> EvalDetail:

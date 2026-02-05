@@ -76,12 +76,15 @@ class Model:
 
     # 分组管理
     rule_groups = {}      # {group_name: [rule_classes]}
+    prompt_groups = {}    # {group_name: [prompt_classes]}
 
     # 按metric_type分类
     rule_metric_type_map = {}    # {metric_type: [rule_classes]}
+    prompt_metric_type_map = {}  # {metric_type: [prompt_classes]}
 
     # 名称映射
     rule_name_map = {}    # {rule_name: rule_class}
+    prompt_name_map = {}  # {prompt_name: prompt_class}
     llm_name_map = {}     # {llm_name: llm_class}
 ```
 
@@ -91,6 +94,7 @@ class Model:
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Model Files   │───▶│   Auto Loader   │───▶│   Name Maps     │
 │   (rule/,       │    │                 │    │                 │
+│    prompt/,     │    │                 │    │                 │
 │    llm/)        │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │                        │
@@ -162,6 +166,19 @@ class GPT35TurboLLM(BaseLLM):
         pass
 ```
 
+#### 3.1.3 prompt_register
+
+```python
+@classmethod
+def prompt_register(cls, metric_type: str, group: List[str]) -> Callable:
+```
+
+**功能**：注册提示词类的装饰器
+
+**参数说明**：
+- `metric_type`: 提示词所属的评测类型
+- `group`: 提示词所属的分组列表
+
 ### 3.2 查询与获取方法
 
 #### 3.2.1 分组查询
@@ -176,7 +193,8 @@ def get_group(cls, group_name) -> Dict[str, List]:
 **返回值**：
 ```python
 {
-    'rule': [rule_classes]
+    'rule': [rule_classes],
+    'prompt': [prompt_classes]
 }
 ```
 
@@ -184,6 +202,7 @@ def get_group(cls, group_name) -> Dict[str, List]:
 ```python
 group_info = Model.get_group("default")
 rules = group_info.get("rule", [])
+prompts = group_info.get("prompt", [])
 ```
 
 #### 3.2.2 按类型查询
@@ -261,15 +280,17 @@ def apply_config_llm(cls):
 
 ```python
 @classmethod
-def apply_config(cls, input_args: InputArgs):
+def apply_config(cls, custom_config: Optional[str | dict], eval_group: str = ''):
 ```
 
 **功能**：完整的配置应用流程
 
 **处理流程**：
-1. 保存 input_args 到类属性
+1. 读取配置文件
 2. 应用规则配置
 3. 应用LLM配置
+4. 应用规则列表配置
+4. 应用提示词列表配置
 
 ### 3.4 自动加载方法
 
@@ -285,9 +306,10 @@ def load_model(cls):
 **处理流程**：
 1. 检查是否已加载，避免重复加载
 2. 扫描rule/目录下的所有.py文件
-3. 扫描llm/目录下的所有.py文件
+3. 扫描prompt/目录下的所有.py文件
+4. 扫描llm/目录下的所有.py文件
 4. 使用importlib动态导入模块
-5. 处理导入异常，记录日志
+6. 处理导入异常，记录日志
 
 **目录结构要求**：
 ```
@@ -296,6 +318,10 @@ dingo/model/
 │   ├── __init__.py
 │   ├── quality_rule.py
 │   └── safety_rule.py
+├── prompt/
+│   ├── __init__.py
+│   ├── qa_prompt.py
+│   └── summary_prompt.py
 └── llm/
     ├── __init__.py
     ├── gpt_llm.py
@@ -362,33 +388,24 @@ class CustomLLM(BaseLLM):
 1. **JSON配置**：
 ```json
 {
-  "evaluator": [
-    {
-      "fields": {"content": "content"},
-      "evals": [
-        {"name": "CustomRule", "config": {"custom_param": "value"}}
-      ]
-    }
-  ]
+  "rule_config": {
+    "CustomRule": [
+      ["custom_param", "value"]
+    ]
+  }
 }
 ```
 
 2. **Python配置**：
 ```python
-from dingo.config import InputArgs
-
-input_data = {
-    "input_path": "data.jsonl",
-    "dataset": {"source": "local", "format": "jsonl"},
-    "evaluator": [
-        {
-            "fields": {"content": "content"},
-            "evals": [{"name": "CustomRule", "config": {"custom_param": "value"}}]
-        }
-    ]
+config = {
+    "rule_config": {
+        "CustomRule": [
+            ["custom_param", "value"]
+        ]
+    }
 }
-input_args = InputArgs(**input_data)
-Model.apply_config(input_args)
+Model.apply_config(config, eval_group="custom")
 ```
 
 ---
@@ -399,6 +416,7 @@ Model.apply_config(input_args)
 
 1. **继承要求**：所有注册的类必须继承自对应的基类
    - 规则类：继承自`BaseRule`
+   - 提示词类：继承自`BasePrompt`
    - LLM类：继承自`BaseLLM`
 
 2. **命名要求**：
@@ -407,7 +425,7 @@ Model.apply_config(input_args)
    - 分组名不能重复
 
 3. **目录结构要求**：
-   - 必须存在`rule/`、`llm/`目录
+   - 必须存在`rule/`、`prompt/`、`llm/`目录
    - Python文件必须以`.py`结尾
    - 不能包含`__init__.py`文件
 

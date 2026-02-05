@@ -8,7 +8,7 @@ Based on the Meta-rater paper for data selection in LLM pre-training.
 import json
 from typing import List
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -42,6 +42,7 @@ class LLMMetaRaterCleanliness(BaseOpenAI):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     prompt = """# CONTEXT #
 I am a data scientist interested in exploring data in the pre-training stage of large language models.
 

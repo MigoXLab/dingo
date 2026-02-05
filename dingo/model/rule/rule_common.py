@@ -3,7 +3,7 @@ import string
 from typing import Tuple
 
 from dingo.config.input_args import EvaluatorRuleArgs
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
@@ -23,6 +23,8 @@ class RuleAbnormalChar(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -56,6 +58,8 @@ class RuleAbnormalHtml(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
@@ -87,6 +91,8 @@ class RuleAbnormalNumber(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r"\n{4}\d+\n{4}")
 
     @classmethod
@@ -117,6 +123,8 @@ class RuleAlphaWords(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=0.6)
 
     @classmethod
@@ -167,6 +175,7 @@ class RuleAudioDataFormat(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -199,6 +208,7 @@ class RuleCapitalWords(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=0.2)
 
     @classmethod
@@ -235,6 +245,8 @@ class RuleCharNumber(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=100)
 
     @classmethod
@@ -269,6 +281,8 @@ class RuleCharSplit(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(
         pattern=r"(?:(?:[a-zA-Z]\s){5}[a-zA-Z])", threshold=3
     )
@@ -305,6 +319,8 @@ class RuleColonEnd(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     eval_fileds = ['content']
     dynamic_config = EvaluatorRuleArgs()
 
@@ -366,6 +382,8 @@ class RuleContentNull(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -397,6 +415,8 @@ class RuleContentShort(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=20)
 
     @classmethod
@@ -438,6 +458,8 @@ class RuleContentShortMultiLan(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=20)
 
     @classmethod
@@ -470,6 +492,8 @@ class RuleCurlyBracket(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=0.025)
 
     @classmethod
@@ -524,6 +548,8 @@ class RuleDocRepeat(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=80)
 
     @classmethod
@@ -565,6 +591,7 @@ class RuleDocFormulaRepeat(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=20)  # 设置阈值为20
 
     @classmethod
@@ -642,6 +669,8 @@ class RuleEnterAndSpace(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
@@ -689,6 +718,8 @@ class RuleEnterMore(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(key_list=[r"\n{8,}", r"\r\n{8,}"])
 
     @classmethod
@@ -736,6 +767,8 @@ class RuleEnterRatioMore(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -768,6 +801,8 @@ class RuleHeadWordAr(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -800,6 +835,8 @@ class RuleHeadWordCs(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -832,6 +869,8 @@ class RuleHeadWordHu(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -864,6 +903,8 @@ class RuleHeadWordKo(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -896,6 +937,8 @@ class RuleHeadWordRu(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -928,6 +971,8 @@ class RuleHeadWordSr(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -960,6 +1005,8 @@ class RuleHeadWordTh(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -992,6 +1039,8 @@ class RuleHeadWordVi(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -1042,6 +1091,8 @@ class RuleHtmlEntity(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(
         key_list=[
             "nbsp",
@@ -1124,6 +1175,8 @@ class RuleHtmlTag(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(
         key_list=["<img", "<p>", "</p>", "<o:p", "</o:p>"]
     )
@@ -1159,6 +1212,8 @@ class RuleIDCard(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(
         pattern=r"(身\s{0,10}份|id\s{0,10}number\s{0,10}|identification|identity|\s{0,10}ID\s{0,10}No\s{0,10}|id\s{0,10}card\s{0,10}|NRIC\s{0,10}number\s{0,10}|IC\s{0,10}number\s{0,10}|resident\s{0,10}registration\s{0,10}|I.D.\s{0,10}Number\s{0,10})"
     )
@@ -1206,6 +1261,8 @@ class RuleInvisibleChar(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(
         pattern=r"[\u2000-\u200F\u202F\u205F\u3000\uFEFF\u00A0\u2060-\u206F\uFEFF\xa0]"
     )
@@ -1252,6 +1309,7 @@ class RuleImageDataFormat(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -1283,6 +1341,8 @@ class RuleLatexSpecialChar(BaseRule):
         "paper_authors": "Together Computer, 2023",
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
+
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(pattern=r"\$\$(.*?\!\!.*?)\$\$")
 
     @classmethod
@@ -1314,6 +1374,8 @@ class RuleLineEndWithEllipsis(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
     dynamic_config = EvaluatorRuleArgs(threshold=0.3, key_list=["...", "…"])
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -1359,6 +1421,8 @@ class RuleLineEndWithTerminal(BaseRule):
     dynamic_config = EvaluatorRuleArgs(
         threshold=0.6, key_list=[".", "!", "?", '"', '"']
     )
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -1422,6 +1486,8 @@ class RuleLineStartWithBulletpoint(BaseRule):
         ],
     )
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import TextSlice, split_paragraphs
@@ -1465,6 +1531,8 @@ class RuleLineJavascriptCount(BaseRule):
     }
     dynamic_config = EvaluatorRuleArgs(threshold=3)
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import TextSlice, normalize, split_paragraphs
@@ -1505,6 +1573,8 @@ class RuleLoremIpsum(BaseRule):
     }
     dynamic_config = EvaluatorRuleArgs(threshold=3e-08)
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import normalize
@@ -1540,6 +1610,8 @@ class RuleMeanWordLength(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
     dynamic_config = EvaluatorRuleArgs(key_list=["3", "10"])
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -1587,6 +1659,7 @@ class RuleNlpDataFormat(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -1637,6 +1710,7 @@ class RuleNoPunc(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs(threshold=112)
 
     @classmethod
@@ -1681,6 +1755,8 @@ class RulePatternSearch(BaseRule):
     }
     dynamic_config = EvaluatorRuleArgs(pattern="your pattern")
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
@@ -1709,6 +1785,8 @@ class RuleSentenceNumber(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
     dynamic_config = EvaluatorRuleArgs(key_list=["3", "7500"])
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -1752,6 +1830,7 @@ class RuleSftDataFormat(BaseRule):
         "evaluation_results": ""
     }
 
+    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
@@ -1799,6 +1878,8 @@ class RuleSpaceMore(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
     dynamic_config = EvaluatorRuleArgs(pattern=" {500,}")
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -1859,6 +1940,8 @@ class RuleSpecialCharacter(BaseRule):
         ]
     )
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
@@ -1905,6 +1988,8 @@ class RuleStopWord(BaseRule):
     }
     dynamic_config = EvaluatorRuleArgs(threshold=0.06)
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         from nltk.tokenize import WordPunctTokenizer
@@ -1945,6 +2030,8 @@ class RuleSymbolWordRatio(BaseRule):
     }
     dynamic_config = EvaluatorRuleArgs(threshold=0.4, key_list=["#", "...", "…"])
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         from nltk.tokenize import WordPunctTokenizer
@@ -1984,6 +2071,8 @@ class RuleUniqueWords(BaseRule):
     }
     dynamic_config = EvaluatorRuleArgs(threshold=0.1)
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         from dingo.model.rule.utils.util import normalize
@@ -2020,6 +2109,8 @@ class RuleUnsafeWords(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
     dynamic_config = EvaluatorRuleArgs(refer_path=[])
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -2094,6 +2185,8 @@ class RuleVedioDataFormat(BaseRule):
     }
     dynamic_config = EvaluatorRuleArgs()
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
@@ -2142,6 +2235,8 @@ class RuleOnlyUrl(BaseRule):
         pattern=r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
     )
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
@@ -2175,6 +2270,8 @@ class RuleWatermark(BaseRule):
     }
     dynamic_config = EvaluatorRuleArgs(key_list=[])
 
+    _required_fields = [RequiredField.CONTENT]
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
@@ -2203,6 +2300,8 @@ class RuleWordNumber(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
     dynamic_config = EvaluatorRuleArgs(key_list=["20", "100000"])
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -2237,6 +2336,8 @@ class RuleWordSplit(BaseRule):
         "evaluation_results": "docs/eval/rule/slimpajama_data_evaluated_by_rule.md"
     }
     dynamic_config = EvaluatorRuleArgs(pattern=r"[A-Za-z]+-\s*$")
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -2289,6 +2390,8 @@ class RuleWordStuck(BaseRule):
             r"[01]+|[0-7]+|0x[0-9a-fA-F]+",
         ]
     )
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -2394,6 +2497,8 @@ class RulePIIDetection(BaseRule):
             "validator": "_validate_ip"
         }
     }
+
+    _required_fields = [RequiredField.CONTENT]
 
     @classmethod
     def _validate_luhn(cls, number: str) -> bool:

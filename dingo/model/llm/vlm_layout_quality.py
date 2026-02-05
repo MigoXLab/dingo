@@ -3,7 +3,7 @@ import json
 import os
 from typing import List
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -12,6 +12,7 @@ from dingo.utils import log
 
 @Model.llm_register("VLMLayoutQuality")
 class VLMLayoutQuality(BaseOpenAI):
+    _required_fields = [RequiredField.CONTENT, RequiredField.IMAGE]
     prompt = r"""
      # 角色
     你是一名严谨细致的布局检测模型专家，你的任务是审查一个布局检测模型输出的蒙版图片，。由于没有标准的正确答案，你需要运用你对通用文档结构、排版惯例和逻辑关系的深刻理解，来识别并标记模型预测中的所有错误。

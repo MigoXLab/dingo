@@ -2,7 +2,7 @@ import json
 import re
 from typing import List
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -25,6 +25,7 @@ class LLMCodeCompare(BaseOpenAI):
         'evaluation_results': ''
     }
 
+    _required_fields = [RequiredField.CONTENT]
     prompt = """
 你是一位专业的代码块识别评估专家,擅长分析 HTML 代码和 Markdown 文本中的代码块。现在我会提供三段内容：
 

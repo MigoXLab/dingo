@@ -69,7 +69,7 @@
 
 🤖 **RAG System Assessment** - Comprehensive evaluation of retrieval and generation quality with 5 academic-backed metrics
 
-🧠 **LLM & Rule Hybrid** - Combine fast heuristic rules (30+ built-in) with LLM-based deep assessment
+🧠 **LLM & Rule & Agent Hybrid** - Combine fast heuristic rules (30+ built-in) with LLM-based deep assessment
 
 🚀 **Flexible Execution** - Run locally for rapid iteration or scale with Spark for billion-scale datasets
 
@@ -177,7 +177,7 @@ python -m dingo.run.vsl --input output_directory
 
 Where `output_directory` contains the evaluation results with a `summary.json` file.
 
-![GUI output](docs/assets/dingo_gui.png)
+![GUI output](docs/assets/dingo_gui.jpg)
 
 ## Online Demo
 Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
@@ -294,13 +294,14 @@ Dingo provides **70+ evaluation metrics** across multiple dimensions, combining 
 | **RAG Evaluation** | Faithfulness, Context Precision, Answer Relevancy | RAG system assessment |
 | **Hallucination Detection** | HHEM-2.1-Open, Factuality Check | Production AI reliability |
 | **Classification** | Topic categorization, Content labeling | Data organization |
-| **Multimodal** | Image-text relevance, VLM quality | Vision-language data |
+| **Multimodal** | Image-text relevance, VLM quality, OCR visual evaluation | Vision-language data |
 | **Security** | PII detection, Perspective API toxicity | Privacy and safety |
 
 📊 **[View Complete Metrics Documentation →](docs/metrics.md)**  
 📖 **[RAG Evaluation Guide →](docs/rag_evaluation_metrics.md)** | **[中文版](docs/rag_evaluation_metrics_zh.md)**  
 🔍 **[Hallucination Detection Guide →](docs/hallucination_detection_guide.md)** | **[中文版](docs/hallucination_guide.md)**  
-✅ **[Factuality Assessment Guide →](docs/factuality_assessment_guide.md)** | **[中文版](docs/factcheck_guide.md)**
+✅ **[Factuality Assessment Guide →](docs/factuality_assessment_guide.md)** | **[中文版](docs/factcheck_guide.md)**  
+👁️ **[VLM Render Judge Guide →](docs/en/vlm_render_judge_guide.md)** | **[中文版](docs/vlm_render_judge_guide.md)**
 
 Most metrics are backed by academic research to ensure scientific rigor.
 
@@ -383,6 +384,12 @@ input_data = {
 ✅ Local models (Llama3, Qwen)  
 ✅ Vision-Language Models (InternVL, Gemini)  
 ✅ Custom prompt registration
+
+**Agent-Based** - Multi-step reasoning with tools
+✅ Web search integration (Tavily)
+✅ Adaptive context gathering
+✅ Multi-source fact verification
+✅ Custom agent & tool registration
 
 **Extensible Architecture**  
 ✅ Plugin-based rule/prompt/model registration  
@@ -491,6 +498,84 @@ class CustomEvaluator(BaseOpenAI):
 **Examples:**
 - [Custom Rules](examples/register/sdk_register_rule.py)
 - [Custom Models](examples/register/sdk_register_llm.py)
+
+### Agent-Based Evaluation with Tools
+
+Dingo supports agent-based evaluators that can use external tools for multi-step reasoning and adaptive context gathering. Two implementation patterns are available:
+
+**Pattern 1: LangChain-Based** (e.g., `AgentFactCheck`)
+- Framework-driven with autonomous multi-step reasoning
+- Uses LangChain 1.0's `create_agent` with ReAct pattern
+- Best for: Complex reasoning tasks, rapid prototyping
+- Less code, more declarative
+
+**Pattern 2: Custom Workflow** (e.g., `AgentHallucination`)
+- Developer-driven with explicit workflow control
+- Manual tool calls and LLM interactions
+- Best for: Composing existing evaluators, domain-specific workflows
+- Full control, explicit behavior
+
+Both patterns share the same configuration interface and are transparent to users.
+
+**Built-in Agents:**
+- `AgentFactCheck`: LangChain-based fact-checking with autonomous search control
+- `AgentHallucination`: Custom workflow hallucination detection with adaptive context gathering
+
+**Quick Example:**
+
+```python
+from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail
+from dingo.model import Model
+from dingo.model.llm.agent.base_agent import BaseAgent
+
+@Model.llm_register('MyAgent')
+class MyAgent(BaseAgent):
+    """Custom agent with tool support"""
+
+    available_tools = ["tavily_search", "my_custom_tool"]
+    max_iterations = 5
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        # Use tools for fact-checking
+        search_result = cls.execute_tool('tavily_search', query=input_data.content)
+
+        # Multi-step reasoning with LLM
+        result = cls.send_messages([...])
+
+        return EvalDetail(...)
+```
+
+For detailed guidance on choosing and implementing agent patterns, see [Agent Development Guide](docs/agent_development_guide.md).
+
+**Configuration Example:**
+```json
+{
+  "evaluator": [{
+    "evals": [{
+      "name": "AgentHallucination",
+      "config": {
+        "key": "openai-api-key",
+        "model": "gpt-4",
+        "parameters": {
+          "agent_config": {
+            "max_iterations": 5,
+            "tools": {
+              "tavily_search": {"api_key": "tavily-key"}
+            }
+          }
+        }
+      }
+    }]
+  }]
+}
+```
+
+**Learn More:**
+- [Agent Development Guide](docs/agent_development_guide.md) - Comprehensive guide for creating custom agents and tools
+- [AgentHallucination Example](examples/agent/agent_hallucination_example.py) - Production agent example
+- [AgentFactCheck Example](examples/agent/agent_executor_example.py) - LangChain agent example
 
 ## ⚙️ Execution Modes
 

@@ -73,40 +73,40 @@ print(f"详细原因: {result.reason[0]}")
 ### 场景二：评估数据集
 
 ```python
-from pathlib import Path
-
 from dingo.config import InputArgs
 from dingo.exec import Executor
 
-# 获取项目根目录
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-
 # 准备配置
 input_data = {
-    "input_path": str(PROJECT_ROOT / "test/data/your_test.jsonl"),
+    "input_path": "test/data/your_test.jsonl",
     "output_path": "output/factcheck_evaluation/",
     "dataset": {
         "source": "local",
         "format": "jsonl",
+        "field": {
+            "prompt": "question",
+            "content": "response"
+        }
     },
     "executor": {
+        "eval_group": "factuality",
         "result_save": {
             "bad": True,  # 保存不实信息
             "good": True  # 保存真实信息
         }
     },
-    "evaluator": [
-        {
-            "fields": {"prompt": "question", "content": "response"},
-            "evals": [
-                {"name": "LLMFactCheckPublic", "config": {
-                    "model": "deepseek-chat",
-                    "key": "your-api-key",
-                    "api_url": "https://api.deepseek.com/v1"
-                }}
-            ]
+    "evaluator": {
+        "llm_config": {
+            "LLMFactCheckPublic": {
+                "model": "deepseek-chat",
+                "key": "your-api-key",
+                "api_url": "https://api.deepseek.com/v1",
+                "parameters": {
+                    "temperature": 0.1
+                }
+            }
         }
-    ]
+    }
 }
 
 # 执行评估
@@ -209,8 +209,10 @@ for turn in conversation:
 ```
 dingo/
   ├── model/
-  │   └── llm/
-  │       └── llm_factcheck_public.py  # 评估器实现（含内嵌提示词）
+  │   ├── llm/
+  │   │   └── llm_factcheck_public.py  # 评估器实现
+  │   └── prompt/
+  │       └── prompt_factcheck.py      # 评估提示词
   └── examples/
       └── factcheck/
           └── dataset_factcheck_evaluation.py  # 数据集评估示例
@@ -218,7 +220,7 @@ dingo/
 
 ### 评估提示词
 
-评估器内置两个核心提示词：
+评估器使用两个核心提示词：
 
 1. `CLAIM_LISTING`：用于提取事实性声明
    - 将文本分解为独立声明

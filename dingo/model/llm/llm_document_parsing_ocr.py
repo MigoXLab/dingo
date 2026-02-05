@@ -2,7 +2,7 @@ import json
 import re
 from typing import List
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -20,6 +20,7 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
         "description": "Evaluate the quality of mineru recognize",
         "evaluation_results": "error_category and error_label",
     }
+    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
     prompt = r"""
     你是一位熟悉文档解析领域的质量专家，你的核心任务是根据正确的markdown"工具标准结果Markdown"，以及对应OCR工具预测结果"Pred的内容"，获取工具预测结果的错误类型。
     *错误类别和标签*

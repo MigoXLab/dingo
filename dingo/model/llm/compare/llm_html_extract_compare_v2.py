@@ -3,7 +3,7 @@ from typing import List
 
 import diff_match_patch as dmp_module
 
-from dingo.io import Data
+from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
@@ -28,6 +28,7 @@ class LLMHtmlExtractCompareV2(BaseOpenAI):
     - input_data.raw_data.get("language", "en"): 语言类型 ("zh" 或 "en")
     """
 
+    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
     prompt = {
         "content_en": r"""Please compare the following two texts, each extracted from the same webpage using different HTML parsing methods. Your task is to determine whether there is a difference in the core informational content between them.
 

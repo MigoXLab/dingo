@@ -1,6 +1,6 @@
 # Dingo ATS 简历优化工具指南
 
-本指南介绍如何使用 Dingo 的 ATS（Applicant Tracking System）简历优化工具，包括 **LLMKeywordMatcher** 关键词匹配器和 **LLMResumeOptimizer** 简历优化器。
+本指南介绍如何使用 Dingo 的 ATS（Applicant Tracking System）简历优化工具，包括 **LLMKeywordMatcher** 关键词匹配器、**LLMResumeOptimizer** 简历优化器和 **LLMScout** 求职战略分析器。
 
 ## 🎯 功能概述
 
@@ -9,6 +9,7 @@ ATS 工具套件用于：
 - **简历-JD 匹配分析**: 评估简历与职位描述的匹配程度
 - **关键词缺失识别**: 识别简历中缺少的必需技能和加分项
 - **智能简历优化**: 自动注入缺失关键词，使用 STAR 法则润色经历描述
+- **求职战略分析**: 基于行业报告和用户画像生成精准求职策略
 
 ## 🔧 核心组件
 
@@ -61,6 +62,55 @@ ml → Machine Learning, dl → Deep Learning, nlp → NLP
 | `prompt` | str | ❌ | 目标岗位 |
 | `context` | str/dict | ❌ | 匹配报告 JSON (触发针对性模式) |
 
+### 3. LLMScout（求职战略分析器）
+
+基于行业报告和用户画像，生成精准求职策略。
+
+**核心功能：**
+- 行业报告解析（公司提取、财务信号识别）
+- 用户画像解析（学历、技能、风险偏好）
+- 人岗匹配评分（5维度加权打分）
+- 搜索策略生成（关键词、平台推荐）
+- 面试风格预测
+
+**输入字段：**
+| 字段 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| `content` | str | ✅ | 行业报告文本 |
+| `prompt` | str | ✅ | 用户画像（自然语言描述） |
+| `context` | str | ❌ | 个人简历文本（提升技能匹配精度） |
+
+**输出字段：**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `score` | float | 综合匹配分数 (0.0-1.0) |
+| `status` | bool | 是否通过阈值检查 |
+| `reason` | List[str] | 分析摘要（目标公司、Tier分类等） |
+| `strategy_context` | dict | 完整策略上下文（公司列表、搜索关键词等） |
+
+**评分权重 (SCORE_WEIGHTS)：**
+| 维度 | 权重 | 说明 |
+|------|------|------|
+| skill_match | 40% | 技能匹配度 |
+| risk_alignment | 20% | 风险偏好匹配 |
+| career_stage_fit | 15% | 职业阶段匹配 |
+| location_match | 10% | 地点匹配 |
+| financial_health | 15% | 公司财务健康度 |
+
+**Tier 分类阈值 (TIER_THRESHOLDS)：**
+| Tier | 分数要求 | 说明 |
+|------|----------|------|
+| Tier 1 | ≥ 0.75 | 强烈推荐 |
+| Tier 2 | ≥ 0.50 | 可以考虑 |
+| Not Recommended | < 0.50 | 不推荐 |
+
+**财务信号分类：**
+- `expansion`: 扩张期（ROE上升、融资完成、扩招）
+- `stable`: 稳定期（ROE平稳、正常招聘）
+- `contraction`: 收缩期（裁员、ROE下降）
+- `uncertain`: 不确定（信号混合）
+- `unknown`: 未知（信息不足）
+
 ## 🚀 快速开始
 
 ### 基本使用
@@ -108,6 +158,50 @@ optimize_data = Data(
 opt_result = LLMResumeOptimizer.eval(optimize_data)
 print(f"优化摘要: {opt_result.reason[0]}")
 print(f"完整结果: {opt_result.optimized_content}")
+```
+
+### Scout 使用示例
+
+```python
+from dingo.config.input_args import EvaluatorLLMArgs
+from dingo.io.input import Data
+from dingo.model.llm.llm_scout import LLMScout
+
+# 配置 LLM
+LLMScout.dynamic_config = EvaluatorLLMArgs(
+    key='YOUR_API_KEY',
+    api_url='https://api.deepseek.com',
+    model='deepseek-chat',
+)
+
+# 行业报告
+industry_report = """
+2024年Q3科技行业报告
+1. 字节跳动 - ROE上升，计划扩招2000人
+2. 阿里巴巴 - ROE平稳，技术岗位保持招聘
+"""
+
+# 用户画像
+user_profile = """
+我是2024届CS硕士，会Python和PyTorch，想找大厂，偏好稳定
+"""
+
+data = Data(
+    data_id='scout_1',
+    content=industry_report,
+    prompt=user_profile,
+    context="简历文本（可选）"  # 提供简历可提升技能匹配精度
+)
+
+result = LLMScout.eval(data)
+print(f"综合分数: {result.score}")
+print(f"策略分析: {result.reason[0]}")
+
+# 访问完整策略上下文
+if hasattr(result, 'strategy_context'):
+    ctx = result.strategy_context
+    for company in ctx.get('target_companies', []):
+        print(f"- {company['name']}: {company['tier']} ({company['match_score']:.0%})")
 ```
 
 ## 📊 匹配分数计算
@@ -237,4 +331,7 @@ python examples/ats_resume/sdk_keyword_matcher.py
 
 # 运行简历优化示例
 python examples/ats_resume/sdk_resume_optimizer.py
+
+# 运行求职战略分析示例
+python examples/ats_resume/sdk_scout.py
 ```

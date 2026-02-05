@@ -1,8 +1,7 @@
 """
-Unit tests for ATS Resume tools (LLMKeywordMatcher and LLMResumeOptimizer).
+Unit tests for ATS Resume tools (LLMKeywordMatcher, LLMResumeOptimizer, and LLMScout).
 
 These tests verify the core functionality without requiring actual LLM API calls.
-Compatible with both main branch (EvalDetail) and dev branch (ModelRes).
 """
 
 import json
@@ -12,6 +11,7 @@ import pytest
 from dingo.io.input import Data
 from dingo.model.llm.llm_keyword_matcher import SYNONYM_MAP, LLMKeywordMatcher
 from dingo.model.llm.llm_resume_optimizer import LLMResumeOptimizer
+from dingo.model.llm.llm_scout import LLMScout, SCORE_WEIGHTS, TIER_THRESHOLDS
 
 
 def _has_error(result) -> bool:
@@ -194,6 +194,177 @@ class TestLLMResumeOptimizer:
         result = LLMResumeOptimizer.eval(data)
 
         assert _has_error(result)
+
+
+class TestLLMScout:
+    """Tests for LLMScout."""
+
+    def test_build_messages_basic(self):
+        """Test basic message building."""
+        data = Data(
+            data_id='test_1',
+            content='行业报告：某科技公司ROE上升10%，计划扩招100人',
+            prompt='我是23届CS硕士，会Python和PyTorch'
+        )
+        messages = LLMScout.build_messages(data)
+
+        assert len(messages) == 1
+        assert messages[0]['role'] == 'user'
+        assert '行业报告' in messages[0]['content']
+        assert 'CS硕士' in messages[0]['content']
+
+    def test_build_messages_with_resume(self):
+        """Test message building with resume context."""
+        data = _create_data_with_context(
+            data_id='test_2',
+            content='行业报告：AI公司融资情况良好',
+            prompt='应届生，想找AI方向',
+            context='简历：熟悉Python、TensorFlow、PyTorch'
+        )
+        if data is None:
+            pytest.skip("Data class doesn't support context field")
+
+        messages = LLMScout.build_messages(data)
+
+        assert len(messages) == 1
+        assert '简历' in messages[0]['content'] or 'context' in str(messages[0])
+
+    def test_score_weights(self):
+        """Test score weights configuration."""
+        assert 'skill_match' in SCORE_WEIGHTS
+        assert 'risk_alignment' in SCORE_WEIGHTS
+        assert 'financial_health' in SCORE_WEIGHTS
+        # Weights should sum to 1.0
+        total = sum(SCORE_WEIGHTS.values())
+        assert abs(total - 1.0) < 0.01
+
+    def test_tier_thresholds(self):
+        """Test tier threshold configuration."""
+        assert 'tier1' in TIER_THRESHOLDS
+        assert 'tier2' in TIER_THRESHOLDS
+        assert TIER_THRESHOLDS['tier1'] > TIER_THRESHOLDS['tier2']
+
+    def test_calculate_match_score(self):
+        """Test match score calculation."""
+        scoring_breakdown = {
+            'skill_match': {'score': 0.8},
+            'risk_alignment': {'score': 0.7},
+            'career_stage_fit': {'score': 0.9},
+            'location_match': {'score': 0.6},
+            'financial_health': {'score': 0.8}
+        }
+        score, tier = LLMScout._calculate_match_score(scoring_breakdown)
+
+        assert 0 <= score <= 1
+        assert tier in ['Tier 1', 'Tier 2', 'Not Recommended']
+
+    def test_calculate_match_score_high(self):
+        """Test high match score results in Tier 1."""
+        scoring_breakdown = {
+            'skill_match': {'score': 0.9},
+            'risk_alignment': {'score': 0.9},
+            'career_stage_fit': {'score': 0.9},
+            'location_match': {'score': 0.9},
+            'financial_health': {'score': 0.9}
+        }
+        score, tier = LLMScout._calculate_match_score(scoring_breakdown)
+
+        assert score >= 0.75
+        assert tier == 'Tier 1'
+
+    def test_calculate_match_score_low(self):
+        """Test low match score results in Not Recommended."""
+        scoring_breakdown = {
+            'skill_match': {'score': 0.2},
+            'risk_alignment': {'score': 0.3},
+            'career_stage_fit': {'score': 0.2},
+            'location_match': {'score': 0.1},
+            'financial_health': {'score': 0.2}
+        }
+        score, tier = LLMScout._calculate_match_score(scoring_breakdown)
+
+        assert score < 0.5
+        assert tier == 'Not Recommended'
+
+    def test_filter_by_confidence(self):
+        """Test company filtering by confidence."""
+        companies = [
+            {
+                'name': 'Good Company',
+                'financial_status': 'expansion',
+                'financial_evidence': {'confidence': 0.8, 'source_quotes': ['ROE上升']}
+            },
+            {
+                'name': 'Low Confidence',
+                'financial_status': 'stable',
+                'financial_evidence': {'confidence': 0.3, 'source_quotes': []}
+            },
+            {
+                'name': 'Contraction Company',
+                'financial_status': 'contraction',
+                'financial_evidence': {'confidence': 0.9, 'source_quotes': ['裁员']}
+            }
+        ]
+        qualified, insufficient, not_recommended = LLMScout._filter_by_confidence(companies)
+
+        assert len(qualified) == 1
+        assert qualified[0]['name'] == 'Good Company'
+        assert len(insufficient) == 1
+        assert insufficient[0]['name'] == 'Low Confidence'
+        assert len(not_recommended) == 1
+        assert not_recommended[0]['name'] == 'Contraction Company'
+
+    def test_generate_reason(self):
+        """Test reason generation."""
+        result_data = {
+            'target_companies': [
+                {'name': 'ABC公司', 'tier': 'Tier 1', 'match_score': 0.85}
+            ],
+            'insufficient_data': [],
+            'not_recommended': [],
+            'meta': {'analysis_confidence': 0.8}
+        }
+        reason = LLMScout._generate_reason(result_data)
+
+        assert 'ABC公司' in reason
+        assert 'Tier 1' in reason
+
+    def test_eval_missing_content(self):
+        """Test eval with missing content (industry report)."""
+        data = Data(data_id='test_3', content='', prompt='用户画像')
+        result = LLMScout.eval(data)
+
+        assert _has_error(result)
+
+    def test_eval_missing_prompt(self):
+        """Test eval with missing prompt (user profile)."""
+        data = Data(data_id='test_4', content='行业报告', prompt='')
+        result = LLMScout.eval(data)
+
+        assert _has_error(result)
+
+    def test_clean_response(self):
+        """Test response cleaning."""
+        # Test markdown code block removal
+        response = '```json\n{"test": "value"}\n```'
+        cleaned = LLMScout._clean_response(response)
+        assert cleaned == '{"test": "value"}'
+
+        # Test think tag removal
+        response = '<think>reasoning</think>{"test": "value"}'
+        cleaned = LLMScout._clean_response(response)
+        assert cleaned == '{"test": "value"}'
+
+    def test_extract_think_content(self):
+        """Test think content extraction."""
+        response = '<think>This is my reasoning</think>{"result": "value"}'
+        think = LLMScout._extract_think_content(response)
+        assert think == 'This is my reasoning'
+
+        # No think tag
+        response = '{"result": "value"}'
+        think = LLMScout._extract_think_content(response)
+        assert think == ''
 
 
 if __name__ == '__main__':

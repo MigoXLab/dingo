@@ -11,7 +11,7 @@ import pytest
 from dingo.io.input import Data
 from dingo.model.llm.llm_keyword_matcher import SYNONYM_MAP, LLMKeywordMatcher
 from dingo.model.llm.llm_resume_optimizer import LLMResumeOptimizer
-from dingo.model.llm.llm_scout import LLMScout, SCORE_WEIGHTS, TIER_THRESHOLDS
+from dingo.model.llm.llm_scout import SCORE_WEIGHTS, TIER_THRESHOLDS, LLMScout
 
 
 def _has_error(result) -> bool:

@@ -14,7 +14,7 @@ Features:
 
 import json
 import re
-from typing import List, Dict, Any, Tuple
+from typing import Any, Dict, List, Tuple
 
 from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
@@ -22,7 +22,6 @@ from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
-
 
 # Scoring weights for match calculation
 SCORE_WEIGHTS = {
@@ -493,4 +492,3 @@ class LLMScout(BaseOpenAI):
 
         # Call parent eval method
         return super().eval(input_data)
-

@@ -281,7 +281,7 @@ class LLMScout(BaseOpenAI):
         start = response.find('{')
         end = response.rfind('}')
         if start != -1 and end != -1:
-            response = response[start:end+1]
+            response = response[start:end + 1]
 
         return response.strip()
 

@@ -59,6 +59,27 @@
 
 **Dingo is A Comprehensive AI Data, Model and Application Quality Evaluation Tool**, designed for ML practitioners, data engineers, and AI researchers. It helps you systematically assess and improve the quality of training data, fine-tuning datasets, and production AI systems.
 
+---
+
+## 🚀 Enterprise Dingo SaaS Version
+
+Need a **production-grade data quality platform**? Try [Dingo SaaS](https://github.com/MigoXLab/dingo-saas) Enterprise Edition!
+
+### ✨ Compared to the open-source version, SaaS provides:
+
+- 🌐 **Web UI** - Visual evaluation interface, no coding required
+- 🔐 **Access Control** - JWT + Google OAuth 2.0
+- 📊 **Visual Reports** - Interactive charts, trend analysis, export features
+- 🔌 **RESTful API** - Seamless integration with existing systems
+
+### 📝 How to Get Free SaaS Code
+
+👉 **[Apply for Dingo SaaS Repository Access](https://aicarrier.feishu.cn/share/base/form/shrcn9RqYttByQ5H1np6Yrnmhuf)** 
+
+Review time: 1-5 business days | Suitable for enterprise data governance, team collaboration
+
+---
+
 ## Why Dingo?
 
 🎯 **Production-Grade Quality Checks** - From pre-training datasets to RAG systems, ensure your AI gets high-quality data

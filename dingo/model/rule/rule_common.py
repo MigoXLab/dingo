@@ -2393,11 +2393,16 @@ class RuleWordStuck(BaseRule):
 
     _required_fields = [RequiredField.CONTENT]
 
+    @staticmethod
+    def _is_latin_text(text: str) -> bool:
+        """Check if text is primarily Latin/English characters."""
+        if not text:
+            return False
+        latin_count = sum(1 for c in text if c.isascii() and c.isalpha())
+        return latin_count / len(text) > 0.5
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
-        import wordninja
-
-        from dingo.model.rule.utils.detect_lang import decide_language_by_str
         from dingo.model.rule.utils.util import is_sha256
         res = EvalDetail(metric=cls.__name__)
         content = input_data.content
@@ -2411,13 +2416,17 @@ class RuleWordStuck(BaseRule):
         ]
         for longest_string in word_list:
             if len(longest_string) > 45 and not is_sha256(longest_string):
-                lan = decide_language_by_str(longest_string)
-                cut = wordninja.split(longest_string)
-                if lan == "en" and len(cut) > 1:
-                    res.status = True
-                    res.label = [f"{cls.metric_type}.{cls.__name__}"]
-                    res.reason = [str(longest_string)]
-                    return res
+                if cls._is_latin_text(longest_string):
+                    try:
+                        import wordninja
+                        cut = wordninja.split(longest_string)
+                    except ImportError:
+                        cut = [longest_string]
+                    if len(cut) > 1:
+                        res.status = True
+                        res.label = [f"{cls.metric_type}.{cls.__name__}"]
+                        res.reason = [str(longest_string)]
+                        return res
         res.label = [QualityLabel.QUALITY_GOOD]
         return res
 

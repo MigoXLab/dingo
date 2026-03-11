@@ -2,7 +2,6 @@ import hashlib
 import os
 from typing import Any, Dict, Tuple
 
-import fasttext
 import requests
 from tqdm import tqdm
 
@@ -109,6 +108,13 @@ class LanguageIdentification:
         """
         Initializes the LanguageIdentification class with the pre-trained fastText model.
         """
+        try:
+            import fasttext
+        except ImportError:
+            raise ImportError(
+                "fasttext is required for language detection. "
+                "Install it with: pip install fasttext"
+            )
         log.info("========= downloading fasttext =========")
         pretrained_lang_model = download_fasttext()
         self.model = fasttext.load_model(pretrained_lang_model)

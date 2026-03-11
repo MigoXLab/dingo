@@ -105,7 +105,21 @@ Review time: 1-5 business days | Suitable for enterprise data governance, team c
 ## Installation
 
 ```shell
+# Core package (rule-based evaluation, LLM evaluation, MCP server)
 pip install dingo-python
+
+# With specific datasource support
+pip install dingo-python[sql]              # + SQL databases
+pip install dingo-python[s3]               # + AWS S3 storage
+pip install dingo-python[parquet]          # + Parquet file support
+pip install dingo-python[huggingface]      # + HuggingFace datasets
+pip install dingo-python[excel]            # + Excel file support
+
+# With all datasource support
+pip install dingo-python[datasource]
+
+# With all features (datasource + agent + optional models)
+pip install dingo-python[all]
 ```
 
 ## Example Use Cases of Dingo

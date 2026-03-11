@@ -1,0 +1,32 @@
+# Optional datasource dependencies
+# Install only what you need, e.g.:
+#   pip install dingo-python[s3]
+#   pip install dingo-python[sql,parquet]
+
+# S3 storage
+boto3>=1.28.43,<2.0.0
+botocore>=1.31.43,<2.0.0
+
+# SQL databases (PostgreSQL, MySQL, SQLite, etc.)
+sqlalchemy
+
+# HuggingFace datasets
+datasets
+huggingface_hub
+
+# Parquet file support
+pyarrow
+
+# Excel file support (.xlsx / .xls)
+openpyxl
+xlrd
+
+# Language detection (used by RuleLongWord)
+fasttext-wheel==0.9.2
+wordninja==2.0.0
+
+# Hallucination detection with HHEM model
+transformers
+
+# HTML extraction comparison
+diff_match_patch

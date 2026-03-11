@@ -104,7 +104,21 @@
 ## インストール
 
 ```shell
+# コアパッケージ（ルール評価、LLM 評価、MCP サーバー）
 pip install dingo-python
+
+# 必要なデータソースサポートを選択してインストール
+pip install dingo-python[sql]              # + SQL データベース
+pip install dingo-python[s3]               # + AWS S3 ストレージ
+pip install dingo-python[parquet]          # + Parquet ファイルサポート
+pip install dingo-python[huggingface]      # + HuggingFace データセット
+pip install dingo-python[excel]            # + Excel ファイルサポート
+
+# 全データソースサポートをインストール
+pip install dingo-python[datasource]
+
+# 全機能をインストール（データソース + Agent + オプションモデル）
+pip install dingo-python[all]
 ```
 
 ## 使用例

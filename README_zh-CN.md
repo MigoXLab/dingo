@@ -105,7 +105,21 @@
 ## 安装
 
 ```shell
+# 核心包（规则评估、LLM 评估、MCP 服务）
 pip install dingo-python
+
+# 按需安装数据源支持
+pip install dingo-python[sql]              # + SQL 数据库
+pip install dingo-python[s3]               # + AWS S3 存储
+pip install dingo-python[parquet]          # + Parquet 文件支持
+pip install dingo-python[huggingface]      # + HuggingFace 数据集
+pip install dingo-python[excel]            # + Excel 文件支持
+
+# 安装全部数据源支持
+pip install dingo-python[datasource]
+
+# 安装全部功能（数据源 + Agent + 可选模型）
+pip install dingo-python[all]
 ```
 
 ## Dingo 使用示例

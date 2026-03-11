@@ -39,6 +39,7 @@ _build/
 
 
 output/
+outputs/
 **/temp.py
 
 # coverage file

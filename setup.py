@@ -4,21 +4,28 @@ from setuptools import find_packages, setup
 with open("README.md", "r", encoding='utf-8') as fh:
     long_description = fh.read()
 
-with open("./requirements/runtime.txt", "r", encoding='utf-8') as f:
-    requirements = f.readlines()
 
-with open("./requirements/web.txt", "r", encoding='utf-8') as f:
-    requirements.extend(f.readlines())
+def _read_requirements(path):
+    with open(path, "r", encoding='utf-8') as f:
+        return [line.strip() for line in f if line.strip() and not line.startswith('#') and not line.startswith('-r')]
 
-# Read optional dependencies
-with open("./requirements/agent.txt", "r", encoding='utf-8') as f:
-    agent_requirements = [line.strip() for line in f.readlines()
-                         if line.strip() and not line.strip().startswith('#')]
 
-# Define extras for optional features
+requirements = _read_requirements("./requirements/runtime.txt")
+requirements.extend(_read_requirements("./requirements/web.txt"))
+
+agent_requirements = _read_requirements("./requirements/agent.txt")
+datasource_requirements = _read_requirements("./requirements/datasource.txt")
+
 extras_require = {
     'agent': agent_requirements,
-    'all': agent_requirements,  # 'all' includes all optional features
+    's3': ['boto3>=1.28.43,<2.0.0', 'botocore>=1.31.43,<2.0.0'],
+    'sql': ['sqlalchemy'],
+    'parquet': ['pyarrow'],
+    'excel': ['openpyxl', 'xlrd'],
+    'huggingface': ['datasets', 'huggingface_hub'],
+    'hhem': ['transformers'],
+    'datasource': datasource_requirements,
+    'all': datasource_requirements + agent_requirements,
 }
 
 

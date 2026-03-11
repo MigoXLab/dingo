@@ -1,0 +1,82 @@
+---
+description: Python coding conventions for the Dingo SDK
+globs:
+  - dingo/**/*.py
+  - mcp_server.py
+  - test/**/*.py
+---
+
+# Python Conventions
+
+## Code Style
+
+- Follow PEP 8 (enforced by pre-commit hooks)
+- Use type hints for function signatures
+- Use `@classmethod` for evaluator `eval()` methods
+- Prefer `getattr(obj, 'field', default)` over direct attribute access for optional Data fields
+
+## Import Rules
+
+- **Core deps** (numpy, pydantic, requests, etc.): top-level imports OK
+- **Optional deps** (pyarrow, transformers, boto3, sqlalchemy, cv2, fasttext, etc.): **must** use lazy imports inside methods with clear `ImportError` messages:
+
+```python
+# Correct — lazy import with helpful error
+def load_data(self):
+    try:
+        import pyarrow.parquet as pq
+    except ImportError:
+        raise ImportError("pyarrow is required for Parquet support. Install: pip install dingo-python[parquet]")
+
+# Wrong — top-level import of optional dep
+import pyarrow.parquet as pq
+```
+
+## Evaluator Patterns
+
+### Rule Evaluator
+
+```python
+@Model.rule_register('QUALITY_BAD_CATEGORY', ['default', 'pretrain'])
+class RuleMyCheck(BaseRule):
+    _required_fields = [RequiredField.CONTENT]
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
+        # evaluation logic
+        if problem_found:
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.reason = ["Description of the issue"]
+        else:
+            res.label = [QualityLabel.QUALITY_GOOD]
+        return res
+```
+
+### LLM Evaluator
+
+```python
+@Model.llm_register('LLMMyEvaluator')
+class LLMMyEvaluator(BaseOpenAI):
+    prompt = """Your evaluation prompt here..."""
+
+    @classmethod
+    def build_messages(cls, input_data: Data) -> List:
+        return [
+            {'role': 'system', 'content': cls.prompt},
+            {'role': 'user', 'content': input_data.content}
+        ]
+```
+
+## Error Handling
+
+- Evaluators should not raise exceptions for bad input data; return `EvalDetail` with appropriate error label instead
+- Use `log.warning()` / `log.error()` from `dingo.utils` for logging
+- External API calls: always handle timeouts and connection errors
+
+## Testing
+
+- Test files: `test/scripts/` mirroring `dingo/` structure
+- Use pytest fixtures and parametrize for multiple test cases
+- Test data in `test/data/`

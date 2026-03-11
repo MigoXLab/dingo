@@ -1,0 +1,20 @@
+---
+description: Dingo project architecture — references AGENTS.md for full context
+globs:
+alwaysApply: true
+---
+
+# Dingo — Quick Reference
+
+**Full agent instructions**: see `AGENTS.md` at project root (tech stack, directory structure, core concepts, development conventions, config maintenance rules).
+
+## Key Rules (always apply)
+
+1. **Plugin architecture**: All evaluators use `@Model.rule_register()` or `@Model.llm_register()` decorators. Never modify the registration system.
+2. **Data model**: `Data` uses `extra = "allow"` — do not add fixed fields unless absolutely necessary. Access optional fields with `getattr(data, 'field', default)`.
+3. **Lazy imports**: Optional heavy dependencies (`pyarrow`, `transformers`, `sqlalchemy`, `boto3`, etc.) must use lazy imports inside methods, not top-level imports.
+4. **Evaluator contract**: Every evaluator `eval()` method must return `EvalDetail` with `metric`, `status` (bool), `label` (list), and `reason` (list).
+5. **Dependencies**: Core deps in `requirements/runtime.txt`, optional in `requirements/datasource.txt`. New optional deps → add to `setup.py` extras_require.
+6. **MCP Server**: Entry point is `mcp_server.py`, uses FastMCP + SSE. Environment variables for LLM config (`OPENAI_API_KEY`, etc.).
+7. **Three interfaces**: SDK (Python API), CLI (`python -m dingo.run.cli`), MCP Server. All share the same `InputArgs` → `Executor` pipeline.
+8. **Testing**: `pytest test/scripts --ignore=test/scripts/data`. Integration tests via CLI with configs in `.github/env/`.

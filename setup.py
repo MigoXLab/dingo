@@ -14,18 +14,12 @@ requirements = _read_requirements("./requirements/runtime.txt")
 requirements.extend(_read_requirements("./requirements/web.txt"))
 
 agent_requirements = _read_requirements("./requirements/agent.txt")
-datasource_requirements = _read_requirements("./requirements/datasource.txt")
+hhem_requirements = _read_requirements("./requirements/hhem_integration.txt")
 
 extras_require = {
     'agent': agent_requirements,
-    's3': ['boto3>=1.28.43,<2.0.0', 'botocore>=1.31.43,<2.0.0'],
-    'sql': ['sqlalchemy'],
-    'parquet': ['pyarrow'],
-    'excel': ['openpyxl', 'xlrd'],
-    'huggingface': ['datasets', 'huggingface_hub'],
-    'hhem': ['transformers'],
-    'datasource': datasource_requirements,
-    'all': datasource_requirements + agent_requirements,
+    'hhem': hhem_requirements,
+    'all': hhem_requirements + agent_requirements,
 }
 
 

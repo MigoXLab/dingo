@@ -105,13 +105,13 @@ Review time: 1-5 business days | Suitable for enterprise data governance, team c
 ## Installation
 
 ```shell
-# Core package (rule-based evaluation, LLM evaluation, MCP server)
+# Core package (includes rule evaluation, LLM evaluation, MCP server, datasource support)
 pip install dingo-python
 
-# With all datasource support
-pip install "dingo-python[datasource]"
+# With HHEM hallucination detection model (requires transformers + torch)
+pip install "dingo-python[hhem]"
 
-# With all features (datasource + agent + optional models)
+# With all features (HHEM + Agent)
 pip install "dingo-python[all]"
 ```
 
@@ -123,12 +123,12 @@ pip install "dingo-python[all]"
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
 from dingo.model.llm.text_quality.llm_text_quality_v4 import LLMTextQualityV4
-from dingo.model.rule.rule_common import RuleEnterAndSpace
+from dingo.model.rule.rule_common import RuleSpecialCharacter
 
 data = Data(
     data_id='123',
     prompt="hello, introduce the world",
-    content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."
+    content="�I am 8 years old. ^I love apple because:"
 )
 
 
@@ -141,10 +141,11 @@ def llm():
     res = LLMTextQualityV4.eval(data)
     print(res)
 
-
 def rule():
-    res = RuleEnterAndSpace().eval(data)
+    res = RuleSpecialCharacter().eval(data)
     print(res)
+
+rule()
 ```
 
 ### 2. Evaluate Dataset

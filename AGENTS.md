@@ -153,14 +153,10 @@ input_data = {
 ### Optional Dependencies (extras_require)
 
 ```bash
-pip install dingo-python              # Core only
-pip install dingo-python[sql]         # + SQL databases
-pip install dingo-python[s3]          # + AWS S3
-pip install dingo-python[parquet]     # + Parquet files
-pip install dingo-python[huggingface] # + HuggingFace datasets
-pip install dingo-python[excel]       # + Excel files
-pip install dingo-python[datasource]  # + All datasources
-pip install dingo-python[all]         # + Everything
+pip install dingo-python                # Core (includes all datasource support)
+pip install "dingo-python[hhem]"        # + HHEM hallucination detection (transformers + torch)
+pip install "dingo-python[agent]"       # + Agent-based evaluation (langchain)
+pip install "dingo-python[all]"         # + Everything
 ```
 
 ## Development Conventions

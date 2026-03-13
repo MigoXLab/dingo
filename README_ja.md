@@ -104,13 +104,13 @@
 ## インストール
 
 ```shell
-# コアパッケージ（ルール評価、LLM 評価、MCP サーバー）
+# コアパッケージ（ルール評価、LLM 評価、MCP サーバー、データソース対応）
 pip install dingo-python
 
-# 全データソースサポートをインストール
-pip install "dingo-python[datasource]"
+# HHEM 幻覚検出モデル（transformers + torch が必要）
+pip install "dingo-python[hhem]"
 
-# 全機能をインストール（データソース + Agent + オプションモデル）
+# 全機能をインストール（HHEM + Agent）
 pip install "dingo-python[all]"
 ```
 
@@ -122,12 +122,12 @@ pip install "dingo-python[all]"
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
 from dingo.model.llm.text_quality.llm_text_quality_v4 import LLMTextQualityV4
-from dingo.model.rule.rule_common import RuleEnterAndSpace
+from dingo.model.rule.rule_common import RuleSpecialCharacter
 
 data = Data(
     data_id='123',
     prompt="hello, introduce the world",
-    content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."
+    content="�I am 8 years old. ^I love apple because:"
 )
 
 
@@ -140,10 +140,11 @@ def llm():
     res = LLMTextQualityV4.eval(data)
     print(res)
 
-
 def rule():
-    res = RuleEnterAndSpace().eval(data)
+    res = RuleSpecialCharacter().eval(data)
     print(res)
+
+rule()
 ```
 
 ### 2. データセットの評価

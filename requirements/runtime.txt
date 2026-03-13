@@ -1,4 +1,4 @@
-# ===== Core dependencies (required for basic evaluation) =====
+# ===== Core dependencies =====
 chardet
 hanziconv
 httpx
@@ -16,6 +16,20 @@ requests
 toml
 zhon
 nltk
+
+# ===== Datasource =====
+boto3>=1.28.43,<2.0.0
+botocore>=1.31.43,<2.0.0
+datasets
+huggingface_hub
+openpyxl
+pyarrow
+sqlalchemy
+xlrd
+
+# ===== Misc =====
+diff_match_patch
+wordninja==2.0.0
 
 # ===== MCP server =====
 fastmcp>=2.0.0,<3.0.0

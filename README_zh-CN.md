@@ -105,13 +105,13 @@
 ## 安装
 
 ```shell
-# 核心包（规则评估、LLM 评估、MCP 服务）
+# 核心包（包含规则评估、LLM 评估、MCP 服务、数据源支持）
 pip install dingo-python
 
-# 安装全部数据源支持
-pip install "dingo-python[datasource]"
+# 安装 HHEM 幻觉检测模型（需要 transformers + torch）
+pip install "dingo-python[hhem]"
 
-# 安装全部功能（数据源 + Agent + 可选模型）
+# 安装全部功能（HHEM + Agent）
 pip install "dingo-python[all]"
 ```
 
@@ -123,12 +123,12 @@ pip install "dingo-python[all]"
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
 from dingo.model.llm.text_quality.llm_text_quality_v4 import LLMTextQualityV4
-from dingo.model.rule.rule_common import RuleEnterAndSpace
+from dingo.model.rule.rule_common import RuleSpecialCharacter
 
 data = Data(
     data_id='123',
     prompt="hello, introduce the world",
-    content="Hello! The world is a vast and diverse place, full of wonders, cultures, and incredible natural beauty."
+    content="�I am 8 years old. ^I love apple because:"
 )
 
 
@@ -141,10 +141,11 @@ def llm():
     res = LLMTextQualityV4.eval(data)
     print(res)
 
-
 def rule():
-    res = RuleEnterAndSpace().eval(data)
+    res = RuleSpecialCharacter().eval(data)
     print(res)
+
+rule()
 ```
 
 ### 2. 评估数据集

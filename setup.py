@@ -37,7 +37,7 @@ web_static_files = get_data_files('web-static')
 
 setup(
     name="dingo-python",
-    version="2.1.0",
+    version="2.1.1",
     author="Dingo",
     description="A Comprehensive AI Data Quality Evaluation Tool for Large Models",
     long_description=long_description,

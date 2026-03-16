@@ -21,7 +21,7 @@ The `mcp_server.py` script provides an experimental Model Context Protocol (MCP)
 1.  **Prerequisites**: Ensure you have Git and a Python environment (e.g., 3.8+) set up.
 2.  **Clone the Repository**: Clone this repository to your local machine.
     ```bash
-    git clone https://github.com/DataEval/dingo.git
+    git clone https://github.com/MigoXLab/dingo.git
     cd dingo
     ```
 3.  **Install Dependencies**: Install the required dependencies, including FastMCP and other Dingo requirements. It's recommended to use the `requirements.txt` file.

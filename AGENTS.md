@@ -4,7 +4,7 @@
 
 Dingo is a comprehensive AI data quality evaluation tool for ML practitioners, data engineers, and AI researchers. It systematically assesses training data, fine-tuning datasets, and production AI systems using rule-based, LLM-based, and agent-based evaluation methods.
 
-**Repository**: https://github.com/DataEval/dingo
+**Repository**: https://github.com/MigoXLab/dingo
 **PyPI**: `pip install dingo-python`
 **License**: Apache 2.0
 

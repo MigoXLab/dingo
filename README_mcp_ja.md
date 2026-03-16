@@ -21,7 +21,7 @@
 1.  **前提条件**: GitとPython環境（例：3.8+）がセットアップされていることを確認してください。
 2.  **リポジトリのクローン**: このリポジトリをローカルマシンにクローンします。
     ```bash
-    git clone https://github.com/DataEval/dingo.git
+    git clone https://github.com/MigoXLab/dingo.git
     cd dingo
     ```
 3.  **依存関係のインストール**: FastMCPやその他のDingo要件を含む必要な依存関係をインストールします。`requirements.txt`ファイルの使用を推奨します。

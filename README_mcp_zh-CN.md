@@ -21,7 +21,7 @@
 1.  **前置条件**: 确保你已安装 Git 和 Python 环境（例如 3.8+）。
 2.  **克隆仓库**: 将此仓库克隆到本地计算机。
     ```bash
-    git clone https://github.com/DataEval/dingo.git
+    git clone https://github.com/MigoXLab/dingo.git
     cd dingo
     ```
 3.  **安装依赖**: 安装所需的依赖项，包括 FastMCP 和其他 Dingo 依赖。推荐使用 `requirements.txt` 文件。

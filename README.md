@@ -188,13 +188,13 @@ if __name__ == '__main__':
 ### Evaluate with Rule Sets
 
 ```shell
-python -m dingo.run.cli --input test/env/local_plaintext.json
+python -m dingo.run.cli --input .github/env/local_plaintext.json
 ```
 
 ### Evaluate with LLM (e.g., GPT-4o)
 
 ```shell
-python -m dingo.run.cli --input test/env/local_json.json
+python -m dingo.run.cli --input .github/env/local_json.json
 ```
 
 ## GUI Visualization

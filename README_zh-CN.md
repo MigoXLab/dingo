@@ -188,13 +188,13 @@ if __name__ == '__main__':
 ### 使用规则集评估
 
 ```shell
-python -m dingo.run.cli --input test/env/local_plaintext.json
+python -m dingo.run.cli --input .github/env/local_plaintext.json
 ```
 
 ### 使用LLM评估（例如GPT-4o）
 
 ```shell
-python -m dingo.run.cli --input test/env/local_json.json
+python -m dingo.run.cli --input .github/env/local_json.json
 ```
 
 ## 图形界面可视化

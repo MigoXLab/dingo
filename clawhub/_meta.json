@@ -1,0 +1,31 @@
+{
+  "name": "dingo-data-quality",
+  "version": "1.0.0",
+  "description": "Evaluate AI training data quality using Dingo — 70+ built-in metrics for text, RAG, OCR, and multimodal datasets. Rule-based checks (free, fast) and LLM-as-a-Judge evaluation with any OpenAI-compatible API.",
+  "author": "MigoXLab",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/MigoXLab/dingo",
+  "category": "data-quality",
+  "tags": [
+    "data-quality",
+    "llm",
+    "evaluation",
+    "rag",
+    "ocr",
+    "machine-learning",
+    "ai",
+    "sft",
+    "fact-checking"
+  ],
+  "requires": {
+    "bins": [],
+    "packages": ["dingo-python"]
+  },
+  "env": {
+    "optional": {
+      "OPENAI_API_KEY": "API key for LLM-based evaluation (not needed for rule-based)",
+      "OPENAI_BASE_URL": "Custom API endpoint URL",
+      "OPENAI_MODEL": "Model name for LLM evaluation"
+    }
+  }
+}

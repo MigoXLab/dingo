@@ -1,6 +1,10 @@
 # Data Quality Evaluation with Dingo
 
-Evaluate AI training data, SFT datasets, RAG pipelines, and OCR documents using Dingo — a comprehensive data quality assessment framework with 70+ built-in metrics.
+Dingo: A Comprehensive AI Data, Model and Application Quality Evaluation Tool.
+
+* **GitHub**: https://github.com/MigoXLab/dingo
+* **SaaS Platform**: https://dingo.openxlab.org.cn/ (free, no install needed)
+* **PyPI**: https://pypi.org/project/dingo-python/
 
 ## Installation
 
@@ -313,12 +317,6 @@ After evaluation completes, the agent should:
 2. If there are failures, briefly explain what each failing metric means
 3. Suggest next steps (e.g., "15% of items have colon-ending issues — you may want to clean those")
 
-## SaaS platform
-
-For users who prefer a web interface, Dingo SaaS is available at: https://dingo.openxlab.org.cn/
-
-No local installation needed — upload data, configure evaluators, and view reports in the browser.
-
 ## Troubleshooting
 
 * **`ModuleNotFoundError: No module named 'dingo'`**: Run `pip install dingo-python` (note: the package name is `dingo-python`, not `dingo`)
@@ -333,3 +331,12 @@ No local installation needed — upload data, configure evaluators, and view rep
 * Rule-based evaluators run locally with zero API cost
 * Results are written to the `outputs/` directory by default (timestamped subdirectories)
 * The `content` field is the most commonly mapped field — it's the main text that most evaluators check
+
+## Resources
+
+* **GitHub**: https://github.com/MigoXLab/dingo
+* **SaaS Platform**: https://dingo.openxlab.org.cn/
+* **PyPI**: https://pypi.org/project/dingo-python/
+* **Metrics Documentation**: https://github.com/MigoXLab/dingo/blob/main/docs/metrics.md
+* **RAG Evaluation Guide**: https://github.com/MigoXLab/dingo/blob/main/docs/rag_evaluation_en.md
+* **Discord**: https://discord.gg/Jhgb2eKWh8

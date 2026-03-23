@@ -197,36 +197,7 @@ dingo eval --input .github/env/local_plaintext.json
 dingo eval --input .github/env/local_json.json
 ```
 
-## GUI Visualization
-
-After evaluation (with `result_save.bad=True`), a frontend page will be automatically generated. To manually start the frontend:
-
-```shell
-python -m dingo.run.vsl --input output_directory
-```
-
-Where `output_directory` contains the evaluation results with a `summary.json` file.
-
-![GUI output](docs/assets/dingo_gui.jpg)
-
-## Online Demo
-Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
-
-## Local Demo
-Try Dingo in local:
-
-```shell
-cd app_gradio
-python app.py
-```
-
-![Gradio demo](docs/assets/gradio_demo.png)
-
-
-## Google Colab Demo
-Experience Dingo interactively with Google Colab notebook: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
-
-
+---
 
 # MCP Server
 
@@ -255,6 +226,58 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 
 This video demonstrates step-by-step how to use Dingo MCP server with Cursor.
 
+---
+
+# 📚 Data Quality Metrics
+
+Dingo provides **70+ evaluation metrics** across multiple dimensions, combining rule-based speed with LLM-based depth.
+
+## Metric Categories
+
+| Category | Examples | Use Case |
+|----------|----------|----------|
+| **Pretrain Text Quality** | Completeness, Effectiveness, Similarity, Security | LLM pre-training data filtering |
+| **SFT Data Quality** | Honest, Helpful, Harmless (3H) | Instruction fine-tuning data |
+| **RAG Evaluation** | Faithfulness, Context Precision, Answer Relevancy | RAG system assessment |
+| **Hallucination Detection** | HHEM-2.1-Open, Factuality Check | Production AI reliability |
+| **Classification** | Topic categorization, Content labeling | Data organization |
+| **Multimodal** | Image-text relevance, VLM quality, OCR visual evaluation | Vision-language data |
+| **Security** | PII detection, Perspective API toxicity | Privacy and safety |
+
+📊 **[View Complete Metrics Documentation →](docs/metrics.md)**  
+📖 **[RAG Evaluation Guide →](docs/rag_evaluation_metrics.md)** | **[中文版](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[Hallucination Detection Guide →](docs/hallucination_detection_guide.md)** | **[中文版](docs/hallucination_guide.md)**  
+✅ **[Factuality Assessment Guide →](docs/factuality_assessment_guide.md)** | **[中文版](docs/factcheck_guide.md)**  
+👁️ **[VLM Render Judge Guide →](docs/en/vlm_render_judge_guide.md)** | **[中文版](docs/vlm_render_judge_guide.md)**
+
+Most metrics are backed by academic research to ensure scientific rigor.
+
+## Quick Metric Usage
+
+```python
+llm_config = {
+    "model": "gpt-4o",
+    "key": "YOUR_API_KEY",
+    "api_url": "https://api.openai.com/v1/chat/completions"
+}
+
+input_data = {
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleAbnormalChar"},           # Rule-based (fast)
+                {"name": "LLMTextQualityV5", "config": llm_config}  # LLM-based (deep)
+            ]
+        }
+    ]
+}
+```
+
+**Customization**: All prompts are defined in `dingo/model/llm/` directory (organized by category: `text_quality/`, `rag/`, `hhh/`, etc.). Extend or modify them for domain-specific requirements.
+
+
+---
 
 # 🎓 Key Concepts for Practitioners
 
@@ -323,55 +346,6 @@ class MyCustomRule(BaseRule):
 **Why It Matters**: Adapt to domain-specific requirements without forking the codebase.
 
 ---
-
-# 📚 Data Quality Metrics
-
-Dingo provides **70+ evaluation metrics** across multiple dimensions, combining rule-based speed with LLM-based depth.
-
-## Metric Categories
-
-| Category | Examples | Use Case |
-|----------|----------|----------|
-| **Pretrain Text Quality** | Completeness, Effectiveness, Similarity, Security | LLM pre-training data filtering |
-| **SFT Data Quality** | Honest, Helpful, Harmless (3H) | Instruction fine-tuning data |
-| **RAG Evaluation** | Faithfulness, Context Precision, Answer Relevancy | RAG system assessment |
-| **Hallucination Detection** | HHEM-2.1-Open, Factuality Check | Production AI reliability |
-| **Classification** | Topic categorization, Content labeling | Data organization |
-| **Multimodal** | Image-text relevance, VLM quality, OCR visual evaluation | Vision-language data |
-| **Security** | PII detection, Perspective API toxicity | Privacy and safety |
-
-📊 **[View Complete Metrics Documentation →](docs/metrics.md)**  
-📖 **[RAG Evaluation Guide →](docs/rag_evaluation_metrics.md)** | **[中文版](docs/rag_evaluation_metrics_zh.md)**  
-🔍 **[Hallucination Detection Guide →](docs/hallucination_detection_guide.md)** | **[中文版](docs/hallucination_guide.md)**  
-✅ **[Factuality Assessment Guide →](docs/factuality_assessment_guide.md)** | **[中文版](docs/factcheck_guide.md)**  
-👁️ **[VLM Render Judge Guide →](docs/en/vlm_render_judge_guide.md)** | **[中文版](docs/vlm_render_judge_guide.md)**
-
-Most metrics are backed by academic research to ensure scientific rigor.
-
-## Quick Metric Usage
-
-```python
-llm_config = {
-    "model": "gpt-4o",
-    "key": "YOUR_API_KEY",
-    "api_url": "https://api.openai.com/v1/chat/completions"
-}
-
-input_data = {
-    "evaluator": [
-        {
-            "fields": {"content": "content"},
-            "evals": [
-                {"name": "RuleAbnormalChar"},           # Rule-based (fast)
-                {"name": "LLMTextQualityV5", "config": llm_config}  # LLM-based (deep)
-            ]
-        }
-    ]
-}
-```
-
-**Customization**: All prompts are defined in `dingo/model/llm/` directory (organized by category: `text_quality/`, `rag/`, `hhh/`, etc.). Extend or modify them for domain-specific requirements.
-
 
 # 🌟 Feature Highlights
 

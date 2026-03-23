@@ -197,35 +197,7 @@ dingo eval --input .github/env/local_plaintext.json
 dingo eval --input .github/env/local_json.json
 ```
 
-## 图形界面可视化
-
-进行评估后（设置`result_save.bad=True`），系统会自动生成前端页面。若要手动启动前端页面，请运行：
-
-```shell
-python -m dingo.run.vsl --input 输出目录
-```
-
-其中`输出目录`包含评估结果和`summary.json`文件。
-
-![GUI output](docs/assets/dingo_gui.jpg)
-
-## 在线演示
-尝试我们的在线演示: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
-
-## 本地演示
-尝试我们的本地演示：
-
-```shell
-cd app_gradio
-python app.py
-```
-
-![Gradio demo](docs/assets/gradio_demo.png)
-
-## Google Colab 演示
-通过Google Colab笔记本交互式体验Dingo：[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
-
-
+---
 
 # MCP 服务端
 
@@ -254,6 +226,57 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 
 此视频展示了关于 Dingo MCP 服务端与 Cursor 一起使用的分步演示。
 
+---
+
+# 📚 数据质量指标
+
+Dingo 提供 **70+ 评估指标**，跨多个维度，结合基于规则的速度和基于 LLM 的深度。
+
+## 指标类别
+
+| 类别 | 示例 | 使用场景 |
+|----------|----------|----------|
+| **预训练文本质量** | 完整性、有效性、相似性、安全性 | LLM 预训练数据过滤 |
+| **SFT 数据质量** | 诚实、有帮助、无害 (3H) | 指令微调数据 |
+| **RAG 评估** | 忠实度、上下文精度、答案相关性 | RAG 系统评估 |
+| **幻觉检测** | HHEM-2.1-Open、事实性检查 | 生产 AI 可靠性 |
+| **分类** | 主题分类、内容标注 | 数据组织 |
+| **多模态** | 图文相关性、VLM 质量、OCR 视觉评估 | 视觉语言数据 |
+| **安全性** | PII 检测、Perspective API 毒性 | 隐私和安全 |
+
+📊 **[查看完整指标文档 →](docs/metrics.md)**  
+📖 **[RAG 评估指南 →](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[幻觉检测指南 →](docs/hallucination_guide.md)**  
+✅ **[事实性评估指南 →](docs/factcheck_guide.md)**  
+👁️ **[VLM 渲染判断指南 →](docs/vlm_render_judge_guide.md)** | **[English](docs/en/vlm_render_judge_guide.md)**
+
+大部分指标都有学术研究支持，以确保科学严谨性。
+
+## 快速使用指标
+
+```python
+llm_config = {
+    "model": "gpt-4o",
+    "key": "YOUR_API_KEY",
+    "api_url": "https://api.openai.com/v1/chat/completions"
+}
+
+input_data = {
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleAbnormalChar"},           # 基于规则（快速）
+                {"name": "LLMTextQualityV5", "config": llm_config}  # 基于LLM（深度）
+            ]
+        }
+    ]
+}
+```
+
+**自定义**：所有 prompts 都定义在 `dingo/model/llm/` 目录中（按类别组织：`text_quality/`、`rag/`、`hhh/` 等）。可针对特定领域需求进行扩展或修改。
+
+---
 
 # 🎓 实践者关键概念
 
@@ -322,54 +345,6 @@ class MyCustomRule(BaseRule):
 **为什么重要**：适应特定领域需求而无需分叉代码库。
 
 ---
-
-# 📚 数据质量指标
-
-Dingo 提供 **70+ 评估指标**，跨多个维度，结合基于规则的速度和基于 LLM 的深度。
-
-## 指标类别
-
-| 类别 | 示例 | 使用场景 |
-|----------|----------|----------|
-| **预训练文本质量** | 完整性、有效性、相似性、安全性 | LLM 预训练数据过滤 |
-| **SFT 数据质量** | 诚实、有帮助、无害 (3H) | 指令微调数据 |
-| **RAG 评估** | 忠实度、上下文精度、答案相关性 | RAG 系统评估 |
-| **幻觉检测** | HHEM-2.1-Open、事实性检查 | 生产 AI 可靠性 |
-| **分类** | 主题分类、内容标注 | 数据组织 |
-| **多模态** | 图文相关性、VLM 质量 | 视觉语言数据 |
-| **安全性** | PII 检测、Perspective API 毒性 | 隐私和安全 |
-
-📊 **[查看完整指标文档 →](docs/metrics.md)**  
-📖 **[RAG 评估指南 →](docs/rag_evaluation_metrics_zh.md)**  
-🔍 **[幻觉检测指南 →](docs/hallucination_guide.md)**  
-✅ **[事实性评估指南 →](docs/factcheck_guide.md)**
-
-大部分指标都有学术研究支持，以确保科学严谨性。
-
-## 快速使用指标
-
-```python
-llm_config = {
-    "model": "gpt-4o",
-    "key": "YOUR_API_KEY",
-    "api_url": "https://api.openai.com/v1/chat/completions"
-}
-
-input_data = {
-    "evaluator": [
-        {
-            "fields": {"content": "content"},
-            "evals": [
-                {"name": "RuleAbnormalChar"},           # 基于规则（快速）
-                {"name": "LLMTextQualityV5", "config": llm_config}  # 基于LLM（深度）
-            ]
-        }
-    ]
-}
-```
-
-**自定义**：所有 prompts 都定义在 `dingo/model/llm/` 目录中（按类别组织：`text_quality/`、`rag/`、`hhh/` 等）。可针对特定领域需求进行扩展或修改。
-
 
 # 🌟 功能亮点
 
@@ -481,6 +456,8 @@ input_data = {
 ✅ 自动统计（avg、min、max、std_dev）  
 ✅ 按字段分组的指标  
 ✅ 总体质量评分
+
+---
 
 # 📖 用户指南
 

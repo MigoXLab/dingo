@@ -196,34 +196,7 @@ dingo eval --input .github/env/local_plaintext.json
 dingo eval --input .github/env/local_json.json
 ```
 
-## GUI可視化
-
-評価後（`result_save.bad=True`で）、フロントエンドページが自動的に生成されます。手動でフロントエンドを開始するには：
-
-```shell
-python -m dingo.run.vsl --input output_directory
-```
-
-ここで`output_directory`は`summary.json`ファイルを含む評価結果が格納されているディレクトリです。
-
-![GUI output](docs/assets/dingo_gui.jpg)
-
-## オンラインデモ
-オンラインデモでDingoをお試しください: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
-
-## ローカルデモ
-地元でDingoを試してみましょう：
-
-```shell
-cd app_gradio
-python app.py
-```
-
-![Gradio demo](docs/assets/gradio_demo.png)
-
-## Google Colabデモ
-Google ColabノートブックでDingoをインタラクティブに体験してください：[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
-
+---
 
 # MCPサーバー
 
@@ -252,6 +225,57 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 
 このビデオでは、Dingo MCPサーバーをCursorと一緒に使用する方法をステップバイステップで説明しています。
 
+---
+
+# 📚 データ品質メトリクス
+
+Dingo は **70以上の評価メトリクス**を提供し、複数の次元にわたってルールベースの速度と LLM ベースの深度を組み合わせます。
+
+## メトリクスカテゴリ
+
+| カテゴリ | 例 | 使用例 |
+|----------|----------|----------|
+| **事前学習テキスト品質** | 完全性、有効性、類似性、セキュリティ | LLM 事前学習データフィルタリング |
+| **SFT データ品質** | 正直、有用、無害 (3H) | 指示ファインチューニングデータ |
+| **RAG 評価** | 忠実度、コンテキスト精度、答え関連性 | RAG システム評価 |
+| **幻覚検出** | HHEM-2.1-Open、事実性チェック | 本番 AI 信頼性 |
+| **分類** | トピック分類、コンテンツラベリング | データ整理 |
+| **マルチモーダル** | 画像テキスト関連性、VLM 品質、OCR 視覚評価 | ビジュアル言語データ |
+| **セキュリティ** | PII 検出、Perspective API 毒性 | プライバシーと安全性 |
+
+📊 **[完全なメトリクス文書を表示 →](docs/metrics.md)**  
+📖 **[RAG 評価ガイド →](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[幻覚検出ガイド →](docs/hallucination_guide.md)**  
+✅ **[事実性評価ガイド →](docs/factcheck_guide.md)**  
+👁️ **[VLM レンダリング判定ガイド →](docs/en/vlm_render_judge_guide.md)** | **[中文版](docs/vlm_render_judge_guide.md)**
+
+大部分のメトリクスは学術研究に裏付けられており、科学的厳密性を確保しています。
+
+## メトリクスの迅速な使用
+
+```python
+llm_config = {
+    "model": "gpt-4o",
+    "key": "YOUR_API_KEY",
+    "api_url": "https://api.openai.com/v1/chat/completions"
+}
+
+input_data = {
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleAbnormalChar"},           # ルールベース（高速）
+                {"name": "LLMTextQualityV5", "config": llm_config}  # LLMベース（深度）
+            ]
+        }
+    ]
+}
+```
+
+**カスタマイズ**：すべてのプロンプトは `dingo/model/llm/` ディレクトリに定義されています（カテゴリ別に整理：`text_quality/`、`rag/`、`hhh/` など）。ドメイン固有のニーズに合わせて拡張または変更できます。
+
+---
 
 # 🎓 実務者のための重要概念
 
@@ -321,54 +345,6 @@ class MyCustomRule(BaseRule):
 
 ---
 
-# 📚 データ品質メトリクス
-
-Dingo は **70以上の評価メトリクス**を提供し、複数の次元にわたってルールベースの速度と LLM ベースの深度を組み合わせます。
-
-## メトリクスカテゴリ
-
-| カテゴリ | 例 | 使用例 |
-|----------|----------|----------|
-| **事前学習テキスト品質** | 完全性、有効性、類似性、セキュリティ | LLM 事前学習データフィルタリング |
-| **SFT データ品質** | 正直、有用、無害 (3H) | 指示ファインチューニングデータ |
-| **RAG 評価** | 忠実度、コンテキスト精度、答え関連性 | RAG システム評価 |
-| **幻覚検出** | HHEM-2.1-Open、事実性チェック | 本番 AI 信頼性 |
-| **分類** | トピック分類、コンテンツラベリング | データ整理 |
-| **マルチモーダル** | 画像テキスト関連性、VLM 品質 | ビジュアル言語データ |
-| **セキュリティ** | PII 検出、Perspective API 毒性 | プライバシーと安全性 |
-
-📊 **[完全なメトリクス文書を表示 →](docs/metrics.md)**  
-📖 **[RAG 評価ガイド →](docs/rag_evaluation_metrics_zh.md)**  
-🔍 **[幻覚検出ガイド →](docs/hallucination_guide.md)**  
-✅ **[事実性評価ガイド →](docs/factcheck_guide.md)**
-
-大部分のメトリクスは学術研究に裏付けられており、科学的厳密性を確保しています。
-
-## メトリクスの迅速な使用
-
-```python
-llm_config = {
-    "model": "gpt-4o",
-    "key": "YOUR_API_KEY",
-    "api_url": "https://api.openai.com/v1/chat/completions"
-}
-
-input_data = {
-    "evaluator": [
-        {
-            "fields": {"content": "content"},
-            "evals": [
-                {"name": "RuleAbnormalChar"},           # ルールベース（高速）
-                {"name": "LLMTextQualityV5", "config": llm_config}  # LLMベース（深度）
-            ]
-        }
-    ]
-}
-```
-
-**カスタマイズ**：すべてのプロンプトは `dingo/model/llm/` ディレクトリに定義されています（カテゴリ別に整理：`text_quality/`、`rag/`、`hhh/` など）。ドメイン固有のニーズに合わせて拡張または変更できます。
-
-
 # 🌟 機能ハイライト
 
 ## 📊 マルチソースデータ統合
@@ -424,6 +400,12 @@ input_data = {
 ✅ ビジョン言語モデル（InternVL、Gemini）  
 ✅ カスタムプロンプト登録
 
+**エージェントベース** - ツールを活用した多段階推論  
+✅ Web 検索統合（Tavily）  
+✅ 適応型コンテキスト収集  
+✅ マルチソース事実検証  
+✅ カスタムエージェントとツール登録
+
 **拡張可能なアーキテクチャ**  
 ✅ プラグインベースのルール/プロンプト/モデル登録  
 ✅ 明確な関心の分離（エージェント、ツール、オーケストレーション）  
@@ -473,6 +455,8 @@ input_data = {
 ✅ 自動統計（avg、min、max、std_dev）  
 ✅ フィールド別にグループ化されたメトリクス  
 ✅ 全体品質スコア
+
+---
 
 # 📖 ユーザーガイド
 
@@ -526,6 +510,86 @@ class MyCustomModel(BaseOpenAI):
 詳細な例については以下をご覧ください：
 - [ルール登録](examples/register/sdk_register_rule.py)
 - [モデル登録](examples/register/sdk_register_llm.py)
+
+### エージェントベース評価とツール
+
+Dingo はエージェントベースの評価器をサポートし、外部ツールを使用した多段階推論と適応型コンテキスト収集が可能です。2つの実装パターンが利用できます：
+
+**パターン 1：LangChain ベース**（例：`AgentFactCheck`）
+- フレームワーク駆動、自律的多段階推論
+- LangChain 1.0 の `create_agent` と ReAct パターンを使用
+- 適用：複雑な推論タスク、迅速なプロトタイピング
+- コードが少なく、より宣言的
+
+**パターン 2：カスタムワークフロー**（例：`AgentHallucination`）
+- 開発者駆動、明示的なワークフロー制御
+- 手動でのツール呼び出しと LLM インタラクション
+- 適用：既存の評価器の組み合わせ、ドメイン固有のワークフロー
+- 完全な制御、明示的な動作
+
+両パターンは同じ設定インターフェースを共有し、ユーザーに対して透過的です。
+
+**組み込みエージェント：**
+- `AgentFactCheck`: LangChain ベースのファクトチェック、自律的検索制御
+- `AgentHallucination`: カスタムワークフローの幻覚検出、適応型コンテキスト収集
+- `ArticleFactChecker`: 2段階の記事ファクトチェック — 検証可能な主張を抽出し、Web 検索と Arxiv を使用して並行検証、設定可能な並行制御
+
+**クイック例：**
+
+```python
+from dingo.io import Data
+from dingo.io.output.eval_detail import EvalDetail
+from dingo.model import Model
+from dingo.model.llm.agent.base_agent import BaseAgent
+
+@Model.llm_register('MyAgent')
+class MyAgent(BaseAgent):
+    """ツールサポート付きカスタムエージェント"""
+
+    available_tools = ["tavily_search", "my_custom_tool"]
+    max_iterations = 5
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        # ツールを使用してファクトチェック
+        search_result = cls.execute_tool('tavily_search', query=input_data.content)
+
+        # LLM を使用した多段階推論
+        result = cls.send_messages([...])
+
+        return EvalDetail(...)
+```
+
+エージェントパターンの選択と実装の詳細については、[エージェント開発ガイド](docs/agent_development_guide.md)をご参照ください。
+
+**設定例：**
+```json
+{
+  "evaluator": [{
+    "evals": [{
+      "name": "AgentHallucination",
+      "config": {
+        "key": "openai-api-key",
+        "model": "gpt-4",
+        "parameters": {
+          "agent_config": {
+            "max_iterations": 5,
+            "tools": {
+              "tavily_search": {"api_key": "tavily-key"}
+            }
+          }
+        }
+      }
+    }]
+  }]
+}
+```
+
+**詳しく学ぶ：**
+- [エージェント開発ガイド](docs/agent_development_guide.md)
+- [AgentHallucination 例](examples/agent/agent_hallucination_example.py)
+- [AgentFactCheck LangChain例](examples/agent/agent_executor_example.py)
+- [ArticleFactChecker 例](examples/agent/agent_article_fact_checking_example.py) - 記事レベルの2段階ファクトチェック
 
 ## 実行エンジン
 

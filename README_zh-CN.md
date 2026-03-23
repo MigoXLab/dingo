@@ -230,7 +230,7 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 
 # 📚 数据质量指标
 
-Dingo 提供 **70+ 评估指标**，跨多个维度，结合基于规则的速度和基于 LLM 的深度。
+Dingo 提供 **100+ 评估指标**，跨多个维度，结合基于规则的速度和基于 LLM 的深度。
 
 ## 指标类别
 

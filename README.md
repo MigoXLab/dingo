@@ -230,7 +230,7 @@ This video demonstrates step-by-step how to use Dingo MCP server with Cursor.
 
 # 📚 Data Quality Metrics
 
-Dingo provides **70+ evaluation metrics** across multiple dimensions, combining rule-based speed with LLM-based depth.
+Dingo provides **100+ evaluation metrics** across multiple dimensions, combining rule-based speed with LLM-based depth.
 
 ## Metric Categories
 

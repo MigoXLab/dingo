@@ -448,9 +448,9 @@ class MyCustomRule(BaseRule):
 ✅ Per-rule violation details  
 ✅ Type and name distribution
 
-**GUI Visualization**  
-✅ Built-in web interface  
-✅ Interactive data exploration  
+**GUI Visualization (via [Dingo SaaS](https://github.com/MigoXLab/dingo-saas))**  
+✅ Web UI with interactive data exploration  
+✅ Visual reports with trend analysis  
 ✅ Anomaly tracking
 
 **Metric Aggregation**  

@@ -17,8 +17,6 @@ Dingo is a comprehensive AI data quality evaluation tool for ML practitioners, d
 | LLM Integration | OpenAI SDK (supports any compatible API) |
 | MCP Server | FastMCP + SSE transport |
 | Distributed | PySpark (optional) |
-| Web UI | React + TypeScript + Vite (in `app/`) |
-| GUI Demo | Gradio (in `app_gradio/`) |
 
 ## Directory Structure
 
@@ -30,7 +28,6 @@ dingo/
 ├── requirements/
 │   ├── runtime.txt          ← core dependencies (minimal)
 │   ├── datasource.txt       ← optional datasource deps (S3, SQL, Parquet, etc.)
-│   ├── web.txt              ← web UI deps
 │   ├── optional.txt         ← heavy optional deps (torch, pyspark, etc.)
 │   └── agent.txt            ← agent evaluation deps (langchain, tavily)
 │
@@ -66,11 +63,8 @@ dingo/
 │   │   ├── local.py         ← LocalExecutor (single machine, cross-layer conflict detection)
 │   │   └── spark.py         ← SparkExecutor (distributed)
 │   └── run/
-│       ├── cli.py           ← CLI entry point (subcommands: eval, info)
-│       └── vsl.py           ← GUI visualization entry point
+│       └── cli.py           ← CLI entry point (subcommands: eval, info)
 │
-├── app/                     ← React frontend (Next.js-style)
-├── app_gradio/              ← Gradio demo UI
 ├── examples/                ← Usage examples (SDK, CLI, various scenarios)
 ├── test/                    ← Test suite
 │   ├── data/                ← Test data files

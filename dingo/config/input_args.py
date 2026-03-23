@@ -132,7 +132,6 @@ class InputArgs(BaseModel):
     output_path: str = "outputs/"
 
     log_level: str = "WARNING"
-    use_browser: bool = False
 
     dataset: DatasetArgs = DatasetArgs()
     executor: ExecutorArgs = ExecutorArgs()

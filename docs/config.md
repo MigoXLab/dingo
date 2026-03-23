@@ -22,7 +22,6 @@
 | input_path | str | "test/data/test_local_json.json" | Yes | 要检查的文件或目录路径 |
 | output_path | str | "outputs/" | No | 结果输出路径 |
 | log_level | str | "WARNING" | No | 日志级别，可选值：['DEBUG', 'INFO', 'WARNING', 'ERROR'] |
-| use_browser | bool | false | No | 是否使用浏览器进行可视化 |
 
 ### Dataset 配置 (dataset)
 

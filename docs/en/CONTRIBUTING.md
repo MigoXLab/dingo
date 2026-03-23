@@ -145,9 +145,6 @@ python -m pytest --cov=dingo test/
 # Test CLI functionality
 dingo eval --input .github/env/local_plaintext.json
 
-# Start local demo
-cd app_gradio
-python app.py
 ```
 
 ## Code Style

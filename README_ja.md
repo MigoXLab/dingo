@@ -446,9 +446,9 @@ class MyCustomRule(BaseRule):
 ✅ ルール違反ごとの詳細情報  
 ✅ タイプと名前の分布
 
-**GUI 可視化**  
-✅ 組み込み Web インターフェース  
-✅ インタラクティブなデータ探索  
+**GUI 可視化（[Dingo SaaS](https://github.com/MigoXLab/dingo-saas) 経由）**  
+✅ Web UI によるインタラクティブなデータ探索  
+✅ トレンド分析付きビジュアルレポート  
 ✅ 異常追跡
 
 **メトリクス集計**  

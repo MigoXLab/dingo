@@ -171,12 +171,6 @@ dingo 默认状态下没有开启并发，如果有大规模评估任务需要�
 
 如果 save_raw 设置为True，那么将执行 [ResultInfo](../dingo/io/output/ResultInfo.py) 类的 to_dict_raw 函数，否则将执行 to_dict 函数。
 
-### 启动前端页面
-dingo 评估任务结束后，如果保存了评估结果，那么就可以通过一下方式启动前端页面展示结果:
-```shell
-python -m dingo.run.vsl --input outputs/20250609_101837_50b5c0be
-```
-
 ## 四、规则
 dingo 内置了不同类型的评估规则，详情见: [规则列表](rules.md)。
 每条评估规则都有自己的 metric_type 和所属的 group。

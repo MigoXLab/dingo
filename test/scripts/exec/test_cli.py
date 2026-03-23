@@ -12,7 +12,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(o
 
 def run_cli(*args, expect_exit=0):
     """Run the dingo CLI as a subprocess and return (stdout, stderr, returncode)."""
-    cmd = [sys.executable, "-m", "dingo.run.cli"] + list(args)
+    cmd = [sys.executable, "-W", "ignore", "-m", "dingo.run.cli"] + list(args)
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=PROJECT_ROOT)
     if expect_exit is not None:
         assert result.returncode == expect_exit, (
@@ -20,6 +20,18 @@ def run_cli(*args, expect_exit=0):
             f"stdout: {result.stdout}\nstderr: {result.stderr}"
         )
     return result.stdout, result.stderr, result.returncode
+
+
+def parse_json_from_output(text):
+    """Extract and parse JSON from output that may contain non-JSON content (e.g. warnings)."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1:
+            return json.loads(text[start:end + 1])
+        raise
 
 
 class TestCLIHelp:
@@ -111,7 +123,7 @@ class TestCLIErrorHandling:
     def test_missing_config_file_json(self):
         """--json mode: missing file produces JSON error on stderr with exit code 3."""
         _, stderr, code = run_cli("eval", "--input", "/nonexistent/path.json", "--json", expect_exit=3)
-        data = json.loads(stderr)
+        data = parse_json_from_output(stderr)
         assert data["status"] == "error"
         assert data["error_type"] == "ConfigError"
         assert "not found" in data["message"]
@@ -129,7 +141,7 @@ class TestCLIErrorHandling:
             f.flush()
             try:
                 _, stderr, code = run_cli("eval", "--input", f.name, "--json", expect_exit=1)
-                data = json.loads(stderr)
+                data = parse_json_from_output(stderr)
                 assert data["status"] == "error"
                 assert data["error_type"] == "ConfigError"
                 assert "Invalid JSON" in data["message"]
@@ -143,7 +155,7 @@ class TestCLIErrorHandling:
             f.flush()
             try:
                 _, stderr, code = run_cli("eval", "--input", f.name, "--json", expect_exit=1)
-                data = json.loads(stderr)
+                data = parse_json_from_output(stderr)
                 assert data["status"] == "error"
                 assert data["error_type"] == "ConfigError"
             finally:

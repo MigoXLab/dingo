@@ -1,28 +1,26 @@
-from fastapi import HTTPException
-
 # tokens
 
 
-class TokensException(HTTPException):
+class TokensException(Exception):
     pass
 
 
 class ExceedMaxTokens(TokensException):
-    status_code = 400
 
     def __init__(self, detail="Exceeded maximum allowed tokens."):
         self.detail = detail
+        super().__init__(detail)
 
 
 # convert
 
 
-class ConvertError(HTTPException):
+class ConvertError(Exception):
     pass
 
 
 class ConvertJsonError(ConvertError):
-    status_code = 500
 
     def __init__(self, detail="Failed to convert JSON data."):
         self.detail = detail
+        super().__init__(detail)

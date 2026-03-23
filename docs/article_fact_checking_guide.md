@@ -165,7 +165,7 @@ cat > article_check_config.json << EOF
 EOF
 
 # 3. Run fact-checking
-python -m dingo.run.cli --input article_check_config.json
+dingo eval --input article_check_config.json
 ```
 
 ## Supported Article Types

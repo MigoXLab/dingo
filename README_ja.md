@@ -187,13 +187,13 @@ if __name__ == '__main__':
 ### ルールセットでの評価
 
 ```shell
-python -m dingo.run.cli --input .github/env/local_plaintext.json
+dingo eval --input .github/env/local_plaintext.json
 ```
 
 ### LLM（例：GPT-4o）での評価
 
 ```shell
-python -m dingo.run.cli --input .github/env/local_json.json
+dingo eval --input .github/env/local_json.json
 ```
 
 ## GUI可視化

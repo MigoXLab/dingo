@@ -34,19 +34,20 @@ dingo/
 │   ├── optional.txt         ← heavy optional deps (torch, pyspark, etc.)
 │   └── agent.txt            ← agent evaluation deps (langchain, tavily)
 │
+├── SKILL.md                 ← AI agent skill definition (symlink → clawhub/SKILL.md)
 ├── dingo/                   ← core Python package
 │   ├── config/
 │   │   └── input_args.py    ← InputArgs, EvalPiplineConfig, EvaluatorGroupConfig
 │   ├── io/
 │   │   ├── input/data.py    ← Data model (Pydantic, extra="allow")
-│   │   └── output/          ← ResultInfo, EvalDetail, SummaryModel
+│   │   └── output/          ← ResultInfo, EvalDetail, SummaryModel (+ cross-layer analysis)
 │   ├── data/
 │   │   ├── datasource/      ← LocalDataSource, SQLDataSource, S3DataSource, HFDataSource
 │   │   ├── dataset/         ← Dataset implementations per source
 │   │   └── converter/       ← Format converters (JSON, JSONL, CSV, Parquet, etc.)
 │   ├── model/
 │   │   ├── model.py         ← Model registry (rule_register, llm_register)
-│   │   ├── rule/            ← Rule-based evaluators (30+ built-in)
+│   │   ├── rule/            ← Rule-based evaluators (80+ built-in)
 │   │   │   ├── base.py      ← BaseRule
 │   │   │   ├── rule_common.py ← Common rules (text quality, format, PII, etc.)
 │   │   │   └── utils/       ← Shared utilities (normalize, ngrams, etc.)
@@ -62,10 +63,10 @@ dingo/
 │   │           ├── agent_fact_check.py
 │   │           └── agent_hallucination.py
 │   ├── exec/
-│   │   ├── local.py         ← LocalExecutor (single machine)
+│   │   ├── local.py         ← LocalExecutor (single machine, cross-layer conflict detection)
 │   │   └── spark.py         ← SparkExecutor (distributed)
 │   └── run/
-│       ├── cli.py           ← CLI entry point
+│       ├── cli.py           ← CLI entry point (subcommands: eval, info)
 │       └── vsl.py           ← GUI visualization entry point
 │
 ├── app/                     ← React frontend (Next.js-style)
@@ -191,7 +192,7 @@ pip install "dingo-python[all]"         # + Everything
 2. Create dataset class in `dingo/data/dataset/`
 3. Register in the respective `__init__.py`
 4. Use lazy imports if new dependencies required
-5. Add dependency to `requirements/datasource.txt` and `setup.py` extras
+5. Add dependency to `requirements/runtime.txt` (core) or `setup.py` extras (heavy/optional)
 
 ### Testing
 
@@ -203,8 +204,31 @@ pytest test/scripts --ignore=test/scripts/data
 pytest test/scripts/model/llm/test_rag.py -v
 
 # Integration tests (CLI)
-python -m dingo.run.cli --input test/env/local_plaintext.json
+dingo eval --input .github/env/local_plaintext.json
+dingo eval --input .github/env/local_json.json --json
 ```
+
+### CLI Reference
+
+Dingo provides a `dingo` CLI command (installed via `pip install dingo-python`):
+
+```bash
+# Run evaluation (primary command)
+dingo eval --input config.json            # Human-readable output
+dingo eval --input config.json --json     # JSON output (for agents/automation)
+
+# List available evaluators, groups
+dingo info                                # Show all (rules, LLM, groups)
+dingo info --rules                        # Rule evaluators only
+dingo info --llm                          # LLM evaluators only
+dingo info --groups                       # Rule groups only
+dingo info --json                         # JSON output
+
+# Backward compatibility (no subcommand)
+dingo --input config.json                 # Same as `dingo eval --input config.json`
+python -m dingo.run.cli --input config.json
+```
+
 
 ### Version Conventions
 
@@ -245,9 +269,10 @@ When these events occur, update the corresponding files:
 | Event | Update |
 |-------|--------|
 | New evaluator added | Ensure registration decorator is correct; update `docs/metrics.md` |
-| New datasource added | Update `requirements/datasource.txt`, `setup.py` extras, README install section |
-| New dependency added | Decide: `runtime.txt` (core) vs `datasource.txt` (optional); use lazy import for optional |
+| New datasource added | Update `requirements/runtime.txt`, `setup.py` extras if heavy, README install section |
+| New dependency added | Decide: `runtime.txt` (core) vs `setup.py` extras (heavy/optional); use lazy import for optional |
 | New MCP tool added | Update MCP Tools table in this file |
+| New CLI subcommand added | Update CLI Reference section in this file |
 | Directory structure change | Update this file |
 | Version bump | Update `setup.py` version field |
 

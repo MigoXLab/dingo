@@ -54,5 +54,10 @@ setup(
     ],
     install_requires=[i.strip() for i in requirements],
     extras_require=extras_require,
+    entry_points={
+        'console_scripts': [
+            'dingo=dingo.run.cli:main',
+        ],
+    },
     python_requires='>=3.10',
 )

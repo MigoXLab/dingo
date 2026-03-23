@@ -48,7 +48,7 @@ python -c "from dingo.config import InputArgs; print('Dingo OK')"
 Dingo CLI takes a JSON config file as input:
 
 ```bash
-python -m dingo.run.cli --input config.json
+dingo eval --input config.json
 ```
 
 ### Minimal rule-based config
@@ -293,7 +293,7 @@ outputs/<timestamp>/
 When using this skill on behalf of the user:
 
 * **Always write a config file** before running CLI evaluation. Don't try to pass complex JSON inline.
-* **Quote file paths** with spaces in commands: `python -m dingo.run.cli --input "my config.json"`
+* **Quote file paths** with spaces in commands: `dingo eval --input "my config.json"`
 * **Wrap main code in `if __name__ == '__main__':`** when writing Python scripts — Dingo uses multiprocessing internally, which fails on macOS without this guard.
 * **Infer format from extension**: `.jsonl` → `jsonl`, `.json` → `json`, `.csv` → `csv`, `.txt` → `plaintext`.
 * **Default to rule-based** when the user doesn't specify evaluation type — it's free, fast, and needs no API key.

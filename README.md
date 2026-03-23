@@ -402,10 +402,10 @@ class MyCustomRule(BaseRule):
 ✅ Vision-Language Models (InternVL, Gemini)  
 ✅ Custom prompt registration
 
-**Agent-Based** - Multi-step reasoning with tools
-✅ Web search integration (Tavily)
-✅ Adaptive context gathering
-✅ Multi-source fact verification
+**Agent-Based** - Multi-step reasoning with tools  
+✅ Web search integration (Tavily)  
+✅ Adaptive context gathering  
+✅ Multi-source fact verification  
 ✅ Custom agent & tool registration
 
 **Extensible Architecture**  

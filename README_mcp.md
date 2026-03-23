@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `mcp_server.py` script provides an experimental Model Context Protocol (MCP) server for Dingo, powered by [FastMCP](https://github.com/modelcontextprotocol/fastmcp). This allows MCP clients, such as Cursor, to interact with Dingo's data evaluation capabilities programmatically.
+Dingo provides a built-in Model Context Protocol (MCP) server, powered by [FastMCP](https://github.com/modelcontextprotocol/fastmcp). This allows MCP clients, such as Cursor, to interact with Dingo's data evaluation capabilities programmatically.
 
 ## Features
 
@@ -18,22 +18,38 @@ The `mcp_server.py` script provides an experimental Model Context Protocol (MCP)
 
 ## Installation
 
-1.  **Prerequisites**: Ensure you have Git and a Python environment (e.g., 3.8+) set up.
-2.  **Clone the Repository**: Clone this repository to your local machine.
-    ```bash
-    git clone https://github.com/MigoXLab/dingo.git
-    cd dingo
-    ```
-3.  **Install Dependencies**: Install the required dependencies, including FastMCP and other Dingo requirements. It's recommended to use the `requirements.txt` file.
-    ```bash
-    pip install -r requirements.txt
-    # Alternatively, at minimum: pip install fastmcp
-    ```
-4.  **Ensure Dingo is Importable**: Make sure your Python environment can find the `dingo` package within the cloned repository when you run the server script.
+```bash
+pip install dingo-python
+```
+
+This installs the `dingo` CLI command which includes the MCP server. No need to clone the repository.
+
+For development or to customize `mcp_server.py` directly:
+
+```bash
+git clone https://github.com/MigoXLab/dingo.git
+cd dingo
+pip install -e .
+```
 
 ## Running the Server
 
-Navigate to the directory containing `mcp_server.py` and run it using Python:
+### Using the CLI (recommended)
+
+```bash
+# SSE transport (default) on port 8000
+dingo serve
+
+# Custom host and port
+dingo serve --host 127.0.0.1 --port 9000
+
+# stdio transport (for Claude Desktop or local agent spawn)
+dingo serve --transport stdio
+```
+
+### Using mcp_server.py directly (legacy)
+
+If you cloned the repository, you can also run the server script directly:
 
 ```bash
 python mcp_server.py
@@ -41,37 +57,10 @@ python mcp_server.py
 
 ### Transmission Modes
 
-Dingo MCP server supports two transmission modes:
-
-1. **STDIO Transmission Mode**:
-   - Enabled by setting the environment variable `LOCAL_DEPLOYMENT_MODE=true`
-   - Uses standard input/output streams for communication
-   - Suitable for direct local execution or Smithery containerized deployment
-   - Configured with `command` and `args` in mcp.json
-
-2. **SSE Transmission Mode**:
-   - Default mode (when `LOCAL_DEPLOYMENT_MODE` is not set or is false)
-   - Uses HTTP Server-Sent Events for network communication
-   - Listens on a specified port after starting and can be accessed via URL
-   - Configured with `url` in mcp.json
-
-Choose the appropriate transmission mode based on your deployment needs:
-- Use STDIO mode for local execution or Smithery deployment
-- Use SSE mode for network service deployment
-
-When using SSE mode, you can customize the server's behavior using arguments in the script's `mcp.run()` call:
-
-```python
-# Example customization in mcp_server.py
-mcp.run(
-    transport="sse",      # Communication protocol (sse is default)
-    host="127.0.0.1",     # Network interface to bind to (default: 0.0.0.0)
-    port=8888,            # Port to listen on (default: 8000)
-    log_level="debug"     # Logging verbosity (default: info)
-)
-```
-
-**Important**: Note the `host` and `port` the server is running on, as you will need these to configure your MCP client.
+| Mode | Use Case | How to Start |
+|------|----------|-------------|
+| **SSE** (default) | Network service, Cursor integration | `dingo serve` or `dingo serve --port 9000` |
+| **stdio** | Claude Desktop, local agent spawn | `dingo serve --transport stdio` |
 
 ## Integration with Cursor
 
@@ -81,46 +70,38 @@ To connect Cursor to your running Dingo MCP server, you need to edit Cursor's MC
 
 Add or modify the entry for your Dingo server within the `mcpServers` object.
 
-**Example 1: SSE Transmission Mode Configuration**:
+**Example 1: SSE Mode** (run `dingo serve` first, then configure):
 
 ```json
 {
   "mcpServers": {
-    // ... other servers ...
-    "dingo_evaluator": {
-      "url": "http://127.0.0.1:8888/sse" // <-- MUST match host, port, and transport of your running server
+    "dingo": {
+      "url": "http://localhost:8000/sse"
     }
-    // ...
   }
 }
 ```
 
-**Example 2: STDIO Transmission Mode Configuration**:
+**Example 2: stdio Mode** (Cursor spawns the process automatically):
 
 ```json
 {
   "mcpServers": {
-    "dingo_evaluator": {
-      "command": "python",
-      "args": ["path/to/mcp_server.py"],
+    "dingo": {
+      "command": "dingo",
+      "args": ["serve", "--transport", "stdio"],
       "env": {
-        "LOCAL_DEPLOYMENT_MODE": "true",
-        "DEFAULT_OUTPUT_DIR": "/path/to/output",
-        "DEFAULT_SAVE_DATA": "true",
-        "DEFAULT_SAVE_CORRECT": "true",
-        "DEFAULT_DATASET_TYPE": "local",
         "OPENAI_API_KEY": "your-api-key",
         "OPENAI_BASE_URL": "https://api.openai.com/v1",
-        "OPENAI_MODEL": "gpt-4",
-        "LOG_LEVEL": "INFO"
+        "OPENAI_MODEL": "gpt-4"
       }
     }
   }
 }
 ```
 
-*   For SSE mode: Ensure the `url` exactly matches the `host`, `port`, and `transport` (currently only `sse` is supported for the URL scheme) your `mcp_server.py` is configured to use. If you didn't customize `mcp.run`, the default URL is likely `http://127.0.0.1:8000/sse` or `http://0.0.0.0:8000/sse`.
-*   For STDIO mode: Ensure `LOCAL_DEPLOYMENT_MODE` is set to `"true"` in the environment variables.
+*   For SSE mode: Start `dingo serve` first, then the `url` must match the host and port. Default is `http://localhost:8000/sse`.
+*   For stdio mode: Cursor spawns the `dingo serve --transport stdio` process automatically. No need to start the server manually.
 *   Restart Cursor after saving changes to `mcp.json`.
 
 ### Usage in Cursor

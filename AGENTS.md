@@ -26,7 +26,7 @@ Dingo is a comprehensive AI data quality evaluation tool for ML practitioners, d
 dingo/
 ├── AGENTS.md                ← this file (agent instructions)
 ├── setup.py                 ← package config (extras_require for optional deps)
-├── mcp_server.py            ← MCP server entry point
+├── mcp_server.py            ← MCP server entry point (legacy, use `dingo serve` instead)
 ├── requirements/
 │   ├── runtime.txt          ← core dependencies (minimal)
 │   ├── datasource.txt       ← optional datasource deps (S3, SQL, Parquet, etc.)
@@ -224,6 +224,11 @@ dingo info --llm                          # LLM evaluators only
 dingo info --groups                       # Rule groups only
 dingo info --json                         # JSON output
 
+# Start MCP server (for AI agent integration)
+dingo serve                               # SSE transport on 0.0.0.0:8000
+dingo serve --port 9000                   # Custom port
+dingo serve --transport stdio             # stdio transport (for local agent)
+
 # Backward compatibility (no subcommand)
 dingo --input config.json                 # Same as `dingo eval --input config.json`
 python -m dingo.run.cli --input config.json
@@ -237,8 +242,8 @@ python -m dingo.run.cli --input config.json
 
 ## MCP Server
 
-Entry point: `mcp_server.py`
-Transport: SSE (`mcp.run(transport="sse")`)
+Start via CLI: `dingo serve` (SSE default) or `dingo serve --transport stdio`
+Legacy entry point: `mcp_server.py`
 Framework: FastMCP
 
 ### Available MCP Tools

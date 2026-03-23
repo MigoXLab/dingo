@@ -229,7 +229,20 @@ python app.py
 
 # MCP 服务端
 
-Dingo 包含一个实验性的模型上下文协议 (MCP) 服务端。有关运行服务端以及将其与 Cursor 等客户端集成的详细信息，请参阅专门的文档：
+Dingo 内置了模型上下文协议 (MCP) 服务端，支持 AI Agent 集成：
+
+```bash
+# 启动 MCP 服务端（SSE 传输，默认端口 8000）
+dingo serve
+
+# 自定义端口
+dingo serve --port 9000
+
+# stdio 传输（适用于 Claude Desktop）
+dingo serve --transport stdio
+```
+
+详细配置和 Cursor/Claude Desktop 集成说明，请参阅专门文档：
 
 [English](README_mcp.md) · [简体中文](README_mcp_zh-CN.md) · [日本語](README_mcp_ja.md)
 

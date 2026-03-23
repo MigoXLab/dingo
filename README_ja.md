@@ -227,7 +227,20 @@ Google ColabノートブックでDingoをインタラクティブに体験して
 
 # MCPサーバー
 
-Dingoには実験的なModel Context Protocol（MCP）サーバーが含まれています。サーバーの実行とCursorなどのクライアントとの統合の詳細については、専用のドキュメントをご覧ください：
+Dingoは、AIエージェント統合のための組み込みModel Context Protocol（MCP）サーバーを提供します：
+
+```bash
+# MCPサーバーを起動（SSEトランスポート、デフォルトポート8000）
+dingo serve
+
+# カスタムポート
+dingo serve --port 9000
+
+# stdioトランスポート（Claude Desktop用）
+dingo serve --transport stdio
+```
+
+詳細なセットアップとCursor/Claude Desktop統合については、専用のドキュメントをご覧ください：
 
 [English](README_mcp.md) · [简体中文](README_mcp_zh-CN.md) · [日本語](README_mcp_ja.md)
 

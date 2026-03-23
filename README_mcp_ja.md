@@ -2,7 +2,7 @@
 
 ## 概要
 
-`mcp_server.py`スクリプトは、[FastMCP](https://github.com/modelcontextprotocol/fastmcp)を使用してDingo用の実験的なModel Context Protocol（MCP）サーバーを提供します。これにより、CursorなどのMCPクライアントがDingoのデータ評価機能とプログラム的に対話できるようになります。
+Dingoは、[FastMCP](https://github.com/modelcontextprotocol/fastmcp)を使用した組み込みのModel Context Protocol（MCP）サーバーを提供します。これにより、CursorなどのMCPクライアントがDingoのデータ評価機能とプログラム的に対話できるようになります。
 
 ## 機能
 
@@ -18,22 +18,38 @@
 
 ## インストール
 
-1.  **前提条件**: GitとPython環境（例：3.8+）がセットアップされていることを確認してください。
-2.  **リポジトリのクローン**: このリポジトリをローカルマシンにクローンします。
-    ```bash
-    git clone https://github.com/MigoXLab/dingo.git
-    cd dingo
-    ```
-3.  **依存関係のインストール**: FastMCPやその他のDingo要件を含む必要な依存関係をインストールします。`requirements.txt`ファイルの使用を推奨します。
-    ```bash
-    pip install -r requirements.txt
-    # または、最低限：pip install fastmcp
-    ```
-4.  **Dingoがインポート可能であることを確認**: サーバースクリプトを実行する際に、Python環境がクローンしたリポジトリ内の`dingo`パッケージを見つけられることを確認してください。
+```bash
+pip install dingo-python
+```
+
+インストール後、`dingo` CLIコマンドが使用可能になり、MCPサーバーが含まれています。リポジトリのクローンは不要です。
+
+開発や`mcp_server.py`の直接カスタマイズが必要な場合：
+
+```bash
+git clone https://github.com/MigoXLab/dingo.git
+cd dingo
+pip install -e .
+```
 
 ## サーバーの実行
 
-`mcp_server.py`が含まれているディレクトリに移動し、Pythonを使用して実行します：
+### CLIを使用（推奨）
+
+```bash
+# SSEトランスポート（デフォルト）、ポート8000でリッスン
+dingo serve
+
+# カスタムホストとポート
+dingo serve --host 127.0.0.1 --port 9000
+
+# stdioトランスポート（Claude Desktopやローカルエージェント起動用）
+dingo serve --transport stdio
+```
+
+### mcp_server.pyを直接実行（レガシー）
+
+リポジトリをクローンした場合、サーバースクリプトを直接実行することもできます：
 
 ```bash
 python mcp_server.py
@@ -41,37 +57,10 @@ python mcp_server.py
 
 ### 伝送モード
 
-Dingo MCPサーバーは2つの伝送モードをサポートしています：
-
-1. **STDIO伝送モード**：
-   - 環境変数`LOCAL_DEPLOYMENT_MODE=true`を設定することで有効化
-   - 標準入出力ストリームを使用して通信
-   - 直接的なローカル実行やSmitheryコンテナ化デプロイメントに適している
-   - mcp.jsonで`command`と`args`を使用して設定
-
-2. **SSE伝送モード**：
-   - デフォルトモード（`LOCAL_DEPLOYMENT_MODE`が設定されていないか、falseの場合）
-   - ネットワーク通信にHTTP Server-Sent Eventsを使用
-   - 起動後に指定されたポートでリッスンし、URL経由でアクセス可能
-   - mcp.jsonで`url`を使用して設定
-
-デプロイメントのニーズに応じて適切な伝送モードを選択してください：
-- ローカル実行やSmitheryデプロイメントにはSTDIOモードを使用
-- ネットワークサービスデプロイメントにはSSEモードを使用
-
-SSEモードを使用する場合、スクリプトの`mcp.run()`呼び出しで引数を使用してサーバーの動作をカスタマイズできます：
-
-```python
-# mcp_server.pyでのカスタマイズ例
-mcp.run(
-    transport="sse",      # 通信プロトコル（sseがデフォルト）
-    host="127.0.0.1",     # バインドするネットワークインターフェース（デフォルト：0.0.0.0）
-    port=8888,            # リッスンするポート（デフォルト：8000）
-    log_level="debug"     # ログの詳細レベル（デフォルト：info）
-)
-```
-
-**重要**: MCPクライアントを設定する際に必要となるため、サーバーが実行されている`host`と`port`をメモしてください。
+| モード | 使用シーン | 起動方法 |
+|--------|-----------|---------|
+| **SSE**（デフォルト） | ネットワークサービス、Cursor統合 | `dingo serve` または `dingo serve --port 9000` |
+| **stdio** | Claude Desktop、ローカルエージェント起動 | `dingo serve --transport stdio` |
 
 ## Cursorとの統合
 
@@ -81,46 +70,38 @@ mcp.run(
 
 `mcpServers`オブジェクト内でDingoサーバーのエントリを追加または変更します。
 
-**例1：SSE伝送モード設定**：
+**例1：SSEモード**（先に`dingo serve`を起動してから設定）：
 
 ```json
 {
   "mcpServers": {
-    // ... その他のサーバー ...
-    "dingo_evaluator": {
-      "url": "http://127.0.0.1:8888/sse" // <-- 実行中のサーバーのhost、port、transportと一致する必要があります
+    "dingo": {
+      "url": "http://localhost:8000/sse"
     }
-    // ...
   }
 }
 ```
 
-**例2：STDIO伝送モード設定**：
+**例2：stdioモード**（Cursorが自動的にプロセスを起動）：
 
 ```json
 {
   "mcpServers": {
-    "dingo_evaluator": {
-      "command": "python",
-      "args": ["path/to/mcp_server.py"],
+    "dingo": {
+      "command": "dingo",
+      "args": ["serve", "--transport", "stdio"],
       "env": {
-        "LOCAL_DEPLOYMENT_MODE": "true",
-        "DEFAULT_OUTPUT_DIR": "/path/to/output",
-        "DEFAULT_SAVE_DATA": "true",
-        "DEFAULT_SAVE_CORRECT": "true",
-        "DEFAULT_DATASET_TYPE": "local",
         "OPENAI_API_KEY": "your-api-key",
         "OPENAI_BASE_URL": "https://api.openai.com/v1",
-        "OPENAI_MODEL": "gpt-4",
-        "LOG_LEVEL": "INFO"
+        "OPENAI_MODEL": "gpt-4"
       }
     }
   }
 }
 ```
 
-*   SSEモードの場合：`url`が`mcp_server.py`が使用するように設定された`host`、`port`、`transport`（現在URLスキームでは`sse`のみサポート）と正確に一致することを確認してください。`mcp.run`をカスタマイズしていない場合、デフォルトのURLは`http://127.0.0.1:8000/sse`または`http://0.0.0.0:8000/sse`の可能性があります。
-*   STDIOモードの場合：環境変数で`LOCAL_DEPLOYMENT_MODE`が`"true"`に設定されていることを確認してください。
+*   SSEモード：先に`dingo serve`を起動し、`url`がホストとポートと一致する必要があります。デフォルトは`http://localhost:8000/sse`です。
+*   stdioモード：Cursorが`dingo serve --transport stdio`プロセスを自動的に起動します。手動でサーバーを起動する必要はありません。
 *   `mcp.json`への変更を保存した後、Cursorを再起動してください。
 
 ### Cursorでの使用

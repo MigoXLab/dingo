@@ -230,7 +230,20 @@ Experience Dingo interactively with Google Colab notebook: [![Open In Colab](htt
 
 # MCP Server
 
-Dingo includes an experimental Model Context Protocol (MCP) server. For details on running the server and integrating it with clients like Cursor, please see the dedicated documentation:
+Dingo includes a built-in Model Context Protocol (MCP) server for AI agent integration:
+
+```bash
+# Start MCP server (SSE transport, default port 8000)
+dingo serve
+
+# Custom port
+dingo serve --port 9000
+
+# stdio transport (for Claude Desktop)
+dingo serve --transport stdio
+```
+
+For detailed setup and Cursor/Claude Desktop integration, see the dedicated documentation:
 
 [English](README_mcp.md) · [简体中文](README_mcp_zh-CN.md) · [日本語](README_mcp_ja.md)
 

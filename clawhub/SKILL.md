@@ -317,6 +317,67 @@ After evaluation completes, the agent should:
 2. If there are failures, briefly explain what each failing metric means
 3. Suggest next steps (e.g., "15% of items have colon-ending issues — you may want to clean those")
 
+## MCP Server (AI Agent Integration)
+
+Dingo includes a built-in MCP (Model Context Protocol) server, allowing AI agents (Cursor, Claude Desktop, etc.) to invoke Dingo's evaluation tools directly.
+
+### Start the server
+
+```bash
+# SSE transport (default, for Cursor / remote agents)
+dingo serve
+
+# Custom port
+dingo serve --port 9000
+
+# stdio transport (for Claude Desktop / local agent spawn)
+dingo serve --transport stdio
+```
+
+### Configure your AI agent
+
+**Cursor** (`~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "dingo": {
+      "url": "http://localhost:8000/sse"
+    }
+  }
+}
+```
+
+**Claude Desktop** (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "dingo": {
+      "command": "dingo",
+      "args": ["serve", "--transport", "stdio"],
+      "env": {
+        "OPENAI_API_KEY": "your-key",
+        "OPENAI_MODEL": "gpt-4o"
+      }
+    }
+  }
+}
+```
+
+### Available MCP tools
+
+| Tool | Description |
+|------|-------------|
+| `run_dingo_evaluation` | Run rule or LLM evaluation on a file |
+| `list_dingo_components` | List rule groups, LLM models, prompts |
+| `get_rule_details` | Get details about a specific rule |
+| `get_llm_details` | Get details about a specific LLM evaluator |
+| `get_prompt_details` | Get embedded prompt for an LLM |
+| `run_quick_evaluation` | Goal-based evaluation (auto-infer settings) |
+
+For detailed MCP documentation, see: https://github.com/MigoXLab/dingo/blob/main/README_mcp.md
+
 ## Troubleshooting
 
 * **`ModuleNotFoundError: No module named 'dingo'`**: Run `pip install dingo-python` (note: the package name is `dingo-python`, not `dingo`)

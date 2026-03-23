@@ -2,7 +2,7 @@
 
 ## 概述
 
-`mcp_server.py` 脚本为 Dingo 提供了一个实验性的模型上下文协议 (MCP) 服务端，由 [FastMCP](https://github.com/modelcontextprotocol/fastmcp) 驱动。这允许 MCP 客户端（例如 Cursor）以编程方式与 Dingo 的数据评估功能进行交互。
+Dingo 内置了模型上下文协议 (MCP) 服务端，由 [FastMCP](https://github.com/modelcontextprotocol/fastmcp) 驱动。这允许 MCP 客户端（例如 Cursor）以编程方式与 Dingo 的数据评估功能进行交互。
 
 ## 特性
 
@@ -18,22 +18,38 @@
 
 ## 安装
 
-1.  **前置条件**: 确保你已安装 Git 和 Python 环境（例如 3.8+）。
-2.  **克隆仓库**: 将此仓库克隆到本地计算机。
-    ```bash
-    git clone https://github.com/MigoXLab/dingo.git
-    cd dingo
-    ```
-3.  **安装依赖**: 安装所需的依赖项，包括 FastMCP 和其他 Dingo 依赖。推荐使用 `requirements.txt` 文件。
-    ```bash
-    pip install -r requirements.txt
-    # 或者，至少安装：pip install fastmcp
-    ```
-4.  **确保 Dingo 可导入**: 确保在运行服务端脚本时，你的 Python 环境可以找到克隆仓库中的 `dingo` 包。
+```bash
+pip install dingo-python
+```
+
+安装后即可使用 `dingo` CLI 命令，内含 MCP 服务端。无需克隆仓库。
+
+如需开发或直接修改 `mcp_server.py`：
+
+```bash
+git clone https://github.com/MigoXLab/dingo.git
+cd dingo
+pip install -e .
+```
 
 ## 运行服务端
 
-导航到包含 `mcp_server.py` 的目录，并使用 Python 运行它：
+### 使用 CLI（推荐）
+
+```bash
+# SSE 传输（默认），监听 8000 端口
+dingo serve
+
+# 自定义主机和端口
+dingo serve --host 127.0.0.1 --port 9000
+
+# stdio 传输（适用于 Claude Desktop 或本地 agent 启动）
+dingo serve --transport stdio
+```
+
+### 直接运行 mcp_server.py（兼容旧方式）
+
+如果已克隆仓库，也可以直接运行：
 
 ```bash
 python mcp_server.py
@@ -41,37 +57,10 @@ python mcp_server.py
 
 ### 传输模式
 
-Dingo MCP 服务端支持两种传输模式：
-
-1. **STDIO 传输模式**：
-   - 通过设置环境变量 `LOCAL_DEPLOYMENT_MODE=true` 启用
-   - 使用标准输入输出流进行通信
-   - 适用于直接本地运行或 Smithery 容器化部署
-   - 在 mcp.json 中使用 `command` 和 `args` 配置
-
-2. **SSE 传输模式**：
-   - 默认模式（当 `LOCAL_DEPLOYMENT_MODE` 未设置或为 false）
-   - 通过 HTTP Server-Sent Events 进行网络通信
-   - 启动后会监听指定端口，可通过 URL 访问
-   - 在 mcp.json 中使用 `url` 配置
-
-根据您的部署需求选择合适的传输模式：
-- 如果要在本地直接运行或使用 Smithery 部署，请使用 STDIO 模式
-- 如果要部署为网络服务，请使用 SSE 模式
-
-在使用 SSE 模式时，你可以在脚本的 `mcp.run()` 调用中使用参数来自定义其行为：
-
-```python
-# mcp_server.py 中的自定义示例
-mcp.run(
-    transport="sse",      # 通信协议 (sse 是默认值)
-    host="127.0.0.1",     # 绑定的网络接口 (默认: 0.0.0.0)
-    port=8888,            # 监听的端口 (默认: 8000)
-    log_level="debug"     # 日志详细程度 (默认: info)
-)
-```
-
-**重要**: 请记下服务端运行的 `host` 和 `port`，因为配置 MCP 客户端时需要这些信息。
+| 模式 | 使用场景 | 启动方式 |
+|------|----------|---------|
+| **SSE**（默认） | 网络服务、Cursor 集成 | `dingo serve` 或 `dingo serve --port 9000` |
+| **stdio** | Claude Desktop、本地 agent 启动 | `dingo serve --transport stdio` |
 
 ## 与 Cursor 集成
 
@@ -81,46 +70,38 @@ mcp.run(
 
 在 `mcpServers` 对象中添加或修改你的 Dingo 服务端条目。
 
-**示例1：SSE 传输模式配置**：
+**示例1：SSE 模式**（先运行 `dingo serve`，再配置）：
 
 ```json
 {
   "mcpServers": {
-    // ... 其他服务端 ...
-    "dingo_evaluator": {
-      "url": "http://127.0.0.1:8888/sse" // <-- 必须与你运行的服务端的 host、port 和 transport 匹配
+    "dingo": {
+      "url": "http://localhost:8000/sse"
     }
-    // ...
   }
 }
 ```
 
-**示例2：STDIO 传输模式配置**：
+**示例2：stdio 模式**（Cursor 自动启动进程）：
 
 ```json
 {
   "mcpServers": {
-    "dingo_evaluator": {
-      "command": "python",
-      "args": ["path/to/mcp_server.py"],
+    "dingo": {
+      "command": "dingo",
+      "args": ["serve", "--transport", "stdio"],
       "env": {
-        "LOCAL_DEPLOYMENT_MODE": "true",
-        "DEFAULT_OUTPUT_DIR": "/path/to/output",
-        "DEFAULT_SAVE_DATA": "true",
-        "DEFAULT_SAVE_CORRECT": "true",
-        "DEFAULT_DATASET_TYPE": "local",
         "OPENAI_API_KEY": "your-api-key",
         "OPENAI_BASE_URL": "https://api.openai.com/v1",
-        "OPENAI_MODEL": "gpt-4",
-        "LOG_LEVEL": "INFO"
+        "OPENAI_MODEL": "gpt-4"
       }
     }
   }
 }
 ```
 
-*   对于 SSE 模式：确保 `url` 与你的 `mcp_server.py` 配置使用的 `host`、`port` 和 `transport` 完全匹配（目前 URL 方案仅支持 `sse`）。如果你没有自定义 `mcp.run`，默认 URL 可能是 `http://127.0.0.1:8000/sse` 或 `http://0.0.0.0:8000/sse`。
-*   对于 STDIO 模式：确保在环境变量中设置 `LOCAL_DEPLOYMENT_MODE` 为 `"true"`。
+*   SSE 模式：需先启动 `dingo serve`，`url` 必须与主机和端口匹配。默认为 `http://localhost:8000/sse`。
+*   stdio 模式：Cursor 会自动启动 `dingo serve --transport stdio` 进程，无需手动启动服务端。
 *   保存对 `mcp.json` 的更改后，重启 Cursor。
 
 ### 在 Cursor 中使用

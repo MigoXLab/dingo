@@ -20,10 +20,10 @@
   <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white" alt="pre-commit"></a>
   <a href="https://pypi.org/project/dingo-python/"><img src="https://img.shields.io/pypi/v/dingo-python.svg" alt="PyPI version"></a>
   <a href="https://pypi.org/project/dingo-python/"><img src="https://img.shields.io/pypi/pyversions/dingo-python.svg" alt="Python versions"></a>
-  <a href="https://github.com/DataEval/dingo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/DataEval/dingo" alt="License"></a>
-  <a href="https://github.com/DataEval/dingo/stargazers"><img src="https://img.shields.io/github/stars/DataEval/dingo" alt="GitHub stars"></a>
-  <a href="https://github.com/DataEval/dingo/network/members"><img src="https://img.shields.io/github/forks/DataEval/dingo" alt="GitHub forks"></a>
-  <a href="https://github.com/DataEval/dingo/issues"><img src="https://img.shields.io/github/issues/DataEval/dingo" alt="GitHub issues"></a>
+  <a href="https://github.com/MigoXLab/dingo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/DataEval/dingo" alt="License"></a>
+  <a href="https://github.com/MigoXLab/dingo/stargazers"><img src="https://img.shields.io/github/stars/DataEval/dingo" alt="GitHub stars"></a>
+  <a href="https://github.com/MigoXLab/dingo/network/members"><img src="https://img.shields.io/github/forks/DataEval/dingo" alt="GitHub forks"></a>
+  <a href="https://github.com/MigoXLab/dingo/issues"><img src="https://img.shields.io/github/issues/DataEval/dingo" alt="GitHub issues"></a>
   <a href="https://mseep.ai/app/dataeval-dingo"><img src="https://mseep.net/pr/dataeval-dingo-badge.png" alt="MseeP.ai Security Assessment Badge" height="20"></a>
   <a href="https://deepwiki.com/MigoXLab/dingo"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
   <a href="https://archestra.ai/mcp-catalog/dataeval__dingo"><img src="https://archestra.ai/mcp-catalog/api/badge/quality/DataEval/dingo" alt="Trust Score"></a>
@@ -49,7 +49,7 @@
 <p align="center">
   If you like Dingo, please give us a ⭐ on GitHub!
   <br/>
-  <a href="https://github.com/DataEval/dingo/stargazers" target="_blank">
+  <a href="https://github.com/MigoXLab/dingo/stargazers" target="_blank">
     <img src="docs/assets/clickstar_2.gif" alt="Click Star" width="480">
   </a>
 </p>
@@ -74,7 +74,7 @@ Need a **production-grade data quality platform**? Try [Dingo SaaS](https://ding
 
 ### 📝 How to Get Free SaaS Code
 
-👉 **[Apply for Dingo SaaS Repository Access](https://aicarrier.feishu.cn/share/base/form/shrcn9RqYttByQ5H1np6Yrnmhuf)** 
+👉 **[Apply for Dingo SaaS Repository Access](https://aicarrier.feishu.cn/share/base/form/shrcnr19E0upfiA92Wm5i2eic7g)** 
 
 Review time: 1-5 business days | Suitable for enterprise data governance, team collaboration
 
@@ -188,49 +188,33 @@ if __name__ == '__main__':
 ### Evaluate with Rule Sets
 
 ```shell
-python -m dingo.run.cli --input test/env/local_plaintext.json
+dingo eval --input .github/env/local_plaintext.json
 ```
 
 ### Evaluate with LLM (e.g., GPT-4o)
 
 ```shell
-python -m dingo.run.cli --input test/env/local_json.json
+dingo eval --input .github/env/local_json.json
 ```
 
-## GUI Visualization
-
-After evaluation (with `result_save.bad=True`), a frontend page will be automatically generated. To manually start the frontend:
-
-```shell
-python -m dingo.run.vsl --input output_directory
-```
-
-Where `output_directory` contains the evaluation results with a `summary.json` file.
-
-![GUI output](docs/assets/dingo_gui.jpg)
-
-## Online Demo
-Try Dingo on our online demo: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
-
-## Local Demo
-Try Dingo in local:
-
-```shell
-cd app_gradio
-python app.py
-```
-
-![Gradio demo](docs/assets/gradio_demo.png)
-
-
-## Google Colab Demo
-Experience Dingo interactively with Google Colab notebook: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
-
-
+---
 
 # MCP Server
 
-Dingo includes an experimental Model Context Protocol (MCP) server. For details on running the server and integrating it with clients like Cursor, please see the dedicated documentation:
+Dingo includes a built-in Model Context Protocol (MCP) server for AI agent integration:
+
+```bash
+# Start MCP server (SSE transport, default port 8000)
+dingo serve
+
+# Custom port
+dingo serve --port 9000
+
+# stdio transport (for Claude Desktop)
+dingo serve --transport stdio
+```
+
+For detailed setup and Cursor/Claude Desktop integration, see the dedicated documentation:
 
 [English](README_mcp.md) · [简体中文](README_mcp_zh-CN.md) · [日本語](README_mcp_ja.md)
 
@@ -242,6 +226,58 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 
 This video demonstrates step-by-step how to use Dingo MCP server with Cursor.
 
+---
+
+# 📚 Data Quality Metrics
+
+Dingo provides **100+ evaluation metrics** across multiple dimensions, combining rule-based speed with LLM-based depth.
+
+## Metric Categories
+
+| Category | Examples | Use Case |
+|----------|----------|----------|
+| **Pretrain Text Quality** | Completeness, Effectiveness, Similarity, Security | LLM pre-training data filtering |
+| **SFT Data Quality** | Honest, Helpful, Harmless (3H) | Instruction fine-tuning data |
+| **RAG Evaluation** | Faithfulness, Context Precision, Answer Relevancy | RAG system assessment |
+| **Hallucination Detection** | HHEM-2.1-Open, Factuality Check | Production AI reliability |
+| **Classification** | Topic categorization, Content labeling | Data organization |
+| **Multimodal** | Image-text relevance, VLM quality, OCR visual evaluation | Vision-language data |
+| **Security** | PII detection, Perspective API toxicity | Privacy and safety |
+
+📊 **[View Complete Metrics Documentation →](docs/metrics.md)**  
+📖 **[RAG Evaluation Guide →](docs/rag_evaluation_metrics.md)** | **[中文版](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[Hallucination Detection Guide →](docs/hallucination_detection_guide.md)** | **[中文版](docs/hallucination_guide.md)**  
+✅ **[Factuality Assessment Guide →](docs/factuality_assessment_guide.md)** | **[中文版](docs/factcheck_guide.md)**  
+👁️ **[VLM Render Judge Guide →](docs/en/vlm_render_judge_guide.md)** | **[中文版](docs/vlm_render_judge_guide.md)**
+
+Most metrics are backed by academic research to ensure scientific rigor.
+
+## Quick Metric Usage
+
+```python
+llm_config = {
+    "model": "gpt-4o",
+    "key": "YOUR_API_KEY",
+    "api_url": "https://api.openai.com/v1/chat/completions"
+}
+
+input_data = {
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleAbnormalChar"},           # Rule-based (fast)
+                {"name": "LLMTextQualityV5", "config": llm_config}  # LLM-based (deep)
+            ]
+        }
+    ]
+}
+```
+
+**Customization**: All prompts are defined in `dingo/model/llm/` directory (organized by category: `text_quality/`, `rag/`, `hhh/`, etc.). Extend or modify them for domain-specific requirements.
+
+
+---
 
 # 🎓 Key Concepts for Practitioners
 
@@ -311,55 +347,6 @@ class MyCustomRule(BaseRule):
 
 ---
 
-# 📚 Data Quality Metrics
-
-Dingo provides **70+ evaluation metrics** across multiple dimensions, combining rule-based speed with LLM-based depth.
-
-## Metric Categories
-
-| Category | Examples | Use Case |
-|----------|----------|----------|
-| **Pretrain Text Quality** | Completeness, Effectiveness, Similarity, Security | LLM pre-training data filtering |
-| **SFT Data Quality** | Honest, Helpful, Harmless (3H) | Instruction fine-tuning data |
-| **RAG Evaluation** | Faithfulness, Context Precision, Answer Relevancy | RAG system assessment |
-| **Hallucination Detection** | HHEM-2.1-Open, Factuality Check | Production AI reliability |
-| **Classification** | Topic categorization, Content labeling | Data organization |
-| **Multimodal** | Image-text relevance, VLM quality, OCR visual evaluation | Vision-language data |
-| **Security** | PII detection, Perspective API toxicity | Privacy and safety |
-
-📊 **[View Complete Metrics Documentation →](docs/metrics.md)**  
-📖 **[RAG Evaluation Guide →](docs/rag_evaluation_metrics.md)** | **[中文版](docs/rag_evaluation_metrics_zh.md)**  
-🔍 **[Hallucination Detection Guide →](docs/hallucination_detection_guide.md)** | **[中文版](docs/hallucination_guide.md)**  
-✅ **[Factuality Assessment Guide →](docs/factuality_assessment_guide.md)** | **[中文版](docs/factcheck_guide.md)**  
-👁️ **[VLM Render Judge Guide →](docs/en/vlm_render_judge_guide.md)** | **[中文版](docs/vlm_render_judge_guide.md)**
-
-Most metrics are backed by academic research to ensure scientific rigor.
-
-## Quick Metric Usage
-
-```python
-llm_config = {
-    "model": "gpt-4o",
-    "key": "YOUR_API_KEY",
-    "api_url": "https://api.openai.com/v1/chat/completions"
-}
-
-input_data = {
-    "evaluator": [
-        {
-            "fields": {"content": "content"},
-            "evals": [
-                {"name": "RuleAbnormalChar"},           # Rule-based (fast)
-                {"name": "LLMTextQualityV5", "config": llm_config}  # LLM-based (deep)
-            ]
-        }
-    ]
-}
-```
-
-**Customization**: All prompts are defined in `dingo/model/llm/` directory (organized by category: `text_quality/`, `rag/`, `hhh/`, etc.). Extend or modify them for domain-specific requirements.
-
-
 # 🌟 Feature Highlights
 
 ## 📊 Multi-Source Data Integration
@@ -415,10 +402,10 @@ input_data = {
 ✅ Vision-Language Models (InternVL, Gemini)  
 ✅ Custom prompt registration
 
-**Agent-Based** - Multi-step reasoning with tools
-✅ Web search integration (Tavily)
-✅ Adaptive context gathering
-✅ Multi-source fact verification
+**Agent-Based** - Multi-step reasoning with tools  
+✅ Web search integration (Tavily)  
+✅ Adaptive context gathering  
+✅ Multi-source fact verification  
 ✅ Custom agent & tool registration
 
 **Extensible Architecture**  
@@ -461,9 +448,9 @@ input_data = {
 ✅ Per-rule violation details  
 ✅ Type and name distribution
 
-**GUI Visualization**  
-✅ Built-in web interface  
-✅ Interactive data exploration  
+**GUI Visualization (via [Dingo SaaS](https://github.com/MigoXLab/dingo-saas))**  
+✅ Web UI with interactive data exploration  
+✅ Visual reports with trend analysis  
 ✅ Anomaly tracking
 
 **Metric Aggregation**  

@@ -36,32 +36,32 @@ jobs:
 
     - name: Integration Test(local plaintext)
       run: |
-        python -m dingo.run.cli --input .github/env/local_plaintext.json
-        python -m dingo.run.cli --input .github/env/local_plaintext_save.json
+        dingo eval --input .github/env/local_plaintext.json
+        dingo eval --input .github/env/local_plaintext_save.json
     - name: Integration Test(local json)
       run: |
-        python -m dingo.run.cli --input .github/env/local_json.json
+        dingo eval --input .github/env/local_json.json
     - name: Integration Test(local jsonl)
       run: |
-        python -m dingo.run.cli --input .github/env/local_jsonl.json
+        dingo eval --input .github/env/local_jsonl.json
     - name: Integration Test(local listjson)
       run: |
-        python -m dingo.run.cli --input .github/env/local_listjson.json
+        dingo eval --input .github/env/local_listjson.json
     - name: Integration Test(huggingface plaintext)
       run: |
-        python -m dingo.run.cli --input .github/env/hf_plaintext.json
+        dingo eval --input .github/env/hf_plaintext.json
     - name: Integration Test(huggingface json)
       run: |
-        python -m dingo.run.cli --input .github/env/hf_json.json
+        dingo eval --input .github/env/hf_json.json
     - name: Integration Test(huggingface jsonl)
       run: |
-        python -m dingo.run.cli --input .github/env/hf_jsonl.json
+        dingo eval --input .github/env/hf_jsonl.json
     - name: Integration Test(huggingface listjson)
       run: |
-        python -m dingo.run.cli --input .github/env/hf_listjson.json
+        dingo eval --input .github/env/hf_listjson.json
     - name: Integration Test(custom config)
       run: |
-        python -m dingo.run.cli --input .github/env/custom_config_rule.json
+        dingo eval --input .github/env/custom_config_rule.json
     - name: Run unit tests
       run: |
         pytest test/scripts --ignore=test/scripts/data

@@ -1,0 +1,32 @@
+{
+  "name": "dingo-data-quality",
+  "version": "1.0.0",
+  "description": "Dingo: A Comprehensive AI Data, Model and Application Quality Evaluation Tool.",
+  "author": "MigoXLab",
+  "license": "MIT-0",
+  "homepage": "https://github.com/MigoXLab/dingo",
+  "category": "data-quality",
+  "tags": [
+    "data-quality",
+    "llm",
+    "evaluation",
+    "rag",
+    "ocr",
+    "machine-learning",
+    "ai",
+    "sft",
+    "fact-checking"
+  ],
+  "requires": {
+    "bins": ["python3"],
+    "packages": ["dingo-python", "dingo-python[agent]"]
+  },
+  "env": {
+    "optional": {
+      "OPENAI_API_KEY": "API key for LLM-based evaluation and ArticleFactChecker fact-checking",
+      "OPENAI_BASE_URL": "Custom API endpoint URL (default: https://api.openai.com/v1)",
+      "OPENAI_MODEL": "Model name for LLM evaluation (default: gpt-5.4-mini)",
+      "TAVILY_API_KEY": "Tavily API key for web search verification in ArticleFactChecker (optional but recommended)"
+    }
+  }
+}

@@ -20,10 +20,10 @@
   <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white" alt="pre-commit"></a>
   <a href="https://pypi.org/project/dingo-python/"><img src="https://img.shields.io/pypi/v/dingo-python.svg" alt="PyPI 版本"></a>
   <a href="https://pypi.org/project/dingo-python/"><img src="https://img.shields.io/pypi/pyversions/dingo-python.svg" alt="Python 版本"></a>
-  <a href="https://github.com/DataEval/dingo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/DataEval/dingo" alt="许可证"></a>
-  <a href="https://github.com/DataEval/dingo/stargazers"><img src="https://img.shields.io/github/stars/DataEval/dingo" alt="GitHub 星标"></a>
-  <a href="https://github.com/DataEval/dingo/network/members"><img src="https://img.shields.io/github/forks/DataEval/dingo" alt="GitHub 分支"></a>
-  <a href="https://github.com/DataEval/dingo/issues"><img src="https://img.shields.io/github/issues/DataEval/dingo" alt="GitHub 问题"></a>
+  <a href="https://github.com/MigoXLab/dingo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/DataEval/dingo" alt="许可证"></a>
+  <a href="https://github.com/MigoXLab/dingo/stargazers"><img src="https://img.shields.io/github/stars/DataEval/dingo" alt="GitHub 星标"></a>
+  <a href="https://github.com/MigoXLab/dingo/network/members"><img src="https://img.shields.io/github/forks/DataEval/dingo" alt="GitHub 分支"></a>
+  <a href="https://github.com/MigoXLab/dingo/issues"><img src="https://img.shields.io/github/issues/DataEval/dingo" alt="GitHub 问题"></a>
   <a href="https://mseep.ai/app/dataeval-dingo"><img src="https://mseep.net/pr/dataeval-dingo-badge.png" alt="MseeP.ai 安全评估徽章" height="20"></a>
   <a href="https://deepwiki.com/MigoXLab/dingo"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
   <a href="https://archestra.ai/mcp-catalog/dataeval__dingo"><img src="https://archestra.ai/mcp-catalog/api/badge/quality/DataEval/dingo" alt="Trust Score"></a>
@@ -46,7 +46,7 @@
 <p align="center">
   如果觉得有帮助，欢迎在 GitHub 上点个 ⭐ 支持！
   <br/>
-  <a href="https://github.com/DataEval/dingo/stargazers" target="_blank">
+  <a href="https://github.com/MigoXLab/dingo/stargazers" target="_blank">
     <img src="docs/assets/clickstar_2.gif" alt="点击 Star 支持" width="480">
   </a>
 </p>
@@ -188,48 +188,33 @@ if __name__ == '__main__':
 ### 使用规则集评估
 
 ```shell
-python -m dingo.run.cli --input test/env/local_plaintext.json
+dingo eval --input .github/env/local_plaintext.json
 ```
 
 ### 使用LLM评估（例如GPT-4o）
 
 ```shell
-python -m dingo.run.cli --input test/env/local_json.json
+dingo eval --input .github/env/local_json.json
 ```
 
-## 图形界面可视化
-
-进行评估后（设置`result_save.bad=True`），系统会自动生成前端页面。若要手动启动前端页面，请运行：
-
-```shell
-python -m dingo.run.vsl --input 输出目录
-```
-
-其中`输出目录`包含评估结果和`summary.json`文件。
-
-![GUI output](docs/assets/dingo_gui.jpg)
-
-## 在线演示
-尝试我们的在线演示: [(Hugging Face)🤗](https://huggingface.co/spaces/DataEval/dingo)
-
-## 本地演示
-尝试我们的本地演示：
-
-```shell
-cd app_gradio
-python app.py
-```
-
-![Gradio demo](docs/assets/gradio_demo.png)
-
-## Google Colab 演示
-通过Google Colab笔记本交互式体验Dingo：[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/DataEval/dingo/blob/dev/examples/colab/dingo_colab_demo.ipynb)
-
-
+---
 
 # MCP 服务端
 
-Dingo 包含一个实验性的模型上下文协议 (MCP) 服务端。有关运行服务端以及将其与 Cursor 等客户端集成的详细信息，请参阅专门的文档：
+Dingo 内置了模型上下文协议 (MCP) 服务端，支持 AI Agent 集成：
+
+```bash
+# 启动 MCP 服务端（SSE 传输，默认端口 8000）
+dingo serve
+
+# 自定义端口
+dingo serve --port 9000
+
+# stdio 传输（适用于 Claude Desktop）
+dingo serve --transport stdio
+```
+
+详细配置和 Cursor/Claude Desktop 集成说明，请参阅专门文档：
 
 [English](README_mcp.md) · [简体中文](README_mcp_zh-CN.md) · [日本語](README_mcp_ja.md)
 
@@ -241,6 +226,57 @@ https://github.com/user-attachments/assets/aca26f4c-3f2e-445e-9ef9-9331c4d7a37b
 
 此视频展示了关于 Dingo MCP 服务端与 Cursor 一起使用的分步演示。
 
+---
+
+# 📚 数据质量指标
+
+Dingo 提供 **100+ 评估指标**，跨多个维度，结合基于规则的速度和基于 LLM 的深度。
+
+## 指标类别
+
+| 类别 | 示例 | 使用场景 |
+|----------|----------|----------|
+| **预训练文本质量** | 完整性、有效性、相似性、安全性 | LLM 预训练数据过滤 |
+| **SFT 数据质量** | 诚实、有帮助、无害 (3H) | 指令微调数据 |
+| **RAG 评估** | 忠实度、上下文精度、答案相关性 | RAG 系统评估 |
+| **幻觉检测** | HHEM-2.1-Open、事实性检查 | 生产 AI 可靠性 |
+| **分类** | 主题分类、内容标注 | 数据组织 |
+| **多模态** | 图文相关性、VLM 质量、OCR 视觉评估 | 视觉语言数据 |
+| **安全性** | PII 检测、Perspective API 毒性 | 隐私和安全 |
+
+📊 **[查看完整指标文档 →](docs/metrics.md)**  
+📖 **[RAG 评估指南 →](docs/rag_evaluation_metrics_zh.md)**  
+🔍 **[幻觉检测指南 →](docs/hallucination_guide.md)**  
+✅ **[事实性评估指南 →](docs/factcheck_guide.md)**  
+👁️ **[VLM 渲染判断指南 →](docs/vlm_render_judge_guide.md)** | **[English](docs/en/vlm_render_judge_guide.md)**
+
+大部分指标都有学术研究支持，以确保科学严谨性。
+
+## 快速使用指标
+
+```python
+llm_config = {
+    "model": "gpt-4o",
+    "key": "YOUR_API_KEY",
+    "api_url": "https://api.openai.com/v1/chat/completions"
+}
+
+input_data = {
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleAbnormalChar"},           # 基于规则（快速）
+                {"name": "LLMTextQualityV5", "config": llm_config}  # 基于LLM（深度）
+            ]
+        }
+    ]
+}
+```
+
+**自定义**：所有 prompts 都定义在 `dingo/model/llm/` 目录中（按类别组织：`text_quality/`、`rag/`、`hhh/` 等）。可针对特定领域需求进行扩展或修改。
+
+---
 
 # 🎓 实践者关键概念
 
@@ -310,54 +346,6 @@ class MyCustomRule(BaseRule):
 
 ---
 
-# 📚 数据质量指标
-
-Dingo 提供 **70+ 评估指标**，跨多个维度，结合基于规则的速度和基于 LLM 的深度。
-
-## 指标类别
-
-| 类别 | 示例 | 使用场景 |
-|----------|----------|----------|
-| **预训练文本质量** | 完整性、有效性、相似性、安全性 | LLM 预训练数据过滤 |
-| **SFT 数据质量** | 诚实、有帮助、无害 (3H) | 指令微调数据 |
-| **RAG 评估** | 忠实度、上下文精度、答案相关性 | RAG 系统评估 |
-| **幻觉检测** | HHEM-2.1-Open、事实性检查 | 生产 AI 可靠性 |
-| **分类** | 主题分类、内容标注 | 数据组织 |
-| **多模态** | 图文相关性、VLM 质量 | 视觉语言数据 |
-| **安全性** | PII 检测、Perspective API 毒性 | 隐私和安全 |
-
-📊 **[查看完整指标文档 →](docs/metrics.md)**  
-📖 **[RAG 评估指南 →](docs/rag_evaluation_metrics_zh.md)**  
-🔍 **[幻觉检测指南 →](docs/hallucination_guide.md)**  
-✅ **[事实性评估指南 →](docs/factcheck_guide.md)**
-
-大部分指标都有学术研究支持，以确保科学严谨性。
-
-## 快速使用指标
-
-```python
-llm_config = {
-    "model": "gpt-4o",
-    "key": "YOUR_API_KEY",
-    "api_url": "https://api.openai.com/v1/chat/completions"
-}
-
-input_data = {
-    "evaluator": [
-        {
-            "fields": {"content": "content"},
-            "evals": [
-                {"name": "RuleAbnormalChar"},           # 基于规则（快速）
-                {"name": "LLMTextQualityV5", "config": llm_config}  # 基于LLM（深度）
-            ]
-        }
-    ]
-}
-```
-
-**自定义**：所有 prompts 都定义在 `dingo/model/llm/` 目录中（按类别组织：`text_quality/`、`rag/`、`hhh/` 等）。可针对特定领域需求进行扩展或修改。
-
-
 # 🌟 功能亮点
 
 ## 📊 多源数据集成
@@ -413,10 +401,10 @@ input_data = {
 ✅ 视觉语言模型（InternVL、Gemini）  
 ✅ 自定义 prompt 注册
 
-**基于智能体** - 多步推理与工具
-✅ 网络搜索集成（Tavily）
-✅ 自适应上下文收集
-✅ 多源事实验证
+**基于智能体** - 多步推理与工具  
+✅ 网络搜索集成（Tavily）  
+✅ 自适应上下文收集  
+✅ 多源事实验证  
 ✅ 自定义智能体与工具注册
 
 **可扩展架构**  
@@ -459,15 +447,17 @@ input_data = {
 ✅ 每条规则违规的详细信息  
 ✅ 类型和名称分布
 
-**GUI 可视化**  
-✅ 内置 Web 界面  
-✅ 交互式数据探索  
+**GUI 可视化（通过 [Dingo SaaS](https://github.com/MigoXLab/dingo-saas)）**  
+✅ Web UI 交互式数据探索  
+✅ 可视化报告与趋势分析  
 ✅ 异常追踪
 
 **指标聚合**  
 ✅ 自动统计（avg、min、max、std_dev）  
 ✅ 按字段分组的指标  
 ✅ 总体质量评分
+
+---
 
 # 📖 用户指南
 

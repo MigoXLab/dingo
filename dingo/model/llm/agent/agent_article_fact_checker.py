@@ -55,13 +55,16 @@ Available Tools:
 
 2. arxiv_search: Search academic papers and verify metadata
    - Use for claims about research papers, academic publications
-   - Provides paper metadata: title, authors, abstract, publication date
-   - Authors in papers often indicate institutional affiliations in abstracts
-   - NOTE: Affiliations are in unstructured text, not dedicated fields
-   - Best for: paper titles, author names, publication dates, and
-     institutional claims when a related paper exists
-   - For institutional claims: use arxiv_search FIRST to find the paper,
-     then tavily_search to cross-verify affiliations
+   - Provides paper metadata: title, authors list, abstract, publication date
+   - Results may include 'affiliations_text': a compact author+institution string
+     parsed from the HTML paper page (e.g. "1 Shanghai AI Laboratory  2 Abaka AI").
+     When present, use it as the AUTHORITATIVE source for institutional claims —
+     it lists every author's institution, making affiliation verification direct.
+   - Best for: paper titles, author names, publication dates, institutional claims
+   - For institutional/attribution claims:
+     1. Call arxiv_search to find the paper
+     2. Check 'affiliations_text' in the result — if present, verify directly
+     3. If 'affiliations_text' is absent, fall back to tavily_search
 
 3. tavily_search: General web search for fact verification
    - Use for general factual claims, current events, companies, products
@@ -95,11 +98,12 @@ STEP 2: Verify Each Claim (Autonomous Tool Selection)
 
    Claim-Type Specific Rules:
    - INSTITUTIONAL/ATTRIBUTION claims (e.g., "released by X University and Y Lab"):
-     You MUST use arxiv_search FIRST to find the actual paper and check author
-     affiliations, THEN use tavily_search to cross-verify. Do NOT rely on
-     tavily_search alone for institutional claims — web sources often give
-     vague or incomplete attribution. The paper's author list is the
-     authoritative source for institutional affiliations.
+     You MUST use arxiv_search FIRST to find the actual paper.
+     Check the 'affiliations_text' field in the result: when present it lists every
+     author's institution (e.g. "1 Shanghai AI Laboratory  2 Abaka AI") and is the
+     AUTHORITATIVE source — use it directly to confirm or refute the claim.
+     If 'affiliations_text' is absent, fall back to tavily_search to cross-verify.
+     Do NOT rely on tavily_search alone — web sources often give vague attribution.
      For CHINESE institution names: translate to English before arxiv_search
      (e.g., "清华大学" → "Tsinghua University", "达摩院" → "Alibaba DAMO Academy",
       "上海人工智能实验室" → "Shanghai AI Laboratory")
@@ -277,6 +281,12 @@ Verdict Rules:
 - TRUE: Found specific, direct evidence CONFIRMING the claim with a cited URL
 - FALSE: Found specific evidence CONTRADICTING the claim
 - UNVERIFIABLE: Could not find clear confirming OR contradicting evidence
+
+For INSTITUTIONAL/ATTRIBUTION claims (e.g. "paper released by X University"):
+  Use arxiv_search first. If the result contains an 'affiliations_text' field,
+  it lists every author's institution (e.g. "1 Shanghai AI Lab  2 MIT") and is
+  the authoritative source — use it to confirm or refute the claim directly.
+  Fall back to tavily_search only when 'affiliations_text' is absent.
 
 CRITICAL: Start with search, then produce JSON only. No text outside the JSON."""
 

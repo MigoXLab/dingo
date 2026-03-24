@@ -1,5 +1,4 @@
 -r ./requirements/runtime.txt
--r ./requirements/web.txt
 -r ./requirements/hhem_integration.txt
 -r ./requirements/optional.txt
 -r ./requirements/docs.txt

@@ -143,11 +143,8 @@ python -m pytest --cov=dingo test/
 
 ```bash
 # Test CLI functionality
-python -m dingo.run.cli --input test/env/local_plaintext.json
+dingo eval --input .github/env/local_plaintext.json
 
-# Start local demo
-cd app_gradio
-python app.py
 ```
 
 ## Code Style

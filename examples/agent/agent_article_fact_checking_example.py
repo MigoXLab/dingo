@@ -92,7 +92,8 @@ def main() -> int:
                                             "api_key": tavily_key
                                         } if tavily_key else {},
                                         "arxiv_search": {
-                                            "max_results": 5
+                                            "max_results": 5,
+                                            "fetch_affiliations": True,
                                         }
                                     }
                                 }

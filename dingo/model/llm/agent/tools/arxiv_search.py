@@ -15,6 +15,9 @@ Configuration:
     rate_limit_delay: Delay between requests in seconds (default: 3.0)
     timeout: Request timeout in seconds (default: 30)
     api_key: Not required for arXiv (public API)
+    fetch_affiliations: Fetch author+institution text from arXiv HTML paper page (default: False).
+        When enabled, adds an ``affiliations_text`` field to each result by scraping
+        the ``ltx_authors`` section.  Silently skipped for papers without HTML version.
 """
 
 import re
@@ -22,6 +25,7 @@ import threading
 import time
 from typing import Any, Dict, List, Optional
 
+import requests as _requests
 from pydantic import Field
 
 from dingo.io.input import RequiredField
@@ -38,6 +42,14 @@ class ArxivConfig(ToolConfig):
     sort_order: str = Field(default="descending", pattern="^(ascending|descending)$")
     rate_limit_delay: float = Field(default=3.0, ge=0.0)
     timeout: int = Field(default=30, ge=1)
+    fetch_affiliations: bool = Field(
+        default=False,
+        description=(
+            "Fetch author+institution text from arXiv HTML page for each result. "
+            "Adds 'affiliations_text' field. Requires one extra HTTP request per result. "
+            "Enable for institutional/attribution claim verification."
+        ),
+    )
 
 
 @tool_register
@@ -99,9 +111,14 @@ class ArxivSearch(BaseTool):
     name = "arxiv_search"
     description = (
         "Search arXiv for academic papers by ID, DOI, title, or author. "
-        "Returns comprehensive paper metadata including title, authors, abstract, "
-        "publication date, PDF URL, and citations. Useful for verifying academic "
-        "claims, finding research papers, and checking paper details."
+        "Returns paper metadata: title, authors list, abstract, publication date, "
+        "PDF URL, and categories. "
+        "When fetch_affiliations is enabled, results also include 'affiliations_text': "
+        "a compact author+institution string parsed from the HTML paper page "
+        "(e.g. '1 Shanghai AI Laboratory  2 Abaka AI  3 2077AI'), which is the "
+        "authoritative source for institutional attribution claims. "
+        "Use this tool for verifying claims about academic papers, author names, "
+        "publication dates, and institutional/organizational affiliations."
     )
     config: ArxivConfig = ArxivConfig()
 
@@ -216,9 +233,23 @@ class ArxivSearch(BaseTool):
 
             # Execute search and collect results
             results = []
+            entry_ids = []
             client = arxiv.Client()
             for paper in client.results(search):
                 results.append(cls._format_paper(paper))
+                entry_ids.append(paper.entry_id)
+
+            # Optionally enrich results with author+institution text from HTML pages.
+            # The arXiv Atom API rarely includes affiliation data; the HTML page is
+            # the only reliable machine-readable source.
+            if cls.config.fetch_affiliations and results:
+                for i, entry_id in enumerate(entry_ids):
+                    html_url = entry_id.replace('/abs/', '/html/')
+                    affiliations_text = cls._fetch_html_affiliations(
+                        html_url, timeout=cls.config.timeout
+                    )
+                    if affiliations_text is not None:
+                        results[i]['affiliations_text'] = affiliations_text
 
             # Format response
             result = {
@@ -241,8 +272,8 @@ class ArxivSearch(BaseTool):
                 error_msg = "Search request timed out"
             elif "network" in error_str or "connection" in error_str:
                 error_msg = "Network connection error"
-            elif "rate limit" in error_str:
-                error_msg = "Rate limit exceeded"
+            elif "rate limit" in error_str or "429" in error_str:
+                error_msg = "Rate limit exceeded (HTTP 429) — arXiv API throttled this request"
             else:
                 error_msg = f"Search failed: {type(e).__name__}"
 
@@ -457,6 +488,43 @@ class ArxivSearch(BaseTool):
             'arxiv_ids': arxiv_ids,
             'dois': dois
         }
+
+    @classmethod
+    def _fetch_html_affiliations(cls, html_url: str, timeout: int = 15) -> Optional[str]:
+        """
+        Fetch author+institution text from an arXiv HTML paper page.
+
+        Extracts the ``ltx_authors`` div from the LaTeXML-rendered HTML page,
+        which contains author names with footnoted institution identifiers
+        (e.g. "1 Shanghai AI Laboratory  2 Abaka AI").
+
+        Args:
+            html_url: Full URL, e.g. ``https://arxiv.org/html/2412.07626v2``.
+            timeout: HTTP request timeout in seconds.
+
+        Returns:
+            Cleaned plain-text of the ``ltx_authors`` section, or ``None`` if
+            unavailable (no HTML version, network error, or missing element).
+        """
+        try:
+            resp = _requests.get(
+                html_url,
+                headers={"user-agent": "dingo-arxiv-tool/1.0"},
+                timeout=timeout,
+            )
+            if resp.status_code != 200:
+                log.debug("arXiv HTML page unavailable (%d): %s", resp.status_code, html_url)
+                return None
+            match = re.search(r'class="ltx_authors"[^>]*>(.*?)</div>', resp.text, re.DOTALL)
+            if not match:
+                log.debug("ltx_authors section not found in HTML page: %s", html_url)
+                return None
+            text = re.sub(r'<[^>]+>', ' ', match.group(1))
+            text = re.sub(r'\s+', ' ', text).strip()
+            return text if text else None
+        except Exception as exc:
+            log.debug("Failed to fetch HTML affiliations from %s: %s", html_url, exc)
+            return None
 
     @classmethod
     def validate_config(cls):

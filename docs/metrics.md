@@ -147,4 +147,5 @@ This document provides comprehensive information about all quality metrics used 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
 | `AgentFactCheck` | AgentFactCheck | Agent-based hallucination detection with autonomous web search | Internal Implementation | N/A | N/A |
+| `ArticleFactChecker` | ArticleFactChecker | Article-level fact checking with autonomous claims extraction and verification | Internal Implementation | N/A | N/A |
 

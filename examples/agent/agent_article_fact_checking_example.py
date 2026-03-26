@@ -9,9 +9,7 @@ Requirements:
     - TAVILY_API_KEY: (Optional) For web search verification
 """
 
-import json
 import os
-import tempfile
 
 from dingo.config import InputArgs
 from dingo.exec import Executor
@@ -33,23 +31,14 @@ def main() -> int:
         print("WARNING: TAVILY_API_KEY not set - web search verification will be limited")
         print("   Set it with: export TAVILY_API_KEY='your-api-key'")
 
-    # Read the complete article (Markdown input)
-    article_path = "test/data/blog_article_full.md"
+    article_path = "test/data/factcheck_article.jsonl"
     if not os.path.exists(article_path):
         print(f"ERROR: Article file not found: {article_path}")
         return 1
 
-    with open(article_path, 'r', encoding='utf-8') as f:
-        article_content = f.read()
-
-    # Wrap article in JSONL so Executor treats it as a single Data object.
-    temp_jsonl = tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False, encoding='utf-8')
-    temp_jsonl.write(json.dumps({"content": article_content}, ensure_ascii=False) + '\n')
-    temp_jsonl.close()
-
     # Configuration for ArticleFactChecker
     config = {
-        "input_path": temp_jsonl.name,
+        "input_path": article_path,
         "dataset": {
             "source": "local",
             "format": "jsonl"
@@ -113,49 +102,38 @@ def main() -> int:
     print("Artifact output: outputs/article_factcheck_<timestamp>/")
     print("=" * 70)
 
-    # Create input args and executor
     input_args = InputArgs(**config)
     executor = Executor.exec_map["local"](input_args)
 
-    try:
-        # Execute fact-checking
-        print("\nExecuting agent-based fact-checking...\n")
+    print("\nExecuting agent-based fact-checking...\n")
+    result = executor.execute()
 
-        result = executor.execute()
+    print("\n" + "=" * 70)
+    print("FACT-CHECKING RESULTS")
+    print("=" * 70)
 
-        # Display results
-        print("\n" + "=" * 70)
-        print("FACT-CHECKING RESULTS")
-        print("=" * 70)
+    if result:
+        print(f"\nTotal items evaluated: {result.total}")
+        print(f"Passed: {result.num_good}  |  Issues found: {result.num_bad}")
+        if result.score:
+            print(f"Overall score: {result.score:.2%}")
+        if result.type_ratio:
+            print("\nIssue breakdown:")
+            for field_key, type_counts in result.type_ratio.items():
+                for label, count in type_counts.items():
+                    print(f"  [{field_key}] {label}: {count}")
 
-        if result:
-            print(f"\nTotal items evaluated: {result.total}")
-            print(f"Passed: {result.num_good}  |  Issues found: {result.num_bad}")
-            if result.score:
-                print(f"Overall score: {result.score:.2%}")
-            if result.type_ratio:
-                print("\nIssue breakdown:")
-                for field_key, type_counts in result.type_ratio.items():
-                    for label, count in type_counts.items():
-                        print(f"  [{field_key}] {label}: {count}")
+    print("\nFact-checking complete!")
+    print(f"\nDingo standard output: {input_args.output_path}/")
+    print("  |-- summary.json                  (aggregated statistics)")
+    print("  +-- content/<LABEL>.jsonl          (results grouped by quality label)")
 
-        print("\nFact-checking complete!")
-        print(f"\nDingo standard output: {input_args.output_path}/")
-        print("  |-- summary.json                  (aggregated statistics)")
-        print("  +-- content/<LABEL>.jsonl          (results grouped by quality label)")
-
-        print("\nIntermediate artifacts: outputs/article_factcheck_<timestamp>_<uuid>/")
-        print("  |-- article_content.md           (original Markdown article)")
-        print("  |-- claims_extracted.jsonl        (extracted claims, one per line)")
-        print("  |-- claims_verification.jsonl     (per-claim verification details)")
-        print("  +-- verification_report.json      (full structured report)")
-        print("\nNote: Override artifact path with agent_config.output_path in config")
-
-    finally:
-        try:
-            os.unlink(temp_jsonl.name)
-        except OSError:
-            pass
+    print("\nIntermediate artifacts: outputs/article_factcheck_<timestamp>_<uuid>/")
+    print("  |-- article_content.md           (original Markdown article)")
+    print("  |-- claims_extracted.jsonl        (extracted claims, one per line)")
+    print("  |-- claims_verification.jsonl     (per-claim verification details)")
+    print("  +-- verification_report.json      (full structured report)")
+    print("\nNote: Override artifact path with agent_config.output_path in config")
 
     return 0
 

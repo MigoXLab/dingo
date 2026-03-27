@@ -346,6 +346,8 @@ class ArticleFactChecker(BaseAgent):
                 "parameters": {
                     "agent_config": {
                         "max_iterations": 10,
+                        "overall_timeout": 900,
+                        "max_concurrent_claims": 5,
                         "tools": {
                             "claims_extractor": {
                                 "api_key": "your-openai-api-key",
@@ -372,6 +374,9 @@ class ArticleFactChecker(BaseAgent):
     ]
     max_iterations = 10  # Allow more iterations for comprehensive checking
     max_concurrent_claims = 5  # Default parallel claim verification slots
+    overall_timeout = 900       # 15-minute wall-clock timeout for entire evaluation
+    _MIN_OVERALL_TIMEOUT = 30   # Floor: 30 seconds
+    _MAX_OVERALL_TIMEOUT = 7200  # Ceiling: 2 hours
 
     _required_fields = [RequiredField.CONTENT]  # Article text
 
@@ -823,17 +828,36 @@ class ArticleFactChecker(BaseAgent):
         if output_dir and input_data.content:
             cls._save_article_content(output_dir, input_data.content)
 
+        timeout = cls._get_overall_timeout()
+
+        async def _run_with_timeout() -> EvalDetail:
+            return await asyncio.wait_for(
+                cls._async_eval(input_data, start_time, output_dir),
+                timeout=timeout,
+            )
+
         try:
-            return asyncio.run(cls._async_eval(input_data, start_time, output_dir))
+            return asyncio.run(_run_with_timeout())
+        except asyncio.TimeoutError:
+            elapsed = time.time() - start_time
+            log.warning(f"ArticleFactChecker: overall timeout exceeded ({elapsed:.1f}s / {timeout:.0f}s limit)")
+            return cls._create_overall_timeout_result(elapsed, timeout)
         except RuntimeError as e:
             # Fallback when called inside an already-running event loop (e.g. Jupyter, tests)
             if "cannot run" in str(e).lower() or "already running" in str(e).lower():
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    future = pool.submit(
-                        lambda: asyncio.run(cls._async_eval(input_data, start_time, output_dir))
-                    )
-                    return future.result()
+                    future = pool.submit(lambda: asyncio.run(_run_with_timeout()))
+                    try:
+                        # Extra margin so asyncio.wait_for fires before this outer timeout
+                        return future.result(timeout=timeout + 30)
+                    except (asyncio.TimeoutError, concurrent.futures.TimeoutError):
+                        elapsed = time.time() - start_time
+                        log.warning(
+                            f"ArticleFactChecker: overall timeout exceeded "
+                            f"({elapsed:.1f}s / {timeout:.0f}s limit, fallback path)"
+                        )
+                        return cls._create_overall_timeout_result(elapsed, timeout)
             raise
 
     # --- Two-Phase Async Architecture Methods ---
@@ -1022,6 +1046,26 @@ class ArticleFactChecker(BaseAgent):
         params = cls.dynamic_config.parameters or {}
         agent_cfg = params.get('agent_config') or {}
         return agent_cfg.get('max_concurrent_claims', cls.max_concurrent_claims)
+
+    @classmethod
+    def _get_overall_timeout(cls) -> float:
+        """Read overall_timeout from agent_config or use class default (900s).
+
+        Returns:
+            Positive timeout in seconds, clamped to [30, 7200].
+        """
+        params = cls.dynamic_config.parameters or {}
+        agent_cfg = params.get('agent_config') or {}
+        raw = agent_cfg.get('overall_timeout', cls.overall_timeout)
+        try:
+            timeout = float(raw)
+        except (TypeError, ValueError):
+            log.warning(f"Invalid overall_timeout={raw!r}, using default {cls.overall_timeout}s")
+            return float(cls.overall_timeout)
+        clamped = max(cls._MIN_OVERALL_TIMEOUT, min(timeout, cls._MAX_OVERALL_TIMEOUT))
+        if clamped != timeout:
+            log.warning(f"overall_timeout={timeout} out of range, clamped to {clamped}s")
+        return float(clamped)
 
     @classmethod
     def _parse_claim_json_robust(cls, output: Optional[str]) -> Dict[str, Any]:
@@ -1792,6 +1836,38 @@ Begin your systematic fact-checking process now.
             "2. Verify article content is valid and non-empty",
             "3. Check tool configurations (claims_extractor, arxiv_search, tavily_search)",
             "4. Review agent logs for detailed error messages"
+        ]
+        return result
+
+    @classmethod
+    def _create_overall_timeout_result(cls, elapsed: float, timeout: float) -> EvalDetail:
+        """
+        Create error result when overall wall-clock timeout is exceeded.
+
+        Args:
+            elapsed: Actual elapsed time in seconds
+            timeout: Configured timeout limit in seconds
+
+        Returns:
+            EvalDetail with timeout error status
+        """
+        minutes, seconds = divmod(int(timeout), 60)
+        limit_str = f"{minutes}m{seconds}s" if minutes else f"{int(timeout)}s"
+        result = EvalDetail(metric=cls.__name__)
+        result.status = True
+        result.label = [f"{QualityLabel.QUALITY_BAD_PREFIX}AGENT_OVERALL_TIMEOUT"]
+        result.reason = [
+            "Article Fact-Checking Failed: Overall Timeout Exceeded",
+            "=" * 70,
+            f"Execution exceeded the {int(timeout)}s ({limit_str}) wall-clock limit.",
+            f"Elapsed time: {elapsed:.1f}s",
+            "",
+            "Recommendations:",
+            f"  1. Increase overall_timeout (current: {int(timeout)}s) in agent_config",
+            "  2. Reduce max_claims in claims_extractor config (e.g., 50 -> 20)",
+            "  3. Use a faster model (e.g., gpt-4o-mini instead of gpt-4o)",
+            "  4. Reduce max_concurrent_claims to lower API rate-limit pressure",
+            "  5. Split long articles into shorter sections",
         ]
         return result
 

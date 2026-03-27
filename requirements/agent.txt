@@ -8,3 +8,6 @@ langchain-openai>=1.0.0
 
 # Tavily for web search tool
 tavily-python>=0.3.0
+
+# ArXiv for academic paper search tool
+arxiv>=2.4.0

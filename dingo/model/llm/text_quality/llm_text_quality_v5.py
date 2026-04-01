@@ -30,7 +30,27 @@ Evaluate whether this text is suitable for LLM pretraining. Focus on issues that
 **Impact**: Broken structures prevent models from learning correct formatting patterns.
 
 **Check for**:
-- **Error_Formula**: Mathematical expressions with **unmatched delimiters** or **unclosed environments**
+- **Error_Formula**: Mathematical content with **broken syntax** OR **systematically stripped symbols/formulas**
+
+  Two failure modes:
+
+  **(A) Broken LaTeX syntax** — delimiters or environments are present but malformed:
+  - Delimiters unmatched: $ without closing $ (LaTeX context, not dollar signs)
+  - Environments unclosed: \\begin{{align}} without \\end{{align}}
+  - Syntax broken: \\frac{{a}}{{b missing closing }}
+  - HTML tags unclosed: <sub>text without </sub>
+  - Impact: Prevents >50% of mainstream parsers from rendering
+
+  **(B) Stripped mathematical content** — symbols/formulas systematically removed during extraction:
+  - Orphan hyphens from stripped Greek letters: "κ-solutions" → "-solutions", "ε-net" → "-net"
+  - Empty positions after connective words: "thus ;" or "the interval ;" where a formula was removed
+  - Sentences referencing variables/expressions that are absent: "a small number" (number missing), "we have ." (equation missing)
+  - Systematic loss: multiple occurrences throughout the text, not just one or two typos
+  - Impact: Mathematical text becomes incoherent; models learn broken academic writing patterns
+
+  Example (BAD — stripped symbols):
+  "Let be a -solution to the Ricci flow which is -noncollapsed. Ancient, in the sense that t ranges on the interval ; Bounded curvature, thus ;"
+  (Greek letters κ stripped from "κ-solution" and "κ-noncollapsed"; interval expression and inequality after "thus" removed entirely)
 
   ⚠️ **Normal patterns (DO NOT flag)**:
   - Mixing inline ($...$) and display ($$...$$) formulas
@@ -38,31 +58,39 @@ Evaluate whether this text is suitable for LLM pretraining. Focus on issues that
   - Line breaks with \\\\ in alignment environments
   - HTML tags: <sub>x</sub>, <sup>2</sup> for subscripts/superscripts
   - Mixing LaTeX and HTML in web-extracted content
-
-  ✅ **Only flag when**:
-  - Delimiters unmatched: $ without closing $ (LaTeX context, not dollar signs)
-  - Environments unclosed: \\begin{{align}} without \\end{{align}}
-  - Syntax broken: \\frac{{a}}{{b missing closing }}
-  - HTML tags unclosed: <sub>text without </sub>
+  - Plain-text math without any LaTeX (e.g., "a^2 + b^2 = c^2" without $ delimiters) — this is fine as long as the expressions are actually present
 
   ⚠️ **Important**: Distinguish LaTeX $ from dollar signs ($100)
   - Dollar sign: "$100", "$5.99" (followed by numbers) → NOT LaTeX
   - LaTeX delimiter: "$x$", "$\\alpha$" (contains math symbols) → IS LaTeX
-  - Example: "The price is $100 and equation $x=y$ costs $50" has 4 dollar symbols but only 2 are LaTeX delimiters (and they match)
 
-  - Example (BAD): "$x^2 + y^2 is broken here $$a = b$$$"
+  - Example (BAD — broken delimiters): "$x^2 + y^2 is broken here $$a = b$$$"
     (First LaTeX $ never closes, extra $ at end)
   - Example (GOOD): "The item costs $100 and satisfies $x^2 + y^2 = z^2$ where price is $50"
     (Dollar signs for money + proper LaTeX pair)
-  - Impact: Only flag errors that prevent >50% of mainstream parsers (pdflatex, MathJax, KaTeX, Pandoc, Jupyter) from rendering
 
 - **Error_Table**: Table structures that are malformed or unreadable
   - Example (BAD): Misaligned columns, missing headers, or garbled HTML tags
   - Impact: Models cannot learn proper table representation
 
 - **Error_Code**: Code blocks with formatting corruption
-  - Example (BAD): Line numbers mixed with code, broken syntax highlighting markers
-  - Impact: Teaches incorrect code structure
+  **Common corruption patterns**:
+  - Missing code fence (` ``` `): code appears as plain text without language block
+  - Lost indentation: Python/YAML code with all indentation stripped (flat lines)
+  - Broken identifiers: spaces injected into tokens, e.g. `sys .argv`, `pts .append`, `i[ 0]`
+  - Line numbers mixed with code, broken syntax highlighting markers
+  - Keywords wrapped in inline backticks instead of a fenced block, e.g. `` `import` sys ``
+
+  Example (BAD — indentation and identifiers destroyed):
+  ```
+  `import` sys
+  pts = []
+  for i in range( 1,len(sys .argv), 2):
+  pts .append([int(sys .argv[i]), int(sys .argv[i +1])])
+  ```
+  Correct version would have a code fence, proper indentation, and no spaces inside `sys.argv`.
+
+  - Impact: Teaches incorrect code syntax, broken tokenization patterns, and wrong indentation conventions
 
 **Key Question**: "Can the model learn proper formatting from this structure?"
 
@@ -160,9 +188,13 @@ Output: {{"score": 1, "type": "Good", "name": "None", "reason": "Well-formed mul
 Input: "The eigenstate $\\psi_n$ where <sub>n</sub> is quantum number and energy E<sup>2</sup> = m<sup>2</sup>c<sup>4</sup>"
 Output: {{"score": 1, "type": "Good", "name": "None", "reason": "Normal mix of LaTeX and HTML tags from web content"}}
 
-**Example 2 (Bad - Completeness)**:
+**Example 2 (Bad - Completeness, broken delimiters)**:
 Input: "The formula $x^2 + y^2 is broken here $$a = b$$$"
 Output: {"score": 0, "type": "Completeness", "name": "Error_Formula", "reason": "Unmatched delimiters: first $ never closes, extra $ at end"}
+
+**Example 2.5 (Bad - Completeness, stripped math)**:
+Input: "Definition 1.(-solutions) A -solution is a Ricci flow which is -noncollapsed at every scale. Ancient, in the sense that t ranges on the interval ; Bounded curvature, thus ;"
+Output: {{"score": 0, "type": "Completeness", "name": "Error_Formula", "reason": "Mathematical symbols systematically stripped: Greek letters removed ('-solutions' instead of 'κ-solutions'), formulas missing after 'the interval' and 'thus'"}}
 
 **Example 3 (Bad - Effectiveness)**:
 Input: "Theappleisredandtasty�withsomegarbledtext□□"

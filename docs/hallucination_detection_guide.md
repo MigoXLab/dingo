@@ -131,7 +131,7 @@ LLMHallucination.dynamic_config = EvaluatorLLMArgs(
     key=os.getenv("OPENAI_API_KEY"),
     api_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
     model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-    parameters={"threshold": 0.5}
+    threshold=0.5
 )
 
 # Prepare data
@@ -218,7 +218,7 @@ LLMHallucination.dynamic_config = EvaluatorLLMArgs(
     key="YOUR_API_KEY",
     api_url="https://api.openai.com/v1",
     model="gpt-4o-mini",
-    parameters={"threshold": 0.5}  # Range: 0.0-1.0
+    threshold=0.5  # Range: 0.0-1.0
 )
 ```
 

@@ -64,14 +64,12 @@ def example_with_context():
                     "key": os.getenv("OPENAI_API_KEY", "your-openai-api-key"),
                     "api_url": os.getenv("OPENAI_API_URL", "https://api.openai.com/v1"),
                     "model": "gpt-4.1-mini-2025-04-14",
-                    "parameters": {
-                        "temperature": 0.1,
-                        "agent_config": {
-                            "max_iterations": 3,
-                            "tools": {
-                                "tavily_search": {
-                                    "api_key": os.getenv("TAVILY_API_KEY", "your-tavily-api-key")
-                                }
+                    "temperature": 0.1,
+                    "agent_config": {
+                        "max_iterations": 3,
+                        "tools": {
+                            "tavily_search": {
+                                "api_key": os.getenv("TAVILY_API_KEY", "your-tavily-api-key")
                             }
                         }
                     }
@@ -155,17 +153,15 @@ def example_without_context():
                     "key": os.getenv("OPENAI_API_KEY", "your-openai-api-key"),
                     "api_url": os.getenv("OPENAI_API_URL", "https://api.openai.com/v1"),
                     "model": "gpt-4.1-mini-2025-04-14",
-                    "parameters": {
-                        "temperature": 0.1,
-                        "agent_config": {
-                            "max_iterations": 3,
-                            "tools": {
-                                "tavily_search": {
-                                    "api_key": os.getenv("TAVILY_API_KEY", "your-tavily-api-key"),
-                                    "max_results": 5,
-                                    "search_depth": "advanced",
-                                    "include_answer": True
-                                }
+                    "temperature": 0.1,
+                    "agent_config": {
+                        "max_iterations": 3,
+                        "tools": {
+                            "tavily_search": {
+                                "api_key": os.getenv("TAVILY_API_KEY", "your-tavily-api-key"),
+                                "max_results": 5,
+                                "search_depth": "advanced",
+                                "include_answer": True
                             }
                         }
                     }
@@ -215,13 +211,11 @@ def example_sdk_usage():
         key=os.getenv("OPENAI_API_KEY", "your-openai-api-key"),
         api_url=os.getenv("OPENAI_API_URL", "https://api.openai.com/v1"),
         model="gpt-4.1-mini-2025-04-14",
-        parameters={
-            "temperature": 0.1,
-            "agent_config": {
-                "tools": {
-                    "tavily_search": {
-                        "api_key": os.getenv("TAVILY_API_KEY", "your-tavily-api-key")
-                    }
+        temperature=0.1,
+        agent_config={
+            "tools": {
+                "tavily_search": {
+                    "api_key": os.getenv("TAVILY_API_KEY", "your-tavily-api-key")
                 }
             }
         }

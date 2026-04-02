@@ -70,15 +70,13 @@ class AgentFactCheck(BaseAgent):
             "key": "your-openai-api-key",
             "api_url": "https://api.openai.com/v1",
             "model": "gpt-4.1-mini-2025-04-14",
-            "parameters": {
-                "agent_config": {
-                    "max_iterations": 5,
-                    "tools": {
-                        "tavily_search": {
-                            "api_key": "your-tavily-api-key",
-                            "max_results": 5,
-                            "search_depth": "advanced"
-                        }
+            "agent_config": {
+                "max_iterations": 5,
+                "tools": {
+                    "tavily_search": {
+                        "api_key": "your-tavily-api-key",
+                        "max_results": 5,
+                        "search_depth": "advanced"
                     }
                 }
             }

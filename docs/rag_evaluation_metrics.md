@@ -86,10 +86,8 @@ llm_config_embedding = {
         "api_url": "https://api.openai.com/v1",
         "key": "YOUR_API_KEY"
     },
-    "parameters": {
-        "strictness": 3,
-        "threshold": 5
-    }
+    "strictness": 3,
+    "threshold": 5
 }
 
 input_data = {
@@ -170,7 +168,8 @@ summary = executor.execute()
         "api_url": "https://api.deepseek.com",
         "key": "YOUR_API_KEY"
     },
-    "parameters": {"strictness": 3, "threshold": 5}
+    "strictness": 3,
+    "threshold": 5
 }
 ```
 
@@ -186,7 +185,8 @@ summary = executor.execute()
         "api_url": "http://localhost:8000/v1",  # Local vLLM/Xinference
         "key": "dummy-key"
     },
-    "parameters": {"strictness": 3, "threshold": 5}
+    "strictness": 3,
+    "threshold": 5
 }
 ```
 

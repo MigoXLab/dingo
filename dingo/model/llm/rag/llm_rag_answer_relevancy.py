@@ -242,14 +242,8 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
 
         try:
             # 增加温度参数以提高问题生成的随机性
-            if hasattr(cls, 'dynamic_config') and cls.dynamic_config.parameters:
-                if 'temperature' not in cls.dynamic_config.parameters:
-                    cls.dynamic_config.parameters['temperature'] = 0.7
-            else:
-                # 如果没有parameters，创建一个包含temperature的parameters
-                current_params = cls.dynamic_config.parameters or {}
-                current_params['temperature'] = 0.7
-                cls.dynamic_config.parameters = current_params
+            if hasattr(cls, 'dynamic_config') and 'temperature' not in cls.dynamic_config.model_extra:
+                cls.dynamic_config.temperature = 0.7
 
             # 生成多个相关问题
             generated_questions = cls.generate_multiple_questions(input_data, cls.strictness)
@@ -263,10 +257,9 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
 
             # 根据分数判断是否通过，默认阈值为5
             threshold = 5
-            if hasattr(cls, 'dynamic_config') and cls.dynamic_config.parameters:
-                threshold = cls.dynamic_config.parameters.get('threshold', 5)
-                # 检查是否有自定义的strictness参数
-                cls.strictness = cls.dynamic_config.parameters.get('strictness', 3)
+            if hasattr(cls, 'dynamic_config'):
+                threshold = cls.dynamic_config.model_extra.get('threshold', 5)
+                cls.strictness = cls.dynamic_config.model_extra.get('strictness', 3)
 
             # 构建详细的reason文本
             all_reasons = []

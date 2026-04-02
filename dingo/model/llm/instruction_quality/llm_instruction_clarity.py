@@ -283,8 +283,8 @@ Output:
 
             # 判断是否通过（默认阈值 6.0）
             threshold = 6.0
-            if hasattr(cls, 'dynamic_config') and cls.dynamic_config.parameters:
-                threshold = cls.dynamic_config.parameters.get('threshold', 6.0)
+            if hasattr(cls, 'dynamic_config'):
+                threshold = cls.dynamic_config.model_extra.get('threshold', 6.0)
 
             if score >= threshold:
                 result.status = False

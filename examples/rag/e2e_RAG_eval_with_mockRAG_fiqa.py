@@ -327,10 +327,8 @@ def run_dingo_evaluation(rag_output_path: str) -> SummaryModel:
             "api_url": OPENAI_BASE_URL,  # 如果同一服务提供 embedding
             "key": OPENAI_API_KEY
         },
-        "parameters": {
-            "strictness": 3,
-            "threshold": 5
-        }
+        "strictness": 3,
+        "threshold": 5
     }
 
     input_data = {

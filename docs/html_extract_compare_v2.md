@@ -62,9 +62,7 @@ data = Data(
     data_id="unique_id_001",  # 必需：数据的唯一标识符
     prompt="工具A提取的文本内容",  # 必需
     content="工具B提取的文本内容",  # 必需
-    raw_data={
-        "language": "zh",  # 可选，默认 "en"
-    }
+    language="zh",  # 可选，默认 "en"；也可放在 raw_data["language"]
 )
 ```
 
@@ -116,9 +114,7 @@ data = Data(
     data_id="test_001",
     prompt="工具A提取的内容...",
     content="工具B提取的文本内容",
-    raw_data={
-        "language": "zh"
-    }
+    language="zh",  # 可选
 )
 
 # 执行评估
@@ -131,69 +127,75 @@ print(f"推理: {result.reason[0]}")
 
 ### 批量评估（使用 Executor）
 
-推荐使用 Executor 进行大规模批量评估，支持并发处理和结果保存。
+推荐使用 Executor 进行大规模批量评估，支持并发处理和结果保存。配置需与 `InputArgs` 一致：`evaluator` 为列表，每项包含 `fields`（列名映射到 `Data`）与 `evals`（评估器及 `config`）。
+
+`LLMHtmlExtractCompareV2` 约定：`prompt` = 工具 A 文本，`content` = 工具 B 文本；`language` 可选，缺省为 `"en"`。
 
 ```python
+import os
 from pathlib import Path
 from dingo.config.input_args import InputArgs
 from dingo.exec.base import Executor
 
-# 配置参数
+common_config = {
+    "model": os.getenv("OPENAI_MODEL", "deepseek-chat"),
+    "key": os.getenv("OPENAI_API_KEY"),
+    "api_url": os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1"),
+}
+
 input_data = {
-    "task_name": "html_extract_compare_evaluation",
+    "task_name": "html_extract_compare_v2_evaluation",
     "input_path": str(Path("test/data/html_extract_compare_test.jsonl")),
     "output_path": "output/html_extract_compare_evaluation/",
-
-    # 数据集配置
     "dataset": {
         "source": "local",
         "format": "jsonl",
-        "field": {
-            "id": "data_id",
-            "content": "content"
-            # magic_md 和 language 会自动放入 raw_data
-        }
     },
-
-    # 执行器配置
     "executor": {
-        "eval_group": "html_extract_compare",  # 评估组
-        "max_workers": 4,  # 并发数
+        "max_workers": 4,
+        "batch_size": 1,
         "result_save": {
-            "bad": True,   # 保存问题样本
-            "good": True   # 保存正常样本
-        }
+            "bad": True,   # 保存工具 B 更优的样本（status=True，对应判断 C）
+            "good": True,  # 保存工具 A 更好或相当的样本
+        },
     },
-
-    # LLM 配置
-    "evaluator": {
-        "llm_config": {
-            "LLMHtmlExtractCompareV2": {
-                "model": "deepseek-chat",
-                "key": "your_api_key",
-                "api_url": "https://api.deepseek.com/v1"
-            }
+    "evaluator": [
+        {
+            # 将 JSONL 列映射到 Data：prompt=工具A，content=工具B
+            "fields": {
+                "id": "data_id",
+                "prompt": "method1",
+                "content": "method2",
+                "language": "language",
+            },
+            "evals": [
+                {"name": "LLMHtmlExtractCompareV2", "config": common_config},
+            ],
         }
-    }
+    ],
 }
 
-# 执行评估
 input_args = InputArgs(**input_data)
 executor = Executor.exec_map["local"](input_args)
 result = executor.execute()
 
-# 查看结果
 print(f"总样本数: {result.total}")
 print(f"工具B更好: {result.num_bad}")
-print(f"工具A更好或相同: {result.total - result.num_bad}")
+print(f"工具A更好或相同: {result.num_good}")
 ```
+
+若你的数据列名为 `content` / `magic_md`，只需将 `fields` 改为 `"prompt": "content", "content": "magic_md"` 等即可。
 
 #### JSONL 数据格式
 
+与仓库内 `test/data/html_extract_compare_test.jsonl` 对齐：每行一条 JSON，至少包含唯一标识、两种提取结果与可选语言。
+
 ```jsonl
-{"data_id": "001", "content": "工具A文本", "magic_md": "工具B文本", "language": "zh"}
-{"data_id": "002", "content": "Tool A text", "magic_md": "Tool B text", "language": "en"}
+{"data_id": "001", "method1": "工具A提取的Markdown文本...", "method2": "工具B提取的Markdown文本...", "language": "zh"}
+{"data_id": "002", "method1": "Tool A extracted text...", "method2": "Tool B extracted text...", "language": "en"}
 ```
+
+`method1` / `method2` 仅为示例列名；实际列名通过 `evaluator[].fields` 中的 `prompt` / `content` 映射指定。
 
 ## 与 V1 版本的对比
 

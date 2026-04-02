@@ -102,10 +102,11 @@ class EmbeddingConfigArgs(BaseModel):
 
 
 class EvaluatorLLMArgs(BaseModel):
+    model_config = {"extra": "allow"}
+
     model: Optional[str] = None
     key: Optional[str] = None
     api_url: Optional[str] = None
-    parameters: Optional[dict] = None
     embedding_config: Optional[EmbeddingConfigArgs] = None
 
 

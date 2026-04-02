@@ -12,8 +12,8 @@ HTML 提取工具对比评估 - Dataset 批量执行示例
 数据格式要求：
 {
     "data_id": "唯一标识",
-    "content": "工具A提取的文本",
-    "magic_md": "工具B提取的文本",
+    "method1": "工具A提取的文本",
+    "method2": "工具B提取的文本",
     "language": "zh" 或 "en"
 }
 
@@ -31,7 +31,7 @@ from dingo.exec.base import Executor
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 # API 配置
-OPENAI_MODEL = 'deepseek-chat'
+OPENAI_MODEL = os.getenv("OPENAI_MODEL")
 OPENAI_URL = os.getenv("OPENAI_BASE_URL")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 common_config = {
@@ -46,7 +46,7 @@ def evaluate_html_extract_compare_dataset():
     批量评估 HTML 提取工具对比数据集
 
     数据集格式：
-    {"data_id": "001", "content": "工具A文本", "magic_md": "工具B文本", "language": "zh"}
+    {"data_id": "001", "method1": "工具A文本", "method2": "工具B文本", "language": "zh"}
     """
     print("=== HTML Extract Compare Dataset Evaluation ===")
     print(f"使用模型: {OPENAI_MODEL}")
@@ -76,7 +76,7 @@ def evaluate_html_extract_compare_dataset():
         },
         "evaluator": [
             {
-                "fields": {"id": "data_id", "prompt": "content", "content": "magic_md"},
+                "fields": {"id": "data_id", "prompt": "method1", "content": "method2", "language": "language"},
                 "evals": [
                     {"name": "LLMHtmlExtractCompareV2", "config": common_config},
                 ]

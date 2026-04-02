@@ -128,10 +128,8 @@ def run_rag_evaluation():
             "api_url": OPENAI_URL,  # 如果同一服务提供 embedding
             "key": OPENAI_KEY
         },
-        "parameters": {
-            "strictness": 3,
-            "threshold": 5
-        }
+        "strictness": 3,
+        "threshold": 5
     }
 
     # 构建配置

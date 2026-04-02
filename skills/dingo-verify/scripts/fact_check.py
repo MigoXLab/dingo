@@ -164,13 +164,11 @@ def build_config(
                     "key": api_key,
                     "model": model,
                     "api_url": api_url,
-                    "parameters": {
-                        "temperature": 0,
-                        "agent_config": {
-                            "max_concurrent_claims": max_concurrent,
-                            "max_iterations": 50,
-                            "tools": tools_config,
-                        }
+                    "temperature": 0,
+                    "agent_config": {
+                        "max_concurrent_claims": max_concurrent,
+                        "max_iterations": 50,
+                        "tools": tools_config,
                     }
                 }
             }]

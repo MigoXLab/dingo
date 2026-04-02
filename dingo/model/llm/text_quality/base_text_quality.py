@@ -47,16 +47,11 @@ class BaseTextQuality(BaseOpenAI):
         response_json = json.loads(response)
         response_model = ResponseScoreTypeNameReason(**response_json)
 
-        # Create EvalDetail with all required fields
-        # status = False for Good quality (no issues found)
-        # status = True for Bad quality (issues found)
-        is_good = response_model.type == "Good"
-
         result = EvalDetail(
             metric=cls.__name__,
-            status=not is_good,  # True if Bad (issues found), False if Good
+            status=False if response_model.score == 1 else True,
             score=response_model.score,
-            label=["QUALITY_GOOD"] if is_good else [f"{response_model.type}.{response_model.name}"],
+            label=["QUALITY_GOOD"] if response_model.score == 1 else [f"{response_model.type}.{response_model.name}"],
             reason=[response_model.reason]
         )
 

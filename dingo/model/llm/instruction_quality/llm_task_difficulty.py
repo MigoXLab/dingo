@@ -321,14 +321,14 @@ Output:
 
             # 难度评估没有"通过/不通过"的概念，只是描述性的
             # 但为了兼容框架，我们设置一个合理的默认行为
-            # 可以通过 parameters 配置 min_difficulty 和 max_difficulty
+            # 可以通过 config 中的 min_difficulty 和 max_difficulty 配置难度范围
             result.status = False  # 默认不标记为问题
             result.label = [f"TASK_DIFFICULTY.{difficulty_level.upper()}"]
 
             # 如果配置了难度范围要求，进行检查
-            if hasattr(cls, 'dynamic_config') and cls.dynamic_config.parameters:
-                min_difficulty = cls.dynamic_config.parameters.get('min_difficulty', 0)
-                max_difficulty = cls.dynamic_config.parameters.get('max_difficulty', 10)
+            if hasattr(cls, 'dynamic_config'):
+                min_difficulty = cls.dynamic_config.model_extra.get('min_difficulty', 0)
+                max_difficulty = cls.dynamic_config.model_extra.get('max_difficulty', 10)
 
                 if difficulty_score < min_difficulty:
                     result.status = True

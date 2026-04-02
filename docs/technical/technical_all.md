@@ -220,9 +220,14 @@ dingo 在使用提示词进行评估任务的时候，必须同时使用场景�
 + model
 + key
 + api_url
-+ parameters
++ temperature（直接平铺在配置中）
++ top_p
++ max_tokens
++ presence_penalty
++ frequency_penalty
++ agent_config（Agent 评估器专用，包含 max_iterations、tools 等）
 
-需要注意的是参数 [parameters](config.md#parameters) ，这个参数会对模型的推理产生影响，可以设置的值包括:
+LLM 调参配置直接平铺在 `config` 对象中（不再嵌套在 `parameters` 字段下），会对模型推理产生影响，可以设置的值包括:
 + temperature
 + top_p
 + max_tokens

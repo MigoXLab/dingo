@@ -104,26 +104,22 @@ HuggingFace 特定配置：
 
 #### EvaluatorLLMArgs 配置 (evaluator.llm_config.[llm_name])
 
-LLM 配置：
+LLM 配置（支持额外字段，所有额外字段会直接透传给 LLM API）：
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
 | model | str | null | No | 使用的模型名称 |
 | key | str | null | No | API 密钥 |
 | api_url | str | null | No | API URL |
-| parameters | object | null | No | LLM 调参配置 |
-
-##### LLM Parameters 配置
-
-LLM 调参配置：
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| temperature | number | 1 | 采样温度，0-2之间 |
-| top_p | number | 1 | 核心采样概率 |
-| max_tokens | number | 4000 | 最大生成token数 |
-| presence_penalty | number | 0 | 存在惩罚，-2.0到2.0之间 |
-| frequency_penalty | number | 0 | 频率惩罚，-2.0到2.0之间 |
+| embedding_config | object | null | No | Embedding 模型独立配置（RAG 评估器使用） |
+| temperature | number | 1 | No | 采样温度，0-2之间 |
+| top_p | number | 1 | No | 核心采样概率 |
+| max_tokens | number | 4000 | No | 最大生成token数 |
+| presence_penalty | number | 0 | No | 存在惩罚，-2.0到2.0之间 |
+| frequency_penalty | number | 0 | No | 频率惩罚，-2.0到2.0之间 |
+| agent_config | object | null | No | Agent 专属配置（max_iterations、tools 等） |
+| threshold | number | - | No | 评估通过阈值（各评估器自定义） |
+| *其他字段* | any | - | No | 所有额外字段直接透传给 LLM API |
 
 ## 配置文件示例
 
@@ -181,13 +177,11 @@ LLM 调参配置：
         "model": "gpt-3.5-turbo",
         "key": "your-api-key",
         "api_url": "https://api.openai.com/v1/chat/completions",
-        "parameters": {
-          "temperature": 1,
-          "top_p": 1,
-          "max_tokens": 4000,
-          "presence_penalty": 0,
-          "frequency_penalty": 0
-        }
+        "temperature": 1,
+        "top_p": 1,
+        "max_tokens": 4000,
+        "presence_penalty": 0,
+        "frequency_penalty": 0
       }
     }
   }

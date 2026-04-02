@@ -201,8 +201,8 @@ class VLMLayoutQuality(BaseOpenAI):
         else:
             model_name = cls.client.models.list().data[0].id
 
-        params = cls.dynamic_config.parameters
-        cls.validate_config(params)
+        extra_params = cls.dynamic_config.model_extra
+        cls.validate_config(extra_params)
 
         completions = cls.client.chat.completions.create(
             model=model_name,

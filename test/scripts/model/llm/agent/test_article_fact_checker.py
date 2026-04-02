@@ -552,7 +552,7 @@ class TestFileSaving:
         from dingo.config.input_args import EvaluatorLLMArgs
         ArticleFactChecker.dynamic_config = EvaluatorLLMArgs(
             key="test", api_url="https://api.example.com", model="test",
-            parameters={"agent_config": {"base_output_path": str(tmp_path)}}
+            agent_config={"base_output_path": str(tmp_path)}
         )
         result = ArticleFactChecker._get_output_dir()
         assert result is not None
@@ -565,7 +565,7 @@ class TestFileSaving:
         from dingo.config.input_args import EvaluatorLLMArgs
         ArticleFactChecker.dynamic_config = EvaluatorLLMArgs(
             key="test", api_url="https://api.example.com", model="test",
-            parameters={"agent_config": {"save_artifacts": False}}
+            agent_config={"save_artifacts": False}
         )
         result = ArticleFactChecker._get_output_dir()
         assert result is None
@@ -577,7 +577,7 @@ class TestFileSaving:
         output_dir = str(tmp_path / "new_output_dir")
         ArticleFactChecker.dynamic_config = EvaluatorLLMArgs(
             key="test", api_url="https://api.example.com", model="test",
-            parameters={"agent_config": {"output_path": output_dir}}
+            agent_config={"output_path": output_dir}
         )
 
         result = ArticleFactChecker._get_output_dir()

@@ -458,7 +458,7 @@ Aggregation:
                                             ├─ name: "AgentFactCheck"
                                             ├─ config.key: API key
                                             ├─ config.model: "gpt-4"
-                                            └─ config.parameters.agent_config:
+                                            └─ config.agent_config:
                                                  ├─ max_iterations: 10
                                                  └─ tools:
                                                       └─ tavily_search:
@@ -539,7 +539,7 @@ Check if tool in available_tools
 ToolRegistry.get(tool_name) → tool_class
     ↓
 configure_tool(tool_name, tool_class)
-    ├─ Extract config from dynamic_config.parameters.agent_config.tools.{tool_name}
+    ├─ Extract config from dynamic_config.agent_config.tools.{tool_name}
     └─ tool_class.update_config(config_dict)
     ↓
 tool_class.execute(**kwargs)
@@ -560,7 +560,7 @@ Return to agent for processing
 3. **Three Patterns**: LangChain-based (declarative), Custom Workflow (imperative), Agent-First + Context (hybrid)
 4. **Tool System**: Centralized registry with configuration injection
 5. **Execution**: Runs in ThreadPoolExecutor alongside other LLMs
-6. **Configuration**: Nested under `parameters.agent_config` in evaluator config
+6. **Configuration**: `agent_config` is a top-level key in evaluator config (flat structure)
 7. **Artifact Saving**: ArticleFactChecker auto-saves intermediate artifacts to a timestamped directory by default; override via `agent_config.output_path`, or disable with `agent_config.save_artifacts=false`
 
 ### Implementation Checklist

@@ -59,7 +59,7 @@ LLMFactCheck.dynamic_config = EvaluatorLLMArgs(
     key=os.getenv("OPENAI_API_KEY"),
     api_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
     model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-    parameters={"threshold": 5.0}
+    threshold=5.0
 )
 
 # Prepare data
@@ -108,7 +108,7 @@ input_data = {
                         "model": "gpt-4o-mini",
                         "key": "YOUR_API_KEY",
                         "api_url": "https://api.openai.com/v1",
-                        "parameters": {"threshold": 5.0}
+                        "threshold": 5.0
                     }
                 }
             ]
@@ -142,7 +142,7 @@ LLMFactCheck.dynamic_config = EvaluatorLLMArgs(
     key="YOUR_API_KEY",
     api_url="https://api.openai.com/v1",
     model="gpt-4o-mini",
-    parameters={"threshold": 5.0}  # Range: 0.0-10.0
+    threshold=5.0  # Range: 0.0-10.0
 )
 ```
 

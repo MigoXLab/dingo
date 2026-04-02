@@ -146,7 +146,7 @@ class BaseAgent(BaseOpenAI):
         Extract tool configuration from agent's dynamic_config.
 
         Configuration is expected in:
-        dynamic_config.parameters.agent_config.tools.{tool_name}
+        dynamic_config.agent_config.tools.{tool_name}
 
         Args:
             tool_name: Name of the tool
@@ -154,8 +154,8 @@ class BaseAgent(BaseOpenAI):
         Returns:
             Dict of configuration values for the tool
         """
-        params = cls.dynamic_config.parameters or {}
-        agent_config = params.get('agent_config', {})
+        extra_params = cls.dynamic_config.model_extra
+        agent_config = extra_params.get('agent_config', {})
         tools_config = agent_config.get('tools', {})
         return tools_config.get(tool_name, {})
 
@@ -184,8 +184,8 @@ class BaseAgent(BaseOpenAI):
         Returns:
             Maximum number of iterations allowed
         """
-        params = cls.dynamic_config.parameters or {}
-        agent_config = params.get('agent_config', {})
+        extra_params = cls.dynamic_config.model_extra
+        agent_config = extra_params.get('agent_config', {})
         return agent_config.get('max_iterations', cls.max_iterations)
 
     @classmethod

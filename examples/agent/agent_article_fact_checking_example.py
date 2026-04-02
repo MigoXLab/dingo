@@ -58,32 +58,30 @@ def main() -> int:
                             "key": openai_key,
                             "model": "intern-s1-pro",
                             "api_url": "https://chat.intern-ai.org.cn/api/v1/",
-                            "parameters": {
-                                "timeout": 600,
-                                "temperature": 0,  # deterministic output
-                                "agent_config": {
-                                    "max_concurrent_claims": 10,
-                                    "max_iterations": 50,
-                                    # Artifacts auto-saved to outputs/article_factcheck_<timestamp>/
-                                    # Override with: "output_path": "your/custom/path"
-                                    "tools": {
-                                        "claims_extractor": {
-                                            "api_key": openai_key,
-                                            "model": "intern-s1-pro",
-                                            "base_url": "https://chat.intern-ai.org.cn/api/v1/",
-                                            "max_claims": 50,
-                                            "claim_types": [
-                                                "factual", "statistical", "attribution", "institutional",
-                                                "temporal", "comparative", "monetary", "technical"
-                                            ]
-                                        },
-                                        "tavily_search": {
-                                            "api_key": tavily_key
-                                        } if tavily_key else {},
-                                        "arxiv_search": {
-                                            "max_results": 5,
-                                            "fetch_affiliations": True,
-                                        }
+                            "timeout": 600,
+                            "temperature": 0,  # deterministic output
+                            "agent_config": {
+                                "max_concurrent_claims": 10,
+                                "max_iterations": 50,
+                                # Artifacts auto-saved to outputs/article_factcheck_<timestamp>/
+                                # Override with: "output_path": "your/custom/path"
+                                "tools": {
+                                    "claims_extractor": {
+                                        "api_key": openai_key,
+                                        "model": "intern-s1-pro",
+                                        "base_url": "https://chat.intern-ai.org.cn/api/v1/",
+                                        "max_claims": 50,
+                                        "claim_types": [
+                                            "factual", "statistical", "attribution", "institutional",
+                                            "temporal", "comparative", "monetary", "technical"
+                                        ]
+                                    },
+                                    "tavily_search": {
+                                        "api_key": tavily_key
+                                    } if tavily_key else {},
+                                    "arxiv_search": {
+                                        "max_results": 5,
+                                        "fetch_affiliations": True,
                                     }
                                 }
                             }

@@ -189,7 +189,7 @@ class TestBuildConfig:
             max_claims=50,
             max_concurrent=5,
         )
-        tools = config["evaluator"][0]["evals"][0]["config"]["parameters"]["agent_config"]["tools"]
+        tools = config["evaluator"][0]["evals"][0]["config"]["agent_config"]["tools"]
         assert "tavily_search" not in tools
         assert "claims_extractor" in tools
         assert "arxiv_search" in tools
@@ -205,7 +205,7 @@ class TestBuildConfig:
             max_claims=50,
             max_concurrent=5,
         )
-        tools = config["evaluator"][0]["evals"][0]["config"]["parameters"]["agent_config"]["tools"]
+        tools = config["evaluator"][0]["evals"][0]["config"]["agent_config"]["tools"]
         assert "tavily_search" in tools
         assert tools["tavily_search"]["api_key"] == "tvly-xxx"
 
@@ -220,8 +220,8 @@ class TestBuildConfig:
             max_claims=50,
             max_concurrent=5,
         )
-        params = config["evaluator"][0]["evals"][0]["config"]["parameters"]
-        assert params["temperature"] == 0
+        cfg = config["evaluator"][0]["evals"][0]["config"]
+        assert cfg["temperature"] == 0
 
 
 class TestErrorOutput:

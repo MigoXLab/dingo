@@ -25,8 +25,16 @@ class LLMHtmlExtractCompareV2(BaseOpenAI):
     输入数据要求：
     - input_data.prompt: 工具A提取的文本
     - input_data.content: 工具B提取的文本
-    - input_data.raw_data.get("language", "en"): 语言类型 ("zh" 或 "en")
+    - language: 可选，来自 input_data.language 或 raw_data["language"]，缺省为 "en"（"zh" / "en"）
     """
+
+    _metric_info = {
+        'category': 'Pretrain Text Quality Assessment Metrics',
+        'metric_name': 'LLMHtmlExtractCompareV2',
+        'description': 'Compares two HTML main-content extraction tools by computing text diffs and using LLM to judge which preserves more core information',
+        'paper_title': '',
+        'paper_url': '',
+    }
 
     _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
     prompt = {
@@ -174,7 +182,8 @@ C. Text A 包含的核心信息内容少于 Text B
         text_tool_b = input_data.content
 
         # 获取配置参数
-        language = input_data.raw_data.get("language", "en")
+        raw_data = getattr(input_data, 'raw_data', {}) or {}
+        language = raw_data.get("language", getattr(input_data, 'language', "en"))
 
         # 计算文本差异
         diff_result = cls.extract_text_diff(text_tool_a, text_tool_b)

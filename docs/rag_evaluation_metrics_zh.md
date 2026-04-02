@@ -123,10 +123,8 @@ input_data = {
                             "api_url": OPENAI_URL,
                             "key": OPENAI_KEY
                         },
-                        "parameters": {
-                            "strictness": 3,
-                            "threshold": 5
-                        }
+                        "strictness": 3,
+                        "threshold": 5
                     }
                 },
                 {
@@ -466,7 +464,7 @@ LLMRAGFaithfulness.dynamic_config = EvaluatorLLMArgs(
     key="YOUR_API_KEY",
     api_url="https://api.openai.com/v1",
     model="gpt-4o-mini",
-    parameters={"threshold": 7}  # 自定义阈值
+    threshold=7  # 自定义阈值
 )
 
 # Answer Relevancy 特殊配置（需要 embedding）⭐
@@ -480,10 +478,8 @@ LLMRAGAnswerRelevancy.dynamic_config = EvaluatorLLMArgs(
         api_url="https://api.openai.com/v1",
         key="YOUR_API_KEY"
     ),
-    parameters={
-        "strictness": 3,  # 生成问题数量
-        "threshold": 5    # 通过阈值
-    }
+    strictness=3,  # 生成问题数量
+    threshold=5    # 通过阈值
 )
 ```
 
@@ -499,7 +495,7 @@ LLMRAGAnswerRelevancy.dynamic_config = EvaluatorLLMArgs(
                     "model": "gpt-4o-mini",
                     "key": "YOUR_API_KEY",
                     "api_url": "https://api.openai.com/v1",
-                    "parameters": {"threshold": 7}
+                    "threshold": 7
                 }
             },
             {
@@ -513,10 +509,8 @@ LLMRAGAnswerRelevancy.dynamic_config = EvaluatorLLMArgs(
                         "api_url": "https://api.openai.com/v1",
                         "key": "YOUR_API_KEY"
                     },
-                    "parameters": {
-                        "strictness": 3,
-                        "threshold": 5
-                    }
+                    "strictness": 3,
+                    "threshold": 5
                 }
             }
         ]
@@ -528,8 +522,8 @@ LLMRAGAnswerRelevancy.dynamic_config = EvaluatorLLMArgs(
 
 | 参数 | 适用指标 | 默认值 | 说明 |
 |------|---------|--------|------|
-| `threshold` | 所有指标 | 5.0 | 通过阈值（0-10），在 `parameters` 中配置 |
-| `strictness` | Answer Relevancy | 3 | 生成问题数量（1-5），在 `parameters` 中配置 |
+| `threshold` | 所有指标 | 5.0 | 通过阈值（0-10），直接在 `config` 中配置 |
+| `strictness` | Answer Relevancy | 3 | 生成问题数量（1-5），直接在 `config` 中配置 |
 | `embedding_config` | Answer Relevancy | - | **必需配置**，包含 `model`（模型名）、`api_url`（服务地址）、`key`（API密钥） |
 
 ## 📊 指标详细说明

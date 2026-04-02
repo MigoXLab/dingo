@@ -101,9 +101,7 @@ input_data = {
                 "model": "deepseek-chat",
                 "key": "your-api-key",
                 "api_url": "https://api.deepseek.com/v1",
-                "parameters": {
-                    "temperature": 0.1
-                }
+                "temperature": 0.1
             }
         }
     }

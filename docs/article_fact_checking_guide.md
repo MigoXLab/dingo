@@ -81,24 +81,22 @@ config = {
             "config": {
                 "key": os.getenv("OPENAI_API_KEY"),
                 "model": "deepseek-chat",  # or "gpt-4o-mini" for OpenAI
-                "parameters": {
-                    "agent_config": {
-                        "max_iterations": 15,
-                        "output_path": "outputs/article_factcheck/",  # Optional: save intermediate artifacts
-                        "tools": {
-                            "claims_extractor": {
-                                "api_key": os.getenv("OPENAI_API_KEY"),
-                                "max_claims": 50,
-                                "claim_types": [
-                                    "factual", "statistical", "attribution", "institutional",
-                                    "temporal", "comparative", "monetary", "technical"
-                                ]
-                            },
-                            "tavily_search": {
-                                "api_key": os.getenv("TAVILY_API_KEY")
-                            },
-                            "arxiv_search": {"max_results": 5}
-                        }
+                "agent_config": {
+                    "max_iterations": 15,
+                    "output_path": "outputs/article_factcheck/",  # Optional: save intermediate artifacts
+                    "tools": {
+                        "claims_extractor": {
+                            "api_key": os.getenv("OPENAI_API_KEY"),
+                            "max_claims": 50,
+                            "claim_types": [
+                                "factual", "statistical", "attribution", "institutional",
+                                "temporal", "comparative", "monetary", "technical"
+                            ]
+                        },
+                        "tavily_search": {
+                            "api_key": os.getenv("TAVILY_API_KEY")
+                        },
+                        "arxiv_search": {"max_results": 5}
                     }
                 }
             }
@@ -143,19 +141,17 @@ cat > article_check_config.json << EOF
       "config": {
         "key": "${OPENAI_API_KEY}",
         "model": "deepseek-chat",
-        "parameters": {
-          "agent_config": {
-            "max_iterations": 15,
-            "tools": {
-              "claims_extractor": {
-                "api_key": "${OPENAI_API_KEY}",
-                "max_claims": 50
-              },
-              "tavily_search": {
-                "api_key": "${TAVILY_API_KEY}"
-              },
-              "arxiv_search": {}
-            }
+        "agent_config": {
+          "max_iterations": 15,
+          "tools": {
+            "claims_extractor": {
+              "api_key": "${OPENAI_API_KEY}",
+              "max_claims": 50
+            },
+            "tavily_search": {
+              "api_key": "${TAVILY_API_KEY}"
+            },
+            "arxiv_search": {}
           }
         }
       }

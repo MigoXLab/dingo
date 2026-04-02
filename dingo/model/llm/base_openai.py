@@ -82,22 +82,18 @@ class BaseOpenAI(BaseLLM):
         else:
             model_name = cls.client.models.list().data[0].id
 
-        params = cls.dynamic_config.parameters
-        cls.validate_config(params)
+        extra_params = cls.dynamic_config.model_extra
+        cls.validate_config(extra_params)
 
         completions = cls.client.chat.completions.create(
             model=model_name,
             messages=messages,
-            temperature=params.get("temperature", 0.3) if params else 0.3,
-            top_p=params.get("top_p", 1) if params else 1,
-            max_tokens=params.get("max_tokens", 4000) if params else 4000,
-            presence_penalty=params.get("presence_penalty", 0) if params else 0,
-            frequency_penalty=params.get("frequency_penalty", 0) if params else 0,
+            **extra_params,
         )
 
         if completions.choices[0].finish_reason == "length":
             raise ExceedMaxTokens(
-                f"Exceed max tokens: {params.get('max_tokens', 4000) if params else 4000}"
+                f"Exceed max tokens: {extra_params.get('max_tokens', 4000)}"
             )
 
         return str(completions.choices[0].message.content)

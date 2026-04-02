@@ -56,9 +56,7 @@ def evaluate_instruction_clarity():
                             "model": OPENAI_MODEL,
                             "key": OPENAI_API_KEY,
                             "api_url": OPENAI_BASE_URL,
-                            "parameters": {
-                                "threshold": 6.0  # 清晰度阈值 (0-10)
-                            }
+                            "threshold": 6.0  # 清晰度阈值 (0-10)
                         }
                     }
                 ]
@@ -127,11 +125,9 @@ def evaluate_task_difficulty():
                             "model": OPENAI_MODEL,
                             "key": OPENAI_API_KEY,
                             "api_url": OPENAI_BASE_URL,
-                            "parameters": {
-                                # 可选：设置期望的难度范围
-                                # "min_difficulty": 4.0,  # 最低难度（太简单的会被标记）
-                                # "max_difficulty": 8.0,  # 最高难度（太难的会被标记）
-                            }
+                            # 可选：设置期望的难度范围
+                            # "min_difficulty": 4.0,  # 最低难度（太简单的会被标记）
+                            # "max_difficulty": 8.0,  # 最高难度（太难的会被标记）
                         }
                     }
                 ]
@@ -198,7 +194,7 @@ def evaluate_both():
                             "model": OPENAI_MODEL,
                             "key": OPENAI_API_KEY,
                             "api_url": OPENAI_BASE_URL,
-                            "parameters": {"threshold": 6.0}
+                            "threshold": 6.0
                         }
                     },
                     {
@@ -207,10 +203,8 @@ def evaluate_both():
                             "model": OPENAI_MODEL,
                             "key": OPENAI_API_KEY,
                             "api_url": OPENAI_BASE_URL,
-                            "parameters": {
-                                "min_difficulty": 3.0,  # 过滤太简单的任务
-                                "max_difficulty": 9.0,  # 过滤过于困难的任务
-                            }
+                            "min_difficulty": 3.0,  # 过滤太简单的任务
+                            "max_difficulty": 9.0,  # 过滤过于困难的任务
                         }
                     }
                 ]

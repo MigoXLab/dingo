@@ -106,11 +106,9 @@ def get_llm_config_from_env(eval_group_name: str = "") -> Dict:
                 "key": openai_key,
                 "api_url": openai_base_url,
                 "model": openai_model,
-                "parameters": {
-                    "temperature": 0.3,
-                    "top_p": 1,
-                    "max_tokens": 4000,
-                }
+                "temperature": 0.3,
+                "top_p": 1,
+                "max_tokens": 4000,
             }
         }
 

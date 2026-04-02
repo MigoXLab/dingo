@@ -327,22 +327,22 @@ class AgentWrapper:
             )
 
         # Extract parameters
-        params = dynamic_config.parameters or {}
+        extra_params = dynamic_config.model_extra
 
         # Create ChatOpenAI instance
         llm = ChatOpenAI(
             api_key=dynamic_config.key,
             base_url=dynamic_config.api_url,
             model=dynamic_config.model or "gpt-4.1-mini",
-            temperature=params.get("temperature", 0.3),
-            max_tokens=params.get("max_tokens", 4096),
-            top_p=params.get("top_p", 1.0),
-            timeout=params.get("timeout", 30)
+            temperature=extra_params.get("temperature", 0.3),
+            max_tokens=extra_params.get("max_tokens", 4096),
+            top_p=extra_params.get("top_p", 1.0),
+            timeout=extra_params.get("timeout", 30)
         )
 
         log.debug(
             f"Created ChatOpenAI: model={dynamic_config.model}, "
-            f"temp={params.get('temperature', 0.3)}"
+            f"temp={extra_params.get('temperature', 0.3)}"
         )
 
         return llm

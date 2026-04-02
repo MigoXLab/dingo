@@ -77,10 +77,8 @@ def evaluate_single_data_example():
     evaluator.dynamic_config.model = OPENAI_MODEL
     evaluator.dynamic_config.key = OPENAI_KEY
     evaluator.dynamic_config.api_url = OPENAI_URL
-    evaluator.dynamic_config.parameters = {
-        "temperature": 0.1,  # 降低随机性以提高一致性
-        "max_tokens": 2000
-    }
+    evaluator.dynamic_config.temperature = 0.1  # 降低随机性以提高一致性
+    evaluator.dynamic_config.max_tokens = 2000
 
     # 创建测试数据
     test_data = Data(

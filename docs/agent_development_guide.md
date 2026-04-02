@@ -441,8 +441,8 @@ def _get_output_dir(cls) -> Optional[str]:
     Get output directory for artifact files (three-priority chain).
     Returns output dir path (created if needed), or None if saving disabled.
     """
-    params = cls.dynamic_config.parameters or {}
-    agent_cfg = params.get('agent_config') or {}
+    extra_params = cls.dynamic_config.model_extra
+    agent_cfg = extra_params.get('agent_config') or {}
 
     explicit_path = agent_cfg.get('output_path')
     if explicit_path:
@@ -673,17 +673,15 @@ class MyAgent(BaseAgent):
             "key": "openai-api-key",
             "api_url": "https://api.openai.com/v1",
             "model": "gpt-4",
-            "parameters": {
-                "agent_config": {
-                    "max_iterations": 3,
-                    "tools": {
-                        "my_tool": {
-                            "api_key": "tool-api-key",
-                            "max_results": 5
-                        }
-                    }
-                }
-            }
+             "agent_config": {
+                 "max_iterations": 3,
+                 "tools": {
+                     "my_tool": {
+                         "api_key": "tool-api-key",
+                         "max_results": 5
+                     }
+                 }
+             }
         }
     }
     """
@@ -889,19 +887,17 @@ def eval(cls, input_data: Data) -> EvalDetail:
         "key": "openai-api-key",
         "api_url": "https://api.openai.com/v1",
         "model": "gpt-4-turbo",
-        "parameters": {
-          "temperature": 0.1,
-          "agent_config": {
-            "max_iterations": 3,
-            "tools": {
-              "my_tool": {
-                "api_key": "my-tool-api-key",
-                "max_results": 10,
-                "timeout": 30
-              },
-              "another_tool": {
-                "config_key": "value"
-              }
+        "temperature": 0.1,
+        "agent_config": {
+          "max_iterations": 3,
+          "tools": {
+            "my_tool": {
+              "api_key": "my-tool-api-key",
+              "max_results": 10,
+              "timeout": 30
+            },
+            "another_tool": {
+              "config_key": "value"
             }
           }
         }
@@ -919,10 +915,10 @@ def eval(cls, input_data: Data) -> EvalDetail:
 def some_method(cls):
     # Access LLM configuration
     model = cls.dynamic_config.model  # "gpt-4-turbo"
-    temperature = cls.dynamic_config.parameters.get('temperature', 0)
+    temperature = cls.dynamic_config.model_extra.get('temperature', 0)
 
     # Access agent-specific configuration
-    agent_config = cls.dynamic_config.parameters.get('agent_config', {})
+    agent_config = cls.dynamic_config.model_extra.get('agent_config', {})
     max_iterations = agent_config.get('max_iterations', 5)
 
     # Get tool configuration
@@ -966,10 +962,8 @@ class MyAgent(BaseAgent):
 {
   "name": "MyAgent",
   "config": {
-    "parameters": {
-      "agent_config": {
-        "max_iterations": 10
-      }
+    "agent_config": {
+      "max_iterations": 10
     }
   }
 }
@@ -1259,17 +1253,15 @@ Always include SOURCES with specific URLs when you perform web searches."""
     "key": "your-openai-api-key",
     "api_url": "https://api.openai.com/v1",
     "model": "gpt-4-turbo",
-    "parameters": {
-      "temperature": 0.1,
-      "max_tokens": 16384,
-      "agent_config": {
-        "max_iterations": 5,
-        "tools": {
-          "tavily_search": {
-            "api_key": "your-tavily-api-key",
-            "max_results": 5,
-            "search_depth": "advanced"
-          }
+    "temperature": 0.1,
+    "max_tokens": 16384,
+    "agent_config": {
+      "max_iterations": 5,
+      "tools": {
+        "tavily_search": {
+          "api_key": "your-tavily-api-key",
+          "max_results": 5,
+          "search_depth": "advanced"
         }
       }
     }
@@ -1597,11 +1589,9 @@ config = {
                 "key": "openai-key",
                 "api_url": "https://api.openai.com/v1",
                 "model": "gpt-4",
-                "parameters": {
-                    "agent_config": {
-                        "tools": {
-                            "tavily_search": {"api_key": "tavily-key"}
-                        }
+                "agent_config": {
+                    "tools": {
+                        "tavily_search": {"api_key": "tavily-key"}
                     }
                 }
             }
@@ -1632,7 +1622,7 @@ summary = executor.execute()
 
 **Configuration not working:**
 - Check JSON structure matches expected format
-- Verify `parameters.agent_config.tools.{tool_name}` structure
+- Verify `agent_config.tools.{tool_name}` structure
 - Use Pydantic validation to catch config errors early
 
 **Tests failing:**

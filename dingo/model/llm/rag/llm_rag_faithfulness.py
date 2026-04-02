@@ -290,8 +290,8 @@ class LLMRAGFaithfulness(BaseOpenAI):
 
         # 根据分数判断是否通过，默认阈值为5
         threshold = 5
-        if hasattr(cls, 'dynamic_config') and cls.dynamic_config.parameters:
-            threshold = cls.dynamic_config.parameters.get('threshold', 5)
+        if hasattr(cls, 'dynamic_config'):
+            threshold = cls.dynamic_config.model_extra.get('threshold', 5)
 
         if score >= threshold:
             result.status = False

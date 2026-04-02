@@ -197,7 +197,7 @@ input_data = {
                         "model": "deepseek-chat",
                         "key": "your-api-key",
                         "api_url": "https://api.deepseek.com",
-                        "parameters": {"threshold": 6.0}
+                        "threshold": 6.0
                     }
                 }
             ]
@@ -223,10 +223,8 @@ print(f"清晰指令: {summary.num_good}/{summary.total}")
                 "model": "deepseek-chat",
                 "key": "your-api-key",
                 "api_url": "https://api.deepseek.com",
-                "parameters": {
-                    "min_difficulty": 3.0,  # 可选：过滤太简单的
-                    "max_difficulty": 8.0,  # 可选：过滤太难的
-                }
+                "min_difficulty": 3.0,  # 可选：过滤太简单的
+                "max_difficulty": 8.0,  # 可选：过滤太难的
             }
         }
     ]
@@ -303,13 +301,13 @@ python examples/custom/evaluate_instruction_quality.py distribution
 **问题1: 过多简单指令**
 ```python
 # 设置最低难度阈值
-"parameters": {"min_difficulty": 3.0}
+"min_difficulty": 3.0
 ```
 
 **问题2: 指令模糊不清**
 ```python
 # 提高清晰度要求
-"parameters": {"threshold": 7.0}
+"threshold": 7.0
 ```
 
 **问题3: 难度分布不均**

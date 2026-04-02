@@ -547,13 +547,13 @@ class TestGetMaxConcurrentClaims:
     def test_returns_class_default_when_no_config(self):
         """Should return max_concurrent_claims class default when not configured."""
         with patch.object(self.checker, 'dynamic_config') as mock_cfg:
-            mock_cfg.parameters = {}
+            mock_cfg.model_extra = {}
             result = self.checker._get_max_concurrent_claims()
         assert result == self.checker.max_concurrent_claims
 
     def test_returns_config_value_when_set(self):
         """Should return value from agent_config.max_concurrent_claims."""
         with patch.object(self.checker, 'dynamic_config') as mock_cfg:
-            mock_cfg.parameters = {"agent_config": {"max_concurrent_claims": 10}}
+            mock_cfg.model_extra = {"agent_config": {"max_concurrent_claims": 10}}
             result = self.checker._get_max_concurrent_claims()
         assert result == 10

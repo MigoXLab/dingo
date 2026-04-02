@@ -95,13 +95,28 @@ class LLMHtmlExtractCompare(BaseOpenAI):
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
+        raw_data = getattr(input_data, "raw_data", None) or {}
+        # Backward-compatible input handling:
+        # - Preferred: raw_data["magic_md"] and raw_data["content"] (legacy dataset schema)
+        # - Fallback: input_data.prompt (tool A) and input_data.reference (tool B)
+        # - Last resort: input_data.prompt (tool A) and input_data.extra fields if provided
+        tool_a_md = raw_data.get("magic_md", None) or getattr(input_data, "prompt", None)
+        tool_b_md = raw_data.get("content", None) or getattr(input_data, "reference", None)
+
+        if tool_a_md is None or tool_b_md is None:
+            raise ValueError(
+                "LLMHtmlExtractCompare requires Tool A and Tool B markdown. "
+                "Provide raw_data['magic_md'] and raw_data['content'], or provide Data.prompt (tool A) "
+                "and Data.reference (tool B)."
+            )
+
         messages = [
             {
                 "role": "user",
                 "content": cls.prompt.format(
                     input_data.content,
-                    input_data.raw_data["magic_md"],
-                    input_data.raw_data["content"],
+                    tool_a_md,
+                    tool_b_md,
                 ),
             }
         ]

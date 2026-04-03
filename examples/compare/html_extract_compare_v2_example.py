@@ -139,9 +139,9 @@ def run_comparison(data: Data, description: str):
     # 打印结果
     # print(f"评估结果类型: {result.type}")
     # print(f"判断名称: {result.name}")
-    print(f"是否存在问题: {result.eval_status}")
-    print(f"评估结果类型: {result.eval_details.label}")
-    print(f"\n推理过程:\n{result.eval_details.reason[0]}")
+    print(f"是否存在问题: {result.status}")
+    print(f"评估结果类型: {result.label}")
+    print(f"\n推理过程:\n{result.reason}")
     print(f"\n{'=' * 60}\n")
 
 

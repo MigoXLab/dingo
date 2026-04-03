@@ -53,6 +53,13 @@ def parse_args():
         default=False,
         help="Output as JSON",
     )
+    info_parser.add_argument(
+        "--count",
+        action="store_true",
+        default=False,
+        help="Print metric counts (rules, llm, groups, total_metrics=rules+llm). "
+        "Human mode: counts only. With --json: prepend a \"counts\" object to the payload.",
+    )
 
     # --- dingo serve ---
     serve_parser = subparsers.add_parser("serve", help="Start MCP server for AI agent integration")
@@ -177,9 +184,23 @@ def cmd_info(args):
             groups[group_name] = [cls.__name__ for cls in rule_list]
         info["groups"] = groups
 
+    counts = {
+        "rules": len(Model.rule_name_map),
+        "llm": len(Model.llm_name_map),
+        "groups": len(Model.rule_groups),
+        "total_metrics": len(Model.rule_name_map) + len(Model.llm_name_map),
+    }
+
     if args.json:
-        json.dump(info, sys.stdout, indent=2, ensure_ascii=False)
+        if args.count:
+            payload = {"counts": counts, **info}
+            json.dump(payload, sys.stdout, indent=2, ensure_ascii=False)
+        else:
+            json.dump(info, sys.stdout, indent=2, ensure_ascii=False)
         sys.stdout.write("\n")
+    elif args.count:
+        for key in ("rules", "llm", "groups", "total_metrics"):
+            print(f"{key}: {counts[key]}")
     else:
         _print_info_table(info)
 

@@ -72,6 +72,27 @@
 - 📊 **ビジュアルレポート** - インタラクティブなチャート、トレンド分析、エクスポート機能
 - 🔌 **RESTful API** - 既存システムとのシームレスな統合
 
+<details>
+<summary><strong>SaaS — Dashboard</strong></summary>
+
+<img src="docs/assets/saas_dashboard.png" alt="Dingo SaaS dashboard" />
+
+</details>
+
+<details>
+<summary><strong>SaaS — Playground</strong></summary>
+
+<img src="docs/assets/saas_playground.png" alt="Dingo SaaS playground" />
+
+</details>
+
+<details>
+<summary><strong>SaaS — Evaluation output</strong></summary>
+
+<img src="docs/assets/saas_output.png" alt="Dingo SaaS evaluation output" />
+
+</details>
+
 ### 📝 無料 SaaS コードの入手方法
 
 👉 **[Dingo SaaS リポジトリアクセスを申請する](https://aicarrier.feishu.cn/share/base/form/shrcnr19E0upfiA92Wm5i2eic7g)** 

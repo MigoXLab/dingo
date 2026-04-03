@@ -388,7 +388,7 @@ def run_comparison(data: Data, description: str):
 
 if __name__ == "__main__":
     # 测试中文场景
-    run_comparison(example_data_cn, "对比两种HTML提取工具")
+    run_comparison(example_data_en, "对比两种HTML提取工具")
 
     # 测试英文场景
     # run_comparison(example_data_en, "英文网页 - 对比两种HTML提取工具")

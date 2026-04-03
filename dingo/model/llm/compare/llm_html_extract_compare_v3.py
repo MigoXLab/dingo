@@ -50,6 +50,7 @@ class LLMHtmlExtractCompareV3(BaseOpenAI):
 Evaluate BOTH texts against these dimensions and compare:
 
 ## 1. Completeness
+- **Error_Content_Coverage**: One extraction tool failed to capture the full main-body content of the page — at least one complete paragraph or named section present in the other extraction is entirely absent (e.g., an "Applications" or "Common Algorithms" section is missing). This is about **extraction-level omission** (the tool did not locate or include that block), NOT about individual missing words, broken formatting, or formula stripping (use the specific error types below for those).
 - **Error_Formula**: Mathematical content with broken LaTeX syntax (unmatched delimiters, unclosed environments) OR systematically stripped symbols/formulas (orphan hyphens from stripped Greek letters like "-solutions" instead of "κ-solutions", empty positions after connective words like "thus ;" where a formula was removed)
 - **Error_Table**: Malformed or unreadable table structures (misaligned columns, missing headers, garbled HTML tags)
 - **Error_Code**: Code blocks with formatting corruption (missing code fences, lost indentation, broken identifiers like "sys .argv", line numbers mixed with code)
@@ -93,7 +94,7 @@ Return JSON only:
 
 Where:
 - `score`: 1 if Text A (`Data.prompt`) is better, 2 if Text B (`Data.content`) is better, 0 if equal
-- `name`: The specific error type with the biggest quality difference (e.g., "Error_Formula", "Error_Table", "Error_Code", "Error_Garbled_Characters", "Error_Words_Stuck", "Error_Lack_Punctuation", "Error_Duplicate", "Error_Politics", "Error_Prohibition"). Use "None" if both are equal.
+- `name`: The specific error type with the biggest quality difference (e.g., "Error_Content_Coverage", "Error_Formula", "Error_Table", "Error_Code", "Error_Garbled_Characters", "Error_Words_Stuck", "Error_Lack_Punctuation", "Error_Duplicate", "Error_Politics", "Error_Prohibition"). Use "None" if both are equal.
 - `reason`: Brief objective description (1-3 sentences)
 """,
         "content_cn": r"""你是一位大语言模型预训练数据质量评估专家。你将对比两个不同 HTML 提取工具从同一网页中提取的文本，判断哪个提取结果的质量更高，更适合用于 LLM 预训练。
@@ -103,6 +104,7 @@ Where:
 请基于以下维度分别评估两段文本并进行对比：
 
 ## 1. 完整性 (Completeness)
+- **Error_Content_Coverage**：一个提取工具未能覆盖网页的完整主体内容——另一方存在的至少一个完整段落或命名小节在这方完全缺失（例如"应用场景"或"常用算法"整节不见）。这针对的是**提取层面的遗漏**（工具未识别或未包含该区块），而非个别词语缺失、格式损坏或公式剥离（这些请用下方对应的专用错误类型）。
 - **Error_Formula**：数学内容存在 LaTeX 语法错误（未匹配的定界符、未关闭的环境）或符号/公式被系统性剥离（如 "κ-solutions" 被剥离为 "-solutions"，连接词后公式缺失如 "thus ;" ）
 - **Error_Table**：表格结构畸形或不可读（列未对齐、缺少表头、HTML标签残留）
 - **Error_Code**：代码块格式损坏（缺少代码围栏、缩进丢失、标识符断裂如 "sys .argv"、行号混入代码）
@@ -146,7 +148,7 @@ Where:
 
 其中：
 - `score`：文本A（`Data.prompt`）更好为 1，文本B（`Data.content`）更好为 2，质量相当为 0
-- `name`：差异最大的具体错误类型（如 "Error_Formula"、"Error_Table"、"Error_Code"、"Error_Garbled_Characters"、"Error_Words_Stuck"、"Error_Lack_Punctuation"、"Error_Duplicate"、"Error_Politics"、"Error_Prohibition"）。如果两者相当则为 "None"。
+- `name`：差异最大的具体错误类型（如 "Error_Content_Coverage"、"Error_Formula"、"Error_Table"、"Error_Code"、"Error_Garbled_Characters"、"Error_Words_Stuck"、"Error_Lack_Punctuation"、"Error_Duplicate"、"Error_Politics"、"Error_Prohibition"）。如果两者相当则为 "None"。
 - `reason`：简要客观描述（1-3句话）
 """,
     }

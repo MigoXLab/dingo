@@ -66,7 +66,7 @@ class LLMScout(BaseOpenAI):
         "source_frameworks": "Dingo Scout Tools"
     }
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
     threshold = 0.50  # Default threshold for recommended companies
 
     @classmethod

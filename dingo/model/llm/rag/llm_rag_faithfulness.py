@@ -43,7 +43,7 @@ class LLMRAGFaithfulness(BaseOpenAI):
         "source_frameworks": "Ragas + DeepEval"
     }
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.CONTEXT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTEXT, RequiredField.CONTENT]
 
     @staticmethod
     def statement_generator_prompt(question: str, answer: str) -> str:

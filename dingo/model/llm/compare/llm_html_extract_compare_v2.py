@@ -36,7 +36,7 @@ class LLMHtmlExtractCompareV2(BaseOpenAI):
         'paper_url': '',
     }
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
     prompt = {
         "content_en": r"""Please compare the following two texts, each extracted from the same webpage using different HTML parsing methods. Your task is to determine whether there is a difference in the core informational content between them.
 

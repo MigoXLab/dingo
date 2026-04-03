@@ -38,7 +38,7 @@ class LLMFactCheckPublic(BaseOpenAI):
         "paper_authors": "OpenAI"
     }
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
     threshold = 0.8
     batch_size = 10  # 默认批处理大小
     web_enabled = True  # 默认启用网络搜索

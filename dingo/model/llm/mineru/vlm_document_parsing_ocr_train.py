@@ -86,7 +86,7 @@ class VLMDocumentParsingOCRTrain(BaseOpenAI):
         ```
         """
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.IMAGE]
+    _required_fields = [RequiredField.IMAGE, RequiredField.CONTENT]
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:

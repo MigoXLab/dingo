@@ -43,7 +43,7 @@ class LLMRAGContextPrecision(BaseOpenAI):
         "source_frameworks": "Ragas"
     }
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.CONTEXT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTEXT, RequiredField.CONTENT]
 
     @classmethod
     def context_precision_prompt(cls, question: str, context: str, answer: str) -> str:

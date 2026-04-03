@@ -20,7 +20,7 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
         "description": "Evaluate the quality of mineru recognize",
         "evaluation_results": "error_category and error_label",
     }
-    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
     prompt = r"""
     你是一位熟悉文档解析领域的质量专家，你的核心任务是根据正确的markdown"工具标准结果Markdown"，以及对应OCR工具预测结果"Pred的内容"，获取工具预测结果的错误类型。
     *错误类别和标签*

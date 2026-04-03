@@ -40,7 +40,7 @@ class LLMHtmlExtractCompareV3(BaseOpenAI):
         "description": "Compares two HTML extraction tools using LLM pretraining quality dimensions (completeness, effectiveness, similarity, security) with full-text evaluation for accurate defect attribution",
     }
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
 
     prompt = {
         "content_en": r"""You are an expert in assessing pretraining data quality for large language models. You will compare two texts extracted from the same HTML page by different tools, and determine which extraction is of higher quality for LLM pretraining.

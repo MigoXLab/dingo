@@ -215,7 +215,7 @@ Where:
             tmp_type = "EXTRACTION_EQUAL"
 
         result.status = response_model.score != 1
-        result.label = [f"{tmp_type}.{response_model.name}"]
+        result.label = [f"{tmp_type}"]
         result.reason = [json.dumps(response_json, ensure_ascii=False)]
 
         return result

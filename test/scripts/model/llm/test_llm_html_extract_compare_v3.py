@@ -75,7 +75,7 @@ class TestProcessResponse:
         )
         result = LLMHtmlExtractCompareV3.process_response(raw)
         assert result.metric == "LLMHtmlExtractCompareV3"
-        assert result.label == ["PROMPT_BETTER.Error_Content_Coverage"]
+        assert result.label == ["PROMPT_BETTER"]
         assert result.status is False
         parsed = json.loads(result.reason[0])
         assert parsed["score"] == 1
@@ -86,7 +86,7 @@ class TestProcessResponse:
             ensure_ascii=False,
         )
         result = LLMHtmlExtractCompareV3.process_response(raw)
-        assert result.label == ["CONTENT_BETTER.Error_Formula"]
+        assert result.label == ["CONTENT_BETTER"]
         assert result.status is True
 
     def test_score_0_extraction_equal(self):
@@ -95,7 +95,7 @@ class TestProcessResponse:
             ensure_ascii=False,
         )
         result = LLMHtmlExtractCompareV3.process_response(raw)
-        assert result.label == ["EXTRACTION_EQUAL.None"]
+        assert result.label == ["EXTRACTION_EQUAL"]
         assert result.status is True
 
     def test_json_fenced_with_markdown(self):
@@ -111,7 +111,7 @@ class TestProcessResponse:
             '{"score": 2, "name": "Error_Table", "reason": "Brief."}'
         )
         result = LLMHtmlExtractCompareV3.process_response(body)
-        assert "CONTENT_BETTER.Error_Table" == result.label[0]
+        assert "CONTENT_BETTER" == result.label[0]
         parsed = json.loads(result.reason[0])
         assert "internal" in parsed["reason"]
 

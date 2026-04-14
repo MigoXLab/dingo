@@ -17,8 +17,10 @@
 7. [LLM-as-Judge 方法论](#7-llm-as-judge-方法论)
 8. [当前难点与挑战](#8-当前难点与挑战)
 9. [针对内部知识库的评测方案设计](#9-针对内部知识库的评测方案设计)
-10. [实施路线图](#10-实施路线图)
-11. [参考资料](#11-参考资料)
+10. [公开基准数据集在本方案中的定位](#10-公开基准数据集在本方案中的定位)
+11. [基于 Dingo 的评测 Pipeline 设计](#11-基于-dingo-的评测-pipeline-设计)
+12. [实施路线图（以 Exa 方法论为主线）](#12-实施路线图以-exa-方法论为主线)
+13. [参考资料](#13-参考资料)
 
 ---
 
@@ -700,42 +702,585 @@ def ab_test_search(query, user):
 
 ---
 
-## 10. 实施路线图
+## 10. 公开基准数据集在本方案中的定位
 
-### Phase 1: 基础评测搭建（第 1-2 周）
+### 10.1 为什么实施路线图中以自建数据集为主？
 
-- [ ] 搭建评测 pipeline 基础设施
-- [ ] 实现 LLM-as-Judge 评分模块
-- [ ] 从内部文档生成初始 QA 评测集（200+ 对）
-- [ ] 建立 BM25 和向量检索基线
-- [ ] 实现基本的 Pointwise 评分 + 聚合
+初版路线图侧重自建数据集，核心原因是**内部知识库的查询分布、文档类型、专有术语与公开数据集差异巨大**。正如 Exa 在 [evals-at-exa](https://exa.ai/blog/evals-at-exa) 中指出的：
 
-### Phase 2: 评测集完善（第 3-4 周）
+> "A good eval should answer the question: on the queries we care about, how well does a retriever perform. But MS Marco (or any closed eval) is likely not the exact distribution of queries that are relevant for our use cases."
 
-- [ ] 构建内容提取黄金参考（每种文档类型 50 个）
-- [ ] 人工构造挑战集（Olympiad，200 题）
-- [ ] 用 LLM 生成多条件复合查询集（200 题）
-- [ ] 实现 Groundedness 评测（区分检索质量和生成质量）
-- [ ] 建立评测报告自动生成
+但这**不代表公开数据集没有价值**。恰恰相反，公开基准在以下环节不可替代：
 
-### Phase 3: 端到端评测（第 5-6 周）
+| 用途 | 说明 | 推荐阶段 |
+|------|------|---------|
+| **组件基线验证** | 验证 embedding 模型、reranker 等组件的基础能力 | Phase 1 |
+| **方法论校准** | 用已有标准答案验证 LLM-as-Judge 评分管线是否可靠 | Phase 1 |
+| **横向对比** | 与业界系统对比，定位自身水平 | Phase 2+ |
+| **回归检测** | 迭代升级后快速检测是否有基础能力退化 | 持续 |
+| **训练数据** | 部分数据集可用于微调 embedding/reranker | 按需 |
 
-- [ ] 构建 Agentic 多步评测 harness
-- [ ] 实现端到端任务评测（带沙箱执行）
-- [ ] 添加延迟、吞吐量等系统指标监控
-- [ ] 建立回归测试集与 CI/CD 集成
+### 10.2 Exa 开源评测集的适用性分析
 
-### Phase 4: 线上评测与迭代（第 7-8 周+）
+Exa 在 [exa-labs/benchmarks](https://github.com/exa-labs/benchmarks) 开源了三套评测集，我们逐一分析其适用性：
 
-- [ ] 部署在线 A/B 测试框架
-- [ ] 接入用户反馈信号（点击、重搜、满意度）
-- [ ] 建立评测集定期更新机制
-- [ ] 建立 Side-by-side 人工评审流程
-- [ ] 持续扩充评测集和失败案例库
+#### WebCode Benchmark（~840 queries，4 个 track）
+
+| Track | 内容 | 对我们的价值 | 适配难度 |
+|-------|------|------------|---------|
+| **Contents**（250 URLs） | 对 URL 提取质量评测，对比黄金 Markdown | **高** — 方法论可直接复用于内部文档 parser 质量评测 | 需替换 URLs 为内部文档，自建黄金参考 |
+| **Highlights**（250 queries） | 给定 URL + 查询，评测高亮摘要质量 | **高** — Groundedness vs Correctness 的评测范式非常值得采用 | 需替换为内部文档+查询 |
+| **RAG**（307 queries） | 全网检索+合成的问答评测 | **中** — 评测 harness 和 LLM-as-Judge 流程可复用，但查询和答案需替换 | 评测代码可直接参考 |
+| **E2E**（33 tasks） | 沙箱编码任务，需要搜索才能完成 | **低** — 面向代码搜索场景，与内部知识库场景差异大 | 不推荐直接使用 |
+
+**关键复用点**：
+- `Searcher` 接口抽象（`search` + `extract` 方法）可直接采用作为我们的搜索引擎适配层
+- LLM-as-Judge 的评分管线代码可参考
+- Groundedness 的判别式评测方法值得直接借鉴
+
+#### People Search Benchmark（1,400 queries）
+
+| 维度 | 说明 |
+|------|------|
+| 内容 | 按角色、地点、级别检索人物档案 |
+| 对我们的价值 | **中-高** — 如果内部知识库涉及人员/专家搜索，其多条件检索评测方式可直接适配 |
+| 指标 | R@1, R@10, Precision |
+
+#### Company Search Benchmark（~800 queries）
+
+| 维度 | 说明 |
+|------|------|
+| 内容 | 按名称、行业、地理位置、融资等检索公司，分 Retrieval 和 RAG 两个 track |
+| 对我们的价值 | **中** — 多条件实体检索 + 事实抽取的评测模式可迁移到内部场景（如项目/产品搜索） |
+| 指标 | R@1, R@5, R@10, Precision (检索), Accuracy (RAG) |
+
+### 10.3 推荐的公开数据集使用策略
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   公开数据集使用分层策略                          │
+├────────────────┬────────────────────────────────────────────────┤
+│ Layer 1        │ 方法论验证层（Phase 1）                         │
+│ 直接运行        │ SimpleQA (子集) — 验证 RAG 管线和 Judge 是否正常 │
+│                │ FRAMES (单步切片) — 验证单步检索+评分管线        │
+├────────────────┼────────────────────────────────────────────────┤
+│ Layer 2        │ 组件基线层（Phase 1-2）                         │
+│ 直接运行        │ BEIR (子集) — 验证 embedding 模型跨域泛化能力   │
+│                │ MS MARCO (子集) — 用 LLM 评分方式重跑，对比基线  │
+├────────────────┼────────────────────────────────────────────────┤
+│ Layer 3        │ 方法复用层（Phase 2-3）                         │
+│ 复用方法论      │ Exa WebCode — 复用 Groundedness 评测方法        │
+│ 替换数据        │ Exa People/Company — 复用多条件检索评测模式      │
+│                │ Exa Websets — 复用 LLM 生成复杂查询的方法        │
+├────────────────┼────────────────────────────────────────────────┤
+│ Layer 4        │ 能力压测层（Phase 3+）                          │
+│ 选择性运行      │ FRAMES (Agentic 切片) — 测试多步推理能力        │
+│                │ BrowseComp / HLE — 压力测试极端场景              │
+└────────────────┴────────────────────────────────────────────────┘
+```
 
 ---
 
-## 11. 参考资料
+## 11. 基于 Dingo 的评测 Pipeline 设计
+
+### 11.1 Dingo 项目能力概述
+
+经过对 [Dingo](https://github.com/MigoXLab/dingo)（`/Users/chupei/code/dingo`）项目的详细分析，其核心能力如下：
+
+| 能力维度 | Dingo 现状 | 与本方案需求的匹配度 |
+|---------|-----------|-------------------|
+| **RAG 评测指标** | 已实现 5 个 RAGAS 标准指标：Faithfulness, Answer Relevancy, Context Relevancy, Context Recall, Context Precision | **高** ✅ |
+| **LLM-as-Judge** | 基于 OpenAI SDK，支持任何兼容 API（GPT、DeepSeek、本地模型等） | **高** ✅ |
+| **数据加载** | 支持 JSONL/JSON/CSV/Parquet/Excel/HuggingFace/S3/SQL | **高** ✅ |
+| **批量执行** | LocalExecutor（线程+进程池）+ SparkExecutor（分布式） | **高** ✅ |
+| **内容质量评测** | 80+ 规则引擎（文本完整性、有效性、流畅性、安全性等）+ LLM 文本质量评测 | **高** ✅ |
+| **文档提取对比** | LLMHtmlExtractCompareV2/V3, LLMCodeCompare, LLMTableCompare, LLMMathCompare | **高** ✅ |
+| **幻觉检测** | LLMHallucination + RuleHallucinationHHEM（本地模型） | **高** ✅ |
+| **可扩展性** | 装饰器注册机制，支持自定义 Rule/LLM/Agent evaluator | **高** ✅ |
+| **搜索结果相关性评分** | ❌ 未内置 Exa 式的 Pointwise 搜索结果评分 | **需扩展** |
+| **Groundedness 评测** | ❌ 未内置 Exa WebCode 的判别式 Groundedness 评测 | **需扩展** |
+| **检索排序指标** | Context Precision 部分覆盖，但缺少 NDCG、MRR 等经典 IR 指标 | **需扩展** |
+| **多步 Agentic 评测** | Agent 框架存在（BaseAgent + Tools），但未针对搜索 Agent 轨迹设计 | **需扩展** |
+| **评测报告** | summary.json + per-item JSONL，缺少对比可视化和置信区间 | **需增强** |
+
+### 11.2 Dingo 能直接满足的评测需求
+
+#### ✅ Layer 1: 语料质量评测 — 完全覆盖
+
+Dingo 的 80+ 规则引擎天然适用于文档语料质量评估：
+
+```python
+# 使用 Dingo 评测内部知识库文档质量
+input_data = {
+    "task_name": "corpus_quality_check",
+    "input_path": "knowledge_base_docs.jsonl",
+    "output_path": "outputs/corpus_quality/",
+    "dataset": {"source": "local", "format": "jsonl"},
+    "evaluator": [{
+        "fields": {"content": "document_text"},
+        "evals": [
+            # 完整性检测
+            {"name": "RuleWordNumber"},
+            {"name": "RuleSentenceNumber"},
+            # 有效性检测
+            {"name": "RuleContentNull"},
+            {"name": "RuleAbnormalChar"},
+            {"name": "RuleHtmlEntity"},
+            # 重复检测
+            {"name": "RuleDocRepeat"},
+            # 安全性检测
+            {"name": "RulePIIDetection"},
+        ]
+    }]
+}
+```
+
+#### ✅ Layer 2: 内容提取质量评测 — 高度覆盖
+
+Dingo 已有文档提取对比的 LLM 评测器，可直接用于评测内部文档 parser：
+
+```python
+# 对比两种 parser 的提取质量
+input_data = {
+    "evaluator": [{
+        "fields": {
+            "content": "parser_a_output",    # 被评测的 parser 输出
+            "reference": "golden_markdown"    # 黄金参考
+        },
+        "evals": [
+            {"name": "LLMHtmlExtractCompareV3", "config": llm_config},
+            {"name": "LLMCodeCompare", "config": llm_config},
+            {"name": "LLMTableCompare", "config": llm_config},
+        ]
+    }]
+}
+```
+
+#### ✅ Layer 4: RAG 端到端评测 — 完全覆盖
+
+Dingo 的 5 个 RAG 指标直接覆盖了方案中的 RAG 评测层：
+
+```python
+# 评测搜索系统的 RAG 质量
+input_data = {
+    "task_name": "search_rag_eval",
+    "input_path": "rag_eval_dataset.jsonl",
+    "evaluator": [{
+        "fields": {
+            "prompt": "user_input",            # 用户查询
+            "content": "response",             # LLM 生成的回答
+            "context": "retrieved_contexts",   # 检索到的上下文列表
+            "reference": "reference"           # 标准答案（可选）
+        },
+        "evals": [
+            {"name": "LLMRAGFaithfulness", "config": llm_config},
+            {"name": "LLMRAGAnswerRelevancy", "config": llm_config_embed},
+            {"name": "LLMRAGContextRelevancy", "config": llm_config},
+            {"name": "LLMRAGContextRecall", "config": llm_config},
+            {"name": "LLMRAGContextPrecision", "config": llm_config},
+        ]
+    }]
+}
+```
+
+### 11.3 需要在 Dingo 上扩展的评测能力
+
+以下能力需要通过 Dingo 的注册机制新增 evaluator：
+
+#### 扩展 1: 搜索结果相关性评分（Pointwise Grading）
+
+对应方案 Layer 3 检索质量评测，参考 Exa 的评分 Prompt：
+
+```python
+@Model.llm_register("LLMSearchResultRelevance")
+class LLMSearchResultRelevance(BaseOpenAI):
+    """
+    Exa 式搜索结果相关性评分。
+    输入: query (prompt) + search_result (content)
+    输出: 0.0-1.0 的相关性分数
+    """
+    # fields: prompt=query, content=search_result_text
+    # 评分维度: query_relevance, result_quality, content_issues, confidence, score
+```
+
+#### 扩展 2: Groundedness 判别式评测
+
+参考 Exa WebCode 的核心创新——将 RAG 评测从生成式任务重构为判别式任务：
+
+```python
+@Model.llm_register("LLMSearchGroundedness")
+class LLMSearchGroundedness(BaseOpenAI):
+    """
+    判别式评测：检索结果是否包含正确答案？
+    不依赖合成 LLM 的生成质量。
+    输入: expected_answer (reference) + retrieved_highlights (context)
+    输出: grounded / not_grounded
+    """
+```
+
+#### 扩展 3: 经典 IR 排序指标
+
+```python
+@Model.rule_register("QUALITY_SEARCH_RANKING")
+class RuleSearchNDCG(BaseRule):
+    """NDCG@K: 归一化折扣累积增益"""
+
+@Model.rule_register("QUALITY_SEARCH_RANKING")
+class RuleSearchMRR(BaseRule):
+    """MRR: 平均倒数排名"""
+```
+
+#### 扩展 4: Agentic 搜索轨迹评测
+
+```python
+@Model.llm_register("LLMAgentSearchTrajectory")
+class LLMAgentSearchTrajectory(BaseOpenAI):
+    """
+    评测 Agent 的搜索行为质量：
+    - 搜索时机是否合理
+    - 查询重写质量
+    - 搜索轮次效率
+    - 最终结果综合质量
+    """
+```
+
+### 11.4 基于 Dingo 的评测架构图
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                    Agentic Search 评测架构                           │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────────┐    ┌──────────────┐    ┌──────────────────────┐    │
+│  │ 评测数据集   │───▶│ Dingo Engine │───▶│ 评测报告              │    │
+│  │             │    │              │    │ • summary.json       │    │
+│  │ • 自建 QA 集│    │ ┌──────────┐ │    │ • per-item JSONL     │    │
+│  │ • 公开基准  │    │ │Evaluators│ │    │ • 对比分析（扩展）    │    │
+│  │ • 回归测试  │    │ └──────────┘ │    └──────────────────────┘    │
+│  └─────────────┘    └──────────────┘                                 │
+│                            │                                         │
+│              ┌─────────────┼─────────────┐                          │
+│              ▼             ▼             ▼                          │
+│     ┌──────────────┐ ┌──────────┐ ┌──────────────┐                 │
+│     │ Dingo 已有    │ │ 需扩展   │ │ 外部工具集成  │                 │
+│     │              │ │          │ │              │                 │
+│     │ • RAG 5 指标  │ │ • 搜索结果│ │ • Exa bench  │                 │
+│     │ • 80+ 规则   │ │   相关性  │ │   Searcher   │                 │
+│     │ • 文档提取对比│ │ • Ground- │ │   接口       │                 │
+│     │ • 幻觉检测   │ │   edness  │ │ • 公开数据集  │                 │
+│     │ • 文本质量   │ │ • NDCG/MRR│ │   加载器     │                 │
+│     │              │ │ • Agent   │ │              │                 │
+│     │              │ │   轨迹评测│ │              │                 │
+│     └──────────────┘ └──────────┘ └──────────────┘                 │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### 11.5 Dingo 的局限性与补充方案
+
+| 局限 | 说明 | 补充方案 |
+|------|------|---------|
+| **无评测集管理** | Dingo 定位是评测引擎而非评测集管理平台，不负责评测集版本控制、自动更新 | 需额外建立评测集仓库 + 版本管理 |
+| **无对比可视化** | 输出为 JSON/JSONL，缺少多系统对比图表 | 需开发可视化 dashboard 或对接已有 BI 工具 |
+| **无置信区间** | 不自动计算统计显著性 | 需在聚合层增加 bootstrap 置信区间计算 |
+| **无在线 A/B** | Dingo 是离线评测工具，不覆盖在线评测 | Phase 4 在线评测需独立方案 |
+| **无 Searcher 抽象** | Dingo 的输入是已有的数据文件，不主动调用搜索引擎获取结果 | 需在 Dingo 前增加一层 "数据采集"，将搜索结果转为 Dingo 可消费的 JSONL |
+
+### 11.6 推荐的集成模式
+
+```python
+# 完整评测流程：数据采集 → Dingo 评测 → 报告
+
+# Step 1: 数据采集层（Dingo 之外）
+def collect_search_results(search_engine, dataset):
+    """调用搜索引擎，收集结果，写入 JSONL"""
+    results = []
+    for item in dataset:
+        search_results = search_engine.search(item["query"], num_results=10)
+        # 可选：调用合成 LLM 生成回答
+        answer = llm.generate(item["query"], context=search_results)
+        results.append({
+            "user_input": item["query"],
+            "response": answer,
+            "retrieved_contexts": [r.text for r in search_results],
+            "reference": item.get("expected_answer", ""),
+        })
+    save_as_jsonl(results, "search_eval_data.jsonl")
+
+# Step 2: Dingo 评测层
+input_args = InputArgs(**{
+    "task_name": "agentic_search_eval_v1",
+    "input_path": "search_eval_data.jsonl",
+    "output_path": "outputs/eval_results/",
+    "dataset": {"source": "local", "format": "jsonl"},
+    "evaluator": [
+        {
+            "fields": {
+                "prompt": "user_input",
+                "content": "response",
+                "context": "retrieved_contexts",
+                "reference": "reference"
+            },
+            "evals": [
+                {"name": "LLMRAGFaithfulness", "config": llm_config},
+                {"name": "LLMRAGContextRelevancy", "config": llm_config},
+                {"name": "LLMRAGContextRecall", "config": llm_config},
+                {"name": "LLMRAGContextPrecision", "config": llm_config},
+                {"name": "LLMRAGAnswerRelevancy", "config": llm_config_embed},
+                # 扩展指标
+                {"name": "LLMSearchGroundedness", "config": llm_config},
+            ]
+        }
+    ]
+})
+executor = Executor.exec_map["local"](input_args)
+summary = executor.execute()
+
+# Step 3: 报告增强层（Dingo 之外）
+def generate_comparison_report(summaries: dict):
+    """多系统对比 + 置信区间 + 可视化"""
+    # summaries = {"system_a": summary_a, "system_b": summary_b, ...}
+    compute_confidence_intervals(summaries)
+    generate_charts(summaries)
+    generate_markdown_report(summaries)
+```
+
+---
+
+## 12. 实施路线图（以 Exa 方法论为主线）
+
+本路线图严格参考 Exa [How we do evals at Exa](https://exa.ai/blog/evals-at-exa) 文章的方法论展开。Exa 的评测体系由**两条核心评测主线**构成，前期先用公开数据集跑通完整管线，后期再扩展到自建数据集和更高级的评测。
+
+### 核心方法论回顾
+
+Exa 的评测由两条**互补的主线**组成：
+
+```
+主线 1: Pure Result Grading（纯结果评分）
+    目标：直接评测搜索返回的结果质量，不经过下游 LLM 合成
+    流程：Query → Search → 对每个 (query, result) LLM 评分 → 聚合
+    核心指标：LLM 相关性评分 (0.0-1.0)
+    对应数据集：MS MARCO queries, In-the-wild queries, Olympiad
+
+主线 2: RAG Grading（RAG 问答评分）
+    目标：评测搜索作为 RAG 工具时对下游任务的增益
+    流程：Query → Agent 循环调用 Search → 生成答案 → 对比标准答案
+    核心指标：正确回答比例 (correct / incorrect / not_attempted)
+    对应数据集：SimpleQA
+```
+
+两条主线**缺一不可**：
+- 只跑主线 1：知道结果相关但不知道能否真正回答问题
+- 只跑主线 2：知道最终答案对了但不知道是搜索功劳还是 LLM 参数记忆
+
+---
+
+### Phase 1: 搭建基础设施 + 跑通 Pure Result Grading（第 1-2 周）
+
+**目标**：用公开数据集跑通 Exa 主线 1 的完整管线
+
+#### 1.1 搭建评测基础设施（基于 Dingo）
+
+- [ ] 安装配置 Dingo（`pip install dingo-python[all]`）
+- [ ] 配置 LLM Judge 后端（GPT-4.1 或等效模型，Exa 验证过 GPT-4o/4o-mini/4.1/Gemini Flash 2.5 排名一致性高）
+- [ ] 在 Dingo 中实现 `LLMSearchResultRelevance` evaluator — Exa 式 Pointwise 搜索结果评分
+
+  **评分 Prompt**（采用 Exa 的精简版，与完整版高度相关）：
+  ```
+  You are a helpful assistant that grades the relevance of search results for given queries.
+  Your task is to assign a relevance score between 0.0 and 1.0 to each result, based on
+  how good a result is for the query.
+
+  For each search result, carefully read the query and the result. Assign a value for
+  each criterion as follows:
+  - Provide a brief explanation of your reasoning.
+  - Assign a query_relevance score between 0.0 and 1.0.
+  - Assign a result_quality score between 0.0 and 1.0.
+  - Indicate if there are any content_issues (True/False).
+  - Assign a confidence score between 0.0 and 1.0.
+  - Assign an overall score between 0.0 and 1.0.
+  ```
+
+- [ ] 实现数据采集层：搜索引擎调用 → 每个 (query, result) 展平 → JSONL 写入 → Dingo 评测
+
+#### 1.2 用 MS MARCO 跑通 Pure Result Grading
+
+这是 Exa 的做法：用 MS MARCO 的 **queries**（不用其原始标签），改用 **LLM 评分**（Open Eval 方式）。
+
+- [ ] 从 MS MARCO 随机采样 **1,000 条 queries**（Exa 在 api-evals 中用了 1,000 条）
+- [ ] 将 queries 发送到被评测的搜索引擎，取 **top 5** 结果（Exa 默认 top 5，验证过 5/10/20 排名一致）
+- [ ] 对每个 (query, result) pair 调用 Dingo `LLMSearchResultRelevance` 评分
+- [ ] 聚合方式：**Mean**（Exa 默认，验证过 Mean/Median/Rank-weighted/NDCG 排名一致）
+- [ ] 输出置信区间（参考 Anthropic [Statistical Approach to Model Evals](https://www.anthropic.com/research/statistical-approach-to-model-evals)）
+
+**操作细节**（来自 Exa 文章）：
+- 所有搜索引擎使用**默认 API 参数**，不做特殊调优
+- 失败查询重试最多 **5 次**（指数退避），所有引擎都失败的查询排除
+- 评测 top 5 而非 top 10 以节省计算
+
+#### 1.3 建立基线系统
+
+- [ ] **BM25 基线**（Elasticsearch）— 最低标准
+- [ ] **向量检索基线**（embedding + ANN）— 语义检索基础能力
+- [ ] **Hybrid 基线**（BM25 + 向量混合）— 常见生产方案
+- [ ] 在 MS MARCO 1,000 条上跑通所有基线，产出第一份**多系统对比报告**
+
+#### 1.4 首轮手工结果审查
+
+Exa 特别强调：
+
+> "There is still no substitute for manually running a few queries ourselves. Evals, especially LLM graded, provide a narrow and sometimes biased window into the performance of retrieval systems."
+
+- [ ] 从 MS MARCO 1,000 条中**抽样 50 条**，逐条人工审查 LLM 评分 vs 实际结果质量
+- [ ] 验证 LLM Judge 评分与人类判断的一致性，如不达标则迭代 Grading Prompt
+- [ ] 建立 Side-by-side 审查工具（Exa 做法：多搜索引擎结果并排展示）
+
+---
+
+### Phase 2: 跑通 RAG Grading + 扩展 Pure Result Grading 数据集（第 3-4 周）
+
+**目标**：用公开数据集跑通 Exa 主线 2，并丰富主线 1 的数据集
+
+#### 2.1 在 SimpleQA 上跑通 RAG Grading
+
+SimpleQA 是 Exa 在 RAG Grading 中使用的核心数据集（4,326 题，OpenAI 开源）。
+
+- [ ] 下载 [SimpleQA 数据集](https://github.com/openai/simple-evals)
+- [ ] 实现 RAG 评测 harness（参考 Exa 的流程）：
+
+  ```
+  对每个 question:
+    1. 将 question 传给 LLM agent
+    2. Agent 调用搜索引擎多次（循环直到输出最终答案）
+    3. 使用 SimpleQA 标准 grader prompt 评分：correct / incorrect / not_attempted
+  最终分数 = correct 数量 / 总数量
+  ```
+
+- [ ] 同时记录**无检索基线**：LLM 不调用搜索直接回答（衡量搜索增益 = RAG分数 - 无检索分数）
+- [ ] 在所有基线系统上运行，产出 RAG Grading 对比报告
+- [ ] 此阶段可直接使用 **Dingo 的 RAG 5 指标**对 SimpleQA 的搜索结果做补充分析：
+  - `LLMRAGFaithfulness` — 答案是否忠实于检索上下文
+  - `LLMRAGContextRelevancy` — 检索到的上下文是否与问题相关
+  - `LLMRAGContextPrecision` — 检索结果排序质量
+
+#### 2.2 扩展 Pure Result Grading 数据集
+
+Exa 使用了三个互补的数据集，我们逐步对齐：
+
+| Exa 数据集 | 规模 | 作用 | 我们的对应方案 |
+|-----------|------|------|-------------|
+| MS MARCO Queries | 10,000 | 通用查询基线 | Phase 1 已完成 1,000 条，此阶段扩展到 **5,000 条** |
+| In-the-wild queries | 5,000 | 真实查询分布 | **暂跳过**（系统未上线，无真实查询日志），后续 Phase 4 补充 |
+| Exa Olympiad | ~500 | 挑战复杂查询 | 此阶段手工构造 **200 条**领域相关的挑战查询 |
+
+- [ ] 扩展 MS MARCO 评测到 5,000 条
+- [ ] 手工构造 **Olympiad 挑战集**（200 条），设计原则：
+  - 需要语义理解的复杂多条件查询
+  - 包含推理和深层知识的问题
+  - 覆盖内部知识库可能面对的边缘场景
+  - Exa 发现：**复杂查询上的优势最为显著**，因此挑战集对区分系统差异至关重要
+
+#### 2.3 实现对比报告与统计分析
+
+- [ ] 开发多系统对比报告生成器
+  - 每个数据集的 Mean Score + 95% 置信区间
+  - 按查询类别分组的细粒度对比
+  - Top/Bottom N 案例展示
+- [ ] 建立评测结果版本管理（每次运行存档，支持历史对比）
+
+---
+
+### Phase 3: 高阶评测 — Groundedness + Agentic + 内容质量（第 5-7 周）
+
+**目标**：补充 Exa 在 WebCode 论文中提出的更细粒度评测维度
+
+#### 3.1 Groundedness 评测（Exa WebCode 方法论）
+
+这是 Exa 在 WebCode 中的核心创新——区分"答案对了"和"检索结果包含答案依据"：
+
+- [ ] 在 Dingo 中实现 `LLMSearchGroundedness` evaluator
+- [ ] 在 SimpleQA 数据集上同时产出 **Correctness** 和 **Groundedness** 两组分数
+- [ ] 验证 Exa 的发现：Correctness 各系统差异小（~86%），Groundedness 差异大，后者才真正反映检索质量
+
+#### 3.2 内容提取质量评测
+
+参考 Exa WebCode Contents 评测，评测文档 parser/extractor 的质量：
+
+- [ ] 利用 Dingo 已有的 `LLMHtmlExtractCompareV3`、`LLMCodeCompare`、`LLMTableCompare` 评测内部文档提取器
+- [ ] 可选：克隆 [exa-labs/benchmarks](https://github.com/exa-labs/benchmarks) 的 WebCode Contents 数据集（250 URLs），用其评测代码验证提取管线
+
+#### 3.3 Agentic 多步评测
+
+参考 Exa 2.1 的 MCP 评测设置：
+
+- [ ] 构建 Agentic harness：Agent 可自主调用搜索工具最多 **10 轮**
+- [ ] 在 **FRAMES Agentic 切片**（824 多跳问题）上运行评测
+- [ ] 可选：在 **HLE / BrowseComp** 子集上压力测试
+- [ ] 记录并分析 Agent 行为诊断指标：
+  - 搜索调用次数
+  - 查询重写质量
+  - 总延迟 vs 搜索延迟
+
+#### 3.4 将经典 IR 指标补充到管线
+
+- [ ] 在 Dingo 中实现 `RuleSearchNDCG`、`RuleSearchMRR`
+- [ ] 在 MS MARCO + Olympiad 数据集上产出 NDCG@5、MRR 指标（作为 Mean Score 的补充视角）
+- [ ] 验证 Exa 的经验：**不同聚合指标下搜索引擎的相对排序保持一致**
+
+---
+
+### Phase 4: 迁移到内部知识库 + 自建数据集（第 8-10 周）
+
+**目标**：将前三阶段验证过的完整评测管线迁移到内部知识库场景
+
+#### 4.1 构建内部知识库评测集
+
+当前管线已跑通，可以高效构建自建数据集：
+
+| 数据集 | 对标 Exa | 构建方法 | 规模 |
+|--------|---------|---------|------|
+| **日常查询集** | In-the-wild queries | 从查询日志采样（系统上线后） | 1,000+ |
+| **文档 QA 集** | SimpleQA 的内部版 | 从内部文档生成 QA 对 + 人工验证 | 500+ |
+| **领域挑战集** | Exa Olympiad | Phase 2 已有 200 条，持续扩充 | 500+ |
+| **多条件查询集** | Websets evals | LLM 一次性生成（参考 Exa 用 o1 的做法） | 200 |
+
+- [ ] 从内部文档生成 QA 对（方法参考 Exa WebCode：选 niche 片段 → 构造问题 → 验证前沿模型无法仅凭参数记忆回答）
+- [ ] 用 LLM 生成多条件复合查询集
+- [ ] 在自建数据集上运行 Pure Result Grading + RAG Grading 双主线
+
+#### 4.2 使用 Dingo 规则引擎评测语料质量
+
+- [ ] 运行 Dingo 80+ 规则引擎扫描全量知识库文档
+- [ ] 产出语料健康度报告（完整性、有效性、重复率、安全性等）
+- [ ] 对内容提取管线进行黄金参考对比评测
+
+#### 4.3 在线评测与持续迭代
+
+- [ ] 系统上线后接入查询日志，构建 In-the-wild 查询集
+- [ ] 部署在线 A/B 测试框架（Dingo 不覆盖，需独立方案）
+- [ ] 接入用户隐式反馈信号（点击率、重搜率、停留时间）
+- [ ] 建立评测集季度更新机制
+- [ ] 建立 Side-by-side 人工评审流程（Exa 做法：多引擎结果并排展示）
+- [ ] 持续扩充回归测试集（每次发现的 bad case 入库）
+
+---
+
+### 各 Phase 的数据集与指标速查表
+
+| Phase | 数据集 | 评测主线 | 核心指标 | Dingo 覆盖度 |
+|-------|-------|---------|---------|-------------|
+| **Phase 1** | MS MARCO 1,000 条 | Pure Result Grading | LLM 相关性 Mean Score + CI | 需扩展 `LLMSearchResultRelevance` |
+| **Phase 2** | SimpleQA 4,326 条 | RAG Grading | Correct 比例 | Dingo RAG 5 指标可补充 |
+| **Phase 2** | MS MARCO 5,000 条 | Pure Result Grading | LLM 相关性 Mean Score | 复用 Phase 1 |
+| **Phase 2** | Olympiad 200 条 | Pure Result Grading | LLM 相关性 Mean Score | 复用 Phase 1 |
+| **Phase 3** | SimpleQA | Groundedness | Groundedness vs Correctness | 需扩展 `LLMSearchGroundedness` |
+| **Phase 3** | FRAMES 824 条 | Agentic 多步 | Correct 比例 + Agent 诊断 | 需扩展 harness |
+| **Phase 3** | WebCode 250 URLs | 内容提取质量 | Completeness, Signal, ROUGE-L 等 | Dingo Compare 指标可用 |
+| **Phase 4** | 自建 QA 集 500+ | 双主线 | 全部指标 | 全部复用 |
+| **Phase 4** | In-the-wild 1,000+ | 双主线 | 全部指标 | 全部复用 |
+
+---
+
+## 13. 参考资料
 
 ### Exa.ai 官方资料
 

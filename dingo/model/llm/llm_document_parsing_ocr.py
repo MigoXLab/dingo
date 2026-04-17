@@ -103,12 +103,16 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
         json_match = re.search(r'\{[\s\S]*"errors"[\s\S]*\}', response)
         types = []
         names = []
+        parse_ok = False
+        errors_nonempty = False
 
         if json_match:
             try:
                 json_str = json_match.group()
                 result_data = json.loads(json_str)
                 errors = result_data.get("errors", [])
+                parse_ok = True
+                errors_nonempty = len(errors) > 0
 
                 for error in errors:
                     error_category = error.get("error_category", "")
@@ -123,7 +127,7 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
             log.error("未找到JSON内容")
 
         result = EvalDetail(metric=cls.__name__)
-        result.status = False
+        result.status = (not parse_ok) or errors_nonempty
 
         tmp_type = '.'.join(types)
         tmp_name = '.'.join(names)

@@ -37,21 +37,25 @@ dingo/
 │   │   └── input_args.py    ← InputArgs, EvalPiplineConfig, EvaluatorGroupConfig
 │   ├── io/
 │   │   ├── input/data.py    ← Data model (Pydantic, extra="allow")
-│   │   └── output/          ← ResultInfo, EvalDetail, SummaryModel (+ cross-layer analysis)
+│   │   └── output/          ← ResultInfo, EvalDetail, SummaryModel, BenchmarkReport
+│   │       └── benchmark_report.py ← Multi-system/dataset comparison & aggregation
 │   ├── data/
 │   │   ├── datasource/      ← LocalDataSource, SQLDataSource, S3DataSource, HFDataSource
 │   │   ├── dataset/         ← Dataset implementations per source
+│   │   ├── searcher.py      ← Searcher protocol + SearchResult + registry (mock, ES)
 │   │   └── converter/       ← Format converters (JSON, JSONL, CSV, Parquet, etc.)
 │   ├── model/
 │   │   ├── model.py         ← Model registry (rule_register, llm_register)
 │   │   ├── rule/            ← Rule-based evaluators (80+ built-in)
 │   │   │   ├── base.py      ← BaseRule
 │   │   │   ├── rule_common.py ← Common rules (text quality, format, PII, etc.)
+│   │   │   ├── rule_search_ranking.py ← IR ranking metrics (NDCG, MRR, Recall, Precision, MAP, HitRate)
 │   │   │   └── utils/       ← Shared utilities (normalize, ngrams, etc.)
 │   │   └── llm/             ← LLM-based evaluators
 │   │       ├── base_openai.py ← BaseOpenAI (base class for all LLM evaluators)
 │   │       ├── text_quality/  ← Text quality evaluators (V4, V5)
 │   │       ├── rag/          ← RAG metrics (Faithfulness, Precision, Recall, etc.)
+│   │       ├── llm_search_result_relevance.py ← Search result relevance (Exa-style pointwise)
 │   │       ├── hhh/          ← 3H evaluators (Honest, Helpful, Harmless)
 │   │       ├── compare/      ← Document comparison evaluators
 │   │       └── agent/        ← Agent-based evaluators

@@ -157,7 +157,7 @@ class Model:
     def set_config_rule(cls, rule: BaseRule, rule_config: EvaluatorRuleArgs):
         if not rule_config:
             return
-        config_default = getattr(rule, 'dynamic_config')
+        config_default = rule.dynamic_config.model_copy(deep=True)
         # Iterate over rule_config fields using Pydantic's model_dump()
         for k, v in rule_config.model_dump().items():
             if v is not None:
@@ -168,7 +168,7 @@ class Model:
     def set_config_llm(cls, llm: BaseLLM, llm_config: EvaluatorLLMArgs):
         if not llm_config:
             return
-        config_default = getattr(llm, 'dynamic_config')
+        config_default = llm.dynamic_config.model_copy(deep=True)
         # Iterate over llm_config fields using Pydantic's model_dump()
         for k, v in llm_config.model_dump().items():
             if v is not None:

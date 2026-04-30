@@ -1,4 +1,5 @@
 from dingo.config.input_args import EvaluatorLLMArgs, EvaluatorRuleArgs
+from dingo.model.llm.llm_custom_rule import LLMCustomRule
 from dingo.model.llm.text_quality.llm_text_quality_v5 import LLMTextQualityV5
 from dingo.model.model import Model
 from dingo.model.rule.rule_common import RulePatternSearch
@@ -39,3 +40,41 @@ def test_set_config_llm_copies_dynamic_config_per_llm_object():
     assert llm_b.dynamic_config.parameters == {"temperature": 0.9}
     assert LLMTextQualityV5.dynamic_config.model is None
     assert LLMTextQualityV5.dynamic_config.model_dump().get("parameters") is None
+
+
+def test_set_config_llm_deep_copies_custom_rule_per_llm_object():
+    llm_a = LLMCustomRule()
+    llm_b = LLMCustomRule()
+
+    Model.set_config_llm(
+        llm_a,
+        EvaluatorLLMArgs(
+            custom_rule={
+                "metric": "MetricA",
+                "description": "Rule A",
+                "criteria": ["criterion a"],
+                "input_fields": ["prompt"],
+            }
+        ),
+    )
+    Model.set_config_llm(
+        llm_b,
+        EvaluatorLLMArgs(
+            custom_rule={
+                "metric": "MetricB",
+                "description": "Rule B",
+                "criteria": ["criterion b"],
+                "input_fields": ["content"],
+            }
+        ),
+    )
+
+    llm_a.dynamic_config.custom_rule.criteria.append("criterion a2")
+
+    assert llm_a.dynamic_config is not llm_b.dynamic_config
+    assert llm_a.dynamic_config.custom_rule is not llm_b.dynamic_config.custom_rule
+    assert llm_a.dynamic_config.custom_rule.metric == "MetricA"
+    assert llm_b.dynamic_config.custom_rule.metric == "MetricB"
+    assert llm_a.dynamic_config.custom_rule.criteria == ["criterion a", "criterion a2"]
+    assert llm_b.dynamic_config.custom_rule.criteria == ["criterion b"]
+    assert LLMCustomRule.dynamic_config.custom_rule is None

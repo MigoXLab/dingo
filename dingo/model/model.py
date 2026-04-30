@@ -169,8 +169,13 @@ class Model:
         if not llm_config:
             return
         config_default = llm.dynamic_config.model_copy(deep=True)
-        # Iterate over llm_config fields using Pydantic's model_dump()
-        for k, v in llm_config.model_dump().items():
+        # Preserve nested Pydantic config objects while still applying extra fields.
+        config_items = {
+            field_name: getattr(llm_config, field_name)
+            for field_name in llm_config.__class__.model_fields
+        }
+        config_items.update(llm_config.model_extra)
+        for k, v in config_items.items():
             if v is not None:
                 setattr(config_default, k, v)
         setattr(llm, 'dynamic_config', config_default)

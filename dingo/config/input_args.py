@@ -101,6 +101,13 @@ class EmbeddingConfigArgs(BaseModel):
     api_url: Optional[str] = None
 
 
+class CustomLLMRuleArgs(BaseModel):
+    metric: str
+    description: str
+    criteria: List[str]
+    input_fields: List[str]
+
+
 class EvaluatorLLMArgs(BaseModel):
     model_config = {"extra": "allow"}
 
@@ -108,6 +115,7 @@ class EvaluatorLLMArgs(BaseModel):
     key: Optional[str] = None
     api_url: Optional[str] = None
     embedding_config: Optional[EmbeddingConfigArgs] = None
+    custom_rule: Optional[CustomLLMRuleArgs] = None
 
 
 class EvalPiplineConfig(BaseModel):

@@ -76,7 +76,10 @@ class LLMCustomRule(BaseOpenAI):
         )
         return [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": json.dumps({"inputs": inputs}, ensure_ascii=False)},
+            {
+                "role": "user",
+                "content": json.dumps({"inputs": inputs}, ensure_ascii=False),
+            },
         ]
 
     def send_messages(self, messages: List):
@@ -155,7 +158,7 @@ class LLMCustomRule(BaseOpenAI):
 
         attempts = 0
         except_msg = ""
-        except_name = Exception.__class__.__name__
+        except_name = Exception.__name__
         while attempts < 3:
             try:
                 response = self.send_messages(messages)

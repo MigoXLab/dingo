@@ -90,7 +90,7 @@ class LLMKeywordMatcher(BaseOpenAI):
         "source_frameworks": "Dingo ATS Tools"
     }
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
     threshold = 0.6  # Default threshold for good match (60%)
 
     @classmethod

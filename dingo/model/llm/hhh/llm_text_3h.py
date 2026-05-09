@@ -10,7 +10,7 @@ from dingo.utils.exception import ConvertJsonError
 
 # @Model.llm_register("LLMText3H")
 class LLMText3H(BaseOpenAI):
-    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
 
     @classmethod
     def build_messages(cls, input_data):

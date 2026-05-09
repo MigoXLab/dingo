@@ -40,5 +40,6 @@ class ResultInfo(BaseModel):
                 for k, v in self.eval_details.items()
             },
         }
+        self.raw_data['dingo_id'] = self.dingo_id
         self.raw_data['dingo_result'] = dingo_result
         return self.raw_data

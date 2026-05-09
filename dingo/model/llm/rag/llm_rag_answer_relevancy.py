@@ -43,7 +43,7 @@ class LLMRAGAnswerRelevancy(BaseOpenAI):
         "source_frameworks": "Ragas"
     }
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
 
     question_generation_prompt = """Task: Generate a question for the given answer and identify if the answer is noncommittal.
 

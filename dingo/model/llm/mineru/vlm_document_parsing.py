@@ -11,7 +11,7 @@ from dingo.utils import log
 
 @Model.llm_register("VLMDocumentParsing")
 class VLMDocumentParsing(BaseOpenAI):
-    _required_fields = [RequiredField.CONTENT, RequiredField.IMAGE]
+    _required_fields = [RequiredField.IMAGE, RequiredField.CONTENT]
     prompt = r"""
             *角色*
         你是一名严谨细致的文档转换质量评估助手。

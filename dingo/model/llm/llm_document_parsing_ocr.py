@@ -20,7 +20,7 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
         "description": "Evaluate the quality of mineru recognize",
         "evaluation_results": "error_category and error_label",
     }
-    _required_fields = [RequiredField.CONTENT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTENT]
     prompt = r"""
     你是一位熟悉文档解析领域的质量专家，你的核心任务是根据正确的markdown"工具标准结果Markdown"，以及对应OCR工具预测结果"Pred的内容"，获取工具预测结果的错误类型。
     *错误类别和标签*
@@ -103,12 +103,16 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
         json_match = re.search(r'\{[\s\S]*"errors"[\s\S]*\}', response)
         types = []
         names = []
+        parse_ok = False
+        errors_nonempty = False
 
         if json_match:
             try:
                 json_str = json_match.group()
                 result_data = json.loads(json_str)
                 errors = result_data.get("errors", [])
+                parse_ok = True
+                errors_nonempty = len(errors) > 0
 
                 for error in errors:
                     error_category = error.get("error_category", "")
@@ -123,7 +127,7 @@ class LLMMinerURecognizeQuality(BaseOpenAI):
             log.error("未找到JSON内容")
 
         result = EvalDetail(metric=cls.__name__)
-        result.status = False
+        result.status = (not parse_ok) or errors_nonempty
 
         tmp_type = '.'.join(types)
         tmp_name = '.'.join(names)

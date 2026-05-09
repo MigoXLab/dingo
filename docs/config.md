@@ -112,13 +112,6 @@ LLM 配置（支持额外字段，所有额外字段会直接透传给 LLM API�
 | key | str | null | No | API 密钥 |
 | api_url | str | null | No | API URL |
 | embedding_config | object | null | No | Embedding 模型独立配置（RAG 评估器使用） |
-| temperature | number | 1 | No | 采样温度，0-2之间 |
-| top_p | number | 1 | No | 核心采样概率 |
-| max_tokens | number | 4000 | No | 最大生成token数 |
-| presence_penalty | number | 0 | No | 存在惩罚，-2.0到2.0之间 |
-| frequency_penalty | number | 0 | No | 频率惩罚，-2.0到2.0之间 |
-| agent_config | object | null | No | Agent 专属配置（max_iterations、tools 等） |
-| threshold | number | - | No | 评估通过阈值（各评估器自定义） |
 | *其他字段* | any | - | No | 所有额外字段直接透传给 LLM API |
 
 ## 配置文件示例

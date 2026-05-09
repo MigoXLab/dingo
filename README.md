@@ -73,6 +73,27 @@ Need a **production-grade data quality platform**? Try [Dingo SaaS](https://ding
 - 📊 **Visual Reports** - Interactive charts, trend analysis, export features
 - 🔌 **RESTful API** - Seamless integration with existing systems
 
+<details>
+<summary><strong>SaaS — Dashboard</strong></summary>
+
+<img src="docs/assets/saas_dashboard.png" alt="Dingo SaaS dashboard" />
+
+</details>
+
+<details>
+<summary><strong>SaaS — Playground</strong></summary>
+
+<img src="docs/assets/saas_playground.png" alt="Dingo SaaS playground" />
+
+</details>
+
+<details>
+<summary><strong>SaaS — Evaluation output</strong></summary>
+
+<img src="docs/assets/saas_output.png" alt="Dingo SaaS evaluation output" />
+
+</details>
+
 ### 📝 How to Get Free SaaS Code
 
 👉 **[Apply for Dingo SaaS Repository Access](https://aicarrier.feishu.cn/share/base/form/shrcnr19E0upfiA92Wm5i2eic7g)** 

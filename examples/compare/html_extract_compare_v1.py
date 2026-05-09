@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dingo.config import InputArgs
@@ -5,10 +6,13 @@ from dingo.exec import Executor
 
 # 获取项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent.parent
+OPENAI_MODEL = os.getenv("OPENAI_MODEL")
+OPENAI_URL = os.getenv("OPENAI_BASE_URL")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 if __name__ == '__main__':
     input_data = {
-        "input_path": str(PROJECT_ROOT / "test/data/compare/old_new_compare_10000.jsonl"),
+        "input_path": str(PROJECT_ROOT / "test/data/compare/test_compare_content.jsonl"),
         "dataset": {
             "source": "local",
             "format": "jsonl",
@@ -24,9 +28,21 @@ if __name__ == '__main__':
         },
         "evaluator": [
             {
-                "fields": {"id": "track_id", "content": "clean_html"},
+                "fields": {
+                    "data_id": "track_id",
+                    "prompt": "markdown_m10",
+                    "reference": "markdown_ours",
+                    "content": "clean_html",
+                },
                 "evals": [
-                    {"name": "LLMHtmlExtractCompare", "config": {"key": "", "api_url": ""}}
+                    {
+                        "name": "LLMHtmlExtractCompare",
+                        "config": {
+                            "key": OPENAI_KEY,
+                            "api_url": OPENAI_URL,
+                            "model": OPENAI_MODEL,
+                        },
+                    }
                 ]
             }
         ]

@@ -11,8 +11,8 @@ DEFAULT_OUTPUT_PATH = PROJECT_ROOT / "outputs/custom_llm_rule_run/"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from dingo.config import InputArgs
-from dingo.exec import Executor
+from dingo.config import InputArgs  # noqa: E402
+from dingo.exec import Executor  # noqa: E402
 
 
 def load_dotenv(env_path: Path) -> None:

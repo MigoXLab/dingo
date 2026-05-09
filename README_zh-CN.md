@@ -72,6 +72,27 @@
 - 📊 **可视化报告** - 交互式图表、趋势分析、导出功能
 - 🔌 **RESTful API** - 与现有系统无缝集成
 
+<details>
+<summary><strong>SaaS — Dashboard</strong></summary>
+
+<img src="docs/assets/saas_dashboard.png" alt="Dingo SaaS dashboard" />
+
+</details>
+
+<details>
+<summary><strong>SaaS — Playground</strong></summary>
+
+<img src="docs/assets/saas_playground.png" alt="Dingo SaaS playground" />
+
+</details>
+
+<details>
+<summary><strong>SaaS — Evaluation output</strong></summary>
+
+<img src="docs/assets/saas_output.png" alt="Dingo SaaS evaluation output" />
+
+</details>
+
 ### 📝 如何获得免费 SaaS 代码
 
 👉 **[点击申请 Dingo SaaS 代码仓库访问权限](https://aicarrier.feishu.cn/share/base/form/shrcn9RqYttByQ5H1np6Yrnmhuf)** 

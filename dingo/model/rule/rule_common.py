@@ -2678,6 +2678,82 @@ class RulePIIDetection(BaseRule):
         return res
 
 
+@Model.rule_register("QUALITY_BAD_EFFECTIVENESS", [""])
+class RuleDictConsistency(BaseRule):
+    """Compare two dict fields and report mismatched keys."""
+
+    _metric_info = {
+        "category": "Rule-Based TEXT Quality Metrics",
+        "quality_dimension": "EFFECTIVENESS",
+        "metric_name": "RuleDictConsistency",
+        "description": "Checks whether metadata and context dict are consistent by key/value equality",
+        "evaluation_results": ""
+    }
+
+    _required_fields = [RequiredField.METADATA, RequiredField.CONTEXT]
+    dynamic_config = EvaluatorRuleArgs(parameters={"ignore_order": True})
+
+    @classmethod
+    def _normalize_value(cls, value, ignore_order: bool):
+        """Normalize nested values for configurable order-aware comparison."""
+        if isinstance(value, dict):
+            return {
+                key: cls._normalize_value(value[key], ignore_order)
+                for key in sorted(value.keys(), key=lambda x: str(x))
+            }
+
+        if isinstance(value, (list, tuple)):
+            normalized = [cls._normalize_value(item, ignore_order) for item in value]
+            if ignore_order:
+                return sorted(normalized, key=lambda x: repr(x))
+            return normalized
+
+        if isinstance(value, set):
+            normalized = [cls._normalize_value(item, ignore_order) for item in value]
+            return sorted(normalized, key=lambda x: repr(x))
+
+        return value
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        res = EvalDetail(metric=cls.__name__)
+        left_dict = getattr(input_data, "metadata", None)
+        right_dict = getattr(input_data, "context", None)
+        parameters = cls.dynamic_config.parameters or {}
+        ignore_order = parameters.get("ignore_order", True)
+
+        if not isinstance(left_dict, dict) or not isinstance(right_dict, dict):
+            res.status = True
+            res.label = [f"{cls.metric_type}.{cls.__name__}", "INVALID_DICT_FIELD"]
+            res.reason = [
+                "metadata/context must both be dict, "
+                f"got metadata={type(left_dict).__name__}, context={type(right_dict).__name__}"
+            ]
+            return res
+
+        diff_keys = []
+        all_keys = set(left_dict.keys()) | set(right_dict.keys())
+        for key in sorted(all_keys, key=lambda x: str(x)):
+            if key not in left_dict or key not in right_dict:
+                diff_keys.append(str(key))
+                continue
+
+            left_value = cls._normalize_value(left_dict[key], ignore_order)
+            right_value = cls._normalize_value(right_dict[key], ignore_order)
+            if left_value != right_value:
+                diff_keys.append(str(key))
+
+        if diff_keys:
+            res.status = True
+            res.label = [
+                f"{cls.metric_type}.{cls.__name__}.{key}" for key in diff_keys
+            ]
+            res.reason = [f"Inconsistent keys: {', '.join(diff_keys)}"]
+        else:
+            res.label = [QualityLabel.QUALITY_GOOD]
+        return res
+
+
 if __name__ == "__main__":
     data = Data(data_id="", prompt="", content="\n \n \n \n hello \n \n ")
     tmp = RuleEnterAndSpace().eval(data)

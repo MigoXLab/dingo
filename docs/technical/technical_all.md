@@ -220,19 +220,10 @@ dingo 在使用提示词进行评估任务的时候，必须同时使用场景�
 + model
 + key
 + api_url
-+ temperature（直接平铺在配置中）
-+ top_p
-+ max_tokens
-+ presence_penalty
-+ frequency_penalty
-+ agent_config（Agent 评估器专用，包含 max_iterations、tools 等）
++ embedding_config（RAG 评估器专用）
++ 其他字段（直接平铺在配置中并透传到 LLM API）
 
-LLM 调参配置直接平铺在 `config` 对象中（不再嵌套在 `parameters` 字段下），会对模型推理产生影响，可以设置的值包括:
-+ temperature
-+ top_p
-+ max_tokens
-+ presence_penalty
-+ frequency_penalty
+LLM 调参配置直接平铺在 `config` 对象中（不再嵌套在 `parameters` 字段下），除标准字段外，其它字段将直接透传到 LLM API。
 
 更多参数细节可参考OpenAI API官方文档。
 

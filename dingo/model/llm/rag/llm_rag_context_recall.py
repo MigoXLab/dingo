@@ -47,7 +47,7 @@ class LLMRAGContextRecall(BaseOpenAI):
         "source_frameworks": "Ragas + DeepEval"
     }
 
-    _required_fields = [RequiredField.CONTENT, RequiredField.CONTEXT, RequiredField.PROMPT]
+    _required_fields = [RequiredField.PROMPT, RequiredField.CONTEXT, RequiredField.CONTENT]
     prompt = """上下文召回评估提示词，用于分类陈述归因"""
 
     @staticmethod

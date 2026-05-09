@@ -217,6 +217,8 @@ dingo info --rules                        # Rule evaluators only
 dingo info --llm                          # LLM evaluators only
 dingo info --groups                       # Rule groups only
 dingo info --json                         # JSON output
+dingo info --count                        # Metric counts only (rules / llm / groups / total_metrics)
+dingo info --json --count                  # JSON with top-level "counts" plus full lists
 
 # Start MCP server (for AI agent integration)
 dingo serve                               # SSE transport on 0.0.0.0:8000

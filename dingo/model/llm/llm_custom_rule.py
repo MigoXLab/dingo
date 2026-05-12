@@ -40,11 +40,13 @@ class LLMCustomRule(BaseOpenAI):
     def _replace_placeholders(text: str, inputs: dict) -> str:
         """Replace {{field_name}} placeholders, leaving other braces intact."""
         import re
+
         def _replacer(m):
             key = m.group(1)
             if key in inputs:
                 return str(inputs[key])
             return m.group(0)
+
         return re.sub(r"\{\{(\w+)\}\}", _replacer, text)
 
     def _collect_inputs(self, input_data: Data) -> tuple[dict, list[str]]:
@@ -72,7 +74,7 @@ class LLMCustomRule(BaseOpenAI):
             '- Return JSON with fields: {"status": boolean, "label": string[], "score": number, "reason": string[]}.\n'
             '- "status": true means the input has an issue, fails the rule, or should count as bad.\n'
             '- "status": false means the input passes the rule, has no issue, or should count as good.\n'
-            '- If no labels are specified, use "label": ["QUALITY_GOOD"] when status is false and "label": ["QUALITY_BAD"] when status is true.\n'
+            '- If no labels are specified, use "label": ["QUALITY_GOOD"] when status is false and "label": ["QUALITY_BAD.{custom_rule.metric}"] when status is true.\n'
             "- If no score semantics are specified, use score 1 for pass/good and score 0 for fail/bad.\n"
             "- Put concise evidence or explanation in reason.\n"
             "Security rules:\n"
@@ -82,7 +84,8 @@ class LLMCustomRule(BaseOpenAI):
         )
 
         user_content = "\n".join(
-            self._replace_placeholders(criterion, inputs) for criterion in custom_rule.criteria
+            self._replace_placeholders(criterion, inputs)
+            for criterion in custom_rule.criteria
         )
         return [
             {"role": "system", "content": system_prompt},

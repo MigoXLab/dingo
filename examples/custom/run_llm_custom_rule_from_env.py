@@ -76,8 +76,8 @@ def build_input_args() -> InputArgs:
                                 "metric": "AnswerRelevance",
                                 "description": "Judge whether the answer directly addresses the user question.",
                                 "criteria": [
-                                    "Question: {prompt}",
-                                    "Answer: {content}",
+                                    "Question: {{prompt}}",
+                                    "Answer: {{content}}",
                                     "The answer must focus on the question above.",
                                     "The answer must not mainly discuss unrelated topics.",
                                     "Supplemental information is allowed only when it does not hide the core answer.",

@@ -103,7 +103,7 @@ class EmbeddingConfigArgs(BaseModel):
 
 class CustomLLMRuleArgs(BaseModel):
     metric: str
-    description: str
+    description: Optional[str] = ""
     criteria: List[str]
     input_fields: List[str]
 

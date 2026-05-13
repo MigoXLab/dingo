@@ -12,16 +12,16 @@ from dingo.model.model import Model
 from dingo.utils.exception import ConvertJsonError, ExceedMaxTokens
 
 
-@Model.llm_register("LLMCustomRule")
-class LLMCustomRule(BaseOpenAI):
-    _metric_info = {"description": "Unified rule for user customization"}
+@Model.llm_register("LLMCustomMetric")
+class LLMCustomMetric(BaseOpenAI):
+    _metric_info = {"description": "Unified metric for user customization"}
     dynamic_config = EvaluatorLLMArgs()
 
-    def _get_custom_rule(self):
-        custom_rule = self.dynamic_config.custom_rule
-        if custom_rule is None:
-            raise ValueError("custom_rule cannot be empty in llm config.")
-        return custom_rule
+    def _get_custom_metric(self):
+        custom_metric = self.dynamic_config.custom_metric
+        if custom_metric is None:
+            raise ValueError("custom_metric cannot be empty in llm config.")
+        return custom_metric
 
     def create_client(self):
         from openai import OpenAI
@@ -52,7 +52,7 @@ class LLMCustomRule(BaseOpenAI):
     def _collect_inputs(self, input_data: Data) -> tuple[dict, list[str]]:
         inputs = {}
         missing_fields = []
-        for field_name in self._get_custom_rule().input_fields:
+        for field_name in self._get_custom_metric().input_fields:
             value = getattr(input_data, field_name, None)
             if value is None or value == "" or value == [] or value == {}:
                 missing_fields.append(field_name)
@@ -61,7 +61,7 @@ class LLMCustomRule(BaseOpenAI):
         return inputs, missing_fields
 
     def build_messages(self, input_data: Data) -> List:
-        custom_rule = self._get_custom_rule()
+        custom_metric = self._get_custom_metric()
         inputs, missing_fields = self._collect_inputs(input_data)
         if missing_fields:
             raise ValueError(
@@ -74,7 +74,7 @@ class LLMCustomRule(BaseOpenAI):
             '- Return JSON with fields: {"status": boolean, "label": string[], "score": number, "reason": string[]}.\n'
             '- "status": true means the input has an issue, fails the rule, or should count as bad.\n'
             '- "status": false means the input passes the rule, has no issue, or should count as good.\n'
-            '- If no labels are specified, use "label": ["QUALITY_GOOD"] when status is false and "label": ["QUALITY_BAD.{custom_rule.metric}"] when status is true.\n'
+            '- If no labels are specified, use "label": ["QUALITY_GOOD"] when status is false and "label": ["QUALITY_BAD.{custom_metric.metric}"] when status is true.\n'
             "- If no score semantics are specified, use score 1 for pass/good and score 0 for fail/bad.\n"
             "- Put concise evidence or explanation in reason.\n"
             "Security rules:\n"
@@ -85,7 +85,7 @@ class LLMCustomRule(BaseOpenAI):
 
         user_content = "\n".join(
             self._replace_placeholders(criterion, inputs)
-            for criterion in custom_rule.criteria
+            for criterion in custom_metric.criteria
         )
         return [
             {"role": "system", "content": system_prompt},
@@ -115,10 +115,10 @@ class LLMCustomRule(BaseOpenAI):
         return str(completions.choices[0].message.content)
 
     def _eval_detail_from_response(self, response_json: dict) -> EvalDetail:
-        custom_rule = self._get_custom_rule()
+        custom_metric = self._get_custom_metric()
 
         return EvalDetail(
-            metric=custom_rule.metric,
+            metric=custom_metric.metric,
             status=response_json["status"],
             score=response_json["score"],
             label=response_json["label"],
@@ -164,15 +164,15 @@ class LLMCustomRule(BaseOpenAI):
         return self._eval_detail_from_response(response_json)
 
     def _missing_fields_result(self, input_data: Data) -> EvalDetail | None:
-        custom_rule = self._get_custom_rule()
+        custom_metric = self._get_custom_metric()
         _, missing_fields = self._collect_inputs(input_data)
         if not missing_fields:
             return None
 
         return EvalDetail(
-            metric=custom_rule.metric,
+            metric=custom_metric.metric,
             status=True,
-            label=[f"QUALITY_BAD.{custom_rule.metric}"],
+            label=[f"QUALITY_BAD.{custom_metric.metric}"],
             reason=[f"Missing required input fields: {', '.join(missing_fields)}"],
         )
 
@@ -204,7 +204,7 @@ class LLMCustomRule(BaseOpenAI):
                 except_name = e.__class__.__name__
 
         return EvalDetail(
-            metric=self._get_custom_rule().metric,
+            metric=self._get_custom_metric().metric,
             status=True,
             label=[f"QUALITY_BAD.{except_name}"],
             reason=[except_msg],

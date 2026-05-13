@@ -4,8 +4,8 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ENV_PATH = PROJECT_ROOT / ".env"
-DEFAULT_INPUT_PATH = PROJECT_ROOT / "examples/custom/llm_custom_rule_data.jsonl"
-DEFAULT_OUTPUT_PATH = PROJECT_ROOT / "outputs/custom_llm_rule_run/"
+DEFAULT_INPUT_PATH = PROJECT_ROOT / "examples/custom/llm_custom_metric_data.jsonl"
+DEFAULT_OUTPUT_PATH = PROJECT_ROOT / "outputs/custom_llm_metric_run/"
 
 # Ensure local repository package is used instead of an installed site-packages version.
 if str(PROJECT_ROOT) not in sys.path:
@@ -43,7 +43,7 @@ def build_input_args() -> InputArgs:
     api_url = require_env("OPENAI_API_URL")
 
     input_data = {
-        "task_name": "llm_custom_rule_demo",
+        "task_name": "llm_custom_metric_demo",
         "input_path": str(DEFAULT_INPUT_PATH),
         "output_path": str(DEFAULT_OUTPUT_PATH),
         "dataset": {
@@ -66,13 +66,13 @@ def build_input_args() -> InputArgs:
                 },
                 "evals": [
                     {
-                        "name": "LLMCustomRule",
+                        "name": "LLMCustomMetric",
                         "config": {
                             "model": model,
                             "key": key,
                             "api_url": api_url,
                             "temperature": 0,
-                            "custom_rule": {
+                            "custom_metric": {
                                 "metric": "AnswerRelevance",
                                 "description": "Judge whether the answer directly addresses the user question.",
                                 "criteria": [

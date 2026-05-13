@@ -1,5 +1,5 @@
 {
-  "input_path": "examples/custom/llm_custom_rule_data.jsonl",
+  "input_path": "examples/custom/llm_custom_metric_data.jsonl",
   "dataset": {
     "source": "local",
     "format": "jsonl"
@@ -20,13 +20,13 @@
       },
       "evals": [
         {
-          "name": "LLMCustomRule",
+          "name": "LLMCustomMetric",
           "config": {
             "model": "gpt-4o",
             "key": "YOUR_OPENAI_API_KEY",
             "api_url": "https://api.openai.com/v1",
             "temperature": 0,
-            "custom_rule": {
+            "custom_metric": {
               "metric": "AnswerRelevance",
               "description": "Judge whether the answer directly addresses the user question.",
               "criteria": [

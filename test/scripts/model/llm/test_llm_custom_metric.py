@@ -3,11 +3,11 @@ from unittest.mock import Mock
 
 from dingo.config.input_args import EvaluatorLLMArgs, InputArgs
 from dingo.io.input import Data
-from dingo.model.llm.llm_custom_rule import LLMCustomRule
+from dingo.model.llm.llm_custom_metric import LLMCustomMetric
 from dingo.model.model import Model
 
 
-def _custom_rule(metric="AnswerRelevance", input_fields=None, criteria=None):
+def _custom_metric(metric="AnswerRelevance", input_fields=None, criteria=None):
     return {
         "metric": metric,
         "description": "Judge whether the answer directly addresses the user question.",
@@ -20,23 +20,23 @@ def _custom_rule(metric="AnswerRelevance", input_fields=None, criteria=None):
     }
 
 
-def test_config_parses_custom_rule_and_keeps_llm_extras_separate():
+def test_config_parses_custom_metric_and_keeps_llm_extras_separate():
     config = EvaluatorLLMArgs(
         model="gpt-4o",
         key="test-key",
         api_url="https://example.test/v1",
         temperature=0,
         max_tokens=256,
-        custom_rule=_custom_rule(),
+        custom_metric=_custom_metric(),
     )
 
-    assert config.custom_rule.metric == "AnswerRelevance"
-    assert config.custom_rule.input_fields == ["prompt", "content"]
+    assert config.custom_metric.metric == "AnswerRelevance"
+    assert config.custom_metric.input_fields == ["prompt", "content"]
     assert config.model_extra == {"temperature": 0, "max_tokens": 256}
-    assert not hasattr(config.custom_rule, "temperature")
+    assert not hasattr(config.custom_metric, "temperature")
 
 
-def test_input_args_config_parses_custom_rule_as_llm_config():
+def test_input_args_config_parses_custom_metric_as_llm_config():
     args = InputArgs(
         input_path="data.jsonl",
         evaluator=[
@@ -44,13 +44,13 @@ def test_input_args_config_parses_custom_rule_as_llm_config():
                 "fields": {"prompt": "question", "content": "answer"},
                 "evals": [
                     {
-                        "name": "LLMCustomRule",
+                        "name": "LLMCustomMetric",
                         "config": {
                             "model": "gpt-4o",
                             "key": "test-key",
                             "api_url": "https://example.test/v1",
                             "temperature": 0,
-                            "custom_rule": _custom_rule(),
+                            "custom_metric": _custom_metric(),
                         },
                     }
                 ],
@@ -61,15 +61,15 @@ def test_input_args_config_parses_custom_rule_as_llm_config():
     config = args.evaluator[0].evals[0].config
 
     assert isinstance(config, EvaluatorLLMArgs)
-    assert config.custom_rule.metric == "AnswerRelevance"
+    assert config.custom_metric.metric == "AnswerRelevance"
     assert config.model_extra == {"temperature": 0}
 
 
 def test_build_messages_system_prompt_has_identity_safety_defaults():
-    llm = LLMCustomRule()
+    llm = LLMCustomMetric()
     Model.set_config_llm(
         llm,
-        EvaluatorLLMArgs(custom_rule=_custom_rule(input_fields=["prompt", "content"])),
+        EvaluatorLLMArgs(custom_metric=_custom_metric(input_fields=["prompt", "content"])),
     )
 
     messages = llm.build_messages(
@@ -106,11 +106,11 @@ def test_build_messages_system_prompt_has_identity_safety_defaults():
 
 
 def test_build_messages_template_variables_substituted():
-    llm = LLMCustomRule()
+    llm = LLMCustomMetric()
     Model.set_config_llm(
         llm,
         EvaluatorLLMArgs(
-            custom_rule={
+            custom_metric={
                 "metric": "AnswerRelevance",
                 "criteria": [
                     "Question: {{prompt}}",
@@ -135,11 +135,11 @@ def test_build_messages_template_variables_substituted():
 
 
 def test_missing_input_fields_returns_bad_without_calling_llm():
-    llm = LLMCustomRule()
+    llm = LLMCustomMetric()
     llm.send_messages = Mock()
     Model.set_config_llm(
         llm,
-        EvaluatorLLMArgs(custom_rule=_custom_rule(input_fields=["prompt", "content"])),
+        EvaluatorLLMArgs(custom_metric=_custom_metric(input_fields=["prompt", "content"])),
     )
 
     result = llm.eval(Data(prompt="What is Paris?"))
@@ -152,8 +152,8 @@ def test_missing_input_fields_returns_bad_without_calling_llm():
 
 
 def test_eval_response_requires_status_label_score_and_reason():
-    llm = LLMCustomRule()
-    Model.set_config_llm(llm, EvaluatorLLMArgs(custom_rule=_custom_rule()))
+    llm = LLMCustomMetric()
+    Model.set_config_llm(llm, EvaluatorLLMArgs(custom_metric=_custom_metric()))
     llm.create_client = Mock()
     llm.send_messages = Mock(
         return_value='```json\n{"score": 1, "reason": "Direct answer."}\n```'
@@ -170,9 +170,9 @@ def test_eval_response_requires_status_label_score_and_reason():
 
 
 def test_eval_detail_response_uses_llm_returned_fields():
-    llm = LLMCustomRule()
+    llm = LLMCustomMetric()
     Model.set_config_llm(
-        llm, EvaluatorLLMArgs(custom_rule=_custom_rule(metric="SourceLabel"))
+        llm, EvaluatorLLMArgs(custom_metric=_custom_metric(metric="SourceLabel"))
     )
     llm.create_client = Mock()
     llm.send_messages = Mock(
@@ -198,9 +198,9 @@ def test_eval_detail_response_uses_llm_returned_fields():
 
 
 def test_eval_detail_response_rejects_missing_fields():
-    llm = LLMCustomRule()
+    llm = LLMCustomMetric()
     Model.set_config_llm(
-        llm, EvaluatorLLMArgs(custom_rule=_custom_rule(metric="PolicyCheck"))
+        llm, EvaluatorLLMArgs(custom_metric=_custom_metric(metric="PolicyCheck"))
     )
     llm.create_client = Mock()
     llm.send_messages = Mock(return_value='{"status": true}')
@@ -214,9 +214,9 @@ def test_eval_detail_response_rejects_missing_fields():
 
 
 def test_eval_response_rejects_legacy_score_reason_format():
-    llm = LLMCustomRule()
+    llm = LLMCustomMetric()
     Model.set_config_llm(
-        llm, EvaluatorLLMArgs(custom_rule=_custom_rule(metric="SafetyCheck"))
+        llm, EvaluatorLLMArgs(custom_metric=_custom_metric(metric="SafetyCheck"))
     )
     llm.create_client = Mock()
     llm.send_messages = Mock(return_value='{"score": 0, "reason": "Unsafe answer."}')
@@ -229,19 +229,19 @@ def test_eval_response_rejects_legacy_score_reason_format():
     assert "Missing required response fields: label, status" in result.reason[0]
 
 
-def test_instances_keep_different_custom_rules_isolated():
-    llm_a = LLMCustomRule()
-    llm_b = LLMCustomRule()
+def test_instances_keep_different_custom_metrics_isolated():
+    llm_a = LLMCustomMetric()
+    llm_b = LLMCustomMetric()
     Model.set_config_llm(
         llm_a,
         EvaluatorLLMArgs(
-            custom_rule=_custom_rule(metric="MetricA", input_fields=["prompt"])
+            custom_metric=_custom_metric(metric="MetricA", input_fields=["prompt"])
         ),
     )
     Model.set_config_llm(
         llm_b,
         EvaluatorLLMArgs(
-            custom_rule={
+            custom_metric={
                 "metric": "MetricB",
                 "description": "Second rule",
                 "criteria": ["Second criterion"],
@@ -253,8 +253,8 @@ def test_instances_keep_different_custom_rules_isolated():
     messages_a = llm_a.build_messages(Data(prompt="A", content="shared"))
     messages_b = llm_b.build_messages(Data(prompt="shared", content="B"))
 
-    assert llm_a.dynamic_config.custom_rule.metric == "MetricA"
-    assert llm_b.dynamic_config.custom_rule.metric == "MetricB"
+    assert llm_a.dynamic_config.custom_metric.metric == "MetricA"
+    assert llm_b.dynamic_config.custom_metric.metric == "MetricB"
     # User prompt contains criteria text
     assert "The answer must focus on the prompt." in messages_a[1]["content"]
     assert "Second criterion" in messages_b[1]["content"]

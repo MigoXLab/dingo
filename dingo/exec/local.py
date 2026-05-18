@@ -178,8 +178,9 @@ class LocalExecutor(ExecProto):
                 Model.set_config_rule(model, e_c_i.config)
             elif eval_type == 'llm':
                 model_cls = Model.llm_name_map.get(e_c_i.name)
-                model = model_cls()  # 实例化类为对象，避免多线程配置覆盖
+                model = model_cls()
                 Model.set_config_llm(model, e_c_i.config)
+                Model.set_config_llm(model_cls, e_c_i.config)
             else:
                 raise ValueError(f"Error eval_type: {eval_type}")
 

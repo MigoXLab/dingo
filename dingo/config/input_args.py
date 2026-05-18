@@ -87,6 +87,8 @@ class ExecutorArgs(BaseModel):
 
 
 class EvaluatorRuleArgs(BaseModel):
+    model_config = {"extra": "forbid"}
+
     threshold: Optional[float] = None
     pattern: Optional[str] = None
     key_list: Optional[List[str]] = None
@@ -119,7 +121,7 @@ class EvaluatorLLMArgs(BaseModel):
 
 
 class EvalPiplineConfig(BaseModel):
-    """Single evaluator configuration item"""
+    """Single evaluator configuration item."""
     name: str
     config: Optional[EvaluatorRuleArgs | EvaluatorLLMArgs] = None
 

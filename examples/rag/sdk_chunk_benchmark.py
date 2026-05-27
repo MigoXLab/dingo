@@ -73,8 +73,18 @@ def normalize_error_name(error_name: str) -> str:
     name = str(error_name).strip()
     if "." in name:
         _, maybe_name = name.split(".", 1)
-        return maybe_name.strip()
-    return name
+        name = maybe_name.strip()
+
+    # 兼容历史/基准集中的 snake_case 标签，映射到 prompt 里的标准名称
+    legacy_mapping = {
+        "start_text_truncation": "Error_Start_Text_Truncation",
+        "start_inline_formula_truncation": "Error_Start_Inline_Formula_Truncation",
+        "start_interline_formula_truncation": "Error_Start_Interline_Formula_Truncation",
+        "start_Interline_Formula_Truncation": "Error_Start_Interline_Formula_Truncation",
+        "start_punctuation_truncation": "Error_Start_Punctuation_Truncation",
+        "start_text_duplicate": "Error_Start_Text_Duplicate",
+    }
+    return legacy_mapping.get(name, name)
 
 
 def build_error_type_to_category_from_prompt(prompt: str) -> Dict[str, str]:
@@ -108,14 +118,14 @@ def infer_error_category(error_name: str, error_map: Dict[str, str], known_categ
 
 
 def init_evaluator(llm_config: Dict):
-    # 通过注册表按 evaluator 名称取模型，避免硬编码类实例
+    # Dingo 的 LLM eval 为 classmethod：从注册表拿类并做类级配置
     Model.load_model()
-    llm_model = Model.get_llm_name_map().get(EVALUATOR_NAME)
-    if llm_model is None:
+    llm_cls = Model.get_llm_name_map().get(EVALUATOR_NAME)
+    if llm_cls is None:
         raise ValueError(f"未找到 evaluator: {EVALUATOR_NAME}")
-    Model.set_config_llm(llm_model, EvaluatorLLMArgs(**llm_config))
-    llm_model.client = None
-    return llm_model
+    Model.set_config_llm(llm_cls, EvaluatorLLMArgs(**llm_config))
+    llm_cls.client = None
+    return llm_cls
 
 
 def evaluate_dataset(
@@ -141,18 +151,21 @@ def evaluate_dataset(
     # 主循环：逐条推理并累积 benchmark 统计
     for idx, row in enumerate(rows, start=1):
         total += 1
-        content = str(row.get(content_field, ""))
+        raw_content = row.get(content_field)
+        content = str(raw_content) if raw_content is not None else ""
         error_types = normalize_error_types(row.get(label_field))
+        gt_error_names = [normalize_error_name(x) for x in ([] if error_types is None else error_types) if str(x).strip()]
         gt_bad: Optional[int] = None
         if error_types is not None:
-            gt_bad = 1 if len(error_types) > 0 else 0
-            labeled_total += 1
+            # 仅基于清洗后的有效标签判断是否 bad
+            gt_bad = 1 if len(gt_error_names) > 0 else 0
 
         pred_bad = 1
         score = None
         labels: List[str] = []
         reasons: List[str] = []
         error_message = ""
+        has_runtime_error = False
         try:
             # status=True 表示 bad，status=False 表示 good
             result = llm_model.eval(Data(content=content))
@@ -163,8 +176,15 @@ def evaluate_dataset(
         except Exception as e:
             errors += 1
             error_message = str(e)
+            has_runtime_error = True
 
-        gt_error_names = [normalize_error_name(x) for x in ([] if error_types is None else error_types) if str(x).strip()]
+        # BaseOpenAI 失败场景通常会返回 QUALITY_BAD.<ExceptionName>
+        if any(str(lbl).startswith("QUALITY_BAD.") for lbl in labels):
+            has_runtime_error = True
+
+        if error_types is not None and not has_runtime_error:
+            labeled_total += 1
+
         pred_error_names = [normalize_error_name(x) for x in labels if str(x).strip()]
         gt_error_categories = sorted(
             {cat for cat in (infer_error_category(x, error_map, known_categories) for x in gt_error_names) if cat}
@@ -182,12 +202,15 @@ def evaluate_dataset(
         pred_error_type_counter.update(pred_error_names)
         pred_error_category_counter.update(pred_error_categories)
 
-        if pred_bad == 1:
-            pred_bad_total += 1
-        else:
-            pred_good_total += 1
+        if not has_runtime_error:
+            if pred_bad == 1:
+                pred_bad_total += 1
+            else:
+                pred_good_total += 1
 
-        if gt_bad is None:
+        if has_runtime_error:
+            confusion_tag = "ERROR"
+        elif gt_bad is None:
             confusion_tag = "NA"
         elif pred_bad == 1 and gt_bad == 1:
             tp += 1

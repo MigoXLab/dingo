@@ -10,7 +10,7 @@ class LLMChunkQuality(BaseTextQuality):
         "category": "RAG Retrieved Evidence Chunk Quality Metrics",
         "metric_name": "LLMChunkQuality",
         "description": "Assesses retrieved citation chunks referenced by LLM answers, detecting start-boundary truncation and duplicated leading text that can weaken grounded generation",
-        "examples": "examples/rag/evaluate_chunk_eval.py"
+        "examples": "examples/rag/sdk_chunk_eval.py"
     }
     _required_fields = [RequiredField.CONTENT]
     prompt = """

@@ -13,13 +13,12 @@ This document provides comprehensive information about all quality metrics used 
 | `LLMRAGContextRecall` | LLMRAGContextRecall | 评估检索上下文的完整性，判断上下文是否能支持答案中的所有陈述 | [RAGAS: Automated Evaluation of Retrieval Augmented Generation](https://arxiv.org/abs/2309.15217) | N/A | [📝 View Example](../examples/rag/dataset_rag_eval_baseline.py) |
 | `LLMRAGContextRelevancy` | LLMRAGContextRelevancy | 评估检索上下文与问题的相关性，检测噪声信息 | [RAGAS: Automated Evaluation of Retrieval Augmented Generation](https://arxiv.org/abs/2309.15217) | N/A | [📝 View Example](../examples/rag/dataset_rag_eval_baseline.py) |
 | `LLMRAGFaithfulness` | LLMRAGFaithfulness | 评估生成答案是否忠实于给定上下文，检测幻觉和编造信息 | [RAGAS: Automated Evaluation of Retrieval Augmented Generation](https://arxiv.org/abs/2309.15217) | N/A | [📝 View Example](../examples/rag/dataset_rag_eval_baseline.py) |
-| `LLMChunkQuality` | LLMChunkQuality | 评估 RAG 引用 chunk 的起始边界截断与重复开头问题，判断其是否适合作为可溯源证据 | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) | N/A | [📝 View Example](../examples/rag/sdk_chunk_eval.py) |
+
 ### Pretrain Text Quality Assessment Metrics
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
 | `LLMCodeCompare` | LLMCodeCompare | Compares the effectiveness of two tools in extracting code blocks from HTML to Markdown format by evaluating recognit... | Internal Implementation | N/A | N/A |
-| `LLMCustomMetric` | User-defined custom metric | Configurable LLM judge that reads `custom_metric.metric`, `description`, `criteria`, and `input_fields` from evaluator config, then returns `QUALITY_GOOD` or `QUALITY_BAD.<metric>` | Internal Implementation | N/A | [📝 View Example](../examples/custom/llm_custom_metric_config.json) |
 | `LLMDatamanAssessment` | LLMDatamanAssessment | Evaluates pre-training data quality using the DataMan methodology (14 standards, 15 domains). Assigns a score (0/1), ... | [DataMan: Data Manager for Pre-training Large Language Models](https://arxiv.org/abs/2502.19363) (Peng et al., 2025) | N/A | N/A |
 | `LLMHtmlExtractCompareV2` | LLMHtmlExtractCompareV2 | Compares two HTML main-content extraction tools by computing text diffs and using LLM to judge which preserves more c... | Internal Implementation | N/A | N/A |
 | `LLMHtmlExtractCompareV3` | LLMHtmlExtractCompareV3 | Compares two HTML extraction tools using LLM pretraining quality dimensions (completeness, effectiveness, similarity,... | Internal Implementation | N/A | N/A |
@@ -62,7 +61,7 @@ This document provides comprehensive information about all quality metrics used 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
 | `QUALITY_BAD_COMPLETENESS` | RuleLineEndWithEllipsis, RuleLineEndWithTerminal, RuleSentenceNumber, RuleWordNumber | Checks whether the ratio of lines ending with ellipsis is below threshold; Checks whether the ratio of lines ending w... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
-| `QUALITY_BAD_EFFECTIVENESS` | RuleDoi, RuleIsbn, RuleAbnormalChar, RuleAbnormalHtml, RuleAlphaWords, RuleAudioDataFormat, RuleCharNumber, RuleColonEnd, RuleContentNull, RuleContentShort, RuleContentShortMultiLan, RuleEnterAndSpace, RuleEnterMore, RuleEnterRatioMore, RuleHtmlEntity, RuleHtmlTag, RuleInvisibleChar, RuleImageDataFormat, RuleLatexSpecialChar, RuleLineJavascriptCount, RuleLoremIpsum, RuleMeanWordLength, RuleNlpDataFormat, RuleSftDataFormat, RuleSpaceMore, RuleSpecialCharacter, RuleStopWord, RuleSymbolWordRatio, RuleVedioDataFormat, RuleOnlyUrl, RuleDictConsistency | Check whether the string is in the correct format of the doi; Check whether the string is in the correct format of th... | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleAbnormalChar, RuleAbnormalHtml, RuleAlphaWords, RuleAudioDataFormat, RuleCharNumber, RuleColonEnd, RuleContentNull, RuleContentShort, RuleContentShortMultiLan, RuleEnterAndSpace, RuleEnterMore, RuleEnterRatioMore, RuleHtmlEntity, RuleHtmlTag, RuleInvisibleChar, RuleImageDataFormat, RuleLatexSpecialChar, RuleLineJavascriptCount, RuleLoremIpsum, RuleMeanWordLength, RuleNlpDataFormat, RuleSftDataFormat, RuleSpaceMore, RuleSpecialCharacter, RuleStopWord, RuleSymbolWordRatio, RuleVedioDataFormat, RuleOnlyUrl, RuleDictConsistency, RuleDoi, RuleIsbn | Detects garbled text and anti-crawling characters by combining special character and invisible character detection; D... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
 | `QUALITY_BAD_FLUENCY` | RuleAbnormalNumber, RuleCharSplit, RuleNoPunc, RuleWordSplit, RuleWordStuck | Checks PDF content for abnormal book page or index numbers that disrupt text flow; Checks PDF content for abnormal ch... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
 | `QUALITY_BAD_RELEVANCE` | RuleHeadWordAr, RuleHeadWordCs, RuleHeadWordHu, RuleHeadWordKo, RuleHeadWordRu, RuleHeadWordSr, RuleHeadWordTh, RuleHeadWordVi, RulePatternSearch, RuleWatermark | Checks whether Arabic content contains irrelevant tail source information; Checks whether Czech content contains irre... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
 | `QUALITY_BAD_SECURITY` | RuleIDCard, RuleUnsafeWords, RulePIIDetection | Checks whether content contains ID card information; Checks whether content contains unsafe words; Detects Personal I... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
@@ -109,6 +108,12 @@ This document provides comprehensive information about all quality metrics used 
 | `LLMMinerURecognizeQuality` | LLMMinerURecognizeQuality | Evaluate the quality of mineru recognize | Internal Implementation | [📊 See Results](error_category and error_label) | N/A |
 | `VLMDocumentParsingOCRTrain` | VLMDocumentParsingOCRTrain | Evaluate the quality of mineru recognize | Internal Implementation | [📊 See Results](error_category and error_label) | N/A |
 
+### RAG Retrieved Evidence Chunk Quality Metrics
+
+| Type | Metric | Description | Paper Source | Evaluation Results | Examples |
+|------|--------|-------------|--------------|-------------------|----------|
+| `LLMChunkQuality` | LLMChunkQuality | Assesses retrieved citation chunks referenced by LLM answers, detecting start-boundary truncation and duplicated lead... | Internal Implementation | N/A | [📝 View Example](../examples/rag/sdk_chunk_eval.py) |
+
 ### Resume Quality Assessment Metrics
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
@@ -153,3 +158,5 @@ This document provides comprehensive information about all quality metrics used 
 |------|--------|-------------|--------------|-------------------|----------|
 | `AgentFactCheck` | AgentFactCheck | Agent-based hallucination detection with autonomous web search | Internal Implementation | N/A | N/A |
 | `ArticleFactChecker` | ArticleFactChecker | Article-level fact checking with autonomous claims extraction and verification | Internal Implementation | N/A | N/A |
+| `LLMCustomMetric` | LLMCustomMetric | Unified metric for user customization | Internal Implementation | N/A | N/A |
+

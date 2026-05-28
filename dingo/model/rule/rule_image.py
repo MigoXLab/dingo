@@ -15,6 +15,7 @@ from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
+from dingo.utils.image_loader import ImageLoader
 
 
 @Model.rule_register("QUALITY_BAD_IMG_EFFECTIVENESS", ["img"])
@@ -39,10 +40,7 @@ class RuleImageValid(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
-        if isinstance(input_data.image[0], str):
-            img = Image.open(input_data.image[0])
-        else:
-            img = input_data.image[0]
+        img = ImageLoader.load_pil(input_data.image[0])
         img_new = img.convert("RGB")
         img_np = np.asarray(img_new)
         if np.all(img_np == (255, 255, 255)) or np.all(img_np == (0, 0, 0)):
@@ -76,10 +74,7 @@ class RuleImageSizeValid(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
-        if isinstance(input_data.image[0], str):
-            img = Image.open(input_data.image[0])
-        else:
-            img = input_data.image[0]
+        img = ImageLoader.load_pil(input_data.image[0])
         width, height = img.size
         aspect_ratio = width / height
         if aspect_ratio > 4 or aspect_ratio < 0.25:
@@ -119,10 +114,7 @@ class RuleImageQuality(BaseRule):
         import torch
 
         res = EvalDetail(metric=cls.__name__)
-        if isinstance(input_data.image[0], str):
-            img = Image.open(input_data.image[0])
-        else:
-            img = input_data.image[0]
+        img = ImageLoader.load_pil(input_data.image[0])
         device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
@@ -140,7 +132,12 @@ class RuleImageQuality(BaseRule):
 
 @Model.rule_register("QUALITY_BAD_IMG_SIMILARITY", [])
 class RuleImageRepeat(BaseRule):
-    """Check for duplicate images using PHash and CNN methods."""
+    """Check for duplicate images using PHash and CNN methods.
+
+    NOTE: This is a directory-level evaluator. Unlike other image evaluators,
+    it takes a directory path via the ``content`` field (not ``image``).
+    The directory is scanned for duplicate images using PHash and CNN.
+    """
 
     # Metadata for documentation generation
     _metric_info = {
@@ -227,10 +224,7 @@ class RuleImageTextSimilarity(BaseRule):
         res = EvalDetail(metric=cls.__name__)
         if not input_data.image or not input_data.content:
             return res
-        if isinstance(input_data.image[0], str):
-            img = Image.open(input_data.image[0])
-        else:
-            img = input_data.image[0]
+        img = ImageLoader.load_pil(input_data.image[0])
         tokenized_texts = word_tokenize(input_data.content)
         if cls.dynamic_config.refer_path is None:
             similar_tool_path = download_similar_tool()
@@ -265,16 +259,21 @@ class RuleImageArtimuse(BaseRule):
         "evaluation_results": ""
     }
 
-    _required_fields = [RequiredField.CONTENT]
+    _required_fields = [RequiredField.IMAGE]
     dynamic_config = EvaluatorRuleArgs(threshold=6, refer_path=['https://artimuse.intern-ai.org.cn/'])
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         try:
+            img_url = input_data.image[0]
+            if not isinstance(img_url, str) or not img_url.startswith(("http://", "https://")):
+                raise ValueError(
+                    f"RuleImageArtimuse requires an HTTP/HTTPS image URL, got: {type(img_url).__name__}"
+                )
             response_create_task = requests.post(
                 cls.dynamic_config.refer_path[0] + 'api/v1/task/create_task',
                 json={
-                    "img_url": input_data.content,
+                    "img_url": img_url,
                     "style": 1
                 },
                 headers={
@@ -357,7 +356,7 @@ class RuleImageLabelOverlap(BaseRule):
 
             # 2. 解析输入数据
             content = input_data.content
-            image_path = input_data.image[0] if (input_data.image and len(input_data.image) > 0) else None
+            image_source = input_data.image[0] if (input_data.image and len(input_data.image) > 0) else None
 
             # 3. 解析标注内容
             if isinstance(content, str):
@@ -385,11 +384,11 @@ class RuleImageLabelOverlap(BaseRule):
                 res.label = ["LabelOverlap_Fail.EmptyAnnotations"]
                 res.reason = ["annotations为空"]
                 return res
-            if not image_path or not os.path.exists(image_path):
+            if not image_source:
                 res = EvalDetail(metric=cls.__name__)
                 res.status = False
                 res.label = ["LabelOverlap_Fail.InvalidImagePath"]
-                res.reason = [f"图片路径无效：{image_path}"]
+                res.reason = [f"图片路径无效：{image_source}"]
                 return res
 
             # 5. 提取边界框并计算重叠
@@ -492,7 +491,7 @@ class RuleImageLabelOverlap(BaseRule):
                 logging.info(f"开始保存图像到: {vis_path}")
 
                 # 生成可视化图像
-                img = Image.open(image_path).convert("RGB")
+                img = ImageLoader.load_pil(image_source).convert("RGB")
                 draw = ImageDraw.Draw(img)
 
                 # 绘制边界框
@@ -627,14 +626,14 @@ class RuleImageLabelVisualization(BaseRule):
             # --------------------------
             # 提取核心数据
             content = input_data.content  # 标注数据（str或dict）
-            image_path = input_data.image[0] if (input_data.image and len(input_data.image) > 0) else None
+            image_source = input_data.image[0] if (input_data.image and len(input_data.image) > 0) else None
 
-            # 验证图片路径有效性
-            if not image_path or not os.path.exists(image_path):
+            # 验证图片源有效性
+            if not image_source:
                 res = EvalDetail(metric=cls.__name__)
                 res.status = False
                 res.label = ["LabelVisualization_Fail.InvalidImagePath"]
-                res.reason = [f"图片路径无效/不存在：{image_path}"]
+                res.reason = [f"图片路径无效/不存在：{image_source}"]
                 return res
 
             # 解析标注内容
@@ -687,7 +686,7 @@ class RuleImageLabelVisualization(BaseRule):
             # 4. 绘制标注并保存可视化图像
             # --------------------------
             # 打开原始图像
-            img = Image.open(image_path).convert("RGB")
+            img = ImageLoader.load_pil(image_source).convert("RGB")
             draw = ImageDraw.Draw(img)
 
             # 调用内部函数绘制标注
@@ -698,7 +697,7 @@ class RuleImageLabelVisualization(BaseRule):
                 output_dir = Path(cls.dynamic_config.refer_path[0]).resolve()
                 output_dir.mkdir(parents=True, exist_ok=True)
                 # 生成文件名
-                img_basename = Path(image_path).name
+                img_basename = Path(str(image_source)).name
                 vis_filename = f"visual_{img_basename}"
                 vis_path = str(output_dir / vis_filename)
             except Exception as path_error:
@@ -707,7 +706,7 @@ class RuleImageLabelVisualization(BaseRule):
                 import tempfile
                 output_dir = Path(tempfile.gettempdir()) / "dingo_visualization"
                 output_dir.mkdir(parents=True, exist_ok=True)
-                img_basename = Path(image_path).name
+                img_basename = Path(str(image_source)).name
                 vis_filename = f"visual_{img_basename}"
                 vis_path = str(output_dir / vis_filename)
 
@@ -740,8 +739,8 @@ class RuleImageLabelVisualization(BaseRule):
 if __name__ == "__main__":
     data = Data(
         data_id='1',
-        content="https://openxlab.oss-cn-shanghai.aliyuncs.com/artimuse/upload/ef39eef6-2b40-4ea3-8285-934684734298-"
-                "stsupload-1753254621827-dog.jpg"
+        image=["https://openxlab.oss-cn-shanghai.aliyuncs.com/artimuse/upload/ef39eef6-2b40-4ea3-8285-934684734298-"
+               "stsupload-1753254621827-dog.jpg"]
     )
     res = RuleImageArtimuse.eval(data)
     print(res)

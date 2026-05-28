@@ -1,6 +1,4 @@
-import base64
 import json
-import os
 from typing import List
 
 from dingo.io.input import Data, RequiredField
@@ -8,6 +6,7 @@ from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
+from dingo.utils.image_loader import ImageLoader
 
 
 @Model.llm_register("VLMLayoutQuality")
@@ -120,58 +119,8 @@ class VLMLayoutQuality(BaseOpenAI):
         """
 
     @classmethod
-    def _encode_image(cls, image_path: str) -> str:
-        """
-        Encode a local image file to base64 data URL format.
-        If the input is already a URL, return it as is.
-
-        This method follows Python's standard path resolution:
-        - Relative paths are resolved relative to the current working directory
-        - Absolute paths are used as-is
-        - URLs (http://, https://, data:) are passed through unchanged
-
-        Args:
-            image_path: Local file path (absolute or relative) or URL
-
-        Returns:
-            Base64 data URL for local files, or original URL for web resources
-
-        Raises:
-            FileNotFoundError: If a local file path does not exist
-            RuntimeError: If the file cannot be read
-        """
-        # Pass through URLs unchanged
-        if image_path.startswith('data:'):
-            return image_path
-
-        if image_path.startswith(("http://", "https://", 'data:')):
-            return image_path
-
-        # Standard file path handling (relative or absolute)
-        if not os.path.isfile(image_path):
-            raise FileNotFoundError(
-                f"Image file not found: '{image_path}'\n"
-                f"Current working directory: {os.getcwd()}\n"
-                f"Absolute path would be: {os.path.abspath(image_path)}\n"
-                f"Ensure the path is correct relative to your current working directory."
-            )
-
-        try:
-            with open(image_path, "rb") as image_file:
-                base64_image = base64.b64encode(image_file.read()).decode('utf-8')
-                # Determine MIME type from file extension
-                ext = os.path.splitext(image_path)[1].lower()
-                mime_type = 'image/jpeg' if ext in ['.jpg', '.jpeg'] else f'image/{ext[1:]}'
-                return f"data:{mime_type};base64,{base64_image}"
-        except Exception as e:
-            raise RuntimeError(
-                f"Failed to read image file '{image_path}': {e}"
-            )
-
-    @classmethod
     def build_messages(cls, input_data: Data) -> List:
-        if isinstance(input_data.image[0], str):
-            image_base64 = cls._encode_image(input_data.image[0])
+        image_base64 = ImageLoader.encode_for_api(input_data.image[0])
 
         bboxs = eval(input_data.content)
 

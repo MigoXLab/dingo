@@ -22,7 +22,7 @@ def classify_QR():
         },
         "evaluator": [
             {
-                "fields": {"id": "id", "content": "content"},
+                "fields": {"id": "id", "image": "image"},
                 "evals": [
                     {"name": "LLMClassifyQR", "config": {"key": "", "api_url": ""}}
                 ]

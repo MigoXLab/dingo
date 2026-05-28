@@ -21,7 +21,7 @@ if __name__ == '__main__':
         },
         "evaluator": [
             {
-                "fields": {"data_id": "id", "content": "content"},
+                "fields": {"data_id": "id", "image": "image"},
                 "evals": [
                     {"name": "RuleImageArtimuse"}
                 ]

@@ -1,7 +1,7 @@
-{"id": "1", "url_1": "../../test/data/img_builtin/origin.jpg", "url_2": "../../test/data/img_builtin/new1.jpeg"}
-{"id": "2", "url_1": "../../test/data/img_builtin/origin.jpg", "url_2": "../../test/data/img_builtin/new2.jpeg"}
-{"id": "3", "url_1": "../../test/data/img_builtin/origin.jpg", "url_2": "../../test/data/img_builtin/new3.jpeg"}
-{"id": "4", "url_1": "../../test/data/img_builtin/origin.jpg", "url_2": "../../test/data/img_builtin/new4.jpeg"}
-{"id": "5", "url_1": "../../test/data/img_builtin/origin.jpg", "url_2": "../../test/data/img_builtin/new5.jpeg"}
-{"id": "6", "url_1": "../../test/data/img_builtin/origin.jpg", "url_2": "../../test/data/img_builtin/new6.jpeg"}
-{"id": "7", "url_1": "../../test/data/img_builtin/origin.jpg", "url_2": "../../test/data/img_builtin/new7.jpeg"}
+{"id": "1", "image": ["../../test/data/img_builtin/origin.jpg", "../../test/data/img_builtin/new1.jpeg"]}
+{"id": "2", "image": ["../../test/data/img_builtin/origin.jpg", "../../test/data/img_builtin/new2.jpeg"]}
+{"id": "3", "image": ["../../test/data/img_builtin/origin.jpg", "../../test/data/img_builtin/new3.jpeg"]}
+{"id": "4", "image": ["../../test/data/img_builtin/origin.jpg", "../../test/data/img_builtin/new4.jpeg"]}
+{"id": "5", "image": ["../../test/data/img_builtin/origin.jpg", "../../test/data/img_builtin/new5.jpeg"]}
+{"id": "6", "image": ["../../test/data/img_builtin/origin.jpg", "../../test/data/img_builtin/new6.jpeg"]}
+{"id": "7", "image": ["../../test/data/img_builtin/origin.jpg", "../../test/data/img_builtin/new7.jpeg"]}

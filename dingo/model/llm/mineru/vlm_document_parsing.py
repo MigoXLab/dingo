@@ -1,4 +1,3 @@
-import base64
 import json
 from typing import List
 
@@ -7,6 +6,7 @@ from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
+from dingo.utils.image_loader import ImageLoader
 
 
 @Model.llm_register("VLMDocumentParsing")
@@ -174,18 +174,14 @@ class VLMDocumentParsing(BaseOpenAI):
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
-        if isinstance(input_data.image[0], str):
-            with open(input_data.image[0], "rb") as image_file:
-                base64_image = base64.b64encode(image_file.read()).decode('utf-8')
-        else:
-            base64_image = input_data.image[0]
+        image_url = ImageLoader.encode_for_api(input_data.image[0])
 
         messages = [
             {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": cls.prompt},
-                    {"type": "image_url", "image_url": {"url": base64_image}},
+                    {"type": "image_url", "image_url": {"url": image_url}},
                     {"type": "text", "text": f"Markdown:\n{input_data.content}"}
                 ]
             }

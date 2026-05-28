@@ -8,6 +8,7 @@ from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.response.response_class import ResponseNameReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
+from dingo.utils.image_loader import ImageLoader
 
 
 @Model.llm_register("LLMClassifyQR")
@@ -20,7 +21,7 @@ class LLMClassifyQR(BaseOpenAI):
         "evaluation_results": ""
     }
 
-    _required_fields = [RequiredField.CONTENT]
+    _required_fields = [RequiredField.IMAGE]
     prompt = """
     'Classify the image into one of the following categories: "CAPTCHA", "QR code", or "Normal image". '
     'Return the type as the image category (CAPTCHA or QR code or Normal image) and the reason as the specific type of CAPTCHA or QR code. '
@@ -33,12 +34,13 @@ class LLMClassifyQR(BaseOpenAI):
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
+        image_url = ImageLoader.encode_for_api(input_data.image[0])
         messages = [
             {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": cls.prompt},
-                    {"type": "image_url", "image_url": {"url": input_data.content}},
+                    {"type": "image_url", "image_url": {"url": image_url}},
                 ],
             }
         ]

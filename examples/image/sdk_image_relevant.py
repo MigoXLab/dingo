@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dingo.config import InputArgs
@@ -5,6 +6,10 @@ from dingo.exec import Executor
 
 # 获取项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+OPENAI_MODEL = os.getenv("OPENAI_MODEL")
+OPENAI_URL = os.getenv("OPENAI_BASE_URL")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 
 def image_relevant():
@@ -23,9 +28,9 @@ def image_relevant():
         },
         "evaluator": [
             {
-                "fields": {"id": "id", "prompt": "url_1", "content": "url_2"},
+                "fields": {"id": "id", "image": "image"},
                 "evals": [
-                    {"name": "VLMImageRelevant", "config": {"model": "", "key": "", "api_url": ""}},
+                    {"name": "VLMImageRelevant", "config": {"model": OPENAI_MODEL, "key": OPENAI_KEY, "api_url": OPENAI_URL}},
                 ]
             }
         ]

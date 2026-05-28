@@ -36,7 +36,8 @@ def _mime_from_ext(path: str) -> str:
 def _download_url(url: str, timeout: int = 30) -> bytes:
     import requests
 
-    resp = requests.get(url, timeout=timeout, stream=True)
+    headers = {"User-Agent": "Dingo(https://github.com/MigoXLab/dingo)"}
+    resp = requests.get(url, timeout=timeout, stream=True, headers=headers)
     resp.raise_for_status()
     return resp.content
 

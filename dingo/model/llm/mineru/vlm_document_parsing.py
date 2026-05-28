@@ -174,7 +174,7 @@ class VLMDocumentParsing(BaseOpenAI):
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
-        image_url = ImageLoader.encode_for_api(input_data.image[0])
+        image_url = ImageLoader.encode_for_api(input_data.image)
 
         messages = [
             {

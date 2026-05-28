@@ -120,7 +120,7 @@ class VLMLayoutQuality(BaseOpenAI):
 
     @classmethod
     def build_messages(cls, input_data: Data) -> List:
-        image_base64 = ImageLoader.encode_for_api(input_data.image[0])
+        image_base64 = ImageLoader.encode_for_api(input_data.image)
 
         bboxs = eval(input_data.content)
 

@@ -1,9 +1,19 @@
 import base64
 import io
 import os
-from typing import Union
+from typing import List, Union
 
 from PIL import Image
+
+
+def _unwrap(source):
+    """If source is a list/tuple, return the first element."""
+    if isinstance(source, (list, tuple)):
+        if not source:
+            raise ValueError("Empty image list provided")
+        return source[0]
+    return source
+
 
 _MIME_MAP = {
     ".jpg": "image/jpeg",
@@ -39,18 +49,23 @@ class ImageLoader:
       - Local file path (absolute or relative to CWD)
       - HTTP/HTTPS URL
       - Base64 data URL (``data:image/...;base64,...``)
+
+    If a list is passed, the first element is used automatically.
     """
 
     @staticmethod
-    def load_pil(source: Union[str, Image.Image]) -> Image.Image:
+    def load_pil(source: Union[str, List[str], Image.Image]) -> Image.Image:
         """Load an image as a PIL Image (for Rule evaluators).
 
         Args:
-            source: Local path, HTTP URL, base64 data URL, or PIL Image.
+            source: Local path, HTTP URL, base64 data URL, PIL Image,
+                    or a list containing any of the above.
 
         Returns:
             PIL.Image.Image
         """
+        source = _unwrap(source)
+
         if isinstance(source, Image.Image):
             return source
 
@@ -79,17 +94,20 @@ class ImageLoader:
         return Image.open(source)
 
     @staticmethod
-    def encode_for_api(source: Union[str, Image.Image]) -> str:
+    def encode_for_api(source: Union[str, List[str], Image.Image]) -> str:
         """Encode an image for OpenAI-compatible vision APIs.
 
         Returns a string suitable for ``{"type": "image_url", "image_url": {"url": ...}}``.
 
         Args:
-            source: Local path, HTTP URL, base64 data URL, or PIL Image.
+            source: Local path, HTTP URL, base64 data URL, PIL Image,
+                    or a list containing any of the above.
 
         Returns:
             URL string or ``data:image/...;base64,...`` data URL.
         """
+        source = _unwrap(source)
+
         if isinstance(source, Image.Image):
             buf = io.BytesIO()
             fmt = source.format or "PNG"

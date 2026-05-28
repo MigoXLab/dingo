@@ -40,7 +40,7 @@ class RuleImageValid(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
-        img = ImageLoader.load_pil(input_data.image[0])
+        img = ImageLoader.load_pil(input_data.image)
         img_new = img.convert("RGB")
         img_np = np.asarray(img_new)
         if np.all(img_np == (255, 255, 255)) or np.all(img_np == (0, 0, 0)):
@@ -74,7 +74,7 @@ class RuleImageSizeValid(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
-        img = ImageLoader.load_pil(input_data.image[0])
+        img = ImageLoader.load_pil(input_data.image)
         width, height = img.size
         aspect_ratio = width / height
         if aspect_ratio > 4 or aspect_ratio < 0.25:
@@ -114,7 +114,7 @@ class RuleImageQuality(BaseRule):
         import torch
 
         res = EvalDetail(metric=cls.__name__)
-        img = ImageLoader.load_pil(input_data.image[0])
+        img = ImageLoader.load_pil(input_data.image)
         device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
@@ -224,7 +224,7 @@ class RuleImageTextSimilarity(BaseRule):
         res = EvalDetail(metric=cls.__name__)
         if not input_data.image or not input_data.content:
             return res
-        img = ImageLoader.load_pil(input_data.image[0])
+        img = ImageLoader.load_pil(input_data.image)
         tokenized_texts = word_tokenize(input_data.content)
         if cls.dynamic_config.refer_path is None:
             similar_tool_path = download_similar_tool()
@@ -265,7 +265,9 @@ class RuleImageArtimuse(BaseRule):
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         try:
-            img_url = input_data.image[0]
+            img_url = input_data.image
+            if isinstance(img_url, (list, tuple)):
+                img_url = img_url[0] if img_url else None
             if not isinstance(img_url, str) or not img_url.startswith(("http://", "https://")):
                 raise ValueError(
                     f"RuleImageArtimuse requires an HTTP/HTTPS image URL, got: {type(img_url).__name__}"
@@ -356,7 +358,11 @@ class RuleImageLabelOverlap(BaseRule):
 
             # 2. 解析输入数据
             content = input_data.content
-            image_source = input_data.image[0] if (input_data.image and len(input_data.image) > 0) else None
+            raw_image = input_data.image
+            if isinstance(raw_image, (list, tuple)):
+                image_source = raw_image[0] if raw_image else None
+            else:
+                image_source = raw_image if raw_image else None
 
             # 3. 解析标注内容
             if isinstance(content, str):
@@ -626,7 +632,11 @@ class RuleImageLabelVisualization(BaseRule):
             # --------------------------
             # 提取核心数据
             content = input_data.content  # 标注数据（str或dict）
-            image_source = input_data.image[0] if (input_data.image and len(input_data.image) > 0) else None
+            raw_image = input_data.image
+            if isinstance(raw_image, (list, tuple)):
+                image_source = raw_image[0] if raw_image else None
+            else:
+                image_source = raw_image if raw_image else None
 
             # 验证图片源有效性
             if not image_source:

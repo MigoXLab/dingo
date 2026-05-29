@@ -43,7 +43,7 @@ dingo/
 │   │   ├── datasource/      ← LocalDataSource, SQLDataSource, S3DataSource, HFDataSource
 │   │   ├── dataset/         ← Dataset implementations per source
 │   │   ├── searcher.py      ← Searcher protocol + SearchResult + registry (mock, ES)
-│   │   └── converter/       ← Format converters (JSON, JSONL, CSV, Parquet, etc.)
+│   │   └── converter/       ← Format converters (JSON, JSONL, CSV, Parquet, MinerU, etc.)
 │   ├── model/
 │   │   ├── model.py         ← Model registry (rule_register, llm_register)
 │   │   ├── rule/            ← Rule-based evaluators (80+ built-in)
@@ -141,6 +141,21 @@ input_data = {
     ]
 }
 ```
+
+### Supported Data Formats
+
+| Format | `dataset.format` | Description |
+|--------|-------------------|-------------|
+| JSON | `json` | Top-level array, each element is one sample |
+| JSONL | `jsonl` | One JSON object per line |
+| CSV | `csv` | Comma-separated values with header |
+| Parquet | `parquet` | Apache Parquet columnar format |
+| Plain text | `plaintext` | One line per sample, mapped to `content` |
+| List JSON | `listjson` | Top-level `{key: [...]}` structure |
+| MinerU V1 | `mineru` | MinerU `content_list.json` (flat block array) |
+| MinerU V2 | `mineru_v2` | MinerU `content_list_v2.json` (pages × blocks) |
+
+MinerU formats automatically flatten blocks into `Data` objects, preserving all original fields (type, bbox, page_idx, etc.) via Pydantic `extra="allow"`. Use `dataset.mineru_config.include_types` to filter by block type.
 
 ### Execution Modes
 

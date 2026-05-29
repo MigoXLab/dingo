@@ -1,0 +1,74 @@
+[
+    {
+        "type": "text",
+        "text": "The response of flow duration curves to afforestation",
+        "text_level": 1,
+        "bbox": [62, 480, 946, 904],
+        "page_idx": 0
+    },
+    {
+        "type": "image",
+        "img_path": "images/fig1.jpg",
+        "image_caption": ["Fig. 1. Annual flow duration curves of daily flows from Pine Creek."],
+        "image_footnote": [],
+        "bbox": [62, 480, 946, 904],
+        "page_idx": 1
+    },
+    {
+        "type": "equation",
+        "img_path": "images/eq1.jpg",
+        "text": "$$\nQ_{\\%} = f(P) + g(T)\n$$",
+        "text_format": "latex",
+        "bbox": [62, 480, 946, 904],
+        "page_idx": 2
+    },
+    {
+        "type": "table",
+        "img_path": "images/table2.jpg",
+        "table_caption": ["Table 2 Significance of the rainfall and time terms"],
+        "table_footnote": ["P indicates rainfall term significance at 5% level."],
+        "table_body": "<html><body><table><tr><td>Site</td><td>10</td><td>20</td></tr><tr><td>Traralgon</td><td>P</td><td>P,*</td></tr></table></body></html>",
+        "bbox": [62, 480, 946, 904],
+        "page_idx": 5
+    },
+    {
+        "type": "code",
+        "sub_type": "algorithm",
+        "code_caption": ["Algorithm 1 Modules for MCTSteg"],
+        "code_body": "1: function GETCOORDINATE(d)\n2:  x <- d / l\n3: return (x, y)\n4: end function",
+        "bbox": [510, 87, 881, 740],
+        "page_idx": 0
+    },
+    {
+        "type": "list",
+        "sub_type": "text",
+        "list_items": [
+            "H.1 Introduction",
+            "H.2 Example: Divide by Zero without Exception Handling",
+            "H.3 Example: Divide by Zero with Exception Handling"
+        ],
+        "bbox": [174, 155, 818, 333],
+        "page_idx": 0
+    },
+    {
+        "type": "header",
+        "text": "Journal of Hydrology 310 (2005) 253-265",
+        "bbox": [363, 164, 623, 177],
+        "page_idx": 0
+    },
+    {
+        "type": "page_footnote",
+        "text": "* Corresponding author.",
+        "bbox": [71, 815, 915, 841],
+        "page_idx": 0
+    },
+    {
+        "type": "chart",
+        "img_path": "images/chart1.jpg",
+        "content": "| Year | Value |\n|------|-------|\n| 2020 | 100 |",
+        "chart_caption": ["Chart 1. Annual trends"],
+        "chart_footnote": [],
+        "bbox": [100, 200, 500, 600],
+        "page_idx": 3
+    }
+]

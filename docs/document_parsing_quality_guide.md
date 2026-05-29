@@ -155,6 +155,39 @@ img：图片路径
 参考: `test/data/test_img_md.jsonl`
 
 
+## MinerU 原生格式支持
+
+Dingo 原生支持 MinerU 的 `content_list.json`（V1）和 `content_list_v2.json`（V2）格式，无需预处理即可直接评估文档解析结果。
+
+### 使用方式
+
+```python
+input_data = {
+    "input_path": "/path/to/content_list.json",
+    "dataset": {
+        "source": "local",
+        "format": "mineru",  # 或 "mineru_v2"
+        "mineru_config": {
+            "include_types": ["text", "table", "image"]  # 可选：只评估特定 block 类型
+        }
+    },
+    "evaluator": [
+        {
+            "fields": {"content": "content"},
+            "evals": [
+                {"name": "RuleColonEnd"},
+                {"name": "RuleAbnormalChar"}
+            ]
+        }
+    ]
+}
+```
+
+每个 MinerU block 会被转换为一条 `Data` 记录，`type`、`bbox`、`page_idx` 等字段自动保留。
+
+详细使用示例参考: `examples/document_parser/sdk_mineru_content_list.py`
+
 ## 参考资料
 
 1. [Dingo 文档](https://deepwiki.com/MigoXLab/dingo) - 完整的 API 文档和更多示例
+2. [MinerU 输出格式说明](https://opendatalab.github.io/MinerU/zh/reference/output_files/) - MinerU 官方输出格式文档

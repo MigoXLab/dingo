@@ -53,6 +53,10 @@ class DatasetFieldArgs(BaseModel):
     image: str = ''
 
 
+class DatasetMinerUArgs(BaseModel):
+    include_types: Optional[List[str]] = None  # 只保留指定的 block 类型，None 表示全部保留
+
+
 class DatasetArgs(BaseModel):
     source: str = 'hugging_face'
     format: str = 'json'
@@ -64,6 +68,7 @@ class DatasetArgs(BaseModel):
     excel_config: DatasetExcelArgs = DatasetExcelArgs()
     csv_config: DatasetCsvArgs = DatasetCsvArgs()
     parquet_config: DatasetParquetArgs = DatasetParquetArgs()
+    mineru_config: DatasetMinerUArgs = DatasetMinerUArgs()
 
 
 class ExecutorResultSaveArgs(BaseModel):

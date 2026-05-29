@@ -395,7 +395,7 @@ class LocalDataSource(DataSource):
         elif os.path.exists(self.path) and os.path.isdir(self.path):
             self._find_all_files(self.path, f_list)
 
-        by_line = self.input_args.dataset.format not in ["json", "listjson"]
+        by_line = self.input_args.dataset.format not in ["json", "listjson", "mineru", "mineru_v2"]
 
         for f in f_list:
             # Check if file is CSV

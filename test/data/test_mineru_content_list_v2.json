@@ -1,0 +1,92 @@
+[
+    [
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {"type": "text", "content": "1 Introduction"}
+                ],
+                "level": 1
+            },
+            "bbox": [83, 121, 917, 156]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {"type": "text", "content": "This paper examines "},
+                    {"type": "equation_inline", "content": "A = \\pi r^2"},
+                    {"type": "text", "content": " in detail."}
+                ]
+            },
+            "bbox": [83, 160, 917, 200]
+        },
+        {
+            "type": "page_footnote",
+            "content": {
+                "page_footnote_content": [
+                    {"type": "text", "content": "* Corresponding author"}
+                ]
+            },
+            "bbox": [71, 815, 915, 841]
+        }
+    ],
+    [
+        {
+            "type": "equation_interline",
+            "content": {
+                "math_content": "Q_{\\%} = f(P) + g(T)",
+                "math_type": "latex"
+            },
+            "bbox": [100, 200, 500, 250]
+        },
+        {
+            "type": "image",
+            "content": {
+                "img_path": "images/fig1.jpg",
+                "image_caption": ["Fig. 1. Flow duration curves."],
+                "image_footnote": []
+            },
+            "bbox": [62, 300, 946, 600]
+        },
+        {
+            "type": "table",
+            "content": {
+                "img_path": "images/table1.jpg",
+                "table_body": "<html><body><table><tr><td>A</td><td>B</td></tr></table></body></html>",
+                "table_caption": ["Table 1. Results"],
+                "table_footnote": []
+            },
+            "bbox": [62, 650, 946, 900]
+        }
+    ],
+    [
+        {
+            "type": "code",
+            "content": {
+                "code_content": "def hello():\n    print('hello')",
+                "code_language": "python"
+            },
+            "bbox": [100, 100, 500, 300]
+        },
+        {
+            "type": "list",
+            "content": {
+                "list_items": ["Item A", "Item B", "Item C"]
+            },
+            "bbox": [100, 350, 500, 500],
+            "sub_type": "text"
+        },
+        {
+            "type": "chart",
+            "content": {
+                "img_path": "images/chart1.jpg",
+                "content": "| X | Y |\n|---|---|\n| 1 | 2 |",
+                "chart_caption": ["Chart 1"],
+                "chart_footnote": []
+            },
+            "bbox": [100, 550, 500, 800],
+            "sub_type": "bar_chart"
+        }
+    ]
+]

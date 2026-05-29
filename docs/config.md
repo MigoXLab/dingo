@@ -30,9 +30,26 @@
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
 | source | str | "hugging_face" | Yes | 数据源类型，可选值：['hugging_face', 'local'] |
-| format | str | "json" | Yes | 数据格式，可选值：['json', 'jsonl', 'plaintext', 'listjson'] |
+| format | str | "json" | Yes | 数据格式，可选值：['json', 'jsonl', 'plaintext', 'listjson', 'csv', 'parquet', 'mineru', 'mineru_v2'] |
 | field | object | - | Yes | 字段映射配置 |
 | hf_config | object | - | No | HuggingFace 特定配置 |
+| mineru_config | object | - | No | MinerU 格式特定配置（仅 mineru / mineru_v2 格式使用） |
+
+#### DatasetMinerUConfig 配置 (dataset.mineru_config)
+
+MinerU 格式特定配置，用于过滤 block 类型：
+
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| include_types | list[str] | null | No | 只保留指定的 block 类型（如 `["text", "table", "image"]`），null 表示保留全部类型 |
+
+MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equation`, `code`, `list`, `header`, `page_footer`, `page_footnote`, `chart` 等。
+
+**格式说明：**
+- `mineru`：对应 MinerU 的 `content_list.json`，顶层为 block 数组
+- `mineru_v2`：对应 MinerU 的 `content_list_v2.json`，顶层为页面数组，每页包含 block 数组
+
+每个 block 会被转换为一条 `Data` 记录。block 的 `type`、`bbox`、`page_idx` 等原始字段会通过 Pydantic `extra="allow"` 保留在 Data 对象上。
 
 #### DatasetField 配置 (dataset.field)
 
@@ -205,6 +222,57 @@ config_dict = {
 config = InputArgs(**config_dict)
 run(config)
 ```
+
+## MinerU 文档解析数据评估
+
+Dingo 原生支持 MinerU 的输出格式（`content_list.json` 和 `content_list_v2.json`），可直接对文档解析结果进行质量评估。
+
+### MinerU V1 配置示例
+
+```json
+{
+  "input_path": "/path/to/content_list.json",
+  "dataset": {
+    "source": "local",
+    "format": "mineru"
+  },
+  "evaluator": [
+    {
+      "fields": {"content": "content"},
+      "evals": [
+        {"name": "RuleColonEnd"},
+        {"name": "RuleAbnormalChar"}
+      ]
+    }
+  ]
+}
+```
+
+### MinerU V2 配置示例（带类型过滤）
+
+```json
+{
+  "input_path": "/path/to/content_list_v2.json",
+  "dataset": {
+    "source": "local",
+    "format": "mineru_v2",
+    "mineru_config": {
+      "include_types": ["text", "title", "table"]
+    }
+  },
+  "evaluator": [
+    {
+      "fields": {"content": "content"},
+      "evals": [
+        {"name": "RuleContentNull"},
+        {"name": "RuleDocRepeat"}
+      ]
+    }
+  ]
+}
+```
+
+更多示例参考: `examples/document_parser/sdk_mineru_content_list.py`
 
 ## 多轮对话模式
 

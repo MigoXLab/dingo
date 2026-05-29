@@ -146,6 +146,24 @@ if __name__ == '__main__':
 参考: `test/data/test_document_OCR_recognize.jsonl`
 
 
+## MinerU 原生格式支持
+
+除了 JSONL 格式外，Dingo 还原生支持 MinerU 的 `content_list.json` 和 `content_list_v2.json` 格式。可直接将 MinerU 输出文件作为输入进行 OCR 质量评估，无需手动转换格式。
+
+配置方式：
+```python
+"dataset": {
+    "source": "local",
+    "format": "mineru",  # 或 "mineru_v2"
+    "mineru_config": {
+        "include_types": ["text", "table"]  # 可选：只评估特定类型
+    }
+}
+```
+
+详情参考: [配置文档](config.md#mineru-文档解析数据评估) 和 `examples/document_parser/sdk_mineru_content_list.py`
+
 ## 参考资料
 
 1. [Dingo 文档](https://deepwiki.com/MigoXLab/dingo) - 完整的 API 文档和更多示例
+2. [MinerU 输出格式说明](https://opendatalab.github.io/MinerU/zh/reference/output_files/) - MinerU 官方输出格式文档

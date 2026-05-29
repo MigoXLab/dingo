@@ -298,3 +298,41 @@ class TestIncludeTypesFilter:
         converter = converters["mineru_v2"].convertor(input_args)
         results = list(converter(v2_pages))
         assert len(results) == 0
+
+
+class TestV2NonDictContent:
+    """Edge cases where V2 block 'content' is null, string, or missing."""
+
+    @pytest.fixture
+    def converter(self):
+        input_args = InputArgs(
+            input_path="dummy.json",
+            dataset={"source": "local", "format": "mineru_v2"},
+            evaluator=[{"evals": []}],
+        )
+        return converters["mineru_v2"].convertor(input_args)
+
+    def test_content_is_none(self, converter):
+        pages = [[{"type": "paragraph", "content": None, "bbox": [0, 0, 100, 100]}]]
+        results = list(converter(pages))
+        assert len(results) == 1
+        assert results[0].content == ""
+        assert results[0].type == "paragraph"
+
+    def test_content_is_string(self, converter):
+        pages = [[{"type": "text", "content": "plain text block"}]]
+        results = list(converter(pages))
+        assert len(results) == 1
+        assert results[0].content == "plain text block"
+
+    def test_content_key_missing(self, converter):
+        pages = [[{"type": "unknown_type"}]]
+        results = list(converter(pages))
+        assert len(results) == 1
+        assert results[0].content == ""
+
+    def test_content_is_integer(self, converter):
+        pages = [[{"type": "foo", "content": 42}]]
+        results = list(converter(pages))
+        assert len(results) == 1
+        assert results[0].content == ""

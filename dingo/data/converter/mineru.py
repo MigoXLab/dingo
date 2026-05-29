@@ -122,7 +122,19 @@ class MinerUConverter(BaseConverter):
 def _map_block_v2(block: dict, page_idx: int, block_idx: int) -> dict:
     """Map a single content_list_v2.json block to a Data-compatible dict."""
     btype = block.get("type", "")
-    inner = block.get("content", {})
+    inner = block.get("content")
+
+    if not isinstance(inner, dict):
+        data_dict = {
+            "data_id": f"p{page_idx}-b{block_idx}",
+            "type": btype,
+            "page_idx": page_idx,
+            "content": inner if isinstance(inner, str) else "",
+            "raw_content": inner,
+        }
+        if "bbox" in block:
+            data_dict["bbox"] = block["bbox"]
+        return data_dict
 
     data_dict = {
         "data_id": f"p{page_idx}-b{block_idx}",

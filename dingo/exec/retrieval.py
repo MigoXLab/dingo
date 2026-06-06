@@ -50,6 +50,10 @@ class RetrievalExecutor:
                 "Please set executor.retrieval with backend, api_url, etc."
             )
         self.retrieval_args = input_args.executor.retrieval
+        self.summary = SummaryModel()
+
+    def get_summary(self):
+        return self.summary
 
     def execute(self) -> SummaryModel:
         task_names = [
@@ -154,6 +158,7 @@ class RetrievalExecutor:
         save_json(detailed, output_dir, "detailed_results.json")
 
         logger.info(f"Evaluation complete. Results saved to: {output_dir}")
+        self.summary = summary
         return summary
 
     def _extract_metrics(self, model_result) -> dict[str, float]:

@@ -14,6 +14,8 @@ PROJECT_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+mteb = pytest.importorskip("mteb", reason="mteb not installed (extras 'retrieval')")
+
 
 class TestRetrievalArgs:
     def test_default_values(self):

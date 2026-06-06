@@ -151,7 +151,7 @@ class TestCLIErrorHandling:
     def test_invalid_config_schema(self):
         """--json mode: valid JSON but invalid InputArgs produces JSON error with exit code 1."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"invalid_field_only": True}, f)
+            json.dump({"evaluator": "not_a_list"}, f)
             f.flush()
             try:
                 _, stderr, code = run_cli("eval", "--input", f.name, "--json", expect_exit=1)

@@ -88,7 +88,10 @@ def _load_builtin_backends():
     _BACKENDS_LOADED = True
     import importlib
 
-    for mod_name in ("dingo.retrieval.backends.agentic",):
+    for mod_name in (
+        "dingo.retrieval.backends.agentic",
+        "dingo.retrieval.backends.semantic_scholar",
+    ):
         try:
             importlib.import_module(mod_name)
         except ImportError:

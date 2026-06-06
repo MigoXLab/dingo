@@ -93,7 +93,7 @@ class RetrievalArgs(BaseModel):
     timeout: float = 120.0
     rate_limit: Optional[float] = None
     max_retries: int = 3
-    max_workers: int = 4
+    max_workers: int = 1
 
 
 class ExecutorArgs(BaseModel):

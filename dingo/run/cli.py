@@ -129,7 +129,7 @@ def parse_args():
     )
     ret_parser.add_argument(
         "--max-workers", type=int, default=1,
-        help="Number of concurrent search threads (default: 4)",
+        help="Number of concurrent search threads (default: 1)",
     )
     ret_parser.add_argument(
         "-o", "--output", type=str, default="outputs/retrieval_eval",

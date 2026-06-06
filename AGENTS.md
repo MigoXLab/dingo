@@ -65,9 +65,16 @@ dingo/
 │   │           └── agent_hallucination.py
 │   ├── exec/
 │   │   ├── local.py         ← LocalExecutor (single machine, cross-layer conflict detection)
-│   │   └── spark.py         ← SparkExecutor (distributed)
+│   │   ├── spark.py         ← SparkExecutor (distributed)
+│   │   └── retrieval.py     ← RetrievalExecutor (MTEB retrieval benchmarks)
+│   ├── retrieval/            ← Retrieval evaluation module
+│   │   ├── search_client.py ← SearchClient ABC + registry + PaperResult/SearchResponse
+│   │   ├── backends/
+│   │   │   └── agentic.py   ← AgenticSearchClient (local + public mode)
+│   │   ├── mteb_adapter.py  ← SearchClientModel (MTEB SearchProtocol adapter)
+│   │   └── eval_utils.py    ← normalize_title, resolve_hit, save_json
 │   └── run/
-│       └── cli.py           ← CLI entry point (subcommands: eval, info)
+│       └── cli.py           ← CLI entry point (subcommands: eval, eval-retrieval, info, serve)
 │
 ├── examples/                ← Usage examples (SDK, CLI, various scenarios)
 ├── test/                    ← Test suite
@@ -163,6 +170,7 @@ MinerU formats automatically flatten blocks into `Data` objects, preserving all 
 |------|-------|----------|
 | Local | `Executor.exec_map["local"]` | Development, < 100K rows |
 | Spark | `Executor.exec_map["spark"]` | Production, > 1M rows |
+| Retrieval | `Executor.exec_map["retrieval"]` | Search API benchmark evaluation (MTEB) |
 
 ### Optional Dependencies (extras_require)
 
@@ -170,6 +178,7 @@ MinerU formats automatically flatten blocks into `Data` objects, preserving all 
 pip install dingo-python                # Core (includes all datasource support)
 pip install "dingo-python[hhem]"        # + HHEM hallucination detection (transformers + torch)
 pip install "dingo-python[agent]"       # + Agent-based evaluation (langchain)
+pip install "dingo-python[retrieval]"   # + Retrieval benchmark evaluation (mteb, tqdm)
 pip install "dingo-python[all]"         # + Everything
 ```
 
@@ -229,6 +238,12 @@ Dingo provides a `dingo` CLI command (installed via `pip install dingo-python`):
 # Run evaluation (primary command)
 dingo eval --input config.json            # Human-readable output
 dingo eval --input config.json --json     # JSON output (for agents/automation)
+
+# Run retrieval benchmark evaluation
+dingo eval-retrieval --backend agentic --tasks SciFact \
+  --api-url https://api.sciverse.space --api-token <token> --limit 100
+dingo eval-retrieval --tasks SciFact LitSearch --max-queries 50 --max-workers 4 \
+  --api-url http://localhost:8080
 
 # List available evaluators, groups
 dingo info                                # Show all (rules, LLM, groups)
@@ -293,6 +308,7 @@ When these events occur, update the corresponding files:
 | New dependency added | Decide: `runtime.txt` (core) vs `setup.py` extras (heavy/optional); use lazy import for optional |
 | New MCP tool added | Update MCP Tools table in this file |
 | New CLI subcommand added | Update CLI Reference section in this file |
+| New search backend added | Add to `dingo/retrieval/backends/`, register with `@register_backend` |
 | Directory structure change | Update this file |
 | Version bump | Update `setup.py` version field |
 

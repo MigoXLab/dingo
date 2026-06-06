@@ -82,6 +82,20 @@ class ExecutorResultSaveArgs(BaseModel):
     full_field_sample_count: int = 0  # 保留完整字段样本条数，0表示关闭
 
 
+class RetrievalArgs(BaseModel):
+    backend: str = "agentic"
+    api_url: str = ""
+    api_token: Optional[str] = None
+    limit: int = 100
+    retrieval_mode: str = "hybrid"
+    sub_queries: Optional[int] = None
+    max_queries: Optional[int] = None
+    timeout: float = 120.0
+    rate_limit: Optional[float] = None
+    max_retries: int = 3
+    max_workers: int = 4
+
+
 class ExecutorArgs(BaseModel):
     # eval_group: str = ""
     # rule_list: List[str] = []
@@ -92,6 +106,7 @@ class ExecutorArgs(BaseModel):
     batch_size: int = 1
     multi_turn_mode: Optional[str] = None
     result_save: ExecutorResultSaveArgs = ExecutorResultSaveArgs()
+    retrieval: Optional[RetrievalArgs] = None
 
 
 class EvaluatorRuleArgs(BaseModel):
@@ -154,7 +169,7 @@ class InputArgs(BaseModel):
 
     dataset: DatasetArgs = DatasetArgs()
     executor: ExecutorArgs = ExecutorArgs()
-    evaluator: List[EvalPipline]
+    evaluator: List[EvalPipline] = []
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -132,7 +132,10 @@ pip install dingo-python
 # HHEM 幻覚検出モデル（transformers + torch が必要）
 pip install "dingo-python[hhem]"
 
-# 全機能をインストール（HHEM + Agent）
+# 検索プラットフォームベンチマーク評価（MTEB + pytrec_eval）
+pip install "dingo-python[retrieval]"
+
+# 全機能をインストール（HHEM + Agent + Retrieval）
 pip install "dingo-python[all]"
 ```
 
@@ -660,6 +663,52 @@ input_args = InputArgs(**input_data)
 executor = Executor.exec_map["spark"](input_args, spark_session=spark, spark_rdd=spark_rdd)
 result = executor.execute()
 ```
+
+### 検索ベンチマーク評価
+
+検索 API を MTEB 標準検索ベンチマーク（SciFact、SCIDOCS など）で評価し、NDCG、Recall、MRR などの指標を算出します。
+
+**CLI：**
+
+```bash
+pip install dingo-python[retrieval]
+
+dingo eval-retrieval --backend agentic --tasks SciFact \
+    --api-url https://api.sciverse.space \
+    --api-token YOUR_TOKEN --limit 100 --max-workers 8
+```
+
+**SDK：**
+
+```python
+from dingo.config import InputArgs
+from dingo.exec import Executor
+
+input_data = {
+    "input_path": "SciFact",
+    "output_path": "outputs/retrieval_eval",
+    "executor": {
+        "retrieval": {
+            "backend": "agentic",
+            "api_url": "https://api.sciverse.space",
+            "api_token": "YOUR_TOKEN",
+            "limit": 100,
+            "max_workers": 8,
+        }
+    },
+}
+
+input_args = InputArgs(**input_data)
+executor = Executor.exec_map["retrieval"](input_args)
+result = executor.execute()
+print(result)
+```
+
+サポートされるパラメータ：
+- `--tasks`: MTEB タスク名（カンマ区切りで複数指定可能、例：`SciFact,SCIDOCS`）
+- `--max-queries`: クエリ数の制限（テスト用）
+- `--max-workers`: 並行スレッド数（デフォルト：4）
+- `--retrieval-mode`: 検索モード（`hybrid`/`milvus`）
 
 ## 評価レポート
 

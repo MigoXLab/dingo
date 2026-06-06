@@ -13,11 +13,13 @@ requirements = _read_requirements("./requirements/runtime.txt")
 
 agent_requirements = _read_requirements("./requirements/agent.txt")
 hhem_requirements = _read_requirements("./requirements/hhem_integration.txt")
+retrieval_requirements = _read_requirements("./requirements/retrieval.txt")
 
 extras_require = {
     'agent': agent_requirements,
     'hhem': hhem_requirements,
-    'all': hhem_requirements + agent_requirements,
+    'retrieval': retrieval_requirements,
+    'all': hhem_requirements + agent_requirements + retrieval_requirements,
 }
 
 

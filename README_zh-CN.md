@@ -133,7 +133,10 @@ pip install dingo-python
 # 安装 HHEM 幻觉检测模型（需要 transformers + torch）
 pip install "dingo-python[hhem]"
 
-# 安装全部功能（HHEM + Agent）
+# 安装检索平台评测（MTEB + pytrec_eval）
+pip install "dingo-python[retrieval]"
+
+# 安装全部功能（HHEM + Agent + Retrieval）
 pip install "dingo-python[all]"
 ```
 
@@ -661,6 +664,52 @@ input_args = InputArgs(**input_data)
 executor = Executor.exec_map["spark"](input_args, spark_session=spark, spark_rdd=spark_rdd)
 result = executor.execute()
 ```
+
+### 检索平台评测
+
+评估搜索 API 在 MTEB 标准检索基准（SciFact、SCIDOCS 等）上的表现，支持 NDCG、Recall、MRR 等指标。
+
+**CLI 方式：**
+
+```bash
+pip install dingo-python[retrieval]
+
+dingo eval-retrieval --backend agentic --tasks SciFact \
+    --api-url https://api.sciverse.space \
+    --api-token YOUR_TOKEN --limit 100 --max-workers 8
+```
+
+**SDK 方式：**
+
+```python
+from dingo.config import InputArgs
+from dingo.exec import Executor
+
+input_data = {
+    "input_path": "SciFact",
+    "output_path": "outputs/retrieval_eval",
+    "executor": {
+        "retrieval": {
+            "backend": "agentic",
+            "api_url": "https://api.sciverse.space",
+            "api_token": "YOUR_TOKEN",
+            "limit": 100,
+            "max_workers": 8,
+        }
+    },
+}
+
+input_args = InputArgs(**input_data)
+executor = Executor.exec_map["retrieval"](input_args)
+result = executor.execute()
+print(result)
+```
+
+支持的参数：
+- `--tasks`: MTEB 任务名，支持逗号分隔多任务（如 `SciFact,SCIDOCS`）
+- `--max-queries`: 限制查询数量（用于快速测试）
+- `--max-workers`: 并发线程数（默认 4）
+- `--retrieval-mode`: 检索模式（`hybrid`/`milvus`）
 
 ## 评估报告
 

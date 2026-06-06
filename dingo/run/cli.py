@@ -83,6 +83,63 @@ def parse_args():
         help="Port to listen on (default: 8000)",
     )
 
+    # --- dingo eval-retrieval ---
+    ret_parser = subparsers.add_parser(
+        "eval-retrieval", help="Run retrieval benchmark evaluation against MTEB tasks"
+    )
+    ret_parser.add_argument(
+        "--backend", type=str, default="agentic",
+        help="Search backend name (default: agentic)",
+    )
+    ret_parser.add_argument(
+        "--tasks", nargs="+", default=["SciFact"],
+        help="MTEB task names to evaluate (default: SciFact)",
+    )
+    ret_parser.add_argument(
+        "--api-url", type=str, required=True,
+        help="Search API base URL",
+    )
+    ret_parser.add_argument(
+        "--api-token", type=str, default=None,
+        help="API authentication token",
+    )
+    ret_parser.add_argument(
+        "--limit", type=int, default=100,
+        help="Number of results to retrieve per query (default: 100)",
+    )
+    ret_parser.add_argument(
+        "--retrieval-mode", type=str, default="hybrid",
+        help="Retrieval mode: hybrid, milvus, or es (default: hybrid)",
+    )
+    ret_parser.add_argument(
+        "--sub-queries", type=int, default=None,
+        help="Number of sub-queries for LLM rewrite (default: server decides)",
+    )
+    ret_parser.add_argument(
+        "--max-queries", type=int, default=None,
+        help="Limit number of queries for quick testing",
+    )
+    ret_parser.add_argument(
+        "--timeout", type=float, default=120.0,
+        help="HTTP request timeout in seconds (default: 120)",
+    )
+    ret_parser.add_argument(
+        "--rate-limit", type=float, default=None,
+        help="Minimum seconds between API requests",
+    )
+    ret_parser.add_argument(
+        "--max-workers", type=int, default=4,
+        help="Number of concurrent search threads (default: 4)",
+    )
+    ret_parser.add_argument(
+        "-o", "--output", type=str, default="outputs/retrieval_eval",
+        help="Output directory (default: outputs/retrieval_eval)",
+    )
+    ret_parser.add_argument(
+        "--json", action="store_true", default=False,
+        help="Output result as JSON to stdout",
+    )
+
     # Backward compatibility: bare `dingo --input config.json`
     parser.add_argument(
         "-i", "--input",
@@ -244,6 +301,57 @@ def _print_info_table(info):
         print(table)
 
 
+def cmd_eval_retrieval(args):
+    """Run retrieval benchmark evaluation."""
+    from dingo.config.input_args import RetrievalArgs
+
+    retrieval_config = RetrievalArgs(
+        backend=args.backend,
+        api_url=args.api_url,
+        api_token=args.api_token,
+        limit=args.limit,
+        retrieval_mode=args.retrieval_mode,
+        sub_queries=args.sub_queries,
+        max_queries=args.max_queries,
+        timeout=args.timeout,
+        rate_limit=args.rate_limit,
+        max_retries=3,
+        max_workers=args.max_workers,
+    )
+
+    input_data = {
+        "task_name": "retrieval_eval",
+        "input_path": ",".join(args.tasks),
+        "output_path": args.output,
+        "executor": {
+            "retrieval": retrieval_config.model_dump(),
+        },
+    }
+
+    use_json = args.json
+
+    try:
+        input_args = InputArgs(**input_data)
+    except Exception as e:
+        if use_json:
+            _json_error("ConfigError", f"Invalid config: {e}", EXIT_CONFIG_ERROR)
+        raise
+
+    try:
+        executor = Executor.exec_map["retrieval"](input_args)
+        result = executor.execute()
+    except Exception as e:
+        if use_json:
+            _json_error("EvalError", str(e), EXIT_EVAL_ERROR)
+        raise
+
+    if use_json:
+        json.dump(result.to_dict(), sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+    else:
+        print(result)
+
+
 def cmd_serve(args):
     """Start the MCP server for AI agent integration."""
     import importlib.util
@@ -290,6 +398,8 @@ def main():
 
     if args.command == "eval":
         cmd_eval(args)
+    elif args.command == "eval-retrieval":
+        cmd_eval_retrieval(args)
     elif args.command == "info":
         cmd_info(args)
     elif args.command == "serve":

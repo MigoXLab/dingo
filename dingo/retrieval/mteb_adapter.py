@@ -26,7 +26,7 @@ from mteb.models.model_meta import ModelMeta
 from tqdm import tqdm
 
 from dingo.retrieval.eval_utils import normalize_title, resolve_hit
-from dingo.retrieval.search_client import SearchClient
+from dingo.retrieval.search_client import SearchClient, SearchResponse
 
 if TYPE_CHECKING:
     from mteb.abstasks.task_metadata import TaskMetadata
@@ -113,7 +113,7 @@ class SearchClientModel:
         self._corpus_ids.clear()
         count = 0
         for row in corpus:
-            doc_id = row["id"]
+            doc_id = str(row["id"])
             self._corpus_ids.add(doc_id)
             title = row.get("title", "")
             if not title:
@@ -161,7 +161,14 @@ class SearchClientModel:
 
         def _process_query(idx_qid_text):
             idx, qid, q_text = idx_qid_text
-            response = self.client.search(q_text, limit=self.search_limit)
+            try:
+                response = self.client.search(q_text, limit=self.search_limit)
+            except Exception as e:
+                error_resp = SearchResponse(
+                    query=q_text, results=[], response_time_ms=0.0,
+                    status_code=0, error=str(e),
+                )
+                return idx, qid, q_text, error_resp, None, None, None
 
             if response.error:
                 return idx, qid, q_text, response, None, None, None
@@ -177,7 +184,7 @@ class SearchClientModel:
             for rank, paper in enumerate(response.results):
                 hit = {"paper_id": paper.paper_id, "title": paper.title}
                 resolved_id, src = resolve_hit(
-                    hit, dict(self._title_to_ids), self._corpus_ids
+                    hit, self._title_to_ids, self._corpus_ids
                 )
                 mapping_stats[src] = mapping_stats.get(src, 0) + 1
                 top_api_results.append(

@@ -100,14 +100,17 @@ class RetrievalExecutor:
                 logger.warning(f"Task {task_name!r} not found in MTEB, skipping")
                 continue
 
-            results = mteb.evaluate(
-                model,
-                tasks=tasks,
-                overwrite_strategy="always",
-            )
-
-            task_metrics = self._extract_metrics(results)
-            all_results[task_name] = task_metrics
+            try:
+                results = mteb.evaluate(
+                    model,
+                    tasks=tasks,
+                    overwrite_strategy="always",
+                )
+                task_metrics = self._extract_metrics(results)
+                all_results[task_name] = task_metrics
+            except Exception as e:
+                logger.error(f"Task {task_name!r} failed: {e}")
+                continue
 
         self._all_results = all_results
         summary.metrics_score_stats = all_results

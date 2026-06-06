@@ -14,6 +14,7 @@ Supports two modes:
 from __future__ import annotations
 import logging
 import os
+import threading
 import time
 from typing import Any
 
@@ -47,6 +48,7 @@ class AgenticSearchClient(SearchClient):
         self.retrieval_mode = (retrieval_mode or "hybrid").strip().lower()
         self.sub_queries = int(sub_queries) if sub_queries is not None else None
         self._last_request_time = 0.0
+        self._lock = threading.Lock()
 
         self.api_token = api_token or os.environ.get("SCIVERSE_API_TOKEN")
         self._public_mode = bool(self.api_token)
@@ -82,10 +84,11 @@ class AgenticSearchClient(SearchClient):
     def _rate_limit_wait(self) -> None:
         if self.rate_limit <= 0:
             return
-        elapsed = time.monotonic() - self._last_request_time
-        if elapsed < self.rate_limit:
-            time.sleep(self.rate_limit - elapsed)
-        self._last_request_time = time.monotonic()
+        with self._lock:
+            elapsed = time.monotonic() - self._last_request_time
+            if elapsed < self.rate_limit:
+                time.sleep(self.rate_limit - elapsed)
+            self._last_request_time = time.monotonic()
 
     def search(self, query: str, limit: int = 100) -> SearchResponse:
         self._rate_limit_wait()
@@ -153,7 +156,7 @@ class AgenticSearchClient(SearchClient):
                 response_time_ms=elapsed_ms,
                 status_code=200,
             )
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             elapsed_ms = (time.monotonic() - start) * 1000
             return SearchResponse(
                 query=query,

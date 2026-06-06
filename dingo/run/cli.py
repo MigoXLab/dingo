@@ -128,7 +128,7 @@ def parse_args():
         help="Minimum seconds between API requests",
     )
     ret_parser.add_argument(
-        "--max-workers", type=int, default=4,
+        "--max-workers", type=int, default=1,
         help="Number of concurrent search threads (default: 4)",
     )
     ret_parser.add_argument(

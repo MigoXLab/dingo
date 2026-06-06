@@ -92,11 +92,15 @@ class SemanticScholarClient(SearchClient):
     def _rate_limit_wait(self) -> None:
         if self.rate_limit <= 0:
             return
+        sleep_time = 0.0
         with self._lock:
-            elapsed = time.monotonic() - self._last_request_time
+            now = time.monotonic()
+            elapsed = now - self._last_request_time
             if elapsed < self.rate_limit:
-                time.sleep(self.rate_limit - elapsed)
-            self._last_request_time = time.monotonic()
+                sleep_time = self.rate_limit - elapsed
+            self._last_request_time = now + sleep_time
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
     def search(self, query: str, limit: int = 100) -> SearchResponse:
         self._rate_limit_wait()

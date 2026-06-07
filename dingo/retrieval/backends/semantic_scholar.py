@@ -11,15 +11,7 @@ dingo eval-retrieval \
   --backend semantic_scholar \
   --tasks SciFact \
   --api-url https://api.semanticscholar.org \
-  --limit 100 \
-  --max-queries 5 \
-  --rate-limit 1.1 \
-  -o outputs/retrieval_eval
-
-S2_API_KEY=your_key dingo eval-retrieval \
-  --backend semantic_scholar \
-  --tasks SciFact \
-  --api-url https://api.semanticscholar.org \
+  --api-token YOUR_S2_API_KEY \
   --limit 100 \
   --max-queries 5 \
   -o outputs/retrieval_eval

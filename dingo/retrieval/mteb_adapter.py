@@ -70,6 +70,9 @@ class SearchClientModel:
         self._corpus_size = 0
         self._collisions = 0
         self._search_traces: list[dict[str, Any]] = []
+        self._relevant_docs_by_context: dict[
+            tuple[str, str, str], dict[str, set[str]]
+        ] = {}
 
         safe_name = client.name.replace(" ", "-")
         self._mteb_model_meta = ModelMeta(
@@ -98,6 +101,31 @@ class SearchClientModel:
     @property
     def mteb_model_meta(self) -> ModelMeta:
         return self._mteb_model_meta
+
+    def set_relevant_docs(
+        self,
+        task_name: str,
+        hf_split: str,
+        hf_subset: str,
+        relevant_docs: dict[str, Any],
+    ) -> None:
+        """Attach qrels for richer debug traces.
+
+        MTEB's SearchProtocol does not pass qrels into ``search()``, but Dingo's
+        detailed traces are easier to inspect when mapped hits are annotated as
+        relevant or not.
+        """
+        normalized: dict[str, set[str]] = {}
+        for qid, docs in (relevant_docs or {}).items():
+            if isinstance(docs, dict):
+                normalized[str(qid)] = {
+                    str(doc_id) for doc_id, score in docs.items() if score
+                }
+            else:
+                normalized[str(qid)] = {str(doc_id) for doc_id in docs}
+        self._relevant_docs_by_context[
+            (task_name, hf_split, hf_subset)
+        ] = normalized
 
     def index(
         self,
@@ -158,6 +186,9 @@ class SearchClientModel:
         errors = 0
         total_matched = 0
         query_details: list[dict[str, Any]] = []
+        relevant_docs_by_qid = self._relevant_docs_by_context.get(
+            (task_metadata.name, hf_split, hf_subset)
+        )
 
         def _process_query(idx_qid_text):
             idx, qid, q_text = idx_qid_text
@@ -168,13 +199,18 @@ class SearchClientModel:
                     query=q_text, results=[], response_time_ms=0.0,
                     status_code=0, error=str(e),
                 )
-                return idx, qid, q_text, error_resp, None, None, None
+                return idx, qid, q_text, error_resp, None, None, None, None
 
             if response.error:
-                return idx, qid, q_text, response, None, None, None
+                return idx, qid, q_text, response, None, None, None, None
 
             doc_scores: dict[str, float] = {}
             top_api_results: list[dict[str, Any]] = []
+            relevant_doc_ids = (
+                relevant_docs_by_qid.get(str(qid))
+                if relevant_docs_by_qid is not None
+                else None
+            )
             mapping_stats: dict[str, int] = {
                 "doc_id_exact": 0,
                 "title_fallback": 0,
@@ -195,13 +231,33 @@ class SearchClientModel:
                         "score": paper.score,
                         "resolved_corpus_id": resolved_id,
                         "mapping_source": src,
+                        "is_relevant": (
+                            bool(resolved_id and resolved_id in relevant_doc_ids)
+                            if relevant_doc_ids is not None
+                            else None
+                        ),
                     }
                 )
                 if not resolved_id or resolved_id in doc_scores:
                     continue
                 doc_scores[resolved_id] = 1.0 / (rank + 1)
 
-            return idx, qid, q_text, response, doc_scores, top_api_results, mapping_stats
+            relevant_matched_count = (
+                sum(1 for doc_id in doc_scores if doc_id in relevant_doc_ids)
+                if relevant_doc_ids is not None
+                else None
+            )
+
+            return (
+                idx,
+                qid,
+                q_text,
+                response,
+                doc_scores,
+                top_api_results,
+                mapping_stats,
+                relevant_matched_count,
+            )
 
         items = [(i, qid, qt) for i, (qid, qt) in enumerate(zip(query_ids, query_texts))]
 
@@ -215,7 +271,16 @@ class SearchClientModel:
                 unit="query",
             )
             for future in concurrent.futures.as_completed(futures):
-                idx, qid, q_text, response, doc_scores, top_api_results, mapping_stats = future.result()
+                (
+                    idx,
+                    qid,
+                    q_text,
+                    response,
+                    doc_scores,
+                    top_api_results,
+                    mapping_stats,
+                    relevant_matched_count,
+                ) = future.result()
 
                 if doc_scores is None:
                     errors += 1
@@ -231,11 +296,24 @@ class SearchClientModel:
                             "response_time_ms": response.response_time_ms,
                             "api_results_count": 0,
                             "matched_count": 0,
+                            "mapped_count": 0,
+                            "relevant_matched_count": 0,
+                            "relevant_total": 0,
                         }
                     )
                 else:
                     results[qid] = doc_scores
                     total_matched += len(doc_scores)
+                    matched_count = (
+                        relevant_matched_count
+                        if relevant_matched_count is not None
+                        else len(doc_scores)
+                    )
+                    relevant_doc_ids = (
+                        relevant_docs_by_qid.get(str(qid))
+                        if relevant_docs_by_qid is not None
+                        else None
+                    )
                     query_details.append(
                         {
                             "qid": qid,
@@ -243,7 +321,19 @@ class SearchClientModel:
                             "error": "",
                             "response_time_ms": response.response_time_ms,
                             "api_results_count": len(response.results),
-                            "matched_count": len(doc_scores),
+                            "matched_count": matched_count,
+                            "mapped_count": len(doc_scores),
+                            "relevant_matched_count": relevant_matched_count,
+                            "relevant_total": (
+                                len(relevant_doc_ids)
+                                if relevant_doc_ids is not None
+                                else None
+                            ),
+                            "gold_doc_ids": (
+                                sorted(relevant_doc_ids)
+                                if relevant_doc_ids is not None
+                                else None
+                            ),
                             "top_api_results": top_api_results,
                             "retrieved_doc_ids": list(doc_scores.keys()),
                             "mapping_stats": mapping_stats,

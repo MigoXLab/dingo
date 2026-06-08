@@ -105,6 +105,7 @@ class RetrievalExecutor:
                 continue
 
             try:
+                self._attach_relevant_docs(model, tasks)
                 results = mteb.evaluate(
                     model,
                     tasks=tasks,
@@ -160,6 +161,25 @@ class RetrievalExecutor:
         logger.info(f"Evaluation complete. Results saved to: {output_dir}")
         self.summary = summary
         return summary
+
+    @staticmethod
+    def _attach_relevant_docs(model: SearchClientModel, tasks: list[Any]) -> None:
+        """Load task qrels into the search adapter for detailed trace annotation."""
+        for task in tasks:
+            task.load_data()
+            if hasattr(task, "convert_v1_dataset_format_to_v2"):
+                task.convert_v1_dataset_format_to_v2(num_proc=None)
+
+            task_name = task.metadata.name
+            for hf_subset, splits in getattr(task, "dataset", {}).items():
+                for hf_split, data_split in splits.items():
+                    relevant_docs = data_split.get("relevant_docs", {})
+                    model.set_relevant_docs(
+                        task_name,
+                        hf_split,
+                        hf_subset,
+                        relevant_docs,
+                    )
 
     def _extract_metrics(self, model_result) -> dict[str, float]:
         """Extract metrics of interest from MTEB ModelResult."""

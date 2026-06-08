@@ -171,15 +171,71 @@ class RetrievalExecutor:
                 task.convert_v1_dataset_format_to_v2(num_proc=None)
 
             task_name = task.metadata.name
+            attached = False
             for hf_subset, splits in getattr(task, "dataset", {}).items():
+                if not isinstance(splits, dict):
+                    continue
                 for hf_split, data_split in splits.items():
-                    relevant_docs = data_split.get("relevant_docs", {})
+                    if not isinstance(data_split, dict):
+                        continue
+                    relevant_docs = data_split.get("relevant_docs")
+                    if relevant_docs is None:
+                        continue
                     model.set_relevant_docs(
                         task_name,
                         hf_split,
                         hf_subset,
                         relevant_docs,
                     )
+                    attached = True
+
+            if attached:
+                continue
+
+            hf_subset = getattr(task, "hf_subset", "default")
+            relevant_docs_dict = getattr(task, "relevant_docs", {})
+            for (
+                hf_subset,
+                hf_split,
+                relevant_docs,
+            ) in RetrievalExecutor._iter_legacy_qrels(relevant_docs_dict, hf_subset):
+                model.set_relevant_docs(
+                    task_name,
+                    hf_split,
+                    hf_subset,
+                    relevant_docs,
+                )
+
+    @staticmethod
+    def _iter_legacy_qrels(
+        relevant_docs_dict: Any,
+        default_subset: str,
+    ):
+        """Yield qrels from older MTEB task.relevant_docs layouts."""
+        if not isinstance(relevant_docs_dict, dict):
+            return
+
+        for key, value in relevant_docs_dict.items():
+            if RetrievalExecutor._looks_like_qrels(value):
+                yield default_subset, key, value
+            elif isinstance(value, dict):
+                for split, qrels in value.items():
+                    if RetrievalExecutor._looks_like_qrels(qrels):
+                        yield key, split, qrels
+
+    @staticmethod
+    def _looks_like_qrels(value: Any) -> bool:
+        if not isinstance(value, dict):
+            return False
+        if not value:
+            return True
+        sample = next(iter(value.values()))
+        if isinstance(sample, dict):
+            if not sample:
+                return True
+            nested_sample = next(iter(sample.values()))
+            return not isinstance(nested_sample, (dict, list, tuple, set))
+        return isinstance(sample, (list, tuple, set))
 
     def _extract_metrics(self, model_result) -> dict[str, float]:
         """Extract metrics of interest from MTEB ModelResult."""

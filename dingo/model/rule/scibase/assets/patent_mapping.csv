@@ -1,0 +1,109 @@
+预期字段名,xml映射字段,数据类型,字段描述,有效性规则,可空,模块
+document_number,business:BibliographicData/business:PublicationReference[@dataFormat='original']/base:DocumentID → WIPOST3Code+DocNumber+Kind；回退 standard/original 或根 @country+@docNumber+@kind,string,文件号（包含所有公开/公告阶段的专利文件编号（如公开号、专利号）。）,非空；同一局内唯一；保留原始格式,否*,著录信息
+document_kind_text,business:BibliographicData/business:SpecificBibliographicData/business:OriginalKindCode,string,文件种类文字描述,与 13 一致,否*,著录信息
+document_kind_code,PublicationReference(original)/base:DocumentID/base:Kind；回退根 @kind,string,ST.16 文件种类代码,必须是合法 ST.16 代码，可选值A1、B、U、S、A、B1、B2,否*,著录信息
+document_status_code,business:Abstract/@status；回退根 @status,string,数据版本状态标识,"不改变专利本身的法律效力，仅反映数据文件的版本可靠性。例如： 
+A：原始首次发布的数据； 
+C：因内容错误（如印刷错误、技术描述修正）发布的更正版数据； 
+D：数据已废弃（通常因重大错误）。",,著录信息
+document_wipo_country_code,PublicationReference(original)/base:DocumentID/base:WIPOST3Code；回退根 @country,string,ST.3,,是,著录信息
+publication_date,PublicationReference/base:DocumentID/base:Date（优先 dataFormat=standard/original）；回退根 @datePublication,string,,,,著录信息
+publication_language,根 @lang,string,公开语言,ISO 639 两位语言码,是,著录信息
+publication_office_code,PublicationReference/@sourceDB 或 DocumentID/WIPOST3Code；回退根 @country,string,公布局/组织代码,ST.3 两位代码或官方组织标识,条件否**,著录信息
+correction_info,business:BibliographicData/business:PublicAvailabilityDate/business:GrantTerms/business:Disclaimer/base:Text,object,更正/勘误信息,结构需符合 ST.50,是,著录信息
+invention_title,business:BibliographicData/business:InventionTitle[@lang=publication_language],string,发明名称,非空；建议长度限制,否*,技术信息
+ipc,business:ClassificationIPC/business:MainClassification|FurtherClassification[@dataFormat='original'],list[string],IPC(国际专利分类),必须是合法分类符号,是*,技术信息
+ipc_text,business:ClassificationIPC/base:Text（按行拆分）,list[string],,,,技术信息
+ipc_edition_statement,business:ClassificationIPC/base:EditionStatement,string,IPC版本号,,,技术信息
+ipcr_classifications,business:ClassificationIPCRDetails/business:ClassificationIPCR/*,list[object],IPCR（改革后 IPC 分类详细信息）,建议每项包含 classification_symbol、classification_version_date、classification_level、classification_value、action_date 等结构化信息；保留原始分类号,是,技术信息
+patent_national_classifications,business:ClassificationNational/business:MainClassification[@dataFormat='original'],list[string],国家专利分类号,保留原始格式；建议记录分类体系来源或国家/地区代码,是,技术信息
+patent_domestic_classifications,business:ClassificationDomestic|DomesticClassification|DomesticPatentClassification/business:MainClassification,list[string],国内/本国专利分类号,保留原始格式；适用于局内自有分类体系,是,技术信息
+patent_fi_classifications,business:ClassificationFI|FIClassification|ClassificationFIData/business:MainClassification|base:Text,list[string],FI 分类号,保留原始格式；适用于日本 FI 分类体系,是,技术信息
+patent_cpc_classifications,business:PatentClassificationDetails/business:PatentClassification[business:ClassificationScheme/@scheme='CPC']；SearchField 下同类节点,list[string],CPC（合作专利分类）分类号,必须是合法 CPC 分类符号；保留原始格式,是,技术信息
+patent_locarno_classes,business:ClassificationLocarno/business:MainClassification,list[string],Locarno Classification工业外观分类号,,是,技术信息
+prior_art_references,business:ReferencesCited/business:Citation/business:ApplicationCitation/business:PublicationReference,list[object],对比文件/现有技术文献,每项建议含 citation_text、doc_number、category,是,技术信息
+search_field,business:SearchField/business:ClassificationNational；PatentClassificationDetails,list[string],检索领域/检索分类,与分类体系一致,是,技术信息
+,,,,,,技术信息
+abstract,business:Abstract/base:Paragraphs,string,摘要全文,非结构化文本,是,全文内容
+description,business:Description/business:Heading|base:Paragraphs|base:Image（递归 business 子节）,list[object],说明书全文,非结构化文本,是,全文内容
+claims,business:Claims/business:Claim/business:ClaimText,list[object],权利要求项,每项至少含 claim_id+claim_num+claim_text,是,全文内容
+drawings,business:Drawings/base:Figure/base:Image,list[object],附图信息,每项至少含 figure_id+image_file；可带 width/height/orientation,是,全文内容
+chemistry,//Chemistry|business:ChemistrySection|ChemicalFormulae|ChemicalFormula 内 Chemistry/base:Image,list[object],化学相关专利独有的item信息,,是,全文内容
+content,根下 Abstract+Description+Drawings+Claims 按文档顺序拼接（标题用 invention_title）,string,处理后专利全文,,是,全文内容
+applicants,business:Parties/business:ApplicantDetails/business:Applicant/base:AddressBook,list[object],申请人,每项至少 name；建议带 country,条件否**,当事人
+assignees,business:Parties/business:AssigneeDetails/business:Assignee/base:AddressBook,list[object],专利权人/所有人,每项至少 name,条件否**,当事人
+inventors,business:Parties/business:InventorDetails/business:Inventor/base:AddressBook,list[object],发明人,已知即填；每项至少 name,是,当事人
+designers,business:Parties/business:DesignerDetails/business:Designer/base:AddressBook,list[object],设计人,,是,当事人
+patent_agents,business:Parties/business:AgentDetails/business:Agent|business:AgentDetails/business:Agent/business:Agency,list[object],代理人,每项至少 name,是,当事人
+patent_agency,business:AgentDetails/business:PatentAgency/base:AddressBook；business:CustomerNumber,list[object],代理机构,,是,当事人
+priority_numbers,business:PriorityClaim/base:DocumentID/base:DocNumber,list[string],优先权申请号,至少 1 个；格式按 ST.10/C、ST.34,否*,优先权
+priority_filing_dates,business:PriorityClaim/base:DocumentID/base:Date,array<date>,优先权申请日,日期按 ST.2,否*,优先权
+priority_office_codes,business:PriorityClaim/base:OfficeCode|business:GeneratingOffice|base:WIPOST3Code,list[string],优先权受理局代码,ST.3 两位代码；PCT 用 WO,否*,优先权
+priority_country_codes,business:PriorityClaim/base:DocumentID/base:WIPOST3Code,list[string],区域/国际优先权指定国家代码,ST.3；至少一个缔约方/WTO 成员,是,优先权
+public_availability_group,business:PublicAvailabilityDate/*（未映射到具名字段的子节点日期）,object,公开/公告日期分组,仅作容器,是,公开/公告/授权时间
+public_availability_unexamined_view_date,business:PublicAvailabilityDate/*Unexamined*View* → base:Date,date,未审查文献阅览公开日,日期按 ST.2,条件否**,公开/公告/授权时间
+public_availability_examined_view_date,business:PublicAvailabilityDate/*Examined*View* → base:Date,date,已审查文献阅览公开日,日期按 ST.2,条件否**,公开/公告/授权时间
+public_availability_unexamined_print_date,business:PublicAvailabilityDate/*Unexamined*Print* → base:Date,date,未审查文献印刷公开日,日期按 ST.2,条件否**,公开/公告/授权时间
+public_availability_examined_print_date,business:PublicAvailabilityDate/*Examined*Print* → base:Date,date,已审查文献印刷公开日,日期按 ST.2,条件否**,公开/公告/授权时间
+grant_publication_date,PublicAvailabilityDate 授权日节点；或 kind∈B/B1/B2 时 publication_date,date,授权文献公开日,日期按 ST.2,条件否**,公开/公告/授权时间
+claims_only_public_date,business:PublicAvailabilityDate/*ClaimsOnly* → base:Date,date,仅权利要求公开日,日期按 ST.2,是,公开/公告/授权时间
+granted_view_date,business:PublicAvailabilityDate/*Granted*View* → base:Date,date,已授权文献阅览公开日,日期按 ST.2,条件否**,公开/公告/授权时间
+corrected_document_issue_date,business:PublicAvailabilityDate/*Corrected* → base:Date,date,更正文献发行日,日期按 ST.2,否*,公开/公告/授权时间
+spc_basic_patent_reference,business:SupplementaryProtectionCertificate|business:SPC/business:BasicPatent|UnderlyingPatent,object,SPC 基础专利引用,含基础专利号，可带公开号,是,SPC（补充保护证书）
+spc_first_national_marketing_auth,SPC/business:FirstNationalMarketingAuthorization|NationalMarketingAuth,object,SPC 首次国家上市许可,含 number+date,是,SPC（补充保护证书）
+spc_first_regional_marketing_auth,SPC/business:FirstRegionalMarketingAuthorization|RegionalMarketingAuth,object,SPC 首次区域上市许可（仅欧盟等区域体系需用）,含 number+date，可选 country_of_origin(ST.3),是,SPC（补充保护证书）
+spc_expiry_or_duration,SPC/business:Expiry|Duration|TermOfProtection,object,SPC 到期日或期限,至少含 expiry_date 或 duration 之一,是,SPC（补充保护证书）
+spc_protected_product_name,SPC/business:Product|ProductName,string,SPC 保护产品名称,非空时建议与基础专利一致性校验,是,SPC（补充保护证书）
+spc_application_date,SPC/business:ApplicationReference/base:DocumentID/base:Date,string,SPC申请日（验证是否符合6个月时限）,,,SPC（补充保护证书）
+spc_country_code,SPC/base:WIPOST3Code 或 @country,string,SPC管辖国家,,,SPC（补充保护证书）
+spc_underlying_patent_number,SPC BasicPatent/DocumentID/base:DocNumber,string,关联的基础专利号（SPC法律效力的唯一依据）,,,SPC（补充保护证书）
+application_numbers,business:ApplicationReference[@dataFormat='original']/base:DocumentID → WIPOST3Code+DocNumber,list[string],申请号,至少 1 个；保留原格式,否*,申请
+filing_dates,business:ApplicationReference/base:DocumentID/base:Date,list[string],申请日,日期按 ST.2；与 21 可一一对应,否*,申请
+original_filing_language,ApplicationReference/@lang；回退根 @lang,string,原始申请语言,ISO 639 两位语言码,是,申请
+effective_rights_date,ApplicationReference/base:DocumentID/base:Date（首个非空）,date,权利生效日,日期按 ST.2,是,申请
+previous_application_reference,business:PreviousApplicationReference|ParentApplicationReference|ProvisionalApplicationReference；ApplicationReference[@applType=provisional|parent|previous],object,PLT 5(7) 先前申请引用,需含 office_code+application_number，可选 filing_date,是,申请
+pct_designated_states,business:PctOrRegionalFilingData//DesignatedState|base:WIPOST3Code|CountryCode,list[string],PCT 指定国,ST.3 两位代码,是,PCT
+regional_designated_states,business:RegionalFilingData//DesignatedState|base:WIPOST3Code,list[string],区域专利指定缔约国,ST.3 两位代码,是,PCT
+pct_national_phase_date,business:PctNationalPhaseEntry|NationalPhaseEntry/base:Date,date,PCT 进入国家/地区阶段日期,日期按 ST.2,是,PCT
+pct_filing_data,business:PctOrRegionalFilingData/base:DocumentID/base:Date,list[object],PCT 国际申请提交数据,每项含 filing_date+application_number，可选 language,是,PCT
+pct_publication_data,business:PctOrRegionalFilingData/business:PctPublication/base:DocumentID,list[object],PCT 国际公开数据,每项含 publication_date+publication_number，可选 language,是,PCT
+pct_effect_ceased_date,business:PctRefiledRevised|RefiledRevisedApplication/base:Date,date,PCT 国际申请失效/未进阶段确认日,日期按 ST.2,是,PCT
+search_report_deferred_publication_date,business:SearchReportDifferentPublication/base:Date,date,检索报告延迟公开日,日期按 ST.2,是,PCT
+regional_filing_data,business:RegionalFilingData/base:DocumentID/base:Date,list[object],区域申请提交数据,每项含 filing_date+application_number，可选 language,是,PCT
+regional_publication_data,business:RegionalFilingData/business:RegionalPublication/base:DocumentID,list[object],区域申请/授权公开数据,每项含 publication_date+publication_number，可选 language,是,PCT
+microorganism_deposit_info,business:BiologicalDeposit|MicroorganismDeposit|MicroorganismDepositDetails|DepositInstitution（容器）,object,微生物保藏信息,仅作容器,是,微生物保藏
+microorganism_deposit_no,保藏节点 base:DepositNumber|business:DepositNumber|base:AccessionNumber,string,微生物保藏编号,,,微生物保藏
+microorganism_deposit_address,保藏节点 base:AddressBook/base:Address,string,微生物保藏地址,,,微生物保藏
+microorganism_deposit_date,保藏节点 base:Date|business:DepositDate,string,微生物保藏时间,,,微生物保藏
+microorganism_deposit_unit,保藏节点 base:Name|business:InstitutionName|AddressBook,string,微生物保藏单位名称,,,微生物保藏
+microorganism_deposit_unit_code,保藏节点 base:WIPOST3Code|business:InstitutionCode,string,微生物保藏单位编号,,,微生物保藏
+microorganism_deposit_survival_status,保藏节点 business:RevivalStatus|@revivalStatus,string,存活情况,,,微生物保藏
+,,,,,,微生物保藏
+addition_relation,business:Addition|AdditionApplication|AdditionRelation → DocumentID|ApplicationReference,object,追加/附加专利关联,含前案号，宜带申请日,是,分案与分组
+division_relation,business:Division|DivisionApplication|DivisionRelation,object,分案来源关联,含母案号，宜带申请日,是,分案与分组
+continuation_relation,business:Continuation|ContinuationApplication|ContinuationInPart|ContinuationRelation；或 Description 标题 RELATED APPLICATION,object,continued/continuation 关联,含前案号+申请日,是,分案与分组
+reissue_publication_number,business:ReissuePublication|ReissuePublicationReference,string,再版/再授权前公开号,非空时应为合法文献号,是,分案与分组
+same_application_previous_publication_number,business:SameApplicationPreviousPublication|SameApplicationPreviousPublicationNumber|PreviousPublicationSameApplication,string,同一申请先前公开号,非空时应为合法文献号,是,分案与分组
+substitute_application_relation,business:Substitute|SubstituteApplication|SubstituteApplicationRelation,object,替代申请关联,含前案号+申请日,是,分案与分组
+utility_model_base_relation,business:UtilityModel|UtilityModelBasis|UtilityModelBase,object,实用新型基础专利/申请关联,含案号，宜带申请日,是,分案与分组
+attachments,//business:Attachment,list[object],附件列表,每项建议含 attachment_type+attachment_name+file_name+order；可带 copies/pages,是,附件与变更
+bibliographic_changes,business:BibliographicChange/base:Date + 节点全文,list[object],著录项目变更,每项建议含 change_seq+change_item+before_value+after_value,是,附件与变更
+,,,,,,附件与变更
+sha256 ,,,,,,库信息
+"origin_url 
+",,,,,,库信息
+"origin_path
+",,,,,,库信息
+file_format,,,,,,库信息
+"file_type
+",,,,,,库信息
+"obtain_timestamp
+",,,,,,库信息
+content_type,,,,,,库信息
+content_length,,,,,,库信息
+process_status,,,,,,库信息
+processed_path ,,,,,,库信息
+page_cnt,,,,,,库信息
+is_broken,,,,,,库信息
+dt,,,,,,库信息
+patent_source,,,,,,库信息

@@ -124,16 +124,22 @@ class Model:
         if cls.module_loaded:
             return
         this_module_directory = os.path.dirname(os.path.abspath(__file__))
-        # rule auto register
-        for file in os.listdir(os.path.join(this_module_directory, "rule")):
-            path = os.path.join(this_module_directory, "rule", file)
-            if (
-                os.path.isfile(path)
-                and file.endswith(".py")
-                and not file == "__init__.py"
-            ):
+        # rule auto register - recursively scan subdirectories
+        rule_base_dir = os.path.join(this_module_directory, "rule")
+        for root, dirs, files in os.walk(rule_base_dir):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+
+            for file in files:
+                if not file.endswith(".py") or file == "__init__.py":
+                    continue
+                rel_path = os.path.relpath(root, rule_base_dir)
+                if rel_path == ".":
+                    module_name = f"dingo.model.rule.{file[:-3]}"
+                else:
+                    rel_module = rel_path.replace(os.sep, ".")
+                    module_name = f"dingo.model.rule.{rel_module}.{file[:-3]}"
                 try:
-                    importlib.import_module("dingo.model.rule." + file.split(".")[0])
+                    importlib.import_module(module_name)
                 except ModuleNotFoundError as e:
                     log.debug(e)
 

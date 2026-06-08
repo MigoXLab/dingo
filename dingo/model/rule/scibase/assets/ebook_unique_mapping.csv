@@ -1,0 +1,21 @@
+﻿字段名,数据类型,聚合策略,策略参数,源字段名,去重 / 聚合处理逻辑
+isbns,array<string>,isbn_normalize,,,数组聚合，全部转换为13位ISBN格式，10位前面加978，13位保留，其他丢弃，全局去重
+isbn13,string,isbn_min,,,唯一去重键；从isbns数组中取最小的归一化13位ISBN
+title,string,freq_lex_max,min_len=2;max_len=1000,,在非空值里取词频最高；剔除长度<2或>1000极值；词频相同取字典序最大值
+abstract,string,freq_lex_max,min_len=10;max_len=10000,,在非空值里取词频最高；剔除长度<10或>10000极值；词频相同取字典序最大值
+language,string,freq_lex_max,,,在非空值里取词频最高；词频相同取字典序最大值
+type,array<string>,dedup_array,lower=true,,统一小写后数组聚合去重
+author,array<string>,dedup_array,,,数组聚合去重
+contributors,array<string>,dedup_array,,,数组聚合去重
+indexed_in,array<string>,dedup_array,,,数组聚合去重
+identifiers,"map<string,string>",merge_map,,,"key去重，相同key取max(value)"
+publication_publisher,array<string>,dedup_array,,publisher,数组聚合去重；原字段名称publisher
+publication_published_year,int,freq_int_max,min_val=1000;max_val=CURRENT_YEAR;extract_year=true,published_year,在非空值里取词频最高；剔除<1000或>当年极值；词频相同取最大值
+publication_published_place,array<string>,dedup_array,,published_place,数组聚合去重；原字段名称published_place
+publication_published_country,array<string>,dedup_array,,published_country,数组聚合去重；原字段名称published_country
+publication_pages,int,max_int,,pages,取本书多版本中的最大页数
+subjects,array<string>,dedup_array,,,数组聚合去重
+genre,array<string>,dedup_array,,,数组聚合去重
+category,string,freq_lex_max,,,在非空值里取词频最高；词频相同取字典序最大值
+access_oa_url,array<string>,dedup_array,,oa_url,数组聚合去重；原字段名称oa_url
+dt,string,latest_dt,,,保留最新分区日期

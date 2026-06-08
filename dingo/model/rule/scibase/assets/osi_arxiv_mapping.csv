@@ -1,0 +1,61 @@
+预期字段,arxiv对应字段,字段值数据类型
+track_id,数仓自己赋予,String
+title,title,String
+abstract,abstract,String
+language,无,String
+doi,doi；在 doi 为空时，使用"10.48550/arxiv."拼接doc_id,String
+type,无,List[string]
+author,author 解析为作者数组（字符串拆分）,List[string]
+identifiers,oaiId->oai_identifier、"arxivId->paper_id去掉http前缀",Object
+indexed_in,新增字符串"arxiv",List[string]
+published_date,updated,String
+published_year,updated中年份，s3是RFC 1123 时间格式，需要转化为 yyyy-mm-dd 格式和db做对比,Integer
+venue,,Object
+venue.name,journal_ref ：从 journal_ref 解析期刊/会议名(后续处理),String
+venue.type,无,String
+venue.issn,无,List[string]
+venue.publisher,无,List[string]
+venue.biblio,,Object
+venue.biblio.volume,从 journal_ref解析(后续处理),String
+venue.biblio.issue,从 journal_ref解析(后续处理),String
+venue.biblio.pages,从 journal_ref解析(后续处理),String
+access_is_oa,布尔值true,String
+access_oa_status,空字符串,String
+access_oa_url,pdf_url（get_pdf=0 时为""）,String
+access_license,license_url 将协议链接映射为对应可选值填入,String
+keywords,无,List[string]
+fieldsOfStudy,无,List[object]
+s2FieldsOfStudy,无,List[object]
+primary_topic,无,Object
+topics,无,List[object]
+concepts,无,List[object]
+subject,无,String
+major,无,String
+major_2,无,String
+major_3,无,String
+category,无,String
+area,无,String
+grade_class,无,String
+grade,无,String
+origin_id,doc_id,String
+origin_osi,取值"arxiv",String
+origin_db_source,无,String
+reference_count,无,Integer
+citation_count,无,Integer
+influential_citation_count,无,Integer
+references,无,List[string]
+related_works,无,List[string]
+citation_normalized_percentile,无,Object
+cited_by_percentile_year,无,Object
+fwci,无,Float
+cited_by_api_url,无,String
+locations,,List[object]
+locations.type,对pdf_url来说，get_pdf值为1时，值为download，get_pdf值为0时，保持空字符串；对source_url来说，get_source值为1时值为download，get_source值为0时保持空字符串。,String
+locations.url,"pdf_url,source_url",String
+locations.license,license_url 将协议链接映射为对应可选值,String
+locations.is_oa,对pdf_url来说，get_pdf值为1时，值为true，get_pdf值为0时为false；对source_url来说，get_source值为1时值为true，get_source值为0时为false。,String
+classifications,,Object
+mesh,无,List[object]
+msc_class,msc_class,String
+acm_class,acm_class,String
+arxiv_category,category,List[string]

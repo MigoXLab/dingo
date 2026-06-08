@@ -127,6 +127,7 @@ This document provides comprehensive information about all quality metrics used 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
 | `QUALITY_BAD_EFFECTIVENESS` | RuleMetadataSimilarity | 检查元数据字段与基准数据的相似度匹配，阈值默认为0.6 | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleSciBaseMetaPaperUniqueReport, RuleSciBaseMetaEbookUniqueReport, RuleSciBaseUnionUniqueMetaDataReport, RuleSciBaseMetaPaperDataReport, RuleSciBaseMetaPatentParsedInfoReport | Validate SciBase paper unique, ebook unique, unified metadata, S3 paper-source, and patent XML parsed-field records while writing per-record reports | Internal Implementation | N/A | N/A |
 
 ### Rule-Based RESUME Quality Metrics
 
@@ -159,4 +160,3 @@ This document provides comprehensive information about all quality metrics used 
 | `AgentFactCheck` | AgentFactCheck | Agent-based hallucination detection with autonomous web search | Internal Implementation | N/A | N/A |
 | `ArticleFactChecker` | ArticleFactChecker | Article-level fact checking with autonomous claims extraction and verification | Internal Implementation | N/A | N/A |
 | `LLMCustomMetric` | LLMCustomMetric | Unified metric for user customization | Internal Implementation | N/A | N/A |
-

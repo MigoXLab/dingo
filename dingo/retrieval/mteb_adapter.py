@@ -70,6 +70,8 @@ def _build_effective_query_text(
 ) -> str:
     if not _task_uses_query_instructions(task_name) or not instruction:
         return query_text
+    if query_text and query_text in instruction:
+        return instruction
     return f"{query_text} {instruction}"
 
 

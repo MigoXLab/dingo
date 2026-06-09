@@ -96,8 +96,8 @@ def parse_args():
         help="MTEB task names to evaluate (default: SciFact)",
     )
     ret_parser.add_argument(
-        "--api-url", type=str, required=True,
-        help="Search API base URL",
+        "--api-url", type=str, default="",
+        help="Search API base URL (default depends on backend)",
     )
     ret_parser.add_argument(
         "--api-token", type=str, default=None,

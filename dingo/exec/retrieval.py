@@ -63,16 +63,18 @@ class RetrievalExecutor:
             raise ValueError("input_path must specify MTEB task name(s), e.g. 'SciFact'")
 
         ra = self.retrieval_args
-        client = create_client(
-            ra.backend,
-            api_url=ra.api_url,
-            api_token=ra.api_token,
-            timeout=ra.timeout,
-            max_retries=ra.max_retries,
-            rate_limit=ra.rate_limit or 0.0,
-            retrieval_mode=ra.retrieval_mode,
-            sub_queries=ra.sub_queries,
-        )
+        client_kwargs: dict[str, Any] = {
+            "api_token": ra.api_token,
+            "timeout": ra.timeout,
+            "max_retries": ra.max_retries,
+            "retrieval_mode": ra.retrieval_mode,
+            "sub_queries": ra.sub_queries,
+        }
+        if ra.api_url:
+            client_kwargs["api_url"] = ra.api_url
+        if ra.rate_limit is not None:
+            client_kwargs["rate_limit"] = ra.rate_limit
+        client = create_client(ra.backend, **client_kwargs)
         model = SearchClientModel(
             client,
             search_limit=ra.limit,

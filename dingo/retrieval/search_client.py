@@ -17,6 +17,11 @@ Adding a new backend:
 
         def search(self, query: str, limit: int = 100) -> SearchResponse:
             ...
+
+dingo eval-retrieval --backend google_scholar --tasks SciFact \
+    --api-token YOUR_SERPAPI_KEY \
+    --limit 100 --rate-limit 1.0 \
+
 """
 
 from __future__ import annotations
@@ -90,6 +95,7 @@ def _load_builtin_backends():
 
     for mod_name in (
         "dingo.retrieval.backends.agentic",
+        "dingo.retrieval.backends.google_scholar",
         "dingo.retrieval.backends.semantic_scholar",
     ):
         try:

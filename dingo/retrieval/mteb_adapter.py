@@ -34,6 +34,60 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+IFIR_INSTRUCTION_TASKS = {"IFIRScifact", "IFIRNFCorpus"}
+INSTRUCTION_COLUMNS = ("instruction", "instructions", "prompt")
+
+
+def _task_uses_query_instructions(task_name: str) -> bool:
+    return task_name in IFIR_INSTRUCTION_TASKS
+
+
+def _get_query_column_values(queries: Any, column_name: str, total: int) -> list[Any]:
+    try:
+        values = queries[column_name]
+    except Exception:
+        return [None] * total
+
+    values_list = list(values)
+    if len(values_list) < total:
+        values_list.extend([None] * (total - len(values_list)))
+    return values_list[:total]
+
+
+def _extract_query_instructions(queries: Any, total: int) -> list[str | None]:
+    for column_name in INSTRUCTION_COLUMNS:
+        values = _get_query_column_values(queries, column_name, total)
+        if any(value not in (None, "") for value in values):
+            return [
+                str(value).strip() if value not in (None, "") else None
+                for value in values
+            ]
+    return [None] * total
+
+
+def _build_effective_query_text(
+    task_name: str, query_text: str, instruction: str | None
+) -> str:
+    if not _task_uses_query_instructions(task_name) or not instruction:
+        return query_text
+    return f"Instruction: {instruction}\nQuery: {query_text}"
+
+
+def _instruction_trace_fields(
+    task_name: str,
+    query_text: str,
+    instruction: str | None,
+    effective_query_text: str,
+) -> dict[str, str]:
+    if not instruction and effective_query_text == query_text:
+        return {}
+
+    fields: dict[str, str] = {"effective_query_text": effective_query_text}
+    if instruction:
+        fields["instruction"] = instruction
+    return fields
+
+
 # Workaround for mteb versions where confidence_scores crashes on empty input.
 try:
     from mteb._evaluators import retrieval_metrics as _rm
@@ -92,7 +146,7 @@ class SearchClientModel:
             reference=None,
             similarity_fn_name=None,
             framework=[],
-            use_instructions=False,
+            use_instructions=True,
             public_training_code=None,
             public_training_data=None,
             training_datasets=None,
@@ -175,11 +229,13 @@ class SearchClientModel:
     ) -> "RetrievalOutputType":
         query_ids = list(queries["id"])
         query_texts = list(queries["text"])
+        query_instructions = _extract_query_instructions(queries, len(query_ids))
         total = len(query_ids)
 
         if self.max_queries and total > self.max_queries:
             query_ids = query_ids[: self.max_queries]
             query_texts = query_texts[: self.max_queries]
+            query_instructions = query_instructions[: self.max_queries]
             total = len(query_ids)
 
         results: dict[str, dict[str, float]] = {}
@@ -191,18 +247,45 @@ class SearchClientModel:
         )
 
         def _process_query(idx_qid_text):
-            idx, qid, q_text = idx_qid_text
+            idx, qid, q_text, instruction = idx_qid_text
+            effective_query_text = _build_effective_query_text(
+                task_metadata.name, q_text, instruction
+            )
             try:
-                response = self.client.search(q_text, limit=self.search_limit)
+                response = self.client.search(
+                    effective_query_text, limit=self.search_limit
+                )
             except Exception as e:
                 error_resp = SearchResponse(
-                    query=q_text, results=[], response_time_ms=0.0,
+                    query=effective_query_text, results=[], response_time_ms=0.0,
                     status_code=0, error=str(e),
                 )
-                return idx, qid, q_text, error_resp, None, None, None, None
+                return (
+                    idx,
+                    qid,
+                    q_text,
+                    instruction,
+                    effective_query_text,
+                    error_resp,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
 
             if response.error:
-                return idx, qid, q_text, response, None, None, None, None
+                return (
+                    idx,
+                    qid,
+                    q_text,
+                    instruction,
+                    effective_query_text,
+                    response,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
 
             doc_scores: dict[str, float] = {}
             top_api_results: list[dict[str, Any]] = []
@@ -252,6 +335,8 @@ class SearchClientModel:
                 idx,
                 qid,
                 q_text,
+                instruction,
+                effective_query_text,
                 response,
                 doc_scores,
                 top_api_results,
@@ -259,7 +344,12 @@ class SearchClientModel:
                 relevant_matched_count,
             )
 
-        items = [(i, qid, qt) for i, (qid, qt) in enumerate(zip(query_ids, query_texts))]
+        items = [
+            (i, qid, qt, instruction)
+            for i, (qid, qt, instruction) in enumerate(
+                zip(query_ids, query_texts, query_instructions)
+            )
+        ]
 
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self.max_workers
@@ -275,6 +365,8 @@ class SearchClientModel:
                     idx,
                     qid,
                     q_text,
+                    instruction,
+                    effective_query_text,
                     response,
                     doc_scores,
                     top_api_results,
@@ -292,6 +384,12 @@ class SearchClientModel:
                         {
                             "qid": qid,
                             "query_text": q_text,
+                            **_instruction_trace_fields(
+                                task_metadata.name,
+                                q_text,
+                                instruction,
+                                effective_query_text,
+                            ),
                             "error": response.error,
                             "response_time_ms": response.response_time_ms,
                             "api_results_count": 0,
@@ -318,6 +416,12 @@ class SearchClientModel:
                         {
                             "qid": qid,
                             "query_text": q_text,
+                            **_instruction_trace_fields(
+                                task_metadata.name,
+                                q_text,
+                                instruction,
+                                effective_query_text,
+                            ),
                             "error": "",
                             "response_time_ms": response.response_time_ms,
                             "api_results_count": len(response.results),

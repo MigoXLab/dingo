@@ -123,9 +123,6 @@ class TestCLIEvalRetrieval:
         assert "--api-url" in stdout
         assert "--limit" in stdout
 
-    def test_missing_api_url_fails(self):
-        _, _, code = self._run_cli(
-            "eval-retrieval", "--backend", "agentic",
-            expect_exit=2,
-        )
-        assert code == 2
+    def test_api_url_is_optional(self):
+        stdout, _, _ = self._run_cli("eval-retrieval", "--help")
+        assert "default depends on backend" in stdout

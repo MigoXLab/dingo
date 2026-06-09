@@ -42,6 +42,7 @@ class TestBackendRegistry:
     def test_list_backends_includes_agentic(self):
         backends = list_backends()
         assert "agentic" in backends
+        assert "google_scholar" in backends
 
     def test_create_unknown_backend_raises(self):
         with pytest.raises(ValueError, match="Unknown backend"):
@@ -54,6 +55,16 @@ class TestBackendRegistry:
             timeout=5.0,
         )
         assert client.name in ("agentic-search-api", "sciverse-public-api")
+
+    def test_create_google_scholar_client(self):
+        client = create_client(
+            "google_scholar",
+            api_url="https://serpapi.com/search.json",
+            api_token="test-token",
+            timeout=5.0,
+            rate_limit=0,
+        )
+        assert client.name == "google-scholar-serpapi"
 
     def test_register_custom_backend(self):
         @register_backend("test_custom")
@@ -72,3 +83,27 @@ class TestBackendRegistry:
         assert client.name == "test-custom"
         resp = client.search("hello")
         assert resp.status_code == 200
+
+
+class TestGoogleScholarClient:
+    def test_parse_serpapi_result(self):
+        from dingo.retrieval.backends.google_scholar import GoogleScholarClient
+
+        item = {
+            "result_id": "abc123",
+            "title": "A Test Paper",
+            "snippet": "This is the abstract.",
+            "publication_info": {
+                "summary": "A Author, B Author - Journal, 2024",
+                "authors": [{"name": "A Author"}, {"name": "B Author"}],
+            },
+        }
+
+        result = GoogleScholarClient._parse_result(item, rank=2)
+
+        assert result.paper_id == "abc123"
+        assert result.title == "A Test Paper"
+        assert result.abstract == "This is the abstract."
+        assert result.score == 0.5
+        assert result.authors == ["A Author", "B Author"]
+        assert result.year == 2024

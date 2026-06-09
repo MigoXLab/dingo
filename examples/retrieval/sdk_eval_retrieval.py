@@ -16,6 +16,7 @@ from dingo.config import InputArgs
 from dingo.exec import Executor
 
 YOUR_API_TOKEN = os.getenv("SCIVERSE_API_TOKEN")
+YOUR_SERPAPI_KEY = os.getenv("SERPAPI_API_KEY")
 
 
 def eval_retrieval_api():
@@ -78,6 +79,29 @@ def eval_multiple_tasks():
                 "api_token": YOUR_API_TOKEN,
                 "limit": 100,
                 "retrieval_mode": "hybrid",
+            }
+        },
+    }
+
+    input_args = InputArgs(**input_data)
+    executor = Executor.exec_map["retrieval"](input_args)
+    result = executor.execute()
+    print(result)
+
+
+def eval_google_scholar_api_quick():
+    """Evaluate Google Scholar results through SerpAPI against SciFact."""
+    input_data = {
+        "task_name": "google_scholar_retrieval_eval_quick",
+        "input_path": "SciFact",
+        "output_path": "outputs/retrieval_eval",
+        "executor": {
+            "retrieval": {
+                "backend": "google_scholar",
+                "api_token": YOUR_SERPAPI_KEY,
+                "limit": 20,
+                "rate_limit": 1.0,
+                "max_queries": 5,
             }
         },
     }

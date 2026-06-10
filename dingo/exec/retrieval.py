@@ -69,6 +69,10 @@ class RetrievalExecutor:
             "max_retries": ra.max_retries,
             "retrieval_mode": ra.retrieval_mode,
             "sub_queries": ra.sub_queries,
+            "search_type": ra.search_type,
+            "sort_by": ra.sort_by,
+            "freshness_boost": ra.freshness_boost,
+            "filters": ra.filters,
         }
         if ra.api_url:
             client_kwargs["api_url"] = ra.api_url

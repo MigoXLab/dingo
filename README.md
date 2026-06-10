@@ -673,6 +673,12 @@ dingo eval-retrieval --backend agentic --tasks SciFact \
     --api-url https://api.sciverse.space \
     --api-token YOUR_TOKEN --limit 100 --max-workers 8
 
+dingo eval-retrieval --backend meta_search --tasks SciFact \
+    --api-url https://api.sciverse.space \
+    --api-token YOUR_TOKEN --limit 100 --rate-limit 1.0 \
+    --freshness-boost MILD \
+    --filters-json '[{"field": "publication_published_year", "operator": "FILTER_OP_GTE", "value": 2010}]'
+
 dingo eval-retrieval --backend google_scholar --tasks SciFact \
     --api-token YOUR_SERPAPI_KEY --limit 100 --rate-limit 1.0
 ```

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -89,6 +89,10 @@ class RetrievalArgs(BaseModel):
     limit: int = 100
     retrieval_mode: str = "hybrid"
     sub_queries: Optional[int] = None
+    search_type: str = "paper"
+    sort_by: Optional[str] = None
+    freshness_boost: Optional[str] = None
+    filters: Optional[List[Dict[str, Any]] | Dict[str, Any]] = None
     max_queries: Optional[int] = None
     timeout: float = 120.0
     rate_limit: Optional[float] = None

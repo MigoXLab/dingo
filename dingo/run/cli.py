@@ -116,6 +116,22 @@ def parse_args():
         help="Number of sub-queries for LLM rewrite (default: server decides)",
     )
     ret_parser.add_argument(
+        "--search-type", type=str, default="paper",
+        help="Meta-search type, for backend meta_search (default: paper)",
+    )
+    ret_parser.add_argument(
+        "--sort-by", type=str, default=None,
+        help="Meta-search sort field/mode",
+    )
+    ret_parser.add_argument(
+        "--freshness-boost", type=str, default=None,
+        help="Meta-search freshness boost mode, e.g. NONE, MILD, STRONG",
+    )
+    ret_parser.add_argument(
+        "--filters-json", type=str, default=None,
+        help="Meta-search filters as a JSON list string; a JSON object is accepted and wrapped into a list",
+    )
+    ret_parser.add_argument(
         "--max-queries", type=int, default=None,
         help="Limit number of queries for quick testing",
     )
@@ -305,6 +321,24 @@ def cmd_eval_retrieval(args):
     """Run retrieval benchmark evaluation."""
     from dingo.config.input_args import RetrievalArgs
 
+    filters = None
+    if args.filters_json:
+        try:
+            parsed_filters = json.loads(args.filters_json)
+        except json.JSONDecodeError as e:
+            if args.json:
+                _json_error("ConfigError", f"Invalid --filters-json: {e}", EXIT_CONFIG_ERROR)
+            raise
+        if isinstance(parsed_filters, dict):
+            filters = [parsed_filters]
+        elif isinstance(parsed_filters, list):
+            filters = parsed_filters
+        else:
+            message = "--filters-json must decode to a JSON list or object"
+            if args.json:
+                _json_error("ConfigError", message, EXIT_CONFIG_ERROR)
+            raise ValueError(message)
+
     retrieval_config = RetrievalArgs(
         backend=args.backend,
         api_url=args.api_url,
@@ -312,6 +346,10 @@ def cmd_eval_retrieval(args):
         limit=args.limit,
         retrieval_mode=args.retrieval_mode,
         sub_queries=args.sub_queries,
+        search_type=args.search_type,
+        sort_by=args.sort_by,
+        freshness_boost=args.freshness_boost,
+        filters=filters,
         max_queries=args.max_queries,
         timeout=args.timeout,
         rate_limit=args.rate_limit,

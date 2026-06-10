@@ -96,6 +96,7 @@ def _load_builtin_backends():
     for mod_name in (
         "dingo.retrieval.backends.agentic",
         "dingo.retrieval.backends.google_scholar",
+        "dingo.retrieval.backends.openalex",
         "dingo.retrieval.backends.semantic_scholar",
     ):
         try:

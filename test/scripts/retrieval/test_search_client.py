@@ -44,6 +44,7 @@ class TestBackendRegistry:
         assert "agentic" in backends
         assert "google_scholar" in backends
         assert "meta_search" in backends
+        assert "openalex" in backends
 
     def test_create_unknown_backend_raises(self):
         with pytest.raises(ValueError, match="Unknown backend"):
@@ -94,6 +95,34 @@ class TestBackendRegistry:
             }
         ]
 
+    def test_create_openalex_client_defaults_to_search(self):
+        client = create_client(
+            "openalex",
+            api_url="https://api.openalex.org",
+            api_token="test-token",
+            timeout=5.0,
+            rate_limit=0,
+        )
+        assert client.name == "openalex-api"
+        params = client._build_params("test query", 100)
+        assert params["search"] == "test query"
+        assert "search.semantic" not in params
+        assert params["per_page"] == 100
+        assert params["api_key"] == "test-token"
+
+    def test_create_openalex_client_semantic_search(self):
+        client = create_client(
+            "openalex",
+            search_type="semantic",
+            api_token="test-token",
+            rate_limit=0,
+        )
+        params = client._build_params("test query", 100)
+        assert params["search.semantic"] == "test query"
+        assert "search" not in params
+        assert params["per_page"] == 50
+        assert client.rate_limit == 1.0
+
     def test_register_custom_backend(self):
         @register_backend("test_custom")
         class TestCustomClient(SearchClient):
@@ -135,3 +164,34 @@ class TestGoogleScholarClient:
         assert result.score == 0.5
         assert result.authors == ["A Author", "B Author"]
         assert result.year == 2024
+
+
+class TestOpenAlexClient:
+    def test_abstract_from_inverted_index(self):
+        from dingo.retrieval.backends.openalex import OpenAlexClient
+
+        abstract = OpenAlexClient._abstract_from_inverted_index(
+            {"hello": [0], "world": [1], "again": [2]}
+        )
+
+        assert abstract == "hello world again"
+
+    def test_parse_openalex_result(self):
+        from dingo.retrieval.backends.openalex import OpenAlexClient
+
+        result = OpenAlexClient._parse_result(
+            {
+                "id": "https://openalex.org/W123",
+                "display_name": "A Test Work",
+                "abstract_inverted_index": {"test": [0], "abstract": [1]},
+                "publication_year": 2024,
+                "relevance_score": 12.5,
+            },
+            rank=3,
+        )
+
+        assert result.paper_id == "https://openalex.org/W123"
+        assert result.title == "A Test Work"
+        assert result.abstract == "test abstract"
+        assert result.year == 2024
+        assert result.score == 12.5

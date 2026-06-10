@@ -681,6 +681,13 @@ dingo eval-retrieval --backend meta_search --tasks SciFact \
 
 dingo eval-retrieval --backend google_scholar --tasks SciFact \
     --api-token YOUR_SERPAPI_KEY --limit 100 --rate-limit 1.0
+
+dingo eval-retrieval --backend openalex --tasks SciFact \
+    --api-token YOUR_OPENALEX_API_KEY --limit 100
+
+dingo eval-retrieval --backend openalex --tasks SciFact \
+    --api-token YOUR_OPENALEX_API_KEY --limit 50 \
+    --search-type semantic --rate-limit 1.0 --max-workers 1
 ```
 
 **SDK:**

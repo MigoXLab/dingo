@@ -65,12 +65,20 @@ def _extract_query_instructions(queries: Any, total: int) -> list[str | None]:
     return [None] * total
 
 
+def _instruction_starts_with_query(query_text: str, instruction: str) -> bool:
+    query = " ".join(query_text.split())
+    instr = " ".join(instruction.split())
+    if not query or not instr:
+        return False
+    return instr == query or instr.startswith(f"{query} ")
+
+
 def _build_effective_query_text(
     task_name: str, query_text: str, instruction: str | None
 ) -> str:
     if not _task_uses_query_instructions(task_name) or not instruction:
         return query_text
-    if query_text and query_text in instruction:
+    if _instruction_starts_with_query(query_text, instruction):
         return instruction
     return f"{query_text} {instruction}"
 

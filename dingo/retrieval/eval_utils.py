@@ -54,9 +54,10 @@ def compute_query_metrics(
     retrieved_doc_ids: list[str],
     relevant_doc_ids: set[str],
 ) -> dict[str, Any]:
-    """Compute nDCG@10, MRR@10, Recall@{5,10,100,1000} for a single query."""
+    """Compute standard retrieval metrics for a single query."""
     top5 = retrieved_doc_ids[:5]
     top10 = retrieved_doc_ids[:10]
+    top20 = retrieved_doc_ids[:20]
     top100 = retrieved_doc_ids[:100]
     top1000 = retrieved_doc_ids[:1000]
 
@@ -64,6 +65,7 @@ def compute_query_metrics(
     rel_in_5 = sum(rel_flags_5)
     rel_flags_10 = [1 if did in relevant_doc_ids else 0 for did in top10]
     rel_in_10 = sum(rel_flags_10)
+    rel_flags_100 = [1 if did in relevant_doc_ids else 0 for did in top100]
     rel_total = len(relevant_doc_ids)
 
     first_rel_rank = -1
@@ -73,12 +75,21 @@ def compute_query_metrics(
             break
     mrr10 = 1.0 / first_rel_rank if first_rel_rank > 0 else 0.0
 
-    ideal_len = min(rel_total, 10)
-    idcg10 = dcg([1] * ideal_len, 10) if ideal_len > 0 else 0.0
+    ideal_len_10 = min(rel_total, 10)
+    idcg10 = dcg([1] * ideal_len_10, 10) if ideal_len_10 > 0 else 0.0
     ndcg10 = (dcg(rel_flags_10, 10) / idcg10) if idcg10 > 0 else 0.0
+
+    ideal_len_100 = min(rel_total, 100)
+    idcg100 = dcg([1] * ideal_len_100, 100) if ideal_len_100 > 0 else 0.0
+    ndcg100 = (dcg(rel_flags_100, 100) / idcg100) if idcg100 > 0 else 0.0
 
     recall5 = (rel_in_5 / rel_total) if rel_total > 0 else 0.0
     recall10 = (rel_in_10 / rel_total) if rel_total > 0 else 0.0
+    recall20 = (
+        sum(1 for did in top20 if did in relevant_doc_ids) / rel_total
+        if rel_total > 0
+        else 0.0
+    )
     recall100 = (
         sum(1 for did in top100 if did in relevant_doc_ids) / rel_total
         if rel_total > 0
@@ -90,16 +101,32 @@ def compute_query_metrics(
         else 0.0
     )
 
+    hits = 0
+    precision_sum = 0.0
+    for rank, did in enumerate(top10, start=1):
+        if did in relevant_doc_ids:
+            hits += 1
+            precision_sum += hits / rank
+    map10 = (
+        precision_sum / min(rel_total, 10)
+        if rel_total > 0
+        else 0.0
+    )
+
     return {
         "first_relevant_rank_at_10": first_rel_rank,
         "relevant_in_top10": rel_in_10,
         "relevant_total": rel_total,
         "ndcg_at_10": round(ndcg10, 5),
+        "ndcg_at_100": round(ndcg100, 5),
         "mrr_at_10": round(mrr10, 5),
         "recall_at_5": round(recall5, 5),
         "recall_at_10": round(recall10, 5),
+        "recall_at_20": round(recall20, 5),
         "recall_at_100": round(recall100, 5),
         "recall_at_1000": round(recall1000, 5),
+        "precision_at_10": round(rel_in_10 / 10, 5),
+        "map_at_10": round(map10, 5),
     }
 
 

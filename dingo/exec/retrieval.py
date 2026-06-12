@@ -18,7 +18,7 @@ import mteb
 from dingo.config.input_args import InputArgs
 from dingo.exec.base import Executor
 from dingo.io import SummaryModel
-from dingo.retrieval.eval_utils import make_output_dir, save_json
+from dingo.retrieval.eval_utils import compute_query_metrics, make_output_dir, save_json
 from dingo.retrieval.mteb_adapter import SearchClientModel
 from dingo.retrieval.search_client import create_client
 
@@ -118,9 +118,29 @@ class RetrievalExecutor:
                     overwrite_strategy="always",
                 )
                 task_metrics = self._extract_metrics(results)
+                if not task_metrics:
+                    logger.warning(
+                        "MTEB returned empty metrics for task %r; "
+                        "falling back to search trace metrics",
+                        task_name,
+                    )
+                    task_metrics = self._compute_metrics_from_search_traces(
+                        model.get_search_traces(),
+                        task_name,
+                    )
                 all_results[task_name] = task_metrics
             except Exception as e:
-                logger.error(f"Task {task_name!r} failed: {e}")
+                logger.error(f"Task {task_name!r} failed: {e}", exc_info=True)
+                task_metrics = self._compute_metrics_from_search_traces(
+                    model.get_search_traces(),
+                    task_name,
+                )
+                if task_metrics:
+                    logger.warning(
+                        "Using search trace fallback metrics for failed task %r",
+                        task_name,
+                    )
+                    all_results[task_name] = task_metrics
                 continue
 
         self._all_results = all_results
@@ -256,6 +276,39 @@ class RetrievalExecutor:
                         if key in score_entry:
                             metrics[key] = round(score_entry[key], 5)
         return metrics
+
+    @staticmethod
+    def _compute_metrics_from_search_traces(
+        traces: list[dict[str, Any]],
+        task_name: str,
+    ) -> dict[str, float]:
+        """Compute fallback retrieval metrics from stored trace qrels/results."""
+        metric_values: dict[str, list[float]] = {}
+        for trace in traces:
+            if trace.get("task") != task_name:
+                continue
+            for query in trace.get("queries", []):
+                retrieved_doc_ids = query.get("retrieved_doc_ids") or []
+                gold_doc_ids = set(query.get("gold_doc_ids") or [])
+                if not gold_doc_ids:
+                    continue
+
+                query_metrics = compute_query_metrics(
+                    retrieved_doc_ids,
+                    gold_doc_ids,
+                )
+                query_metrics["main_score"] = query_metrics.get("ndcg_at_10", 0.0)
+
+                for key in METRICS_OF_INTEREST:
+                    if key not in query_metrics:
+                        continue
+                    metric_values.setdefault(key, []).append(query_metrics[key])
+
+        return {
+            key: round(sum(values) / len(values), 5)
+            for key, values in metric_values.items()
+            if values
+        }
 
     def load_data(self):
         pass

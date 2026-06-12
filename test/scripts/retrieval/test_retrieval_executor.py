@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -126,3 +127,59 @@ class TestCLIEvalRetrieval:
     def test_api_url_is_optional(self):
         stdout, _, _ = self._run_cli("eval-retrieval", "--help")
         assert "default depends on backend" in stdout
+
+
+class TestRetrievalExecutorFallbackMetrics:
+    def test_execute_uses_trace_metrics_when_mteb_metrics_empty(self, tmp_path, monkeypatch):
+        import dingo.exec.retrieval as retrieval_module
+        from dingo.exec.retrieval import RetrievalExecutor
+
+        class FakeClient:
+            name = "fake-openalex"
+
+        input_args = InputArgs(**{
+            "input_path": "SciFact",
+            "output_path": str(tmp_path),
+            "executor": {
+                "retrieval": {
+                    "backend": "openalex",
+                    "api_url": "https://api.openalex.org",
+                    "limit": 10,
+                }
+            },
+        })
+        executor = RetrievalExecutor(input_args)
+
+        monkeypatch.setattr(retrieval_module, "create_client", lambda *a, **k: FakeClient())
+        monkeypatch.setattr(retrieval_module.mteb, "get_tasks", lambda tasks: [object()])
+        monkeypatch.setattr(RetrievalExecutor, "_attach_relevant_docs", lambda self, model, tasks: None)
+
+        def fake_evaluate(model, tasks, overwrite_strategy):
+            model._search_traces.append({
+                "task": "SciFact",
+                "total_queries": 2,
+                "queries": [
+                    {
+                        "qid": "q1",
+                        "retrieved_doc_ids": ["d1", "d2"],
+                        "gold_doc_ids": ["d1"],
+                    },
+                    {
+                        "qid": "q2",
+                        "retrieved_doc_ids": ["d3"],
+                        "gold_doc_ids": ["d4"],
+                    },
+                ],
+            })
+            return SimpleNamespace(
+                task_results=[SimpleNamespace(scores={})],
+            )
+
+        monkeypatch.setattr(retrieval_module.mteb, "evaluate", fake_evaluate)
+
+        summary = executor.execute()
+
+        assert summary.score == 0.5
+        assert summary.metrics_score_stats["SciFact"]["main_score"] == 0.5
+        assert summary.metrics_score_stats["SciFact"]["ndcg_at_10"] == 0.5
+        assert summary.metrics_score_stats["SciFact"]["recall_at_10"] == 0.5

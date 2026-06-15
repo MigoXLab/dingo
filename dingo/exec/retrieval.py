@@ -84,6 +84,11 @@ class RetrievalExecutor:
             search_limit=ra.limit,
             max_queries=ra.max_queries,
             max_workers=ra.max_workers,
+            title_fuzzy_enabled=ra.title_fuzzy_enabled,
+            title_fuzzy_threshold=ra.title_fuzzy_threshold,
+            title_fuzzy_margin=ra.title_fuzzy_margin,
+            title_fuzzy_min_len=ra.title_fuzzy_min_len,
+            title_fuzzy_max_candidates=ra.title_fuzzy_max_candidates,
         )
 
         output_dir = make_output_dir(
@@ -159,6 +164,11 @@ class RetrievalExecutor:
             "limit": ra.limit,
             "retrieval_mode": ra.retrieval_mode,
             "sub_queries": ra.sub_queries,
+            "title_fuzzy_enabled": ra.title_fuzzy_enabled,
+            "title_fuzzy_threshold": ra.title_fuzzy_threshold,
+            "title_fuzzy_margin": ra.title_fuzzy_margin,
+            "title_fuzzy_min_len": ra.title_fuzzy_min_len,
+            "title_fuzzy_max_candidates": ra.title_fuzzy_max_candidates,
             "max_queries": ra.max_queries,
             "tasks": task_names,
         }

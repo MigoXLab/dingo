@@ -94,6 +94,11 @@ class RetrievalArgs(BaseModel):
     freshness_boost: Optional[str] = None
     filters: Optional[List[Dict[str, Any]] | Dict[str, Any]] = None
     max_queries: Optional[int] = None
+    title_fuzzy_enabled: bool = False
+    title_fuzzy_threshold: float = 0.95
+    title_fuzzy_margin: float = 0.01
+    title_fuzzy_min_len: int = 20
+    title_fuzzy_max_candidates: int = 300
     timeout: float = 120.0
     rate_limit: Optional[float] = None
     max_retries: int = 3

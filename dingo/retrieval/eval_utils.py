@@ -16,6 +16,7 @@ import os
 import re
 import unicodedata
 from datetime import datetime
+from difflib import SequenceMatcher
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -134,25 +135,58 @@ def resolve_hit(
     hit: dict[str, Any],
     title_index: dict[str, list[str]],
     corpus_id_set: set[str],
-) -> tuple[str, str]:
+    *,
+    title_fuzzy_enabled: bool = False,
+    title_fuzzy_threshold: float = 0.95,
+    title_fuzzy_margin: float = 0.01,
+    title_fuzzy_min_len: int = 20,
+    title_norm_candidates: list[tuple[str, list[str]]] | None = None,
+) -> tuple[str, str, float | None]:
     """Resolve a search hit to a corpus ID.
 
-    Returns ``(corpus_id, mapping_source)`` where *mapping_source* is one of
-    ``"doc_id_exact"``, ``"title_fallback"``, or ``"unmatched"``.
+    Returns ``(corpus_id, mapping_source, fuzzy_similarity)`` where
+    *mapping_source* is one of ``"doc_id_exact"``, ``"title_fallback"``,
+    ``"title_fuzzy"``, or ``"unmatched"``.
     """
     raw_id = str(hit.get("doc_id") or hit.get("paper_id") or "").strip()
     if raw_id:
         stripped = strip_d_prefix(raw_id)
         for candidate in (raw_id, stripped, f"d{stripped}"):
             if candidate in corpus_id_set:
-                return candidate, "doc_id_exact"
+                return candidate, "doc_id_exact", None
     title = str(hit.get("title") or "")
     norm = normalize_title(title)
     if norm:
         candidates = title_index.get(norm)
         if candidates:
-            return candidates[0], "title_fallback"
-    return "", "unmatched"
+            return candidates[0], "title_fallback", None
+
+    if title_fuzzy_enabled and norm and len(norm) >= title_fuzzy_min_len:
+        iterable_candidates = (
+            title_norm_candidates
+            if title_norm_candidates is not None
+            else list(title_index.items())
+        )
+        best_ids: list[str] | None = None
+        best_score = -1.0
+        second_score = -1.0
+        for candidate_norm, candidate_ids in iterable_candidates:
+            score = SequenceMatcher(None, norm, candidate_norm).ratio()
+            if score > best_score:
+                second_score = best_score
+                best_score = score
+                best_ids = candidate_ids
+            elif score > second_score:
+                second_score = score
+
+        if (
+            best_ids
+            and best_score >= title_fuzzy_threshold
+            and (best_score - second_score) >= title_fuzzy_margin
+        ):
+            return best_ids[0], "title_fuzzy", round(best_score, 6)
+
+    return "", "unmatched", None
 
 
 def make_output_dir(explicit_dir: str | None, default_prefix: str) -> str:

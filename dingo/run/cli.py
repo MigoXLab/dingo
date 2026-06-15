@@ -136,6 +136,26 @@ def parse_args():
         help="Limit number of queries for quick testing",
     )
     ret_parser.add_argument(
+        "--title-fuzzy-enabled", action="store_true", default=False,
+        help="Enable fuzzy title fallback matching (default: disabled)",
+    )
+    ret_parser.add_argument(
+        "--title-fuzzy-threshold", type=float, default=0.95,
+        help="Minimum title similarity to accept fuzzy match (default: 0.95)",
+    )
+    ret_parser.add_argument(
+        "--title-fuzzy-margin", type=float, default=0.01,
+        help="Minimum gap between best and second-best fuzzy score (default: 0.01)",
+    )
+    ret_parser.add_argument(
+        "--title-fuzzy-min-len", type=int, default=20,
+        help="Minimum normalized title length for fuzzy matching (default: 20)",
+    )
+    ret_parser.add_argument(
+        "--title-fuzzy-max-candidates", type=int, default=300,
+        help="Max fuzzy candidates re-ranked per hit (default: 300)",
+    )
+    ret_parser.add_argument(
         "--timeout", type=float, default=120.0,
         help="HTTP request timeout in seconds (default: 120)",
     )
@@ -351,6 +371,11 @@ def cmd_eval_retrieval(args):
         freshness_boost=args.freshness_boost,
         filters=filters,
         max_queries=args.max_queries,
+        title_fuzzy_enabled=args.title_fuzzy_enabled,
+        title_fuzzy_threshold=args.title_fuzzy_threshold,
+        title_fuzzy_margin=args.title_fuzzy_margin,
+        title_fuzzy_min_len=args.title_fuzzy_min_len,
+        title_fuzzy_max_candidates=args.title_fuzzy_max_candidates,
         timeout=args.timeout,
         rate_limit=args.rate_limit,
         max_retries=3,

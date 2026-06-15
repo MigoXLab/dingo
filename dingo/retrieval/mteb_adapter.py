@@ -20,6 +20,7 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 from collections import defaultdict
+from heapq import nlargest
 from typing import TYPE_CHECKING, Any
 
 from mteb.models.model_meta import ModelMeta
@@ -98,6 +99,15 @@ def _instruction_trace_fields(
     return fields
 
 
+def _title_ngrams(text: str, n: int = 3) -> set[str]:
+    """Return character n-grams for normalized title text."""
+    if not text:
+        return set()
+    if len(text) < n:
+        return {text}
+    return {text[i : i + n] for i in range(len(text) - n + 1)}
+
+
 # Workaround for mteb versions where confidence_scores crashes on empty input.
 try:
     from mteb._evaluators import retrieval_metrics as _rm
@@ -123,13 +133,25 @@ class SearchClientModel:
         search_limit: int = 100,
         max_queries: int | None = None,
         max_workers: int = 1,
+        title_fuzzy_enabled: bool = False,
+        title_fuzzy_threshold: float = 0.95,
+        title_fuzzy_margin: float = 0.01,
+        title_fuzzy_min_len: int = 20,
+        title_fuzzy_max_candidates: int = 300,
     ):
         self.client = client
         self.search_limit = search_limit
         self.max_queries = max_queries
         self.max_workers = max_workers
+        self.title_fuzzy_enabled = title_fuzzy_enabled
+        self.title_fuzzy_threshold = title_fuzzy_threshold
+        self.title_fuzzy_margin = title_fuzzy_margin
+        self.title_fuzzy_min_len = title_fuzzy_min_len
+        self.title_fuzzy_max_candidates = title_fuzzy_max_candidates
 
         self._title_to_ids: dict[str, list[str]] = defaultdict(list)
+        self._normalized_titles: list[str] = []
+        self._title_ngrams_index: dict[str, list[int]] = defaultdict(list)
         self._corpus_ids: set[str] = set()
         self._corpus_size = 0
         self._collisions = 0
@@ -202,6 +224,8 @@ class SearchClientModel:
         num_proc: int | None = None,
     ) -> None:
         self._title_to_ids.clear()
+        self._normalized_titles.clear()
+        self._title_ngrams_index.clear()
         self._corpus_ids.clear()
         count = 0
         for row in corpus:
@@ -212,6 +236,11 @@ class SearchClientModel:
                 continue
             normalized = normalize_title(title)
             if normalized:
+                if normalized not in self._title_to_ids:
+                    title_idx = len(self._normalized_titles)
+                    self._normalized_titles.append(normalized)
+                    for gram in _title_ngrams(normalized):
+                        self._title_ngrams_index[gram].append(title_idx)
                 self._title_to_ids[normalized].append(doc_id)
                 count += 1
 
@@ -224,6 +253,31 @@ class SearchClientModel:
             f"from {count} docs ({self._collisions} collisions) "
             f"[task={task_metadata.name}]"
         )
+
+    def _get_fuzzy_title_candidates(self, norm_title: str) -> list[tuple[str, list[str]]]:
+        """Get top fuzzy candidates via n-gram overlap prefiltering."""
+        grams = _title_ngrams(norm_title)
+        if not grams:
+            return []
+
+        overlap_counts: dict[int, int] = defaultdict(int)
+        for gram in grams:
+            for title_idx in self._title_ngrams_index.get(gram, []):
+                overlap_counts[title_idx] += 1
+
+        if not overlap_counts:
+            return []
+
+        top = nlargest(
+            self.title_fuzzy_max_candidates,
+            overlap_counts.items(),
+            key=lambda x: x[1],
+        )
+
+        return [
+            (self._normalized_titles[title_idx], self._title_to_ids[self._normalized_titles[title_idx]])
+            for title_idx, _ in top
+        ]
 
     def search(
         self,
@@ -307,13 +361,27 @@ class SearchClientModel:
             mapping_stats: dict[str, int] = {
                 "doc_id_exact": 0,
                 "title_fallback": 0,
+                "title_fuzzy": 0,
                 "unmatched": 0,
             }
 
             for rank, paper in enumerate(response.results):
                 hit = {"paper_id": paper.paper_id, "title": paper.title}
-                resolved_id, src = resolve_hit(
-                    hit, self._title_to_ids, self._corpus_ids
+                norm_hit_title = normalize_title(hit.get("title") or "")
+                fuzzy_candidates = (
+                    self._get_fuzzy_title_candidates(norm_hit_title)
+                    if self.title_fuzzy_enabled and norm_hit_title
+                    else None
+                )
+                resolved_id, src, fuzzy_similarity = resolve_hit(
+                    hit,
+                    self._title_to_ids,
+                    self._corpus_ids,
+                    title_fuzzy_enabled=self.title_fuzzy_enabled,
+                    title_fuzzy_threshold=self.title_fuzzy_threshold,
+                    title_fuzzy_margin=self.title_fuzzy_margin,
+                    title_fuzzy_min_len=self.title_fuzzy_min_len,
+                    title_norm_candidates=fuzzy_candidates,
                 )
                 mapping_stats[src] = mapping_stats.get(src, 0) + 1
                 top_api_results.append(
@@ -324,6 +392,7 @@ class SearchClientModel:
                         "score": paper.score,
                         "resolved_corpus_id": resolved_id,
                         "mapping_source": src,
+                        "title_fuzzy_similarity": fuzzy_similarity,
                         "is_relevant": (
                             bool(resolved_id and resolved_id in relevant_doc_ids)
                             if relevant_doc_ids is not None

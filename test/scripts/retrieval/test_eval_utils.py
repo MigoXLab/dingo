@@ -105,30 +105,69 @@ class TestResolveHit:
 
     def test_exact_match_with_d_prefix(self):
         hit = {"paper_id": "d123", "title": "Something"}
-        cid, src = resolve_hit(hit, self.title_index, self.corpus_ids)
+        cid, src, score = resolve_hit(hit, self.title_index, self.corpus_ids)
         assert cid == "d123"
         assert src == "doc_id_exact"
+        assert score is None
 
     def test_exact_match_without_prefix(self):
         hit = {"paper_id": "123", "title": "Something"}
-        cid, src = resolve_hit(hit, self.title_index, self.corpus_ids)
+        cid, src, score = resolve_hit(hit, self.title_index, self.corpus_ids)
         assert cid == "d123"
         assert src == "doc_id_exact"
+        assert score is None
 
     def test_title_fallback(self):
         hit = {"paper_id": "999", "title": "Attention Is All You Need"}
-        cid, src = resolve_hit(hit, self.title_index, self.corpus_ids)
+        cid, src, score = resolve_hit(hit, self.title_index, self.corpus_ids)
         assert cid == "d123"
         assert src == "title_fallback"
+        assert score is None
 
     def test_unmatched(self):
         hit = {"paper_id": "999", "title": "Unknown Paper"}
-        cid, src = resolve_hit(hit, self.title_index, self.corpus_ids)
+        cid, src, score = resolve_hit(hit, self.title_index, self.corpus_ids)
         assert cid == ""
         assert src == "unmatched"
+        assert score is None
 
     def test_empty_hit(self):
         hit = {"paper_id": "", "title": ""}
-        cid, src = resolve_hit(hit, self.title_index, self.corpus_ids)
+        cid, src, score = resolve_hit(hit, self.title_index, self.corpus_ids)
         assert cid == ""
         assert src == "unmatched"
+        assert score is None
+
+    def test_title_fuzzy_markup_match(self):
+        title_index = {
+            "linkagedisequilibriummappingofchek2commonvariationandbreastcancerrisk": ["d999"]
+        }
+        hit = {
+            "paper_id": "not-in-corpus",
+            "title": "Linkage disequilibrium mapping of [!i]CHEK2[!/i]:: Common variation and breast cancer risk",
+        }
+        cid, src, score = resolve_hit(
+            hit,
+            title_index,
+            {"d999"},
+            title_fuzzy_enabled=True,
+            title_fuzzy_threshold=0.98,
+            title_fuzzy_margin=0.001,
+            title_fuzzy_min_len=10,
+        )
+        assert cid == "d999"
+        assert src == "title_fuzzy"
+        assert score is not None and score >= 0.98
+
+    def test_title_fuzzy_disabled_stays_unmatched(self):
+        title_index = {
+            "linkagedisequilibriummappingofchek2commonvariationandbreastcancerrisk": ["d999"]
+        }
+        hit = {
+            "paper_id": "not-in-corpus",
+            "title": "Linkage disequilibrium mapping of [!i]CHEK2[!/i]:: Common variation and breast cancer risk",
+        }
+        cid, src, score = resolve_hit(hit, title_index, {"d999"})
+        assert cid == ""
+        assert src == "unmatched"
+        assert score is None

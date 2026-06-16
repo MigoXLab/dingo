@@ -198,14 +198,19 @@ def _parse_grade_response(response_text: str) -> RelevanceGrade:
     except json.JSONDecodeError:
         return RelevanceGrade(error=f"JSON parse failed: {text[:200]}")
 
-    return RelevanceGrade(
-        score=float(data.get("score", 0.0)),
-        query_relevance=float(data.get("query_relevance", 0.0)),
-        result_quality=float(data.get("result_quality", 0.0)),
-        content_issues=bool(data.get("content_issues", False)),
-        confidence=float(data.get("confidence", 0.0)),
-        reasoning=str(data.get("reasoning", "")),
-    )
+    try:
+        if not isinstance(data, dict):
+            return RelevanceGrade(error=f"JSON is not a dictionary: {text[:200]}")
+        return RelevanceGrade(
+            score=float(data.get("score", 0.0)),
+            query_relevance=float(data.get("query_relevance", 0.0)),
+            result_quality=float(data.get("result_quality", 0.0)),
+            content_issues=bool(data.get("content_issues", False)),
+            confidence=float(data.get("confidence", 0.0)),
+            reasoning=str(data.get("reasoning", "")),
+        )
+    except (ValueError, TypeError) as e:
+        return RelevanceGrade(error=f"Failed to parse grade response: {e}. Text: {text[:200]}")
 
 
 class LLMSearchResultRelevance:
@@ -234,7 +239,9 @@ class LLMSearchResultRelevance:
     def _get_client(self):
         if self._client is None:
             from openai import OpenAI
-            kwargs: dict[str, Any] = {"api_key": self.api_key}
+            kwargs: dict[str, Any] = {}
+            if self.api_key:
+                kwargs["api_key"] = self.api_key
             if self.api_url:
                 kwargs["base_url"] = self.api_url
             self._client = OpenAI(**kwargs)
@@ -277,6 +284,12 @@ def aggregate_grades(
     method: str = "mean",
 ) -> OpenEvalSummary:
     """Aggregate a list of grades into summary metrics."""
+    if method not in ("mean", "median"):
+        logger.warning(
+            "Aggregation method %r is not supported for pointwise open eval; "
+            "defaulting to mean/median metrics.",
+            method,
+        )
     if not grades:
         return OpenEvalSummary()
 

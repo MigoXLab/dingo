@@ -384,7 +384,11 @@ class RetrievalExecutor:
         )
         summary.metrics_score_stats = all_results
         summary.total = len(query_details)
-        summary.score = oe_summary.mean_score
+        summary.score = (
+            oe_summary.median_score
+            if oe_args.aggregate == "median"
+            else oe_summary.mean_score
+        )
         summary.finish_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         config: dict[str, Any] = {
@@ -551,25 +555,29 @@ class RetrievalExecutor:
             result["llm_grade"] = grade.to_dict()
             return grade
 
-        grades: list[RelevanceGrade] = []
+        grades: list[RelevanceGrade] = [RelevanceGrade() for _ in range(len(work_items))]
 
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=oe_args.max_workers
         ) as pool:
-            futures = [pool.submit(_grade_item, item) for item in work_items]
-            completed = concurrent.futures.as_completed(futures)
+            future_to_idx = {
+                pool.submit(_grade_item, item): idx
+                for idx, item in enumerate(work_items)
+            }
+            completed = concurrent.futures.as_completed(future_to_idx)
             completed = _tqdm_or_none(
                 completed,
-                total=len(futures),
+                total=len(future_to_idx),
                 desc="OpenEval grading",
                 unit="pair",
             ) or completed
             for future in completed:
+                idx = future_to_idx[future]
                 try:
-                    grades.append(future.result())
+                    grades[idx] = future.result()
                 except Exception as e:
                     logger.warning("Open eval grading error: %s", e)
-                    grades.append(RelevanceGrade(error=str(e)))
+                    grades[idx] = RelevanceGrade(error=str(e))
 
         task_grades: dict[str, list[RelevanceGrade]] = {}
         idx = 0

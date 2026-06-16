@@ -13,11 +13,13 @@ requirements = _read_requirements("./requirements/runtime.txt")
 
 agent_requirements = _read_requirements("./requirements/agent.txt")
 hhem_requirements = _read_requirements("./requirements/hhem_integration.txt")
+litellm_requirements = ["litellm>=1.35.0,<2.0"]
 
 extras_require = {
     'agent': agent_requirements,
     'hhem': hhem_requirements,
-    'all': hhem_requirements + agent_requirements,
+    'litellm': litellm_requirements,
+    'all': hhem_requirements + agent_requirements + litellm_requirements,
 }
 
 

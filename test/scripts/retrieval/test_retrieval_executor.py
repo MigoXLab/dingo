@@ -163,11 +163,23 @@ class TestRetrievalExecutorFallbackMetrics:
                         "qid": "q1",
                         "retrieved_doc_ids": ["d1", "d2"],
                         "gold_doc_ids": ["d1"],
+                        "api_results_count": 3,
+                        "raw_api_metrics": {
+                            "raw_api_ndcg_at_10": 0.5,
+                            "raw_api_recall_at_10": 1.0,
+                            "raw_api_mrr_at_10": 0.5,
+                        },
                     },
                     {
                         "qid": "q2",
                         "retrieved_doc_ids": ["d3"],
                         "gold_doc_ids": ["d4"],
+                        "api_results_count": 1,
+                        "raw_api_metrics": {
+                            "raw_api_ndcg_at_10": 0.0,
+                            "raw_api_recall_at_10": 0.0,
+                            "raw_api_mrr_at_10": 0.0,
+                        },
                     },
                 ],
             })
@@ -183,3 +195,7 @@ class TestRetrievalExecutorFallbackMetrics:
         assert summary.metrics_score_stats["SciFact"]["main_score"] == 0.5
         assert summary.metrics_score_stats["SciFact"]["ndcg_at_10"] == 0.5
         assert summary.metrics_score_stats["SciFact"]["recall_at_10"] == 0.5
+        assert summary.metrics_score_stats["SciFact"]["raw_api_ndcg_at_10"] == 0.25
+        assert summary.metrics_score_stats["SciFact"]["raw_api_recall_at_10"] == 0.5
+        assert summary.metrics_score_stats["SciFact"]["raw_api_mrr_at_10"] == 0.25
+        assert summary.metrics_score_stats["SciFact"]["raw_api_avg_results_count"] == 2.0

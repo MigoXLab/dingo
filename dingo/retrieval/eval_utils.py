@@ -131,6 +131,34 @@ def compute_query_metrics(
     }
 
 
+def build_raw_api_ranked_doc_ids(
+    top_api_results: list[dict[str, Any]],
+) -> list[str]:
+    """Build a ranked doc-id list that preserves raw API ranks for metrics.
+
+    Unmatched hits and duplicate resolved corpus IDs are kept as unique
+    non-relevant placeholders so later API hits do not move upward.
+    """
+    ranked: list[str] = []
+    seen_resolved_ids: set[str] = set()
+    for index, result in enumerate(top_api_results, start=1):
+        rank = result.get("rank") or index
+        resolved_id = str(result.get("resolved_corpus_id") or "").strip()
+        if not resolved_id:
+            ranked.append(f"__raw_api_unmatched__{rank}")
+            continue
+        if resolved_id in seen_resolved_ids:
+            ranked.append(f"__raw_api_duplicate__{rank}")
+            continue
+        seen_resolved_ids.add(resolved_id)
+        ranked.append(resolved_id)
+    return ranked
+
+
+def prefix_metrics(metrics: dict[str, Any], prefix: str) -> dict[str, Any]:
+    return {f"{prefix}{key}": value for key, value in metrics.items()}
+
+
 def resolve_hit(
     hit: dict[str, Any],
     title_index: dict[str, list[str]],

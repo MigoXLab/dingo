@@ -37,6 +37,10 @@ METRICS_OF_INTEREST = [
     "map_at_10",
 ]
 
+RAW_API_METRICS_OF_INTEREST = [
+    f"raw_api_{key}" for key in METRICS_OF_INTEREST if key != "main_score"
+]
+
 
 @Executor.register("retrieval")
 class RetrievalExecutor:
@@ -133,6 +137,12 @@ class RetrievalExecutor:
                         model.get_search_traces(),
                         task_name,
                     )
+                task_metrics.update(
+                    self._compute_raw_api_metrics_from_search_traces(
+                        model.get_search_traces(),
+                        task_name,
+                    )
+                )
                 all_results[task_name] = task_metrics
             except Exception as e:
                 logger.error(f"Task {task_name!r} failed: {e}", exc_info=True)
@@ -141,6 +151,12 @@ class RetrievalExecutor:
                     task_name,
                 )
                 if task_metrics:
+                    task_metrics.update(
+                        self._compute_raw_api_metrics_from_search_traces(
+                            model.get_search_traces(),
+                            task_name,
+                        )
+                    )
                     logger.warning(
                         "Using search trace fallback metrics for failed task %r",
                         task_name,
@@ -319,6 +335,37 @@ class RetrievalExecutor:
             for key, values in metric_values.items()
             if values
         }
+
+    @staticmethod
+    def _compute_raw_api_metrics_from_search_traces(
+        traces: list[dict[str, Any]],
+        task_name: str,
+    ) -> dict[str, float]:
+        metric_values: dict[str, list[float]] = {}
+        api_results_counts: list[float] = []
+        for trace in traces:
+            if trace.get("task") != task_name:
+                continue
+            for query in trace.get("queries", []):
+                raw_metrics = query.get("raw_api_metrics") or {}
+                for key in RAW_API_METRICS_OF_INTEREST:
+                    if key not in raw_metrics:
+                        continue
+                    metric_values.setdefault(key, []).append(raw_metrics[key])
+                if "api_results_count" in query:
+                    api_results_counts.append(float(query.get("api_results_count") or 0))
+
+        summary = {
+            key: round(sum(values) / len(values), 5)
+            for key, values in metric_values.items()
+            if values
+        }
+        if api_results_counts:
+            summary["raw_api_avg_results_count"] = round(
+                sum(api_results_counts) / len(api_results_counts),
+                5,
+            )
+        return summary
 
     def load_data(self):
         pass

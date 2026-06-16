@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any
 from mteb.models.model_meta import ModelMeta
 from tqdm import tqdm
 
-from dingo.retrieval.eval_utils import normalize_title, resolve_hit
+from dingo.retrieval.eval_utils import build_raw_api_ranked_doc_ids, compute_query_metrics, normalize_title, prefix_metrics, resolve_hit
 from dingo.retrieval.search_client import SearchClient, SearchResponse
 
 if TYPE_CHECKING:
@@ -335,6 +335,7 @@ class SearchClientModel:
                     None,
                     None,
                     None,
+                    None,
                 )
 
             if response.error:
@@ -345,6 +346,7 @@ class SearchClientModel:
                     instruction,
                     effective_query_text,
                     response,
+                    None,
                     None,
                     None,
                     None,
@@ -409,6 +411,17 @@ class SearchClientModel:
                 if relevant_doc_ids is not None
                 else None
             )
+            raw_api_metrics = (
+                prefix_metrics(
+                    compute_query_metrics(
+                        build_raw_api_ranked_doc_ids(top_api_results),
+                        relevant_doc_ids,
+                    ),
+                    "raw_api_",
+                )
+                if relevant_doc_ids is not None
+                else None
+            )
 
             return (
                 idx,
@@ -421,6 +434,7 @@ class SearchClientModel:
                 top_api_results,
                 mapping_stats,
                 relevant_matched_count,
+                raw_api_metrics,
             )
 
         items = [
@@ -451,9 +465,23 @@ class SearchClientModel:
                     top_api_results,
                     mapping_stats,
                     relevant_matched_count,
+                    raw_api_metrics,
                 ) = future.result()
 
                 if doc_scores is None:
+                    relevant_doc_ids = (
+                        relevant_docs_by_qid.get(str(qid))
+                        if relevant_docs_by_qid is not None
+                        else None
+                    )
+                    raw_api_metrics = (
+                        prefix_metrics(
+                            compute_query_metrics([], relevant_doc_ids),
+                            "raw_api_",
+                        )
+                        if relevant_doc_ids is not None
+                        else None
+                    )
                     errors += 1
                     logger.warning(
                         f"[{idx + 1}/{total}] {qid} ERROR: {response.error}"
@@ -475,7 +503,17 @@ class SearchClientModel:
                             "matched_count": 0,
                             "mapped_count": 0,
                             "relevant_matched_count": 0,
-                            "relevant_total": 0,
+                            "relevant_total": (
+                                len(relevant_doc_ids)
+                                if relevant_doc_ids is not None
+                                else 0
+                            ),
+                            "gold_doc_ids": (
+                                sorted(relevant_doc_ids)
+                                if relevant_doc_ids is not None
+                                else None
+                            ),
+                            "raw_api_metrics": raw_api_metrics,
                         }
                     )
                 else:
@@ -520,6 +558,7 @@ class SearchClientModel:
                             "top_api_results": top_api_results,
                             "retrieved_doc_ids": list(doc_scores.keys()),
                             "mapping_stats": mapping_stats,
+                            "raw_api_metrics": raw_api_metrics,
                         }
                     )
 

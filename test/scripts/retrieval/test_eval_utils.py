@@ -2,7 +2,7 @@
 
 import pytest
 
-from dingo.retrieval.eval_utils import compute_query_metrics, normalize_title, recall_at_k, resolve_hit, strip_d_prefix
+from dingo.retrieval.eval_utils import build_raw_api_ranked_doc_ids, compute_query_metrics, normalize_title, recall_at_k, resolve_hit, strip_d_prefix
 
 
 class TestNormalizeTitle:
@@ -93,6 +93,23 @@ class TestComputeQueryMetrics:
         assert metrics["ndcg_at_10"] == 0.0
         assert metrics["mrr_at_10"] == 0.0
         assert metrics["recall_at_10"] == 0.0
+
+
+class TestBuildRawApiRankedDocIds:
+    def test_preserves_unmatched_and_duplicate_positions(self):
+        ranked = build_raw_api_ranked_doc_ids(
+            [
+                {"rank": 1, "resolved_corpus_id": ""},
+                {"rank": 2, "resolved_corpus_id": "d1"},
+                {"rank": 3, "resolved_corpus_id": "d1"},
+                {"rank": 4, "resolved_corpus_id": "d2"},
+            ]
+        )
+
+        assert ranked[0].startswith("__raw_api_unmatched__")
+        assert ranked[1] == "d1"
+        assert ranked[2].startswith("__raw_api_duplicate__")
+        assert ranked[3] == "d2"
 
 
 class TestResolveHit:

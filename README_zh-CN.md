@@ -133,7 +133,7 @@ pip install dingo-python
 # 安装 HHEM 幻觉检测模型（需要 transformers + torch）
 pip install "dingo-python[hhem]"
 
-# 安装检索平台评测（MTEB + pytrec_eval）
+# 安装检索平台评测（MTEB + pytrec-eval-terrier）
 pip install "dingo-python[retrieval]"
 
 # 安装全部功能（HHEM + Agent + Retrieval）

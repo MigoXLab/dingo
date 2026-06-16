@@ -133,7 +133,7 @@ pip install dingo-python
 # With HHEM hallucination detection model (requires transformers + torch)
 pip install "dingo-python[hhem]"
 
-# With retrieval benchmark evaluation (MTEB + pytrec_eval)
+# With retrieval benchmark evaluation (MTEB + pytrec-eval-terrier)
 pip install "dingo-python[retrieval]"
 
 # With all features (HHEM + Agent + Retrieval)

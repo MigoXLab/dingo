@@ -132,7 +132,7 @@ pip install dingo-python
 # HHEM 幻覚検出モデル（transformers + torch が必要）
 pip install "dingo-python[hhem]"
 
-# 検索プラットフォームベンチマーク評価（MTEB + pytrec_eval）
+# 検索プラットフォームベンチマーク評価（MTEB + pytrec-eval-terrier）
 pip install "dingo-python[retrieval]"
 
 # 全機能をインストール（HHEM + Agent + Retrieval）

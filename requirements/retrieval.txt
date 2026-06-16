@@ -1,2 +1,2 @@
 mteb>=1.0.0
-pytrec_eval
+pytrec-eval-terrier>=0.5.6

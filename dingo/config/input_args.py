@@ -82,6 +82,19 @@ class ExecutorResultSaveArgs(BaseModel):
     full_field_sample_count: int = 0  # 保留完整字段样本条数，0表示关闭
 
 
+class OpenEvalArgs(BaseModel):
+    """LLM-as-Judge open eval config (Exa-style pointwise grading)."""
+    enabled: bool = False
+    model: Optional[str] = None
+    key: Optional[str] = None
+    api_url: Optional[str] = None
+    top_k: int = 5
+    aggregate: str = "mean"
+    max_workers: int = 4
+    prompt_mode: str = "standard"
+    expected_criteria: Optional[str] = None
+
+
 class RetrievalArgs(BaseModel):
     backend: str = "agentic"
     api_url: str = ""
@@ -103,6 +116,8 @@ class RetrievalArgs(BaseModel):
     rate_limit: Optional[float] = None
     max_retries: int = 3
     max_workers: int = 1
+    open_eval: Optional[OpenEvalArgs] = None
+    input_queries: Optional[str] = None
 
 
 class ExecutorArgs(BaseModel):

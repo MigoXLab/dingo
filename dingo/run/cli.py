@@ -176,6 +176,46 @@ def parse_args():
         help="Output result as JSON to stdout",
     )
 
+    # --- open eval (LLM-as-Judge) ---
+    ret_parser.add_argument(
+        "--open-eval", action="store_true", default=False,
+        help="Enable LLM-as-Judge open eval grading (Exa-style pointwise)",
+    )
+    ret_parser.add_argument(
+        "--open-eval-model", type=str, default=None,
+        help="LLM model for grading (e.g. gpt-4.1, gpt-4o)",
+    )
+    ret_parser.add_argument(
+        "--open-eval-key", type=str, default=None,
+        help="API key for the grading LLM",
+    )
+    ret_parser.add_argument(
+        "--open-eval-api-url", type=str, default=None,
+        help="API base URL for the grading LLM",
+    )
+    ret_parser.add_argument(
+        "--open-eval-top-k", type=int, default=5,
+        help="Grade top-k results per query (default: 5)",
+    )
+    ret_parser.add_argument(
+        "--open-eval-aggregate", type=str, default="mean",
+        choices=["mean", "median", "ndcg"],
+        help="Score aggregation method (default: mean)",
+    )
+    ret_parser.add_argument(
+        "--open-eval-prompt-mode", type=str, default="standard",
+        choices=["standard", "detailed"],
+        help="Grading prompt: standard (minimal) or detailed (full rubric)",
+    )
+    ret_parser.add_argument(
+        "--open-eval-max-workers", type=int, default=4,
+        help="Concurrent LLM grading threads (default: 4)",
+    )
+    ret_parser.add_argument(
+        "--input-queries", type=str, default=None,
+        help="Path to JSONL query file for standalone open eval (no MTEB corpus needed)",
+    )
+
     # Backward compatibility: bare `dingo --input config.json`
     parser.add_argument(
         "-i", "--input",
@@ -339,7 +379,7 @@ def _print_info_table(info):
 
 def cmd_eval_retrieval(args):
     """Run retrieval benchmark evaluation."""
-    from dingo.config.input_args import RetrievalArgs
+    from dingo.config.input_args import OpenEvalArgs, RetrievalArgs
 
     filters = None
     if args.filters_json:
@@ -358,6 +398,19 @@ def cmd_eval_retrieval(args):
             if args.json:
                 _json_error("ConfigError", message, EXIT_CONFIG_ERROR)
             raise ValueError(message)
+
+    open_eval = None
+    if args.open_eval:
+        open_eval = OpenEvalArgs(
+            enabled=True,
+            model=args.open_eval_model,
+            key=args.open_eval_key,
+            api_url=args.open_eval_api_url,
+            top_k=args.open_eval_top_k,
+            aggregate=args.open_eval_aggregate,
+            max_workers=args.open_eval_max_workers,
+            prompt_mode=args.open_eval_prompt_mode,
+        )
 
     retrieval_config = RetrievalArgs(
         backend=args.backend,
@@ -380,11 +433,13 @@ def cmd_eval_retrieval(args):
         rate_limit=args.rate_limit,
         max_retries=3,
         max_workers=args.max_workers,
+        open_eval=open_eval,
+        input_queries=getattr(args, "input_queries", None),
     )
 
     input_data = {
         "task_name": "retrieval_eval",
-        "input_path": ",".join(args.tasks),
+        "input_path": ",".join(args.tasks) if not args.input_queries else "__open_eval__",
         "output_path": args.output,
         "executor": {
             "retrieval": retrieval_config.model_dump(),

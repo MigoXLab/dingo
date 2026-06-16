@@ -151,7 +151,7 @@ class TestRetrievalExecutorFallbackMetrics:
         executor = RetrievalExecutor(input_args)
 
         monkeypatch.setattr(retrieval_module, "create_client", lambda *a, **k: FakeClient())
-        monkeypatch.setattr(retrieval_module.mteb, "get_tasks", lambda tasks: [object()])
+        monkeypatch.setattr(mteb, "get_tasks", lambda tasks: [object()])
         monkeypatch.setattr(RetrievalExecutor, "_attach_relevant_docs", lambda self, model, tasks: None)
 
         def fake_evaluate(model, tasks, overwrite_strategy):
@@ -187,7 +187,7 @@ class TestRetrievalExecutorFallbackMetrics:
                 task_results=[SimpleNamespace(scores={})],
             )
 
-        monkeypatch.setattr(retrieval_module.mteb, "evaluate", fake_evaluate)
+        monkeypatch.setattr(mteb, "evaluate", fake_evaluate)
 
         summary = executor.execute()
 

@@ -391,6 +391,7 @@ class SearchClientModel:
                         "rank": rank + 1,
                         "paper_id": paper.paper_id,
                         "title": paper.title,
+                        "abstract": paper.abstract,
                         "score": paper.score,
                         "resolved_corpus_id": resolved_id,
                         "mapping_source": src,

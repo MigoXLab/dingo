@@ -13,7 +13,7 @@ requirements = _read_requirements("./requirements/runtime.txt")
 
 agent_requirements = _read_requirements("./requirements/agent.txt")
 hhem_requirements = _read_requirements("./requirements/hhem_integration.txt")
-litellm_requirements = ["litellm>=1.35.0,<2.0"]
+litellm_requirements = ["litellm>=1.80.0,<1.87.0"]
 
 extras_require = {
     'agent': agent_requirements,

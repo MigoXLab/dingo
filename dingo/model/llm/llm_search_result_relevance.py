@@ -9,17 +9,23 @@ Two prompt modes are available (from Exa's "How we do evals" blog post):
 - ``standard``: minimal 10-line prompt, high correlation with detailed
 - ``detailed``: full 46-line prompt with scoring rubric and examples
 
-This class is used directly by ``RetrievalExecutor`` during the open eval
-phase; it is **not** registered via ``@Model.llm_register`` because it
-operates on search traces rather than ``Data`` rows.
+Registered as ``@Model.llm_register('LLMSearchResultRelevance')``.
+Uses the fan-out pattern: one Data row (query + N search results) produces
+one EvalDetail with aggregated score.
 """
 
 from __future__ import annotations
 import json
 import logging
 import statistics
+import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, List
+
+from dingo.io.input import Data, RequiredField
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
+from dingo.model import Model
+from dingo.model.llm.base_openai import BaseOpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -213,72 +219,6 @@ def _parse_grade_response(response_text: str) -> RelevanceGrade:
         return RelevanceGrade(error=f"Failed to parse grade response: {e}. Text: {text[:200]}")
 
 
-class LLMSearchResultRelevance:
-    """Exa-style pointwise search result relevance grader.
-
-    Manages its own OpenAI client instance, independent of Dingo's
-    ``BaseOpenAI`` evaluator hierarchy.
-    """
-
-    def __init__(
-        self,
-        *,
-        model: str | None = None,
-        api_key: str | None = None,
-        api_url: str | None = None,
-        prompt_mode: str = "standard",
-        expected_criteria: str | None = None,
-    ):
-        self.model = model or "gpt-4o"
-        self.api_key = api_key
-        self.api_url = api_url
-        self.prompt_mode = prompt_mode
-        self.expected_criteria = expected_criteria
-        self._client = None
-
-    def _get_client(self):
-        if self._client is None:
-            from openai import OpenAI
-            kwargs: dict[str, Any] = {}
-            if self.api_key:
-                kwargs["api_key"] = self.api_key
-            if self.api_url:
-                kwargs["base_url"] = self.api_url
-            self._client = OpenAI(**kwargs)
-        return self._client
-
-    def grade(
-        self,
-        query: str,
-        title: str,
-        abstract: str = "",
-        expected_criteria: str | None = None,
-    ) -> RelevanceGrade:
-        """Grade a single (query, result) pair."""
-        system_prompt = _get_system_prompt(self.prompt_mode)
-        user_message = _build_user_message(
-            query, title, abstract,
-            expected_criteria=expected_criteria or self.expected_criteria,
-        )
-
-        try:
-            client = self._get_client()
-            completion = client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message},
-                ],
-                temperature=0.0,
-                max_tokens=512,
-            )
-            response_text = completion.choices[0].message.content or ""
-            return _parse_grade_response(response_text)
-        except Exception as e:
-            logger.warning("LLM grading failed for query=%r title=%r: %s", query, title, e)
-            return RelevanceGrade(error=str(e))
-
-
 def aggregate_grades(
     grades: list[RelevanceGrade],
     method: str = "mean",
@@ -310,3 +250,226 @@ def aggregate_grades(
         graded_pairs=len(grades),
         error_count=errors,
     )
+
+
+@Model.llm_register("LLMSearchResultRelevance")
+class LLMSearchResultRelevance(BaseOpenAI):
+    """Exa-style pointwise search result relevance grader.
+
+    Evaluates search results for a given query using the fan-out pattern:
+    one Data row with N search results produces one EvalDetail with the
+    mean relevance score.
+
+    Data fields:
+    - ``prompt``: the search query text
+    - ``search_results``: list of result dicts (each with ``title``, ``abstract``)
+    - ``expected_criteria`` (optional): criteria for a good result
+
+    Config (via dynamic_config.model_extra):
+    - ``prompt_mode``: "standard" or "detailed" (default: "standard")
+    - ``top_k``: max results to grade per query (default: 5)
+    - ``expected_criteria``: global criteria string (overridden by Data field)
+    - ``threshold``: score threshold for pass/fail (default: 0.5)
+    """
+
+    _required_fields = [RequiredField.PROMPT]
+    prompt = ""
+
+    _custom_config_keys = frozenset({
+        "prompt_mode", "top_k", "expected_criteria", "threshold",
+    })
+
+    @classmethod
+    def send_messages(cls, messages: List):
+        """Override to strip custom config keys before calling the OpenAI API."""
+        from dingo.utils.exception import ExceedMaxTokens
+
+        if cls.dynamic_config.model:
+            model_name = cls.dynamic_config.model
+        else:
+            model_name = cls.client.models.list().data[0].id
+
+        extra_params = {
+            k: v for k, v in (cls.dynamic_config.model_extra or {}).items()
+            if k not in cls._custom_config_keys
+        }
+        cls.validate_config(extra_params)
+
+        completions = cls.client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            **extra_params,
+        )
+
+        if completions.choices[0].finish_reason == "length":
+            raise ExceedMaxTokens(
+                f"Exceed max tokens: {extra_params.get('max_tokens', 4000)}"
+            )
+
+        return str(completions.choices[0].message.content)
+
+    @classmethod
+    def _get_prompt_mode(cls) -> str:
+        return (cls.dynamic_config.model_extra or {}).get("prompt_mode", "standard")
+
+    @classmethod
+    def _get_top_k(cls) -> int:
+        return int((cls.dynamic_config.model_extra or {}).get("top_k", 5))
+
+    @classmethod
+    def _get_expected_criteria(cls) -> str | None:
+        return (cls.dynamic_config.model_extra or {}).get("expected_criteria")
+
+    @classmethod
+    def _get_threshold(cls) -> float:
+        return float((cls.dynamic_config.model_extra or {}).get("threshold", 0.5))
+
+    @classmethod
+    def build_messages(cls, input_data: Data) -> List:
+        """Build message bundles for each (query, result) pair.
+
+        Returns a list of dicts: [{"result_index": i, "messages": [...]}]
+        """
+        query = getattr(input_data, "prompt", "") or ""
+        search_results = getattr(input_data, "search_results", None) or []
+        expected_criteria = (
+            getattr(input_data, "expected_criteria", None)
+            or cls._get_expected_criteria()
+        )
+        top_k = cls._get_top_k()
+        prompt_mode = cls._get_prompt_mode()
+        system_prompt = _get_system_prompt(prompt_mode)
+
+        messages_list = []
+        for i, result in enumerate(search_results[:top_k]):
+            if not isinstance(result, dict):
+                continue
+            title = result.get("title", "")
+            abstract = result.get("abstract", "")
+            user_msg = _build_user_message(query, title, abstract, expected_criteria)
+            messages_list.append({
+                "result_index": i,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_msg},
+                ],
+            })
+        return messages_list
+
+    @classmethod
+    def process_response(cls, responses: List[str]) -> EvalDetail:
+        """Aggregate per-result LLM responses into one EvalDetail."""
+        grades: list[RelevanceGrade] = []
+        reasons: list[str] = []
+
+        for i, response in enumerate(responses):
+            grade = _parse_grade_response(response)
+            grades.append(grade)
+            if grade.error:
+                reasons.append(f"Result {i + 1}: ERROR - {grade.error}")
+            else:
+                reasons.append(
+                    f"Result {i + 1}: score={grade.score:.2f} "
+                    f"(relevance={grade.query_relevance:.2f}, "
+                    f"quality={grade.result_quality:.2f}) - {grade.reasoning[:100]}"
+                )
+
+        valid_scores = [g.score for g in grades if not g.error]
+        mean_score = statistics.mean(valid_scores) if valid_scores else 0.0
+
+        result = EvalDetail(metric=cls.__name__, score=round(mean_score, 5))
+        threshold = cls._get_threshold()
+
+        if mean_score >= threshold:
+            result.status = False
+            result.label = [QualityLabel.QUALITY_GOOD]
+        else:
+            result.status = True
+            result.label = ["QUALITY_BAD.SEARCH_RELEVANCE_LOW"]
+
+        reason_summary = (
+            f"Mean relevance: {mean_score:.4f} "
+            f"({len(valid_scores)} graded, {len(grades) - len(valid_scores)} errors)"
+        )
+        result.reason = [reason_summary] + reasons
+        return result
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        """Fan-out evaluation: grade each search result independently."""
+        search_results = getattr(input_data, "search_results", None) or []
+        if not search_results:
+            result = EvalDetail(metric=cls.__name__, score=0.0)
+            result.status = True
+            result.label = ["QUALITY_BAD.NO_SEARCH_RESULTS"]
+            result.reason = ["No search results to grade"]
+            return result
+
+        messages_list = cls.build_messages(input_data)
+        if not messages_list:
+            result = EvalDetail(metric=cls.__name__, score=0.0)
+            result.status = True
+            result.label = ["QUALITY_BAD.NO_VALID_RESULTS"]
+            result.reason = ["No valid search results to grade"]
+            return result
+
+        if cls.client is None:
+            cls.create_client()
+
+        responses = []
+        for item in messages_list:
+            messages = item["messages"]
+            attempts = 0
+            response = None
+
+            while attempts < 3:
+                try:
+                    response = cls.send_messages(messages)
+                    break
+                except Exception as e:
+                    attempts += 1
+                    logger.warning(
+                        "LLM grading failed (attempt %d/3) for result %d: %s",
+                        attempts, item["result_index"], e,
+                    )
+                    time.sleep(1)
+
+            if response is None:
+                responses.append('{"error": "All retry attempts failed"}')
+            else:
+                responses.append(response)
+
+        return cls.process_response(responses)
+
+    @classmethod
+    def grade_single(
+        cls,
+        query: str,
+        title: str,
+        abstract: str = "",
+        expected_criteria: str | None = None,
+    ) -> RelevanceGrade:
+        """Grade a single (query, result) pair directly.
+
+        Convenience method for use by RetrievalExecutor's parallel grading.
+        Uses the class-level client and config.
+        """
+        if cls.client is None:
+            cls.create_client()
+
+        prompt_mode = cls._get_prompt_mode()
+        system_prompt = _get_system_prompt(prompt_mode)
+        user_message = _build_user_message(
+            query, title, abstract,
+            expected_criteria=expected_criteria or cls._get_expected_criteria(),
+        )
+
+        try:
+            response = cls.send_messages([
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ])
+            return _parse_grade_response(response)
+        except Exception as e:
+            logger.warning("LLM grading failed for query=%r title=%r: %s", query, title, e)
+            return RelevanceGrade(error=str(e))

@@ -5,23 +5,26 @@ Registered as ``Executor.exec_map["retrieval"]``. Uses the same InputArgs
 configuration as other executors, reading retrieval-specific config from
 ``input_args.executor.retrieval``.
 
-Supports an optional **open eval** phase (Exa-style LLM-as-Judge pointwise
-grading) that runs after search and alongside MTEB closed-eval metrics.
+Architecture (unified with standard Dingo pipeline):
+1. Search Phase: call SearchClient to produce search traces
+2. Data Conversion: convert traces to standard Data rows (one per query)
+3. Evaluation Phase: call registered evaluators (rule + LLM) via Model registry
+4. Output: standard ResultInfo / SummaryModel + search_traces for audit
 """
 
 from __future__ import annotations
-import concurrent.futures
 import logging
 import os
 import uuid
 from datetime import datetime
 from typing import Any
 
-from dingo.config.input_args import InputArgs, OpenEvalArgs
+from dingo.config.input_args import EvalPiplineConfig, EvaluatorLLMArgs, InputArgs
 from dingo.exec.base import Executor
-from dingo.io import SummaryModel
-from dingo.model.llm.llm_search_result_relevance import LLMSearchResultRelevance, RelevanceGrade, aggregate_grades
-from dingo.retrieval.eval_utils import compute_query_metrics, make_output_dir, save_json
+from dingo.io import Data, ResultInfo, SummaryModel
+from dingo.io.output.eval_detail import EvalDetail
+from dingo.model import Model
+from dingo.retrieval.eval_utils import make_output_dir, save_json
 from dingo.retrieval.mteb_adapter import SearchClientModel
 from dingo.retrieval.search_client import create_client
 
@@ -44,6 +47,10 @@ RAW_API_METRICS_OF_INTEREST = [
     f"raw_api_{key}" for key in METRICS_OF_INTEREST if key != "main_score"
 ]
 
+_RULE_EVALUATOR_NAMES = [
+    "RuleNDCG", "RuleMRR", "RuleRecall", "RulePrecision", "RuleMAP", "RuleHitRate",
+]
+
 
 def _tqdm_or_none(iterable=None, **kwargs):
     """Return tqdm-wrapped iterable/progress bar if available, else fallback."""
@@ -56,7 +63,11 @@ def _tqdm_or_none(iterable=None, **kwargs):
 
 @Executor.register("retrieval")
 class RetrievalExecutor:
-    """Evaluates search APIs against MTEB retrieval benchmarks."""
+    """Evaluates search APIs against MTEB retrieval benchmarks.
+
+    Uses registered evaluators (rule + LLM) from the Dingo model registry
+    for all metric computation.
+    """
 
     def __init__(self, input_args: InputArgs):
         self.input_args = input_args
@@ -91,6 +102,184 @@ class RetrievalExecutor:
             client_kwargs["rate_limit"] = ra.rate_limit
         client = create_client(ra.backend, **client_kwargs)
         return client, client_kwargs
+
+    # ------------------------------------------------------------------
+    # Data conversion: search traces -> standard Data rows
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _traces_to_data_rows(
+        traces: list[dict[str, Any]],
+        task_name: str = "",
+    ) -> list[Data]:
+        """Convert search traces to standard Data rows (one per query).
+
+        Each Data row contains:
+        - data_id: {task_name}_{qid}
+        - prompt: the query text
+        - search_results: list of result dicts from the trace
+        - reference: list of gold doc IDs (from trace's gold_doc_ids)
+        - expected_criteria: from query-level if present
+        """
+        data_rows: list[Data] = []
+        for trace in traces:
+            t_name = trace.get("task", task_name)
+            for query_detail in trace.get("queries", []):
+                if query_detail.get("error"):
+                    continue
+
+                qid = query_detail.get("qid", "")
+                data_id = f"{t_name}_{qid}" if t_name else str(qid)
+
+                search_results = query_detail.get("top_api_results", [])
+                gold_doc_ids = query_detail.get("gold_doc_ids", []) or []
+                expected_criteria = query_detail.get("expected_criteria")
+
+                row = Data(
+                    data_id=data_id,
+                    prompt=query_detail.get("query_text", ""),
+                    search_results=search_results,
+                    reference=gold_doc_ids,
+                )
+                if expected_criteria:
+                    row.expected_criteria = expected_criteria
+
+                data_rows.append(row)
+
+        return data_rows
+
+    # ------------------------------------------------------------------
+    # Evaluator auto-configuration
+    # ------------------------------------------------------------------
+
+    def _build_evaluator_configs(self) -> list[EvalPiplineConfig]:
+        """Auto-configure evaluators based on retrieval mode.
+
+        - If gold labels are available (MTEB closed eval): add rule IR evaluators
+        - If open_eval is enabled: add LLMSearchResultRelevance
+        """
+        configs: list[EvalPiplineConfig] = []
+        ra = self.retrieval_args
+        oe_args = ra.open_eval
+
+        # Rule evaluators for IR metrics (always added for MTEB mode)
+        if not ra.input_queries:
+            for name in _RULE_EVALUATOR_NAMES:
+                if name in Model.rule_name_map:
+                    configs.append(EvalPiplineConfig(name=name))
+
+        # LLM evaluator for open eval
+        if oe_args and oe_args.enabled:
+            extra_kwargs: dict[str, Any] = {
+                "prompt_mode": oe_args.prompt_mode,
+                "top_k": oe_args.top_k,
+            }
+            if oe_args.expected_criteria:
+                extra_kwargs["expected_criteria"] = oe_args.expected_criteria
+            llm_config = EvaluatorLLMArgs(
+                model=oe_args.model,
+                key=oe_args.key,
+                api_url=oe_args.api_url,
+                **extra_kwargs,
+            )
+            configs.append(EvalPiplineConfig(
+                name="LLMSearchResultRelevance",
+                config=llm_config,
+            ))
+
+        return configs
+
+    # ------------------------------------------------------------------
+    # Evaluation loop (uses registered evaluators)
+    # ------------------------------------------------------------------
+
+    def _evaluate_data_rows(
+        self,
+        data_rows: list[Data],
+        eval_configs: list[EvalPiplineConfig],
+    ) -> list[ResultInfo]:
+        """Run registered evaluators on each Data row, producing ResultInfo list."""
+        Model.load_model()
+        results: list[ResultInfo] = []
+
+        rule_configs = [c for c in eval_configs if c.name in Model.rule_name_map]
+        llm_configs = [c for c in eval_configs if c.name in Model.llm_name_map]
+
+        progress = _tqdm_or_none(
+            data_rows, total=len(data_rows), desc="Evaluating queries", unit="query"
+        ) or data_rows
+
+        for data in progress:
+            result_info = ResultInfo(
+                dingo_id=str(getattr(data, "data_id", "")),
+                raw_data=data.to_dict(),
+            )
+            eval_details: list[EvalDetail] = []
+
+            # Run rule evaluators
+            for ec in rule_configs:
+                model_cls = Model.rule_name_map[ec.name]
+                model = model_cls()
+                if ec.config:
+                    Model.set_config_rule(model, ec.config)
+                    Model.set_config_rule(model_cls, ec.config)
+                detail = model.eval(data)
+                eval_details.append(detail)
+                if detail.status:
+                    result_info.eval_status = True
+
+            # Run LLM evaluators
+            for ec in llm_configs:
+                model_cls = Model.llm_name_map[ec.name]
+                model = model_cls()
+                if ec.config:
+                    Model.set_config_llm(model, ec.config)
+                    Model.set_config_llm(model_cls, ec.config)
+                detail = model.eval(data)
+                eval_details.append(detail)
+                if detail.status:
+                    result_info.eval_status = True
+
+            result_info.eval_details = {"retrieval": eval_details}
+            results.append(result_info)
+
+        return results
+
+    def _aggregate_results(
+        self, results: list[ResultInfo], summary: SummaryModel
+    ) -> SummaryModel:
+        """Aggregate ResultInfo list into SummaryModel using standard methods."""
+        for result_info in results:
+            for field_key, eval_details in result_info.eval_details.items():
+                if field_key not in summary.type_ratio:
+                    summary.type_ratio[field_key] = {}
+
+                label_set = set()
+                for eval_detail in eval_details:
+                    if eval_detail.score is not None and eval_detail.metric:
+                        summary.add_metric_score(
+                            field_key, eval_detail.metric, eval_detail.score
+                        )
+                    label_list = eval_detail.label if eval_detail.label else []
+                    for label in label_list:
+                        label_set.add(label)
+
+                for label in label_set:
+                    summary.type_ratio[field_key].setdefault(label, 0)
+                    summary.type_ratio[field_key][label] += 1
+
+            if result_info.eval_status:
+                summary.num_bad += 1
+            else:
+                summary.num_good += 1
+            summary.total += 1
+
+        summary.calculate_metrics_score_averages()
+        return summary
+
+    # ------------------------------------------------------------------
+    # Main execution paths
+    # ------------------------------------------------------------------
 
     def execute(self) -> SummaryModel:
         ra = self.retrieval_args
@@ -137,8 +326,7 @@ class RetrievalExecutor:
             create_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-        all_results: dict[str, Any] = {}
-
+        # --- Search Phase ---
         for task_name in task_names:
             logger.info(f"Starting evaluation on task: {task_name}")
             tasks = mteb.get_tasks(tasks=[task_name])
@@ -148,67 +336,42 @@ class RetrievalExecutor:
 
             try:
                 self._attach_relevant_docs(model, tasks)
-                results = mteb.evaluate(
+                mteb.evaluate(
                     model,
                     tasks=tasks,
                     overwrite_strategy="always",
                 )
-                task_metrics = self._extract_metrics(results)
-                if not task_metrics:
-                    logger.warning(
-                        "MTEB returned empty metrics for task %r; "
-                        "falling back to search trace metrics",
-                        task_name,
-                    )
-                    task_metrics = self._compute_metrics_from_search_traces(
-                        model.get_search_traces(),
-                        task_name,
-                    )
-                task_metrics.update(
-                    self._compute_raw_api_metrics_from_search_traces(
-                        model.get_search_traces(),
-                        task_name,
-                    )
-                )
-                all_results[task_name] = task_metrics
             except Exception as e:
-                logger.error(f"Task {task_name!r} failed: {e}", exc_info=True)
-                task_metrics = self._compute_metrics_from_search_traces(
-                    model.get_search_traces(),
-                    task_name,
-                )
-                if task_metrics:
-                    task_metrics.update(
-                        self._compute_raw_api_metrics_from_search_traces(
-                            model.get_search_traces(),
-                            task_name,
-                        )
-                    )
-                    logger.warning(
-                        "Using search trace fallback metrics for failed task %r",
-                        task_name,
-                    )
-                    all_results[task_name] = task_metrics
+                logger.error(f"Task {task_name!r} search phase failed: {e}", exc_info=True)
                 continue
 
-        oe_args = ra.open_eval
-        if oe_args and oe_args.enabled:
-            open_eval_metrics = self._run_open_eval(
-                model.get_search_traces(), oe_args, task_names,
-            )
-            for tn, oe_metrics in open_eval_metrics.items():
-                all_results.setdefault(tn, {}).update(oe_metrics)
+        # --- Data Conversion ---
+        traces = model.get_search_traces()
+        data_rows = self._traces_to_data_rows(traces)
 
-        self._all_results = all_results
-        summary.metrics_score_stats = all_results
-        summary.total = sum(
-            t.get("total_queries", 0)
-            for trace in model.get_search_traces()
-            for t in [trace]
-        )
-        summary.score = all_results.get(task_names[0], {}).get("main_score", 0.0) if task_names else 0.0
+        if not data_rows:
+            logger.warning("No data rows produced from search traces")
+            summary.finish_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.summary = summary
+            return summary
+
+        # --- Evaluation Phase (via registered evaluators) ---
+        eval_configs = self._build_evaluator_configs()
+        results = self._evaluate_data_rows(data_rows, eval_configs)
+        summary = self._aggregate_results(results, summary)
+
+        # Compute supplementary raw API metrics (pre-corpus-resolution, for debugging)
+        raw_api_metrics = {}
+        for task_name in task_names:
+            raw = self._compute_raw_api_metrics_from_search_traces(traces, task_name)
+            if raw:
+                raw_api_metrics[task_name] = raw
+
+        # --- Output ---
+        summary.score = self._compute_primary_score(summary)
         summary.finish_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        oe_args = ra.open_eval
         config: dict[str, Any] = {
             "backend": ra.backend,
             "api_url": ra.api_url,
@@ -242,14 +405,16 @@ class RetrievalExecutor:
             "score": summary.score,
             "total": summary.total,
             "config": config,
-            "metrics": all_results,
+            "metrics": summary.metrics_score_stats,
+            "raw_api_metrics": raw_api_metrics,
         }
         save_json(summary_dict, output_dir, "summary.json")
 
         detailed = {
             "config": config,
-            "results": all_results,
-            "search_traces": model.get_search_traces(),
+            "metrics": summary.metrics_score_stats,
+            "raw_api_metrics": raw_api_metrics,
+            "search_traces": traces,
         }
         save_json(detailed, output_dir, "detailed_results.json")
 
@@ -292,15 +457,7 @@ class RetrievalExecutor:
 
         task_label = os.path.splitext(os.path.basename(queries_path))[0]
 
-        grader = LLMSearchResultRelevance(
-            model=oe_args.model,
-            api_key=oe_args.key,
-            api_url=oe_args.api_url,
-            prompt_mode=oe_args.prompt_mode,
-            expected_criteria=oe_args.expected_criteria,
-        )
-
-        all_grades: list[RelevanceGrade] = []
+        # --- Search Phase ---
         search_traces: list[dict[str, Any]] = []
         query_details: list[dict[str, Any]] = []
         errors = 0
@@ -308,7 +465,7 @@ class RetrievalExecutor:
         query_iter = _tqdm_or_none(
             enumerate(query_items),
             total=len(query_items),
-            desc="OpenEval queries",
+            desc="Searching queries",
             unit="query",
         ) or enumerate(query_items)
 
@@ -326,40 +483,23 @@ class RetrievalExecutor:
                 continue
 
             top_results: list[dict[str, Any]] = []
-            query_grades: list[RelevanceGrade] = []
-
             for rank, paper in enumerate(response.results[:oe_args.top_k]):
-                grade = grader.grade(
-                    query=q_text,
-                    title=paper.title,
-                    abstract=paper.abstract,
-                    expected_criteria=q_criteria,
-                )
-                all_grades.append(grade)
-                query_grades.append(grade)
                 top_results.append({
                     "rank": rank + 1,
                     "paper_id": paper.paper_id,
                     "title": paper.title,
                     "abstract": paper.abstract,
                     "score": paper.score,
-                    "llm_grade": grade.to_dict(),
                 })
-
-            valid_scores = [g.score for g in query_grades if not g.error]
-            q_mean = (
-                sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
-            )
 
             query_details.append({
                 "qid": str(idx),
                 "query_text": q_text,
                 "expected_criteria": q_criteria,
                 "api_results_count": len(response.results),
-                "graded_count": len(query_grades),
                 "response_time_ms": response.response_time_ms,
-                "open_eval_mean_score": round(q_mean, 5),
                 "top_api_results": top_results,
+                "gold_doc_ids": [],
             })
 
         trace = {
@@ -372,8 +512,24 @@ class RetrievalExecutor:
         }
         search_traces.append(trace)
 
-        oe_summary = aggregate_grades(all_grades, method=oe_args.aggregate)
-        all_results: dict[str, Any] = {task_label: oe_summary.to_dict()}
+        # --- Data Conversion ---
+        data_rows = self._traces_to_data_rows(search_traces, task_name=task_label)
+
+        if not data_rows:
+            logger.warning("No data rows from standalone open eval search")
+            summary = SummaryModel(
+                task_id=str(uuid.uuid4())[:8],
+                task_name=self.input_args.task_name or "open_eval",
+                input_path=queries_path,
+                output_path=output_dir,
+            )
+            summary.finish_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.summary = summary
+            return summary
+
+        # --- Evaluation Phase ---
+        eval_configs = self._build_evaluator_configs()
+        results = self._evaluate_data_rows(data_rows, eval_configs)
 
         summary = SummaryModel(
             task_id=str(uuid.uuid4())[:8],
@@ -382,15 +538,11 @@ class RetrievalExecutor:
             output_path=output_dir,
             create_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-        summary.metrics_score_stats = all_results
-        summary.total = len(query_details)
-        summary.score = (
-            oe_summary.median_score
-            if oe_args.aggregate == "median"
-            else oe_summary.mean_score
-        )
+        summary = self._aggregate_results(results, summary)
+        summary.score = self._compute_primary_score(summary)
         summary.finish_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        # --- Output ---
         config: dict[str, Any] = {
             "mode": "standalone_open_eval",
             "backend": ra.backend,
@@ -416,24 +568,40 @@ class RetrievalExecutor:
             "score": summary.score,
             "total": summary.total,
             "config": config,
-            "metrics": all_results,
+            "metrics": summary.metrics_score_stats,
         }
         save_json(summary_dict, output_dir, "summary.json")
 
         detailed = {
             "config": config,
-            "results": all_results,
+            "metrics": summary.metrics_score_stats,
             "search_traces": search_traces,
         }
         save_json(detailed, output_dir, "detailed_results.json")
 
         logger.info(
-            "Standalone open eval complete: mean_score=%.4f (%d queries). "
+            "Standalone open eval complete: %d queries evaluated. "
             "Results saved to: %s",
-            oe_summary.mean_score, len(query_details), output_dir,
+            len(data_rows), output_dir,
         )
         self.summary = summary
         return summary
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _compute_primary_score(summary: SummaryModel) -> float:
+        """Pick the primary score from metrics for the summary."""
+        for field_key, metrics in summary.metrics_score_stats.items():
+            # Prefer NDCG if available (closed eval)
+            if "RuleNDCG" in metrics:
+                return metrics["RuleNDCG"].get("score_average", 0.0)
+            # Fall back to LLM relevance score (open eval)
+            if "LLMSearchResultRelevance" in metrics:
+                return metrics["LLMSearchResultRelevance"].get("score_average", 0.0)
+        return 0.0
 
     @staticmethod
     def _attach_relevant_docs(model: SearchClientModel, tasks: list[Any]) -> None:
@@ -511,146 +679,11 @@ class RetrievalExecutor:
         return isinstance(sample, (list, tuple, set))
 
     @staticmethod
-    def _run_open_eval(
-        traces: list[dict[str, Any]],
-        oe_args: OpenEvalArgs,
-        task_names: list[str],
-    ) -> dict[str, dict[str, Any]]:
-        """Grade (query, result) pairs with an LLM judge.
-
-        Updates trace entries in-place (adds ``llm_grade`` to each result)
-        and returns ``{task_name: {open_eval_*: value}}`` metrics.
-        """
-        grader = LLMSearchResultRelevance(
-            model=oe_args.model,
-            api_key=oe_args.key,
-            api_url=oe_args.api_url,
-            prompt_mode=oe_args.prompt_mode,
-            expected_criteria=oe_args.expected_criteria,
-        )
-
-        work_items: list[tuple[dict, dict, str]] = []
-        for trace in traces:
-            task = trace.get("task", "")
-            for query_detail in trace.get("queries", []):
-                q_text = query_detail.get("query_text", "")
-                for result in query_detail.get("top_api_results", [])[:oe_args.top_k]:
-                    work_items.append((query_detail, result, q_text))
-
-        if not work_items:
-            return {}
-
-        logger.info(
-            "Open eval: grading %d (query, result) pairs with model=%s",
-            len(work_items), oe_args.model,
-        )
-
-        def _grade_item(item: tuple[dict, dict, str]):
-            _, result, q_text = item
-            grade = grader.grade(
-                query=q_text,
-                title=result.get("title", ""),
-                abstract=result.get("abstract", ""),
-            )
-            result["llm_grade"] = grade.to_dict()
-            return grade
-
-        grades: list[RelevanceGrade] = [RelevanceGrade() for _ in range(len(work_items))]
-
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=oe_args.max_workers
-        ) as pool:
-            future_to_idx = {
-                pool.submit(_grade_item, item): idx
-                for idx, item in enumerate(work_items)
-            }
-            completed = concurrent.futures.as_completed(future_to_idx)
-            completed = _tqdm_or_none(
-                completed,
-                total=len(future_to_idx),
-                desc="OpenEval grading",
-                unit="pair",
-            ) or completed
-            for future in completed:
-                idx = future_to_idx[future]
-                try:
-                    grades[idx] = future.result()
-                except Exception as e:
-                    logger.warning("Open eval grading error: %s", e)
-                    grades[idx] = RelevanceGrade(error=str(e))
-
-        task_grades: dict[str, list[RelevanceGrade]] = {}
-        idx = 0
-        for trace in traces:
-            task = trace.get("task", "")
-            for query_detail in trace.get("queries", []):
-                for _ in query_detail.get("top_api_results", [])[:oe_args.top_k]:
-                    task_grades.setdefault(task, []).append(grades[idx])
-                    idx += 1
-
-        result_metrics: dict[str, dict[str, Any]] = {}
-        for task, task_grade_list in task_grades.items():
-            summary = aggregate_grades(task_grade_list, method=oe_args.aggregate)
-            result_metrics[task] = summary.to_dict()
-            logger.info(
-                "Open eval for %s: mean_score=%.4f (%d pairs, %d errors)",
-                task, summary.mean_score, summary.graded_pairs, summary.error_count,
-            )
-
-        return result_metrics
-
-    def _extract_metrics(self, model_result) -> dict[str, float]:
-        """Extract metrics of interest from MTEB ModelResult."""
-        metrics: dict[str, float] = {}
-        for task_result in model_result.task_results:
-            scores = task_result.scores
-            if not scores:
-                continue
-            for split_scores in scores.values():
-                for score_entry in split_scores:
-                    for key in METRICS_OF_INTEREST:
-                        if key in score_entry:
-                            metrics[key] = round(score_entry[key], 5)
-        return metrics
-
-    @staticmethod
-    def _compute_metrics_from_search_traces(
-        traces: list[dict[str, Any]],
-        task_name: str,
-    ) -> dict[str, float]:
-        """Compute fallback retrieval metrics from stored trace qrels/results."""
-        metric_values: dict[str, list[float]] = {}
-        for trace in traces:
-            if trace.get("task") != task_name:
-                continue
-            for query in trace.get("queries", []):
-                retrieved_doc_ids = query.get("retrieved_doc_ids") or []
-                gold_doc_ids = set(query.get("gold_doc_ids") or [])
-                if not gold_doc_ids:
-                    continue
-
-                query_metrics = compute_query_metrics(
-                    retrieved_doc_ids,
-                    gold_doc_ids,
-                )
-                query_metrics["main_score"] = query_metrics.get("ndcg_at_10", 0.0)
-
-                for key in METRICS_OF_INTEREST:
-                    if key not in query_metrics:
-                        continue
-                    metric_values.setdefault(key, []).append(query_metrics[key])
-
-        return {
-            key: round(sum(values) / len(values), 5)
-            for key, values in metric_values.items()
-            if values
-        }
-
-    @staticmethod
     def _compute_raw_api_metrics_from_search_traces(
         traces: list[dict[str, Any]],
         task_name: str,
     ) -> dict[str, float]:
+        """Compute supplementary metrics from raw API results (pre-corpus-resolution)."""
         metric_values: dict[str, list[float]] = {}
         api_results_counts: list[float] = []
         for trace in traces:

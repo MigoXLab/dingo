@@ -170,7 +170,49 @@ MinerU formats automatically flatten blocks into `Data` objects, preserving all 
 |------|-------|----------|
 | Local | `Executor.exec_map["local"]` | Development, < 100K rows |
 | Spark | `Executor.exec_map["spark"]` | Production, > 1M rows |
-| Retrieval | `Executor.exec_map["retrieval"]` | Search API benchmark evaluation (MTEB) |
+| Retrieval | `Executor.exec_map["retrieval"]` | Search API benchmark evaluation (MTEB + open eval) |
+
+### Retrieval Evaluation Architecture
+
+The `RetrievalExecutor` is fully unified with Dingo's standard architecture:
+
+```
+Search Phase → _traces_to_data_rows() → Registered Evaluators → Standard Output
+```
+
+**Data model**: One `Data` row per query (fan-out pattern):
+```python
+Data(
+    data_id="SciFact_q001",
+    prompt="quantum computing applications",
+    search_results=[
+        {"rank": 1, "title": "...", "abstract": "...", "resolved_corpus_id": "doc_123"},
+        ...
+    ],
+    reference=["doc_123", "doc_456"],   # gold doc IDs (closed eval)
+    expected_criteria="...",             # optional (open eval)
+)
+```
+
+**Registered evaluators** (group `"retrieval"`):
+
+| Rule Evaluator | Metric | Description |
+|----------------|--------|-------------|
+| `RuleNDCG` | `RETRIEVAL_NDCG` | NDCG@k (default k=10) |
+| `RuleMRR` | `RETRIEVAL_MRR` | Mean Reciprocal Rank@k |
+| `RuleRecall` | `RETRIEVAL_RECALL` | Recall@k |
+| `RulePrecision` | `RETRIEVAL_PRECISION` | Precision@k |
+| `RuleMAP` | `RETRIEVAL_MAP` | Mean Average Precision@k |
+| `RuleHitRate` | `RETRIEVAL_HIT_RATE` | Hit Rate@k (binary) |
+
+| LLM Evaluator | Description |
+|----------------|-------------|
+| `LLMSearchResultRelevance` | Exa-style pointwise relevance grading (fan-out over search results) |
+
+**Auto-configuration**: The executor auto-detects which evaluators to use:
+- MTEB mode (gold labels): all rule IR evaluators
+- Open eval mode: `LLMSearchResultRelevance`
+- Combined: both rule + LLM evaluators
 
 ### Optional Dependencies (extras_require)
 
@@ -244,6 +286,18 @@ dingo eval-retrieval --backend agentic --tasks SciFact \
   --api-url https://api.sciverse.space --api-token <token> --limit 100
 dingo eval-retrieval --tasks SciFact LitSearch --max-queries 50 --max-workers 4 \
   --api-url http://localhost:8080
+
+# Run retrieval with LLM-as-Judge open eval (Exa-style)
+dingo eval-retrieval --backend agentic --tasks SciFact \
+  --api-url https://api.sciverse.space --api-token <token> \
+  --open-eval --open-eval-model gpt-4o --open-eval-key <key> \
+  --open-eval-api-url http://llm-api/v1
+
+# Standalone open eval (custom queries, no MTEB corpus needed)
+dingo eval-retrieval --backend agentic \
+  --input-queries queries.jsonl \
+  --api-url https://api.sciverse.space --api-token <token> \
+  --open-eval --open-eval-model gpt-4o --open-eval-key <key>
 
 # List available evaluators, groups
 dingo info                                # Show all (rules, LLM, groups)

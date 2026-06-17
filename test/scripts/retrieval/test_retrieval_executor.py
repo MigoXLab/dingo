@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -14,8 +15,6 @@ from dingo.config.input_args import RetrievalArgs
 PROJECT_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-
-mteb = pytest.importorskip("mteb", reason="mteb not installed (extras 'retrieval')")
 
 
 class TestRetrievalArgs:
@@ -129,73 +128,89 @@ class TestCLIEvalRetrieval:
         assert "default depends on backend" in stdout
 
 
-class TestRetrievalExecutorFallbackMetrics:
-    def test_execute_uses_trace_metrics_when_mteb_metrics_empty(self, tmp_path, monkeypatch):
-        import dingo.exec.retrieval as retrieval_module
-        from dingo.exec.retrieval import RetrievalExecutor
+class TestRetrievalExecutorEvaluatorAutoConfig:
+    """Test evaluator auto-configuration logic."""
 
-        class FakeClient:
-            name = "fake-openalex"
+    def test_mteb_mode_configures_rule_evaluators(self):
+        from dingo.exec.retrieval import RetrievalExecutor
+        from dingo.model import Model
+        Model.load_model()
 
         input_args = InputArgs(**{
             "input_path": "SciFact",
-            "output_path": str(tmp_path),
+            "output_path": "/tmp/test",
             "executor": {
                 "retrieval": {
-                    "backend": "openalex",
-                    "api_url": "https://api.openalex.org",
-                    "limit": 10,
+                    "backend": "agentic",
+                    "api_url": "http://test",
                 }
             },
         })
         executor = RetrievalExecutor(input_args)
+        configs = executor._build_evaluator_configs()
+        names = [c.name for c in configs]
+        assert "RuleNDCG" in names
+        assert "RuleMRR" in names
+        assert "RuleRecall" in names
+        assert "LLMSearchResultRelevance" not in names
 
-        monkeypatch.setattr(retrieval_module, "create_client", lambda *a, **k: FakeClient())
-        monkeypatch.setattr(mteb, "get_tasks", lambda tasks: [object()])
-        monkeypatch.setattr(RetrievalExecutor, "_attach_relevant_docs", lambda self, model, tasks: None)
+    def test_open_eval_adds_llm_evaluator(self):
+        from dingo.config.input_args import OpenEvalArgs
+        from dingo.exec.retrieval import RetrievalExecutor
+        from dingo.model import Model
+        Model.load_model()
 
-        def fake_evaluate(model, tasks, overwrite_strategy):
-            model._search_traces.append({
-                "task": "SciFact",
-                "total_queries": 2,
-                "queries": [
-                    {
-                        "qid": "q1",
-                        "retrieved_doc_ids": ["d1", "d2"],
-                        "gold_doc_ids": ["d1"],
-                        "api_results_count": 3,
-                        "raw_api_metrics": {
-                            "raw_api_ndcg_at_10": 0.5,
-                            "raw_api_recall_at_10": 1.0,
-                            "raw_api_mrr_at_10": 0.5,
-                        },
+        input_args = InputArgs(**{
+            "input_path": "SciFact",
+            "output_path": "/tmp/test",
+            "executor": {
+                "retrieval": {
+                    "backend": "agentic",
+                    "api_url": "http://test",
+                    "open_eval": {
+                        "enabled": True,
+                        "model": "gpt-4o",
+                        "key": "test-key",
+                        "api_url": "http://llm/v1",
                     },
-                    {
-                        "qid": "q2",
-                        "retrieved_doc_ids": ["d3"],
-                        "gold_doc_ids": ["d4"],
-                        "api_results_count": 1,
-                        "raw_api_metrics": {
-                            "raw_api_ndcg_at_10": 0.0,
-                            "raw_api_recall_at_10": 0.0,
-                            "raw_api_mrr_at_10": 0.0,
-                        },
+                }
+            },
+        })
+        executor = RetrievalExecutor(input_args)
+        configs = executor._build_evaluator_configs()
+        names = [c.name for c in configs]
+        assert "RuleNDCG" in names
+        assert "LLMSearchResultRelevance" in names
+
+        llm_config = next(c for c in configs if c.name == "LLMSearchResultRelevance")
+        assert llm_config.config.model == "gpt-4o"
+        assert llm_config.config.key == "test-key"
+        assert llm_config.config.api_url == "http://llm/v1"
+
+    def test_standalone_mode_only_llm(self):
+        from dingo.exec.retrieval import RetrievalExecutor
+        from dingo.model import Model
+        Model.load_model()
+
+        input_args = InputArgs(**{
+            "input_path": "__open_eval__",
+            "output_path": "/tmp/test",
+            "executor": {
+                "retrieval": {
+                    "backend": "agentic",
+                    "api_url": "http://test",
+                    "input_queries": "queries.jsonl",
+                    "open_eval": {
+                        "enabled": True,
+                        "model": "gpt-4o",
+                        "key": "k",
+                        "api_url": "http://llm/v1",
                     },
-                ],
-            })
-            return SimpleNamespace(
-                task_results=[SimpleNamespace(scores={})],
-            )
-
-        monkeypatch.setattr(mteb, "evaluate", fake_evaluate)
-
-        summary = executor.execute()
-
-        assert summary.score == 0.5
-        assert summary.metrics_score_stats["SciFact"]["main_score"] == 0.5
-        assert summary.metrics_score_stats["SciFact"]["ndcg_at_10"] == 0.5
-        assert summary.metrics_score_stats["SciFact"]["recall_at_10"] == 0.5
-        assert summary.metrics_score_stats["SciFact"]["raw_api_ndcg_at_10"] == 0.25
-        assert summary.metrics_score_stats["SciFact"]["raw_api_recall_at_10"] == 0.5
-        assert summary.metrics_score_stats["SciFact"]["raw_api_mrr_at_10"] == 0.25
-        assert summary.metrics_score_stats["SciFact"]["raw_api_avg_results_count"] == 2.0
+                }
+            },
+        })
+        executor = RetrievalExecutor(input_args)
+        configs = executor._build_evaluator_configs()
+        names = [c.name for c in configs]
+        assert "RuleNDCG" not in names
+        assert "LLMSearchResultRelevance" in names

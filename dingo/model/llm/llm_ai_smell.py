@@ -206,7 +206,7 @@ class LLMAISmell(BaseOpenAI):
             "adjective_violence": "✨ 形容词暴力指数",
         }
 
-        reason_lines = [f"🤖 AI味总分：{total_score}/10"]
+        reason_lines = [f"🤖 AI味总分：{int(total_score)}/10"]
         reason_lines.append("")
         for key, label in dim_labels.items():
             raw_score = dimensions.get(key, 0)
@@ -216,7 +216,7 @@ class LLMAISmell(BaseOpenAI):
                 score = 0.0
             example = evidence.get(key, "")
             bar = cls._score_bar(round(score))
-            reason_lines.append(f"{label}：{score}/10 {bar}")
+            reason_lines.append(f"{label}：{int(score)}/10 {bar}")
             if example and score >= 5:
                 reason_lines.append(f"  └ 例：{example}")
         reason_lines.append("")

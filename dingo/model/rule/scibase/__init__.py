@@ -1,1 +1,1 @@
-"""Quanliang/scibase rule implementations."""
+"""SciBase QA rule implementations."""

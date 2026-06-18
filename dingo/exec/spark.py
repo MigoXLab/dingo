@@ -236,8 +236,30 @@ class SparkExecutor(ExecProto):
 
         for e_c_i in eval_list:
             if eval_type == 'rule':
-                model = Model.rule_name_map.get(e_c_i.name)
-                Model.set_config_rule(model, e_c_i.config)
+                model_cls = Model.rule_name_map.get(e_c_i.name)
+                if getattr(model_cls, "__module__", "").startswith("dingo.model.rule.scibase."):
+                    model = model_cls()
+                    Model.set_config_rule(model, e_c_i.config)
+                    if "dynamic_config" not in model.__dict__:
+                        model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+                    if model.dynamic_config.parameters is None:
+                        model.dynamic_config.parameters = {}
+                    model.dynamic_config.parameters.setdefault(
+                        "_dingo_dataset_sql_config",
+                        self.input_args.dataset.sql_config.model_dump(),
+                    )
+                    model.dynamic_config.parameters.setdefault(
+                        "_dingo_dataset_s3_config",
+                        self.input_args.dataset.s3_config.model_dump(),
+                    )
+                    model.dynamic_config.parameters.setdefault("_dingo_dataset_source", self.input_args.dataset.source)
+                    model.dynamic_config.parameters.setdefault("_dingo_dataset_format", self.input_args.dataset.format)
+                    model.dynamic_config.parameters.setdefault("_dingo_input_path", self.input_args.input_path)
+                    setattr(model_cls, "dynamic_config", model.dynamic_config)
+                    model = model_cls
+                else:
+                    model = model_cls
+                    Model.set_config_rule(model, e_c_i.config)
             elif eval_type == 'llm':
                 model = Model.llm_name_map.get(e_c_i.name)
                 Model.set_config_llm(model, e_c_i.config)

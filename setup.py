@@ -31,6 +31,12 @@ setup(
     url="https://github.com/MigoXLab/dingo",
     packages=find_packages(),
     include_package_data=True,
+    package_data={
+        "dingo": [
+            "model/rule/scibase/assets/*.csv",
+            "model/rule/scibase/assets/*.json",
+        ],
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",

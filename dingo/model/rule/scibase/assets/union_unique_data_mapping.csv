@@ -1,0 +1,109 @@
+统一字段名,字段值数据类型,源字段映射(论文),源字段映射(图书),源字段映射(星河),字段有效性规则,备注,字段来源
+unique_id,String,'paper:{doi}','ebook:{isbn13}',,,全量表唯一标识，用于跨 Metadata 与 Fulltext 数据关联、去重与检索。,全量表生成字段
+metadata_type,String,,,,"可选值：""paper"",""ebook""",【Metadata表】元数据来源类型。论文来源取值 paper，图书来源取值 ebook。数据类型：String。,Metadata表
+doi,String,doi,,doi,"格式参考10.1016/s0021-9258(19)52451-6，需均保持小写，无前缀“https://doi.org/”部分
+规范：星河图书馆qa测试代码","【Metadata表】数字对象唯一标识符（DOI），主要用于论文等学术资源定位。数据类型：String。来源映射：OSI论文字段=doi。
+【Fulltext表】全文解析得到的 DOI。数据类型：string。","Metadata表, Fulltext表"
+isbns,List[string],,isbns,,"符合 ISBN 校验规则。13 位与 10 位两种格式。格式参考[
+        ""9781426208072"",
+        ""1426208073""
+      ]    
+规范：星河图书馆qa测试代码",【Metadata表】图书 ISBN 列表，可能包含多个 ISBN。数据类型：List[string]。来源映射：OSI图书字段=isbns。,Metadata表
+isbn13,String,,isbn13,,"格式参考""9781426208072""
+规范：星河图书馆qa测试代码",【Metadata表】13 位 ISBN，图书资源的标准编号。数据类型：String。来源映射：OSI图书字段=isbn13。,Metadata表
+title,String,title,title,title,"不包含不可见字符
+规范：星河图书馆qa测试代码","【Metadata表】资源标题/题名。数据类型：String。来源映射：OSI图书字段=title；OSI论文字段=title。
+【Fulltext表】全文解析得到的标题。数据类型：string。","Metadata表, Fulltext表"
+abstract,String,abstract,abstract,abstract,"不包含不可见字符
+规范：星河图书馆qa测试代码","【Metadata表】摘要、简介或内容概述。数据类型：String。来源映射：OSI图书字段=abstract；OSI论文字段=abstract。
+【Fulltext表】全文解析得到的摘要。数据类型：string。","Metadata表, Fulltext表"
+language,String,language,language,language,"有效性规则见元数据目录格式标准【WIP】
+ISO 639-1语言代码标识，其无法覆盖范围则应用iso ISO 639-3代码。规范：星河图书馆qa测试代码","【Metadata表】资源语言。数据类型：String。来源映射：OSI图书字段=language；OSI论文字段=language。
+【Fulltext表】全文解析得到的语言。数据类型：string。","Metadata表, Fulltext表"
+type,String,type,type,,,【Metadata表】资源类型或文献类型。数据类型：String。来源映射：OSI图书字段=type；OSI论文字段=type。,Metadata表
+author,List[object],author,author,author,"2026.06.01 author字段格式修改为List[object]。每个对象都有两个key-value对，key分别为：""name""、""orcid""，其中name存储作者姓名，orcid存储作者的开放学者身份标识。举例：[
+    {
+      ""name"": ""Alan Aspuru-Guzik"",
+      ""orcid"": ""https://orcid.org/0000-0002-8277-4434""
+    }]。
+每个string指向一个作者，不能多个人名放在同个string下
+每个string不包含分割性质字符，规范：星河图书馆qa测试代码","【Metadata表】作者列表。数据类型：List[object]。来源映射：OSI图书字段=author；OSI论文字段=author。
+【Fulltext表】全文解析得到的作者列表。数据类型：List[object]。","Metadata表, Fulltext表"
+contributors,List[string],,contributors,,"每个string指向一个作者，不能多个人名放在同个string下
+每个string不包含分割性质字符，规范：星河图书馆qa测试代码",【Metadata表】贡献者列表，如编者、译者等。数据类型：List[string]。来源映射：OSI图书字段=contributors。,Metadata表
+indexed_in,List[string],indexed_in,indexed_in,,,【Metadata表】收录/索引来源列表。数据类型：List[string]。来源映射：OSI图书字段=indexed_in；OSI论文字段=indexed_in。非对外字段。,Metadata表
+identifiers,Object,identifiers,identifiers,,,【Metadata表】其他外部标识符集合。数据类型：Object。来源映射：OSI图书字段=identifiers；OSI论文字段=identifiers。非对外字段。,Metadata表
+locations,List[object],locations,,,"每个object都有4个属性：
+type：可选值：""download"",""reader"",""display"",""""
+url：正则规范 r'^[Hh][Tt][Tt][Pp][Ss]?://[^/$.?#][\s\S]*$'
+license：可选值: cc-by、cc-by-nc、cc-by-sa、cc-by-nd、cc-by-nc-sa、cc-by-nc-nd、other-oa、cc0、""""、public-domain、publisher-specific-oa、publisher-specific、wiley-specific、elsevier-specific、oup-specific、acs-specific、rsc-specific、iop-specific、other-oa、unspecified-oa、implied-oa、nonexclusive-distrib 。以下协议类型非论文许可而为数据许可（gpl-v1、gpl-v2、gpl-v3、mit）政府许可（ogl-c）未知许可类型（pd）,但允许出现在可选值中。
+is_oa：可选值：""true"" ""false"" ""unknown""",【Metadata表】资源可访问位置、来源链接或馆藏/开放获取位置列表。数据类型：List[object]。来源映射：OSI论文字段=locations。,Metadata表
+access_is_oa,String,access_is_oa,,,可选值："true" "false" "",【Metadata表】是否开放获取。数据类型：String。来源映射：OSI论文字段=is_oa。,Metadata表
+access_oa_status,String,access_oa_status,,,可选值：diamond、gold、green、hybrid、bronze、closed、"",【Metadata表】开放获取状态。数据类型：String。来源映射：OSI论文字段=oa_status。,Metadata表
+access_oa_url,List[string],access_oa_url,access_oa_url,,正则规范 r'^[Hh][Tt][Tt][Pp][Ss]?://[^/$.?#][\s\S]*$',【Metadata表】开放获取 URL。数据类型：String。来源映射：OSI图书字段=oa_url；OSI论文字段=oa_url。,Metadata表
+access_license,String,access_license,,,"可选值: cc-by、cc-by-nc、cc-by-sa、cc-by-nd、cc-by-nc-sa、cc-by-nc-nd、other-oa、cc0、""""、public-domain、publisher-specific-oa、publisher-specific、wiley-specific、elsevier-specific、oup-specific、acs-specific、rsc-specific、iop-specific、other-oa、unspecified-oa、implied-oa、nonexclusive-distrib 。以下协议类型非论文许可而为数据许可（gpl-v1、gpl-v2、gpl-v3、mit）政府许可（ogl-c）未知许可类型（pd）,但允许出现在可选值中。",【Metadata表】开放获取或使用许可协议。数据类型：String。来源映射：OSI论文字段=license。,Metadata表
+publication_published_date,String,published_date,,,格式为"1951-11-01"即"yyyy-mm-dd",【Metadata表】出版/发表日期。数据类型：String。来源映射：OSI论文字段=published_date。,Metadata表
+publication_published_year,Integer,published_year,publication_published_year,,格式为1951，大于0，小于2100,【Metadata表】出版/发表年份。数据类型：Integer。来源映射：OSI图书字段=published_year；OSI论文字段=published_year。,Metadata表
+publication_published_place,List[string],,publication_published_place,,,【Metadata表】出版地。数据类型：List[string]。来源映射：OSI图书字段=published_place。,Metadata表
+publication_published_country,List[string],,publication_published_country,,,【Metadata表】出版国家/地区。数据类型：List[string]。来源映射：OSI图书字段=published_country。,Metadata表
+publication_venue_name,String,venue_name,,,,【Metadata表】发表载体名称，如期刊、会议或图书系列名称。数据类型：String。来源映射：OSI论文字段=venue.name。,Metadata表
+publication_venue_name_unified,String,,,,期刊字典标准化如果publication_venue_name在target_journal_name列，那么本字段就是target_journal_name列，不在则取publication_venue_name,归一化的期刊统一命名,全量表生成字段
+publication_venue_type,String,venue_type,,,,【Metadata表】发表载体类型。数据类型：String。来源映射：OSI论文字段=venue.type。,Metadata表
+publication_venue_issn,List[string],venue_issn,,,"其中string元素：由8位数字组成。8位数字分为前后两段各4位，中间用连接号相连，""xxxx-xxxx""，（前7位数字为单纯的数字序号，无任何特殊含义，第八个数字是根据前七个数字按模数 11算法计算得出的检验码。若计算结果为10，第八个数字可为“X”）
+规范：每个string元素 星河图书馆qa测试代码",【Metadata表】发表载体 ISSN 列表。数据类型：List[string]。来源映射：OSI论文字段=venue.issn。,Metadata表
+publication_publisher,List[string],venue_publisher,publication_publisher,,,【Metadata表】出版方/出版社。数据类型：List[string]。来源映射：OSI图书字段=publisher；OSI论文字段=venue.publisher。,Metadata表
+publication_venue_biblio_volume,String,biblio_volume,,,格式示例为"193"，可以转化为数字,【Metadata表】期刊/会议卷号。数据类型：String。来源映射：OSI论文字段=venue.biblio.volume。,Metadata表
+publication_venue_biblio_issue,String,biblio_issue,,,格式示例为"1"，可以转化为数字,【Metadata表】期刊/会议期号。数据类型：String。来源映射：OSI论文字段=venue.biblio.issue。,Metadata表
+publication_venue_biblio_pages,String,biblio_pages,,,格式示例为"265-275",【Metadata表】期刊/会议页码范围。数据类型：String。来源映射：OSI论文字段=venue.biblio.issue。,Metadata表
+publication_pages,Integer,,publication_pages,,大于0,【Metadata表】图书页数或资源总页数。数据类型：Integer。来源映射：OSI图书字段=pages。,Metadata表
+keywords,List[string],keywords,,,,【Metadata表】关键词列表。数据类型：List[string]。来源映射：OSI论文字段=keywords。,Metadata表
+fieldsOfStudy,List[object],fieldsOfStudy,,,,【Metadata表】学科领域信息。数据类型：List[object]。来源映射：OSI论文字段=fieldsOfStudy。,Metadata表
+s2fieldsofstudy,List[object],s2fieldsofstudy,,,,【Metadata表】Semantic Scholar 学科领域信息，内部字段。数据类型：List[object]。来源映射：OSI论文字段=s2FieldsOfStudy。非对外字段。,Metadata表
+primary_topic,Object,primary_topic,,,,【Metadata表】主要主题信息。数据类型：Object。来源映射：OSI论文字段=primary_topic。,Metadata表
+topics,List[object],topics,,,,【Metadata表】主题列表。数据类型：List[object]。来源映射：OSI论文字段=topics。,Metadata表
+concepts,List[object],concepts,,,,【Metadata表】概念标签列表。数据类型：List[object]。来源映射：OSI论文字段=concepts。,Metadata表
+grade_class,String,/,,grade_class,"有效性规则见元数据目录格式标准【WIP】
+规范：星河图书馆qa测试代码","【Metadata表】等级分类。数据类型：String。来源映射：OSI图书字段=grade_class；OSI论文字段=grade_class。
+【Fulltext表】全文解析得到的等级分类。数据类型：string。","Metadata表, Fulltext表"
+grade,String,/,,grade,"有效性规则见元数据目录格式标准【WIP】
+规范：星河图书馆qa测试代码","【Metadata表】等级。数据类型：String。来源映射：OSI图书字段=grade；OSI论文字段=grade。
+【Fulltext表】全文解析得到的等级。数据类型：string。","Metadata表, Fulltext表"
+subjects,List[string],,subjects,,,【Metadata表】图书主题词列表。数据类型：List[string]。来源映射：OSI图书字段=subjects。,Metadata表
+genre,List[string],,genre,,,【Metadata表】图书体裁/类型列表。数据类型：List[string]。来源映射：OSI图书字段=genre。,Metadata表
+reference_count,Integer,reference_count,,,,【Metadata表】引用文献数,Metadata表
+citation_count,Integer,citation_count,,,,【Metadata表】被引次数，指一篇文章被其他文章引用的次数，是衡量文章影响力的重要指标。,Metadata表
+influential_citation_count,Integer,influential_citation_count,,,,【Metadata表】高影响力被引次数,Metadata表
+fwci,Float,fwci,,,,【Metadata表】一篇文献的“领域加权引用影响”Field-Weighted Citation Impact,Metadata表
+citations,List[object],/,,,,【Metadata表】引用本篇论文的文献列表,Metadata表
+references,List[string],references,,,"string元素中存储url
+规范：url星河图书馆qa测试代码",【Metadata表】本论文引用的文献列表,Metadata表
+related_works,List[string],related_works,,,"string元素中存储url
+规范：url星河图书馆qa测试代码",【Metadata表】本论文相关工作列表,Metadata表
+citation_normalized_percentile,Object,citation_normalized_percentile,,,,【Metadata表】一篇文献的“被引百分位”，表示该文献的引用次数在其文献类型、出版年份和学科子领域构成的可比集合中所处的百分位位置。例如 0.999 62 意味着该文献的引用次数高于 99.962% 的同类型、同年、同领域文献，因此属于全球前 0.038%。,Metadata表
+cited_by_percentile_year,Object,cited_by_percentile_year,,,,"【Metadata表】按“出版年份”细分的被引百分位区间。min: 99, max: 100 表示该文献在同年份的所有可比文献中，处于 99–100 百分位段，即“最顶尖 1%”。",Metadata表
+cited_by_api_url,String,cited_by_api_url,,,"string元素中存储url
+规范：url星河图书馆qa测试代码",【Metadata表】获取“被哪些文献引用”的 API 端点（可直接调用 OpenAlex API，获取所有引用该文献的作品（works）列表。）,Metadata表
+classifications,Object,classifications,/,/,,【Metadata表】,
+supplementary_material,List[object],/,/,supplementary_material,每个对象都有三个key-value对，key分别为：supplementary_material_name、supplementary_material_url、supplementary_material_path，分别存储补充材料文件名、补充材料链接、补充材料的对象存储路径,【Fulltext表】全文对应的补充材料文件,Fulltext表
+access_xinghe_repository_has_fulltext,Boolean,,,/,可选值有布尔值true、布尔值false，默认值为false,【Metadata表】有全文数据。数据类型：Boolean。来源映射：OSI图书字段=xinghe_repository_has_fulltext；OSI论文字段=xinghe_repository_has_fulltext。,Metadata表
+access_xinghe_repository_sha256,String,,,sha256,默认值空列表；当xinghe_repository_has_fulltext 为true时，此字段不可以为空。,"【Metadata表】全文文件 SHA-256 哈希值，用于文件唯一识别、去重与关联。数据类型：List[string]。来源映射：OSI图书字段=access_xinghe_repository_sha256；OSI论文字段=access_xinghe_repository_sha256。
+【Fulltext表】数据类型：string。","Metadata表, Fulltext表"
+access_xinghe_repository_origin_path,String,,,origin_path,默认值""；当xinghe_repository_has_fulltext 为true时，此字段不可以为空。,【Fulltext表】全文原始文件存储路径，内部字段。数据类型：string。非对外字段。,Fulltext表
+access_xinghe_repository_page_cnt,Integer,,,page_cnt,,【Fulltext表】全文页数。数据类型：int。,Fulltext表
+access_xinghe_repository_process_status,Integer,,,process_status,1-已处理；0-未处理，默认值为0,【Fulltext表】全文处理状态，内部字段。数据类型：int。非对外字段。,Fulltext表
+access_xinghe_repository_processed_path,String,,,processed_path,当access_xinghe_repository_process_status为1，此字段不允许为空,【Fulltext表】全文处理后文件路径，内部字段。数据类型：string。非对外字段。,Fulltext表
+access_xinghe_repository_origin_url,String,,,origin_url,,【Fulltext表】全文原始来源 URL。数据类型：string。,Fulltext表
+access_xinghe_repository_file_format,String,,,file_format,示例（仅示例非可选值范围）pdfmp4oggdocx使用python-magic 进行文档类别识别，可选范围即magic识别库中包含的文档类型+unknown,【Fulltext表】全文文件格式，如 pdf、html 等。数据类型：string。,Fulltext表
+access_xinghe_repository_file_type,String,,,file_type,"范围：
+paper
+ebook
+textbook
+patent
+report
+other",【Fulltext表】全文文件类型。数据类型：string。,Fulltext表
+access_xinghe_repository_content_type,String,,,content_type,取值：https://mimetype.io/all-types,【Fulltext表】文件 MIME Content-Type。数据类型：string。,Fulltext表
+access_xinghe_repository_content_length,long,,,content_length,,【Fulltext表】文件内容长度/大小。数据类型：long。,Fulltext表
+access_xinghe_repository_is_broken,Integer,,,is_broken,具体取值范围与定义见文件完整性校验,【Fulltext表】全文文件是否损坏或不可正常解析。数据类型：int。枚举值：0、1、2、3，详见文件完整性校验,Fulltext表
+access_xinghe_repository_obtain_timestamp,timestamp (seconds),,,obtain_timestamp,,【Fulltext表】全文获取时间戳（秒），内部字段。数据类型：timestamp (seconds)。非对外字段。Unix epoch seconds，可以是整数（精确到秒），也可以是浮点数（小数部分可精确至微秒 ,Fulltext表
+access_xinghe_repository_model_name,String,/,/,model_name,目前可选值为【数据字典】数据域-模型名称-学科科目,【Fulltexta表】全文解析使用的模型名称，内部字段。数据类型：string。非对外字段。,Fulltext表
+access_xinghe_repository_model_version,String,/,/,model_version,目前可选值为【数据字典】数据域-模型名称-学科科目,【Fulltext表】全文解析使用的模型版本，内部字段。数据类型：string。非对外字段。,Fulltext表

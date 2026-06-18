@@ -118,12 +118,18 @@ def run_example():
     )
     executor = LocalExecutor(input_args=input_args)
 
-    # Call executor.eval_text to evaluate a single document string.
-    # Example: result = executor.eval_text(SAMPLE_DOC_HIGH_AI_SMELL)
     print("\nDocument snippet (high AI smell):")
     print(SAMPLE_DOC_HIGH_AI_SMELL[:200] + "...")
     print("\nExpected: AI_SMELL_DETECTED with high scores on adjective_violence and detail_vacuum")
     print(f"\nExecutor ready: {executor.__class__.__name__}")
+
+    # To run the actual evaluation (requires a valid API key configured above):
+    # try:
+    #     result = executor.eval_text(SAMPLE_DOC_HIGH_AI_SMELL)
+    #     print("\nEvaluation Result:")
+    #     print(result.reason[0])
+    # except Exception as e:
+    #     print(f"\nCould not run evaluation: {e}")
 
     print("\n" + "=" * 60)
     print("Example 2: Low AI Smell Document")

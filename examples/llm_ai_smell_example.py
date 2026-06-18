@@ -8,8 +8,8 @@ This example demonstrates how to use LLMAISmell to detect AI-generated
 writing patterns in requirement documents.
 """
 
-from dingo.exec.local import LocalExecutor
 from dingo.config.input_args import InputArgs
+from dingo.exec.local import LocalExecutor
 
 SAMPLE_DOC_HIGH_AI_SMELL = """
 ## 智能客服系统需求文档
@@ -105,25 +105,25 @@ def run_example():
     print("Example 1: High AI Smell Document")
     print("=" * 60)
 
-    executor = LocalExecutor(
-        input_args=InputArgs(
-            eval_group="llm",
-            llm_config={
-                "model": "gpt-4o",
-                "key": "YOUR_API_KEY",
-                "api_base": "https://api.openai.com/v1",
-            },
-            custom_config={
-                "llm": ["LLMAISmell"]
-            }
-        )
+    # Configure the executor with LLMAISmell checker.
+    # Replace YOUR_API_KEY and api_base with your actual LLM credentials.
+    input_args = InputArgs(
+        eval_group="llm",
+        llm_config={
+            "model": "gpt-4o",
+            "key": "YOUR_API_KEY",
+            "api_base": "https://api.openai.com/v1",
+        },
+        custom_config={"llm": ["LLMAISmell"]},
     )
+    executor = LocalExecutor(input_args=input_args)
 
-    # Use executor.eval_text for quick single-text evaluation
-    # This is a simplified example showing the checker's usage
+    # Call executor.eval_text to evaluate a single document string.
+    # Example: result = executor.eval_text(SAMPLE_DOC_HIGH_AI_SMELL)
     print("\nDocument snippet (high AI smell):")
     print(SAMPLE_DOC_HIGH_AI_SMELL[:200] + "...")
     print("\nExpected: AI_SMELL_DETECTED with high scores on adjective_violence and detail_vacuum")
+    print(f"\nExecutor ready: {executor.__class__.__name__}")
 
     print("\n" + "=" * 60)
     print("Example 2: Low AI Smell Document")

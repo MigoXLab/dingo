@@ -184,10 +184,13 @@ class LLMAISmell(BaseOpenAI):
         except json.JSONDecodeError:
             raise ConvertJsonError(f"Failed to parse AI smell response as JSON: {response[:200]}")
 
-        total_score = data.get("total_score", 0)
-        dimensions = data.get("dimensions", {})
-        evidence = data.get("evidence", {})
-        verdict = data.get("verdict", "")
+        try:
+            total_score = float(data.get("total_score", 0))
+        except (ValueError, TypeError):
+            total_score = 0.0
+        dimensions = data.get("dimensions") or {}
+        evidence = data.get("evidence") or {}
+        verdict = str(data.get("verdict") or "")
 
         # Build human-readable reason
         dim_labels = {
@@ -201,9 +204,13 @@ class LLMAISmell(BaseOpenAI):
         reason_lines = [f"🤖 AI味总分：{total_score}/10"]
         reason_lines.append("")
         for key, label in dim_labels.items():
-            score = dimensions.get(key, 0)
+            raw_score = dimensions.get(key, 0)
+            try:
+                score = float(raw_score)
+            except (ValueError, TypeError):
+                score = 0.0
             example = evidence.get(key, "")
-            bar = cls._score_bar(score)
+            bar = cls._score_bar(round(score))
             reason_lines.append(f"{label}：{score}/10 {bar}")
             if example and score >= 5:
                 reason_lines.append(f"  └ 例：{example}")
@@ -225,6 +232,6 @@ class LLMAISmell(BaseOpenAI):
     @classmethod
     def _score_bar(cls, score: int, width: int = 10) -> str:
         """Generate a simple ASCII progress bar for a 0-10 score."""
-        filled = round(score)
+        filled = max(0, min(width, int(round(score))))
         empty = width - filled
         return f"[{'█' * filled}{'░' * empty}]"

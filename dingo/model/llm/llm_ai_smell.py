@@ -170,7 +170,8 @@ class LLMAISmell(BaseOpenAI):
         """
         Process LLM response and convert to EvalDetail.
         """
-        # Clean markdown code blocks
+        # Strip leading/trailing whitespace first, then remove markdown code blocks
+        response = response.strip()
         if response.startswith("```json"):
             response = response[7:]
         elif response.startswith("```"):
@@ -181,6 +182,10 @@ class LLMAISmell(BaseOpenAI):
 
         try:
             data = json.loads(response)
+            if not isinstance(data, dict):
+                raise ConvertJsonError(
+                    f"Parsed JSON is not a dictionary: {type(data)}"
+                )
         except json.JSONDecodeError:
             raise ConvertJsonError(f"Failed to parse AI smell response as JSON: {response[:200]}")
 

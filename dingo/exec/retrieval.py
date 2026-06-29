@@ -20,6 +20,7 @@ from typing import Any
 from dingo.config.input_args import InputArgs, OpenEvalArgs
 from dingo.exec.base import Executor
 from dingo.io import SummaryModel
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.model.llm.llm_search_result_relevance import LLMSearchResultRelevance, RelevanceGrade, aggregate_grades
 from dingo.retrieval.eval_utils import compute_query_metrics, make_output_dir, save_json
 from dingo.retrieval.mteb_adapter import SearchClientModel
@@ -257,14 +258,73 @@ class RetrievalExecutor:
         self.summary = summary
         return summary
 
+    @staticmethod
+    def _read_query_items(queries_path: str) -> list[dict[str, Any]]:
+        """Read queries from JSONL or CSV file."""
+        import json as _json
+
+        if queries_path.lower().endswith(".csv"):
+            import csv
+            items: list[dict[str, Any]] = []
+            with open(queries_path, "r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    q = row.get("query", "").strip()
+                    if q:
+                        items.append({"query": q})
+            return items
+
+        with open(queries_path, "r", encoding="utf-8") as f:
+            return [_json.loads(line) for line in f if line.strip()]
+
+    @staticmethod
+    def _paper_to_result_dict(rank: int, paper: Any) -> dict[str, Any]:
+        """Convert a PaperResult to a rich dict with raw metadata."""
+        raw = getattr(paper, "raw", {}) or {}
+        authors = raw.get("author", [])
+        if isinstance(authors, list):
+            author_names = []
+            for a in authors[:10]:
+                if isinstance(a, dict):
+                    author_names.append(a.get("name", ""))
+                else:
+                    author_names.append(str(a))
+            author_str = ", ".join(n for n in author_names if n)
+            if len(authors) > 10:
+                author_str += f" (+{len(authors) - 10} more)"
+        else:
+            author_str = str(authors) if authors else ""
+
+        paper_type_raw = raw.get("type")
+        if isinstance(paper_type_raw, list):
+            paper_type = paper_type_raw[0] if paper_type_raw else ""
+        elif isinstance(paper_type_raw, str):
+            paper_type = paper_type_raw
+        else:
+            paper_type = ""
+
+        return {
+            "rank": rank,
+            "paper_id": paper.paper_id,
+            "title": paper.title,
+            "abstract": paper.abstract,
+            "score": paper.score,
+            "venue": raw.get("publication_venue_name_unified", ""),
+            "year": raw.get("publication_published_year"),
+            "citation_count": raw.get("citation_count"),
+            "authors": author_str,
+            "paper_type": paper_type,
+        }
+
     def _execute_standalone_open_eval(self) -> SummaryModel:
         """Pure open eval: search custom queries and grade with LLM judge.
 
-        No MTEB corpus or gold labels needed. Reads queries from a JSONL file
-        (each line: ``{"query": "...", "expected_criteria": "..."}``).
-        """
-        import json as _json
+        Supports two modes via ``open_eval.eval_mode``:
+        - ``"relevance"`` (default): Exa-style pointwise grading
+        - ``"quality"``: multi-dimensional quality eval (pointwise + listwise)
 
+        Input: JSONL or CSV query file (CSV must have a ``query`` column).
+        """
         ra = self.retrieval_args
         oe_args = ra.open_eval
         if not oe_args or not oe_args.enabled:
@@ -274,8 +334,7 @@ class RetrievalExecutor:
             )
 
         queries_path = ra.input_queries
-        with open(queries_path, "r", encoding="utf-8") as f:
-            query_items = [_json.loads(line) for line in f if line.strip()]
+        query_items = self._read_query_items(queries_path)
 
         if ra.max_queries and len(query_items) > ra.max_queries:
             query_items = query_items[:ra.max_queries]
@@ -284,12 +343,24 @@ class RetrievalExecutor:
             "Standalone open eval: %d queries from %s", len(query_items), queries_path,
         )
 
+        eval_mode = getattr(oe_args, "eval_mode", "relevance") or "relevance"
+        if eval_mode == "quality":
+            return self._execute_quality_eval(query_items, queries_path)
+
+        return self._execute_relevance_eval(query_items, queries_path)
+
+    def _execute_relevance_eval(
+        self, query_items: list[dict[str, Any]], queries_path: str,
+    ) -> SummaryModel:
+        """Original Exa-style pointwise relevance grading."""
+        ra = self.retrieval_args
+        oe_args = ra.open_eval
+
         client, _ = self._build_client()
         output_dir = make_output_dir(
             explicit_dir=None,
             default_prefix=os.path.join(self.input_args.output_path, ra.backend),
         )
-
         task_label = os.path.splitext(os.path.basename(queries_path))[0]
 
         grader = LLMSearchResultRelevance(
@@ -337,14 +408,9 @@ class RetrievalExecutor:
                 )
                 all_grades.append(grade)
                 query_grades.append(grade)
-                top_results.append({
-                    "rank": rank + 1,
-                    "paper_id": paper.paper_id,
-                    "title": paper.title,
-                    "abstract": paper.abstract,
-                    "score": paper.score,
-                    "llm_grade": grade.to_dict(),
-                })
+                result_dict = self._paper_to_result_dict(rank + 1, paper)
+                result_dict["llm_grade"] = grade.to_dict()
+                top_results.append(result_dict)
 
             valid_scores = [g.score for g in query_grades if not g.error]
             q_mean = (
@@ -431,6 +497,248 @@ class RetrievalExecutor:
             "Standalone open eval complete: mean_score=%.4f (%d queries). "
             "Results saved to: %s",
             oe_summary.mean_score, len(query_details), output_dir,
+        )
+        self.summary = summary
+        return summary
+
+    def _execute_quality_eval(
+        self, query_items: list[dict[str, Any]], queries_path: str,
+    ) -> SummaryModel:
+        """Multi-dimensional quality eval using registered evaluators.
+
+        Uses ``LLMSearchQualityPointwise`` (relevance + content_effectiveness)
+        and ``LLMSearchQualityListwise`` (authority + timeliness + diversity).
+        """
+        from dingo.config.input_args import EvaluatorLLMArgs
+        from dingo.io.input import Data
+        from dingo.model import Model
+
+        ra = self.retrieval_args
+        oe_args = ra.open_eval
+
+        client, _ = self._build_client()
+        output_dir = make_output_dir(
+            explicit_dir=None,
+            default_prefix=os.path.join(self.input_args.output_path, ra.backend),
+        )
+        task_label = os.path.splitext(os.path.basename(queries_path))[0]
+
+        # --- Phase 1: Search all queries ---
+        data_rows: list[Data] = []
+        search_trace_queries: list[dict[str, Any]] = []
+        search_errors = 0
+
+        search_iter = _tqdm_or_none(
+            enumerate(query_items),
+            total=len(query_items),
+            desc="Searching queries",
+            unit="query",
+        ) or enumerate(query_items)
+
+        for idx, item in search_iter:
+            q_text = item.get("query", "")
+            if not q_text:
+                continue
+
+            try:
+                response = client.search(q_text, limit=ra.limit)
+            except Exception as e:
+                logger.warning("Search failed for query %d: %s", idx, e)
+                search_errors += 1
+                continue
+
+            top_k = oe_args.top_k
+            results_list = []
+            for rank, paper in enumerate(response.results[:top_k]):
+                results_list.append(self._paper_to_result_dict(rank + 1, paper))
+
+            row = Data(
+                data_id=f"q_{idx:04d}",
+                prompt=q_text,
+                search_results=results_list,
+                reference=[],
+            )
+            data_rows.append(row)
+
+            search_trace_queries.append({
+                "qid": f"q_{idx:04d}",
+                "query_text": q_text,
+                "api_results_count": len(response.results),
+                "graded_count": min(len(response.results), top_k),
+                "response_time_ms": response.response_time_ms,
+                "top_api_results": results_list,
+            })
+
+        logger.info(
+            "Search complete: %d queries, %d errors. Starting quality evaluation...",
+            len(data_rows), search_errors,
+        )
+
+        # --- Phase 2: Configure and run registered evaluators ---
+        Model.load_model()
+
+        llm_config = EvaluatorLLMArgs(
+            model=oe_args.model,
+            key=oe_args.key,
+            api_url=oe_args.api_url,
+            top_k=oe_args.top_k,
+            max_grading_workers=oe_args.max_workers,
+        )
+
+        evaluator_names = [
+            "LLMSearchQualityPointwise",
+            "LLMSearchQualityListwise",
+        ]
+
+        all_eval_details: dict[str, list[dict[str, Any]]] = {}
+        evaluator_scores: dict[str, list[float]] = {}
+
+        for eval_name in evaluator_names:
+            evaluator_cls = Model.llm_name_map.get(eval_name)
+            if not evaluator_cls:
+                logger.warning("Evaluator %s not found in registry, skipping", eval_name)
+                continue
+
+            Model.set_config_llm(evaluator_cls, llm_config)
+            evaluator_cls.client = None
+
+            eval_iter = _tqdm_or_none(
+                enumerate(data_rows),
+                total=len(data_rows),
+                desc=f"Evaluating ({eval_name})",
+                unit="query",
+            ) or enumerate(data_rows)
+
+            details_for_eval: list[dict[str, Any]] = []
+            scores_for_eval: list[float] = []
+
+            for row_idx, data_row in eval_iter:
+                try:
+                    detail: EvalDetail = evaluator_cls.eval(data_row)
+                    score = detail.score if detail.score is not None else 0.0
+                    scores_for_eval.append(score)
+                    details_for_eval.append({
+                        "data_id": getattr(data_row, "data_id", f"q_{row_idx}"),
+                        "query": getattr(data_row, "prompt", ""),
+                        "score": score,
+                        "status": detail.status,
+                        "label": detail.label,
+                        "reason": detail.reason,
+                    })
+                except Exception as e:
+                    logger.warning(
+                        "%s eval failed for query %d: %s", eval_name, row_idx, e,
+                    )
+                    scores_for_eval.append(0.0)
+                    details_for_eval.append({
+                        "data_id": getattr(data_row, "data_id", f"q_{row_idx}"),
+                        "query": getattr(data_row, "prompt", ""),
+                        "score": 0.0,
+                        "error": str(e),
+                    })
+
+            all_eval_details[eval_name] = details_for_eval
+            evaluator_scores[eval_name] = scores_for_eval
+
+        # --- Phase 3: Aggregate ---
+        import statistics as _stats
+
+        metrics_stats: dict[str, Any] = {}
+        for eval_name, scores in evaluator_scores.items():
+            if not scores:
+                continue
+            metrics_stats[eval_name] = {
+                "score_average": round(_stats.mean(scores), 5),
+                "score_median": round(_stats.median(scores), 5),
+                "score_stdev": round(_stats.stdev(scores), 5) if len(scores) > 1 else 0.0,
+                "score_min": round(min(scores), 5),
+                "score_max": round(max(scores), 5),
+                "score_count": len(scores),
+                "pass_rate_0.7": round(
+                    sum(1 for s in scores if s >= 0.7) / len(scores), 5,
+                ),
+            }
+
+        pw_scores = evaluator_scores.get("LLMSearchQualityPointwise", [])
+        lw_scores = evaluator_scores.get("LLMSearchQualityListwise", [])
+        overall_scores = []
+        for i in range(min(len(pw_scores), len(lw_scores))):
+            overall_scores.append(pw_scores[i] * 0.5 + lw_scores[i] * 0.5)
+
+        if overall_scores:
+            metrics_stats["overall"] = {
+                "score_average": round(_stats.mean(overall_scores), 5),
+                "score_median": round(_stats.median(overall_scores), 5),
+                "score_count": len(overall_scores),
+            }
+
+        overall_mean = (
+            _stats.mean(overall_scores) if overall_scores
+            else _stats.mean(pw_scores) if pw_scores
+            else 0.0
+        )
+
+        summary = SummaryModel(
+            task_id=str(uuid.uuid4())[:8],
+            task_name=self.input_args.task_name or "quality_eval",
+            input_path=queries_path,
+            output_path=output_dir,
+            create_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        summary.metrics_score_stats = {task_label: metrics_stats}
+        summary.total = len(data_rows)
+        summary.score = round(overall_mean, 5)
+        summary.finish_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        config: dict[str, Any] = {
+            "mode": "quality_eval",
+            "backend": ra.backend,
+            "api_url": ra.api_url,
+            "limit": ra.limit,
+            "input_queries": queries_path,
+            "open_eval": {
+                "enabled": True,
+                "eval_mode": "quality",
+                "model": oe_args.model,
+                "top_k": oe_args.top_k,
+                "max_workers": oe_args.max_workers,
+            },
+            "evaluators": evaluator_names,
+        }
+
+        summary_dict = {
+            "task_id": summary.task_id,
+            "task_name": summary.task_name,
+            "input_path": summary.input_path,
+            "output_path": summary.output_path,
+            "create_time": summary.create_time,
+            "finish_time": summary.finish_time,
+            "score": summary.score,
+            "total": summary.total,
+            "config": config,
+            "metrics": metrics_stats,
+        }
+        save_json(summary_dict, output_dir, "summary.json")
+
+        detailed = {
+            "config": config,
+            "metrics": metrics_stats,
+            "evaluator_details": all_eval_details,
+            "search_traces": [{
+                "task": task_label,
+                "mode": "quality_eval",
+                "queries_file": queries_path,
+                "total_queries": len(search_trace_queries),
+                "search_errors": search_errors,
+                "queries": search_trace_queries,
+            }],
+        }
+        save_json(detailed, output_dir, "detailed_results.json")
+
+        logger.info(
+            "Quality eval complete: overall_score=%.4f (%d queries). "
+            "Results saved to: %s",
+            overall_mean, len(data_rows), output_dir,
         )
         self.summary = summary
         return summary

@@ -83,8 +83,14 @@ class ExecutorResultSaveArgs(BaseModel):
 
 
 class OpenEvalArgs(BaseModel):
-    """LLM-as-Judge open eval config (Exa-style pointwise grading)."""
+    """LLM-as-Judge open eval config.
+
+    eval_mode controls which evaluators are used:
+    - "relevance" (default): Exa-style pointwise grading (LLMSearchResultRelevance)
+    - "quality": multi-dimensional quality eval (LLMSearchQualityPointwise + Listwise)
+    """
     enabled: bool = False
+    eval_mode: str = "relevance"
     model: Optional[str] = None
     key: Optional[str] = None
     api_url: Optional[str] = None

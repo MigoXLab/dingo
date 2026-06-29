@@ -179,7 +179,12 @@ def parse_args():
     # --- open eval (LLM-as-Judge) ---
     ret_parser.add_argument(
         "--open-eval", action="store_true", default=False,
-        help="Enable LLM-as-Judge open eval grading (Exa-style pointwise)",
+        help="Enable LLM-as-Judge open eval grading",
+    )
+    ret_parser.add_argument(
+        "--open-eval-mode", type=str, default="relevance",
+        choices=["relevance", "quality"],
+        help="Eval mode: relevance (Exa-style pointwise) or quality (multi-dim pointwise+listwise)",
     )
     ret_parser.add_argument(
         "--open-eval-model", type=str, default=None,
@@ -213,7 +218,7 @@ def parse_args():
     )
     ret_parser.add_argument(
         "--input-queries", type=str, default=None,
-        help="Path to JSONL query file for standalone open eval (no MTEB corpus needed)",
+        help="Path to JSONL or CSV query file for standalone open eval (CSV must have 'query' column)",
     )
 
     # Backward compatibility: bare `dingo --input config.json`
@@ -403,6 +408,7 @@ def cmd_eval_retrieval(args):
     if args.open_eval:
         open_eval = OpenEvalArgs(
             enabled=True,
+            eval_mode=args.open_eval_mode,
             model=args.open_eval_model,
             key=args.open_eval_key,
             api_url=args.open_eval_api_url,

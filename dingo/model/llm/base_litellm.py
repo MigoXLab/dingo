@@ -43,6 +43,35 @@ class BaseLiteLLM(BaseOpenAI):
         # Use cls.client as an initialisation sentinel (no real client object needed).
         cls.client = True
 
+        # If embedding_config is configured, initialize the embedding client
+        if cls.dynamic_config.embedding_config:
+            from openai import OpenAI
+
+            from dingo.config.input_args import EmbeddingConfigArgs
+
+            embedding_cfg = cls.dynamic_config.embedding_config
+
+            # Handle embedding_config being a dict or object
+            if isinstance(embedding_cfg, dict):
+                embedding_cfg = EmbeddingConfigArgs(**embedding_cfg)
+
+            if not embedding_cfg.api_url:
+                raise ValueError("embedding_config must provide api_url")
+
+            if not embedding_cfg.model:
+                raise ValueError("embedding_config must provide model")
+
+            # Create independent Embedding client
+            cls.embedding_client = OpenAI(
+                api_key=embedding_cfg.key or 'dummy-key',
+                base_url=embedding_cfg.api_url
+            )
+
+            cls.embedding_model = {
+                'model_name': embedding_cfg.model,
+                'client': cls.embedding_client
+            }
+
     @classmethod
     def send_messages(cls, messages: List) -> str:
         import litellm
@@ -66,10 +95,15 @@ class BaseLiteLLM(BaseOpenAI):
             **call_kwargs,
         )
 
-        finish_reason = response.choices[0].finish_reason  # type: ignore[union-attr]
+        if not response.choices:
+            raise ValueError("LiteLLM returned an empty response choices list.")
+
+        choice = response.choices[0]
+        finish_reason = choice.finish_reason  # type: ignore[union-attr]
         if finish_reason == "length":
             raise ExceedMaxTokens(
                 f"Exceed max tokens: {extra_params.get('max_tokens', 4000)}"
             )
 
-        return str(response.choices[0].message.content)  # type: ignore[union-attr]
+        content = choice.message.content  # type: ignore[union-attr]
+        return str(content) if content is not None else ""

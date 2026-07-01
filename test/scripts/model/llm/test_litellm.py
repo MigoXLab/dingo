@@ -5,14 +5,16 @@ from unittest import mock
 
 import pytest
 
-from dingo.config.input_args import EvaluatorLLMArgs
-from dingo.model.llm.base_litellm import BaseLiteLLM
-from dingo.utils.exception import ExceedMaxTokens
+pytest.importorskip("litellm", reason="litellm is not installed")
 
+from dingo.config.input_args import EvaluatorLLMArgs  # noqa: E402
+from dingo.model.llm.base_litellm import BaseLiteLLM  # noqa: E402
+from dingo.utils.exception import ExceedMaxTokens  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_provider(**cfg_kwargs) -> type:
     """Return a fresh BaseLiteLLM subclass with an isolated dynamic_config."""
@@ -112,6 +114,20 @@ class TestSendMessages:
         with mock.patch("litellm.completion", return_value=length_resp):
             with pytest.raises(ExceedMaxTokens):
                 P.send_messages([{"role": "user", "content": "hi"}])
+
+    def test_raises_on_empty_choices(self):
+        P = _make_provider(model="gpt-4o")
+        empty_resp = SimpleNamespace(choices=[])
+        with mock.patch("litellm.completion", return_value=empty_resp):
+            with pytest.raises(ValueError, match="empty response choices"):
+                P.send_messages([{"role": "user", "content": "hi"}])
+
+    def test_none_content_returns_empty_string(self):
+        P = _make_provider(model="gpt-4o")
+        none_resp = _stub_response(content=None)
+        with mock.patch("litellm.completion", return_value=none_resp):
+            result = P.send_messages([{"role": "user", "content": "hi"}])
+        assert result == ""
 
 
 # ---------------------------------------------------------------------------

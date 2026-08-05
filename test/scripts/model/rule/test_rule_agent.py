@@ -185,6 +185,69 @@ class TestRuleAgentTraceLatencyAnomaly:
         assert res.status is False
         assert res.label == [QualityLabel.QUALITY_GOOD]
 
+    # -- peer grouping -------------------------------------------------
+
+    def test_fast_and_slow_step_kinds_are_compared_separately(self):
+        """A normal long inference must not be flagged just because tool calls are fast.
+
+        Without grouping the 18 sub-second tool steps drag the mean to ~4s and
+        the final generation trips mean+3σ — the bimodal-pooling failure.
+        """
+        steps = [
+            {"name": "tool", "duration": 0.15, "group": "tool"} for _ in range(18)
+        ] + [
+            {"name": "LLM Inference", "duration": d, "group": "llm"}
+            for d in (4.46, 9.73, 5.87, 6.01, 11.79, 57.97)
+        ]
+        res = RuleAgentTraceLatencyAnomaly.eval(_data(json.dumps({"steps": steps})))
+        assert res.status is False
+        assert res.label == [QualityLabel.QUALITY_GOOD]
+
+    def test_pooled_input_still_flags_the_same_outlier(self):
+        """The same steps without groups keep the old (pooled) verdict."""
+        steps = [{"name": "tool", "duration": 0.15} for _ in range(18)] + [
+            {"name": "LLM Inference", "duration": d}
+            for d in (4.46, 9.73, 5.87, 6.01, 11.79, 57.97)
+        ]
+        res = RuleAgentTraceLatencyAnomaly.eval(_data(json.dumps({"steps": steps})))
+        assert res.status is True
+
+    def test_outlier_within_its_own_group_is_flagged(self):
+        """Grouping must not mute real anomalies — a stuck tool call is now visible
+        against its peers instead of hiding under the inference threshold."""
+        steps = [
+            {"name": "read", "duration": 0.15, "group": "tool"} for _ in range(10)
+        ] + [
+            {"name": "stuck_tool", "duration": 9.0, "group": "tool"},
+            {"name": "gen", "duration": 30.0, "group": "llm"},
+            {"name": "gen", "duration": 32.0, "group": "llm"},
+            {"name": "gen", "duration": 31.0, "group": "llm"},
+        ]
+        res = RuleAgentTraceLatencyAnomaly.eval(_data(json.dumps({"steps": steps})))
+        assert res.status is True
+        assert "stuck_tool" in res.reason[0]
+        # The group is named so a reader knows what the step was compared against.
+        assert "tool threshold" in res.reason[0]
+
+    def test_group_with_too_few_samples_is_skipped(self):
+        """Two samples cannot establish a threshold — that group is not judged."""
+        steps = [{"name": f"s{i}", "duration": 1.0, "group": "a"} for i in range(5)] + [
+            {"name": "lonely", "duration": 999.0, "group": "b"},
+            {"name": "lonely2", "duration": 1.0, "group": "b"},
+        ]
+        res = RuleAgentTraceLatencyAnomaly.eval(_data(json.dumps({"steps": steps})))
+        assert res.status is False
+
+    @pytest.mark.parametrize("key", ["group", "type"])
+    def test_group_alias_keys(self, key):
+        # 15 baseline samples keep stdev small enough that the outlier clears
+        # mean+3σ; with too few, a lone outlier inflates σ and masks itself.
+        steps = [{"name": "t", "duration": 0.1, key: "tool"} for _ in range(15)] + [
+            {"name": "slow", "duration": 9.0, key: "tool"}
+        ]
+        res = RuleAgentTraceLatencyAnomaly.eval(_data(json.dumps({"steps": steps})))
+        assert res.status is True
+
 
 class TestRuleAgentRegistration:
     """The saas orchestrator keys off rule_name_map + the agent attributes."""

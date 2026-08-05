@@ -214,6 +214,18 @@ class RuleAgentTraceLatencyAnomaly(BaseRule):
 
     Input: content = JSON array of step objects with 'duration' or 'duration_seconds' field.
     A step is flagged if its duration exceeds mean + 3*stddev.
+
+    Steps may declare a peer group via ``group`` (alias: ``type``); the outlier
+    test then runs *within* each group. An agent trace is
+    normally bimodal — tool calls finish in milliseconds while model inferences
+    take seconds — and pooling them makes the statistics meaningless in both
+    directions: the tool durations drag the mean down until a perfectly normal
+    final generation trips the threshold, while a genuinely stuck tool call hides
+    far below a threshold set by the inference times. Grouping compares each step
+    against its own kind.
+
+    Steps that declare no group are pooled together, so input without the field
+    behaves exactly as before.
     """
 
     # Trace-level evaluator (see RuleAgentTraceLoopDetection for rationale).
@@ -222,38 +234,61 @@ class RuleAgentTraceLatencyAnomaly(BaseRule):
 
     _required_fields = [RequiredField.CONTENT]
 
+    #: Minimum samples in a group before its statistics mean anything.
+    _MIN_GROUP_SIZE = 3
+
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         result = EvalDetail(metric=cls.__name__)
 
         steps = cls._extract_steps(input_data.content)
-        durations = [s["duration"] for s in steps if s["duration"] is not None and s["duration"] > 0]
+        stats = cls._group_stats(steps)
 
-        if len(durations) < 3:
-            result.label = [QualityLabel.QUALITY_GOOD]
-            return result
-
-        mean = statistics.mean(durations)
-        stdev = statistics.stdev(durations)
-        threshold = mean + 3 * stdev
-
-        anomalies = [
-            s for s in steps
-            if s["duration"] is not None and s["duration"] > threshold
-        ]
+        # Iterate in original step order so the reported anomalies keep the
+        # trace's own ordering rather than the grouping's.
+        anomalies = []
+        for step in steps:
+            group = stats.get(step["group"])
+            if group and step["duration"] is not None and step["duration"] > group["threshold"]:
+                anomalies.append((step, group))
 
         if anomalies:
             result.status = True
             result.label = [f"{cls.metric_type}.{cls.__name__}"]
-            result.reason = [
-                f"Step '{a['name']}' took {a['duration']:.2f}s "
-                f"(threshold: {threshold:.2f}s, mean: {mean:.2f}s)"
-                for a in anomalies[:5]
-            ]
+            # Name the peer group only when there is more than one, so a reader
+            # knows what an outlier was compared against.
+            multi_group = len(stats) > 1
+            result.reason = []
+            for step, group in anomalies[:5]:
+                label = f"{step['group']} " if multi_group and step["group"] else ""
+                result.reason.append(
+                    f"Step '{step['name']}' took {step['duration']:.2f}s "
+                    f"({label}threshold: {group['threshold']:.2f}s, "
+                    f"mean: {group['mean']:.2f}s)"
+                )
         else:
             result.label = [QualityLabel.QUALITY_GOOD]
 
         return result
+
+    @classmethod
+    def _group_stats(cls, steps: List[dict]) -> dict:
+        """Per-group mean/threshold, skipping groups with too few samples."""
+        durations: dict = {}
+        for step in steps:
+            if step["duration"] is not None and step["duration"] > 0:
+                durations.setdefault(step["group"], []).append(step["duration"])
+
+        stats = {}
+        for group, values in durations.items():
+            if len(values) < cls._MIN_GROUP_SIZE:
+                continue
+            mean = statistics.mean(values)
+            stats[group] = {
+                "mean": mean,
+                "threshold": mean + 3 * statistics.stdev(values),
+            }
+        return stats
 
     @classmethod
     def _extract_steps(cls, content: str) -> List[dict]:
@@ -263,6 +298,7 @@ class RuleAgentTraceLatencyAnomaly(BaseRule):
                 "duration": cls._safe_float(
                     item.get("duration", item.get("duration_seconds"))
                 ),
+                "group": str(item.get("group") or item.get("type") or ""),
             }
             for item in _load_trace_items(content, "steps", "tool_calls")
             if isinstance(item, dict)

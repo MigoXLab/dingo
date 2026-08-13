@@ -144,23 +144,15 @@ class RuleAgentTraceLoopDetection(BaseRule):
         Only signatures carrying a real argument fingerprint qualify. Without
         arguments, three consecutive calls to one tool are as likely to be three
         different files as one repeat, and flagging those would make every
-        source that omits arguments look broken.
+        source that omits arguments look broken. Those are masked to unique
+        values so they cannot match each other, which lets the existing pattern
+        search do the work at length one instead of a second hand-rolled scan.
         """
-        run_start = 0
-        for index in range(1, len(calls) + 1):
-            same = index < len(calls) and calls[index][1] == calls[run_start][1]
-            if same:
-                continue
-            count = index - run_start
-            fingerprint = calls[run_start][1].split("|", 1)[-1]
-            if count >= min_repeats and fingerprint:
-                return {
-                    "pattern": [calls[run_start][1]],
-                    "count": count,
-                    "position": run_start,
-                }
-            run_start = index
-        return None
+        masked = [
+            signature if signature.split("|", 1)[-1] else f"{signature}#{index}"
+            for index, (_name, signature) in enumerate(calls)
+        ]
+        return cls._detect_loops(masked, min_pattern_len=1, min_repeats=min_repeats)
 
     @classmethod
     def _detect_loops(

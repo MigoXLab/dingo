@@ -74,9 +74,18 @@ class RuleAgentTraceLoopDetection(BaseRule):
         calls = cls._extract_calls(input_data.content)
         if len(calls) < 6:
             result.label = [QualityLabel.QUALITY_GOOD]
+            # State what was checked. A pass with no reason is indistinguishable
+            # from a rule that did not run, and reads as a clean bill of health
+            # for a trace nobody looked at.
+            result.reason = [
+                f"{len(calls)} tool calls — too few to analyse for repetition "
+                "(needs 6)"
+            ]
             return result
 
         loop_info = cls._detect_loops([signature for _, signature in calls])
+        if loop_info is None:
+            loop_info = cls._detect_repeated_identical_calls(calls)
         if loop_info:
             start = loop_info["position"]
             pattern = [name for name, _ in calls[start : start + len(loop_info["pattern"])]]
@@ -88,6 +97,9 @@ class RuleAgentTraceLoopDetection(BaseRule):
             ]
         else:
             result.label = [QualityLabel.QUALITY_GOOD]
+            result.reason = [
+                f"{len(calls)} tool calls checked, no repeating pattern found"
+            ]
 
         return result
 
@@ -117,6 +129,38 @@ class RuleAgentTraceLoopDetection(BaseRule):
                 normalized = str(value)
             return hashlib.sha256(normalized.encode()).hexdigest()[:12]
         return ""
+
+    @classmethod
+    def _detect_repeated_identical_calls(
+        cls, calls: List[tuple], min_repeats: int = 3
+    ) -> Optional[dict]:
+        """Catch one call repeated verbatim, which ``_detect_loops`` cannot see.
+
+        Loop detection starts at two-call patterns, so a tool invoked three
+        times in a row with byte-identical arguments — a research agent asking
+        the same calculation three times — is not a "pattern" and goes
+        unreported, even though it is the plainest loop there is.
+
+        Only signatures carrying a real argument fingerprint qualify. Without
+        arguments, three consecutive calls to one tool are as likely to be three
+        different files as one repeat, and flagging those would make every
+        source that omits arguments look broken.
+        """
+        run_start = 0
+        for index in range(1, len(calls) + 1):
+            same = index < len(calls) and calls[index][1] == calls[run_start][1]
+            if same:
+                continue
+            count = index - run_start
+            fingerprint = calls[run_start][1].split("|", 1)[-1]
+            if count >= min_repeats and fingerprint:
+                return {
+                    "pattern": [calls[run_start][1]],
+                    "count": count,
+                    "position": run_start,
+                }
+            run_start = index
+        return None
 
     @classmethod
     def _detect_loops(
@@ -174,6 +218,9 @@ class RuleAgentTraceTokenBudget(BaseRule):
         total_tokens = cls._extract_tokens(input_data)
         if total_tokens is None:
             result.label = [QualityLabel.QUALITY_GOOD]
+            # Not "within budget" — unknown. Many sources record no usage, and
+            # a silent pass there claims a check that never happened.
+            result.reason = ["No token usage recorded, so the budget was not checked"]
             return result
 
         if total_tokens > budget:
@@ -185,6 +232,10 @@ class RuleAgentTraceTokenBudget(BaseRule):
             result.score = min(1.0, budget / total_tokens) if total_tokens > 0 else 0.0
         else:
             result.label = [QualityLabel.QUALITY_GOOD]
+            result.reason = [
+                f"Token usage {total_tokens:,} of budget {budget:,} "
+                f"({total_tokens / budget:.0%})"
+            ]
             result.score = 1.0
 
         return result
@@ -268,6 +319,20 @@ class RuleAgentTraceLatencyAnomaly(BaseRule):
                 )
         else:
             result.label = [QualityLabel.QUALITY_GOOD]
+            if stats:
+                checked = sum(g["count"] for g in stats.values())
+                result.reason = [
+                    f"{checked} timed steps in {len(stats)} peer "
+                    f"{'group' if len(stats) == 1 else 'groups'}, no outliers"
+                ]
+            else:
+                # Distinguish "nothing stood out" from "there was nothing to
+                # compare": a group needs a few samples before its statistics
+                # mean anything, and a bare pass hid that the test never ran.
+                result.reason = [
+                    "Too few timed steps to test for outliers "
+                    f"(needs {cls._MIN_GROUP_SIZE} per peer group)"
+                ]
 
         return result
 
@@ -287,6 +352,8 @@ class RuleAgentTraceLatencyAnomaly(BaseRule):
             stats[group] = {
                 "mean": mean,
                 "threshold": mean + 3 * statistics.stdev(values),
+                # Carried so a passing verdict can say how much was examined.
+                "count": len(values),
             }
         return stats
 

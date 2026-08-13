@@ -74,6 +74,39 @@ class TestRuleAgentTraceLoopDetection:
         assert res.status is True
         assert res.reason is not None and "Loop detected" in res.reason[0]
 
+    def test_three_identical_calls_are_a_loop(self):
+        # Pattern search starts at length 2, so one call repeated verbatim was
+        # never a "pattern" and went unreported — the plainest loop there is.
+        # Observed live: a research agent asked the same calculation 3 times.
+        content = json.dumps(
+            {
+                "tool_calls": [
+                    {"tool_name": "mathematics", "args": {"expr": "hc/610nm"}}
+                    for _ in range(3)
+                ]
+                + [
+                    {"tool_name": "browse_tools", "args": {"q": str(i)}}
+                    for i in range(5)
+                ]
+            }
+        )
+        res = RuleAgentTraceLoopDetection.eval(_data(content))
+        assert res.status is True
+        assert "mathematics" in res.reason[0]
+
+    def test_three_repeats_without_arguments_are_not_claimed_as_a_loop(self):
+        # With no arguments recorded, three consecutive calls to one tool are as
+        # likely three different files as one repeat. The single-call branch
+        # must stay silent; only the pre-existing pattern search may speak.
+        content = json.dumps(
+            {
+                "tool_calls": [{"tool_name": "read_file"} for _ in range(3)]
+                + [{"tool_name": f"other_{i}", "args": {"i": i}} for i in range(5)]
+            }
+        )
+        res = RuleAgentTraceLoopDetection.eval(_data(content))
+        assert res.status is False
+
     def test_loop_reason_names_the_repeated_tool_not_its_signature(self):
         content = json.dumps(
             {
@@ -276,3 +309,46 @@ class TestRuleAgentRegistration:
         # checks to route these as trace-level (not span-level) evaluators.
         assert rule_cls.input_data_type == "agent_trace_json"
         assert rule_cls.eval_layer
+
+
+class TestPassingVerdictsExplainThemselves:
+    """A pass with no reason is indistinguishable from a rule that never ran."""
+
+    def test_loop_pass_says_what_was_checked(self):
+        content = json.dumps(
+            {"tool_calls": [{"tool_name": f"t{i}", "args": {"i": i}} for i in range(8)]}
+        )
+        res = RuleAgentTraceLoopDetection.eval(_data(content))
+        assert res.status is False
+        assert "8 tool calls checked" in res.reason[0]
+
+    def test_loop_pass_below_threshold_says_it_did_not_analyse(self):
+        content = json.dumps({"tool_calls": [{"tool_name": "a"}, {"tool_name": "b"}]})
+        res = RuleAgentTraceLoopDetection.eval(_data(content))
+        assert res.status is False
+        assert "too few to analyse" in res.reason[0]
+
+    def test_token_pass_reports_usage_against_budget(self):
+        res = RuleAgentTraceTokenBudget.eval(_data(json.dumps({"total_tokens": 25_000})))
+        assert res.status is False
+        assert "25,000" in res.reason[0] and "500,000" in res.reason[0]
+
+    def test_token_pass_without_usage_does_not_claim_a_check(self):
+        res = RuleAgentTraceTokenBudget.eval(_data(json.dumps({"steps": []})))
+        assert res.status is False
+        assert "not checked" in res.reason[0]
+
+    def test_latency_pass_reports_what_it_compared(self):
+        content = json.dumps(
+            {"steps": [{"name": f"s{i}", "duration": 1.0 + i * 0.01, "group": "tool"}
+                       for i in range(5)]}
+        )
+        res = RuleAgentTraceLatencyAnomaly.eval(_data(content))
+        assert res.status is False
+        assert "5 timed steps" in res.reason[0]
+
+    def test_latency_pass_with_too_few_samples_says_so(self):
+        content = json.dumps({"steps": [{"name": "s", "duration": 1.0, "group": "tool"}]})
+        res = RuleAgentTraceLatencyAnomaly.eval(_data(content))
+        assert res.status is False
+        assert "Too few timed steps" in res.reason[0]

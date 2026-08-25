@@ -123,30 +123,32 @@ class TestRuleAgentTraceLoopDetection:
         assert "read_file" in res.reason[0]
         assert "path" not in res.reason[0]
 
-    def test_short_sequence_passes(self):
-        # Fewer than 6 tool names → early pass, no analysis.
+    def test_short_sequence_is_unanalysable_not_clean(self):
+        # Fewer than 6 tool names → the test never ran. Reporting that as a
+        # pass told a reader the trace had been checked for repetition.
         content = json.dumps([{"tool_name": "a"}, {"tool_name": "b"}])
         res = RuleAgentTraceLoopDetection.eval(_data(content))
         assert res.status is False
-        assert res.label == [QualityLabel.QUALITY_GOOD]
+        assert res.applicable is False
+        assert res.label != [QualityLabel.QUALITY_GOOD]
 
     def test_null_tool_calls_does_not_crash(self):
         # JSON null for a present key previously broke iteration (TypeError).
         res = RuleAgentTraceLoopDetection.eval(_data('{"tool_calls": null}'))
         assert res.status is False
-        assert res.label == [QualityLabel.QUALITY_GOOD]
+        assert res.applicable is False
 
     def test_non_dict_items_do_not_crash(self):
         # Operator-precedence bug previously raised AttributeError on "a"/null.
         res = RuleAgentTraceLoopDetection.eval(_data('["a", null, {"name": "x"}]'))
         assert res.status is False
-        assert res.label == [QualityLabel.QUALITY_GOOD]
+        assert res.applicable is False
 
     def test_non_json_text_passes(self):
         # Plain text content (not JSON) must be tolerated, not raise.
         res = RuleAgentTraceLoopDetection.eval(_data("just some free text"))
         assert res.status is False
-        assert res.label == [QualityLabel.QUALITY_GOOD]
+        assert res.applicable is False
 
 
 class TestRuleAgentTraceTokenBudget:
@@ -156,11 +158,26 @@ class TestRuleAgentTraceTokenBudget:
         assert isinstance(RuleAgentTraceTokenBudget.dynamic_config, EvaluatorRuleArgs)
         assert RuleAgentTraceTokenBudget.dynamic_config.threshold == 500_000
 
-    def test_under_budget_passes(self):
+    def test_under_budget_passes_and_reports_the_usage(self):
         res = RuleAgentTraceTokenBudget.eval(_data('{"total_tokens": 1000}'))
         assert res.status is False
         assert res.label == [QualityLabel.QUALITY_GOOD]
-        assert res.score == 1.0
+        assert "1,000 of budget 500,000" in res.reason[0]
+
+    def test_being_under_budget_is_not_a_score(self):
+        """A budget is a threshold. Scoring everything under it 1.0 graded a run
+        at 0.2% of budget and one at 99% alike, and put a constant into the
+        efficiency mean — 16 of 16 scores were exactly 1.0 on one live import."""
+        frugal = RuleAgentTraceTokenBudget.eval(_data('{"total_tokens": 1000}'))
+        nearly_over = RuleAgentTraceTokenBudget.eval(_data('{"total_tokens": 499000}'))
+
+        assert frugal.score is None
+        assert nearly_over.score is None
+        assert frugal.status is nearly_over.status is False
+
+    def test_an_overage_still_scores_by_how_far_over(self):
+        res = RuleAgentTraceTokenBudget.eval(_data('{"total_tokens": 1000000}'))
+        assert res.score == 0.5
 
     def test_over_budget_is_flagged(self):
         res = RuleAgentTraceTokenBudget.eval(_data('{"total_tokens": 600000}'))
@@ -168,10 +185,14 @@ class TestRuleAgentTraceTokenBudget:
         assert res.label == ["AGENT_TRACE_QUALITY.RuleAgentTraceTokenBudget"]
         assert res.reason is not None and "exceeds budget" in res.reason[0]
 
-    def test_missing_tokens_passes(self):
+    def test_missing_tokens_reaches_no_verdict(self):
+        """The reason said the budget was not checked while the label said the
+        trace was good. A source that exports no token counts is not a source
+        reporting frugal ones."""
         res = RuleAgentTraceTokenBudget.eval(_data('{"other_field": 1}'))
+        assert res.applicable is False
         assert res.status is False
-        assert res.label == [QualityLabel.QUALITY_GOOD]
+        assert res.label != [QualityLabel.QUALITY_GOOD]
 
     def test_threshold_override_via_dynamic_config(self):
         original = RuleAgentTraceTokenBudget.dynamic_config.threshold
@@ -200,12 +221,15 @@ class TestRuleAgentTraceLatencyAnomaly:
         assert res.status is False
         assert res.label == [QualityLabel.QUALITY_GOOD]
 
-    def test_few_steps_pass(self):
-        # Fewer than 3 valid durations → not enough data, early pass.
+    def test_few_steps_is_uncomparable_not_clean(self):
+        # Fewer than 3 valid durations → nothing to compare against. "No
+        # outlier stood out" and "there was nothing to stand out from" are
+        # different answers, and only the first is a pass.
         steps = [{"name": "a", "duration": 1.0}, {"name": "b", "duration": 99.0}]
         res = RuleAgentTraceLatencyAnomaly.eval(_data(json.dumps({"steps": steps})))
         assert res.status is False
-        assert res.label == [QualityLabel.QUALITY_GOOD]
+        assert res.applicable is False
+        assert res.label != [QualityLabel.QUALITY_GOOD]
 
     def test_duration_seconds_alias(self):
         steps = [{"name": f"s{i}", "duration_seconds": 1.0} for i in range(15)]
@@ -216,7 +240,7 @@ class TestRuleAgentTraceLatencyAnomaly:
     def test_null_steps_does_not_crash(self):
         res = RuleAgentTraceLatencyAnomaly.eval(_data('{"steps": null}'))
         assert res.status is False
-        assert res.label == [QualityLabel.QUALITY_GOOD]
+        assert res.applicable is False
 
     # -- peer grouping -------------------------------------------------
 

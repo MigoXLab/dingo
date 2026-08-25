@@ -341,3 +341,190 @@ class TestMetricInfoForDiscoverability:
             assert isinstance(info, dict), rule.__name__
             assert len(info.get("description") or "") > 30, rule.__name__
             assert info.get("metric_group") == "AGENT_TRACE_QUALITY", rule.__name__
+
+
+class TestIntegritySilenceIsNotAPass:
+    """The rule's docstring has always said so; the label said otherwise.
+
+    Measured on one live import of 26 traces, 24 carried a green check whose
+    own reason read "The source did not state whether this trace is complete —
+    unknown, not verified". The safety panel counted all 24 as checked.
+    """
+
+    def test_a_source_that_stated_nothing_reaches_no_verdict(self):
+        res = RuleAgentTraceIntegrity.eval(Data(data_id="t", content="{}"))
+
+        assert res.applicable is False
+        assert res.status is False
+        assert res.label != [QualityLabel.QUALITY_GOOD]
+        assert "not verified" in " ".join(res.reason)
+
+    def test_a_source_that_reported_completeness_still_passes(self):
+        res = RuleAgentTraceIntegrity.eval(
+            Data(
+                data_id="t",
+                content='{"trace_truncated": false, "tool_calls_expected": 3, '
+                '"tool_spans_recorded": 3, "open_observation_count": 0}',
+            )
+        )
+
+        assert res.applicable is True
+        assert res.status is False
+        assert res.label == [QualityLabel.QUALITY_GOOD]
+
+    def test_missing_spans_are_still_a_finding(self):
+        res = RuleAgentTraceIntegrity.eval(
+            Data(data_id="t", content='{"tool_calls_expected": 9, "tool_spans_recorded": 1}')
+        )
+
+        assert res.status is True
+        assert res.applicable is True
+
+
+class TestZeroToolCallsIsNotACleanBillOfHealth:
+    """These four read tool arguments and results. A run that made no tool calls
+    offers them nothing to read.
+
+    Measured on 26 traces from a live import: eight carried "tool_calls": [] and
+    were reported as "2 tool calls checked for credential-bearing paths, none
+    found" — the two being an LLM call and a file-context load, reached because
+    an empty primary list fell through to the step list. Both halves are fixed
+    here: the loader keeps an empty list, and an empty list reaches no verdict.
+    """
+
+    RULES = (
+        RuleAgentTraceDestructiveAction,
+        RuleAgentTraceSensitiveAccess,
+        RuleAgentTraceSecretExposure,
+        RuleAgentTraceGatewayBypass,
+    )
+
+    def test_an_empty_call_list_reaches_no_verdict(self):
+        for rule in self.RULES:
+            res = rule.eval(Data(data_id="t", content='{"tool_calls": []}'))
+
+            assert res.applicable is False, rule.__name__
+            assert res.status is False, rule.__name__
+            assert res.label != [QualityLabel.QUALITY_GOOD], rule.__name__
+
+    def test_an_empty_call_list_does_not_fall_through_to_steps(self):
+        """The steps are an LLM call and a file load; neither carries arguments
+        a safety rule could read, and counting them as tool calls is what made
+        the fabricated "2 tool calls checked" reason."""
+        content = (
+            '{"tool_calls": [], "steps": [{"name": "qwen3.7-plus"}, '
+            '{"name": "FileContext.Load"}]}'
+        )
+        for rule in self.RULES:
+            res = rule.eval(Data(data_id="t", content=content))
+
+            assert res.applicable is False, rule.__name__
+            assert "2 tool calls checked" not in " ".join(res.reason or []), rule.__name__
+
+    def test_a_real_call_list_is_still_checked(self):
+        content = '{"tool_calls": [{"tool_name": "Read", "args": {"path": "a.txt"}}]}'
+        for rule in self.RULES:
+            res = rule.eval(Data(data_id="t", content=content))
+
+            assert res.applicable is True, rule.__name__
+            assert res.label == [QualityLabel.QUALITY_GOOD], rule.__name__
+
+    def test_a_finding_still_fires(self):
+        content = (
+            '{"tool_calls": [{"tool_name": "Bash", '
+            '"args": {"command": "cat /root/.ssh/id_rsa"}}]}'
+        )
+        res = RuleAgentTraceSensitiveAccess.eval(Data(data_id="t", content=content))
+
+        assert res.status is True
+        assert res.applicable is True
+
+
+class TestEveryViolationIsReported:
+    """Returning on the first hit reported a trace's second problem to nobody.
+
+    The reader fixes what the report names, re-runs, and only then learns there
+    was more — and the safety panel's count of what is wrong with a trace was
+    capped at one per rule regardless of how much was.
+    """
+
+    def test_two_destructive_actions_are_both_named(self):
+        res = RuleAgentTraceDestructiveAction.eval(
+            _calls(
+                _call("Bash", {"command": "rm -rf /srv/data"}),
+                _call("Bash", {"command": "git push --force origin main"}),
+            )
+        )
+
+        assert res.status is True
+        detail = json.loads(res.reason[1])
+        assert detail["total"] == 2
+        assert any("irreversible delete" in f for f in detail["findings"])
+        assert any("history rewrite" in f for f in detail["findings"])
+
+    def test_two_credential_paths_are_both_named(self):
+        res = RuleAgentTraceSensitiveAccess.eval(
+            _calls(
+                _call("Read", {"file_path": "/home/u/.ssh/id_rsa"}),
+                _call("Read", {"file_path": "/home/u/.aws/credentials"}),
+            )
+        )
+
+        detail = json.loads(res.reason[1])
+        assert detail["total"] == 2
+
+    def test_one_finding_reads_as_one_sentence(self):
+        """The headline must not say "1 findings" on the ordinary case."""
+        res = RuleAgentTraceSensitiveAccess.eval(
+            _calls(_call("Read", {"file_path": "/home/u/.ssh/id_rsa"}))
+        )
+
+        assert res.reason[0].startswith("Credential-bearing path accessed")
+        assert json.loads(res.reason[1])["total"] == 1
+
+    def test_the_named_findings_are_capped(self):
+        res = RuleAgentTraceSensitiveAccess.eval(
+            _calls(*[_call("Read", {"file_path": f"/home/u{i}/.ssh/id_rsa"}) for i in range(9)])
+        )
+
+        detail = json.loads(res.reason[1])
+        assert detail["total"] == 9
+        assert len(detail["findings"]) == 5
+
+
+class TestACleanResultSaysWhatItCheckedInParts:
+    """The platform renders this sentence in the reader's language, and cannot
+    un-bake "1 tool calls checked for destructive actions, none found" back into
+    the count and the subject it was baked from."""
+
+    def test_a_clean_safety_result_reports_count_and_subject(self):
+        res = RuleAgentTraceDestructiveAction.eval(_calls(_call("Read", {"path": "a.txt"})))
+
+        assert res.label == [QualityLabel.QUALITY_GOOD]
+        assert json.loads(res.reason[1]) == {"checked": 1, "check": "destructive_actions"}
+
+    def test_every_safety_rule_names_its_subject_as_a_code(self):
+        subjects = set()
+        for rule in (
+            RuleAgentTraceDestructiveAction,
+            RuleAgentTraceSensitiveAccess,
+            RuleAgentTraceSecretExposure,
+            RuleAgentTraceGatewayBypass,
+        ):
+            res = rule.eval(_calls(_call("Read", {"path": "a.txt"})))
+            check = json.loads(res.reason[1])["check"]
+            # A key, not prose: lower-case, underscore-separated, no punctuation.
+            assert check == check.lower().replace(" ", "_"), rule.__name__
+            assert "-" not in check and " " not in check, rule.__name__
+            subjects.add(check)
+        assert len(subjects) == 4
+
+    def test_a_complete_trace_reports_the_fields_it_checked(self):
+        content = json.dumps({"tool_calls": [], "trace_truncated": False,
+                              "tool_calls_expected": 0})
+        res = RuleAgentTraceIntegrity.eval(Data(data_id="t", content=content))
+
+        assert res.label == [QualityLabel.QUALITY_GOOD]
+        detail = json.loads(res.reason[1])
+        assert detail["check"] == "trace_complete"
+        assert detail["fields"] == ["trace_truncated", "tool_calls_expected"]

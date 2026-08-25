@@ -24,6 +24,35 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
+def evidence_discipline(specific_bullet: str) -> str:
+    """The rules every judge shown a record must follow, said once.
+
+    Pasted into three prompts by hand, it had already drifted within the commit
+    that introduced it — and a judge holding a stale copy applies a different
+    evidence standard from its neighbours while the two verdicts are shown side
+    by side. Only the one bullet that is genuinely per-judge varies.
+    """
+    return f"""
+Evidence discipline. The content may carry a section headed "What the tool calls
+actually returned". That section is the record of the run; the agent's own
+summary and final answer are its account of the run. Where the two disagree, the
+record governs.
+
+- Name the step or call each claim rests on ("call 3 returned nothing"), and do
+  not restate the agent's summary as though it were verified.
+- An agent's own statement is not evidence that the statement is true. A summary
+  reporting a specific outcome, quoted back by the answer-delivery call, is one
+  claim, not two.
+- {specific_bullet}
+- Unverified is not disproved. A claim the record neither confirms nor
+  contradicts lowers your confidence, not the agent's grade: score what the
+  record does show and say which part is unconfirmed.
+- If the record cannot settle the question at all — nothing was recorded that
+  bears on it — do not guess a number. Return `"not_applicable": true` with a
+  reason saying what was missing, and omit "score".
+"""
+
+
 class BaseLLMAgentEval(BaseOpenAI):
     """Shared base class for all Agent evaluation metrics."""
 
@@ -122,6 +151,22 @@ class BaseLLMAgentEval(BaseOpenAI):
         """
         log.info(response)
         data = cls._parse_json_response(response)
+
+        # A judge that cannot answer must be able to say so. Without this it had
+        # only the score, so "the record cannot confirm or contradict this" and
+        # "the agent failed" came out as the same low number under the same
+        # "critical" label: two live traces whose attached file was never
+        # returned by any call scored 0.2/critical on reasoning that said, in
+        # its own words, that it could not verify either way — beside two
+        # traces in the identical evidentiary position that scored 0.6-0.7.
+        # Unverified is not disproved, and the platform already carries
+        # `applicable` end to end for exactly this.
+        if data.get("not_applicable") is True:
+            result = EvalDetail(metric=cls.__name__)
+            result.applicable = False
+            reason_text = data.get("reason", "")
+            result.reason = [reason_text] if reason_text else None
+            return result
 
         raw_score = data.get("score", data.get("overall_score", 0))
         try:

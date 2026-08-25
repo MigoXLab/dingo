@@ -9,7 +9,7 @@ from typing import List
 
 from dingo.io.input import Data, RequiredField
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, evidence_discipline
 
 
 @Model.llm_register("LLMAgentStepEfficiency")
@@ -42,6 +42,10 @@ Analyze the agent's execution trace and identify:
 A score of 10 means perfectly efficient execution with no wasted steps.
 A score of 0 means the agent was completely stuck in loops or took entirely unnecessary actions.
 
+""" + evidence_discipline(
+        "A step whose call returned nothing did not establish what it was\n"
+        "  there to establish, whatever the summary says it established."
+    ) + """
 Respond in the same language as the input content for the "reason" field.
 
 Return your evaluation as a JSON object with this exact schema:

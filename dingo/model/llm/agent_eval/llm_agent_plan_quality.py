@@ -10,7 +10,7 @@ from typing import List
 from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, evidence_discipline
 from dingo.utils import log
 
 
@@ -47,6 +47,10 @@ Compute an overall **score** from 0 to 10 that is CONSISTENT with the three
 dimensions above (e.g. all 5s → 9-10, all 3s → 5-6, all 1s → 0-2). Do not let
 the score contradict the dimension ratings.
 
+""" + evidence_discipline(
+        "A plan step the record shows never happened is not completed,\n"
+        "  whatever the plan's own progress notes say."
+    ) + """
 IMPORTANT: The "reason" field MUST be in the same language as the Task Objective. If the task objective is in Chinese, respond in Chinese. If in English, respond in English.
 
 Return your evaluation as a JSON object with this exact schema:

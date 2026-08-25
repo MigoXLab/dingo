@@ -9,7 +9,7 @@ from typing import List
 
 from dingo.io.input import Data, RequiredField
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, evidence_discipline
 
 
 @Model.llm_register("LLMAgentTaskCompletion")
@@ -44,6 +44,10 @@ all 4s → 7-8, all 3s → 5-6, all 2s → 3-4, all 1s → 0-2). Do not let the 
 contradict the dimension ratings. If the run was incomplete, credit verifiable
 partial progress rather than scoring 0.
 
+""" + evidence_discipline(
+        "A step whose call returned nothing did not establish what it was\n"
+        "  there to establish, whatever the summary says it established."
+    ) + """
 Respond in the same language as the input content for the "reason" field.
 
 Return your evaluation as a JSON object with this exact schema:

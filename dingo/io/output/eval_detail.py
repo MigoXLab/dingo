@@ -36,20 +36,14 @@ class EvalDetail(BaseModel):
     # 评审引擎判定契约（spec §4.2/§7.3）。旧评估器不设时全部回退，行为不变。
     verdict: Optional[str] = None          # "pass" | "warning" | "issue"
     applicable: bool = True                # False = N/A，从聚合分母剔除（spec §15.2）
-    # 为什么不适用：evaluator 读过证据后判不了（"declined"），还是它在这类
-    # 运行上根本不适用（"structural"）。两者产生的 EvalDetail 此前完全相同，
-    # 下游只能靠一张 evaluator 名单去猜是哪一种——名单漏一个，一条本来干净
-    # 的运行就会被当成"有维度判不了"而被压分。做出决定的地方才知道答案。
-    # 第三种："execution_error" —— evaluator 自己挂了（重试耗尽后走到 eval() 的
-    # 兜底分支）。它同样以 applicable=False 记录，于是下游把"评测器坏了"读成了
-    # "这项检查不适用于你的运行"——恰好是本字段要区分的两件事里最不该混的一件：
-    # 前两种说的是这次运行，这一种只说评测器自己。
+    # 为什么不适用。前两种在讲这次运行——判官读过证据仍判不了（declined），
+    # 或这类运行上本就不适用（structural）；第三种只讲评测器自己挂了
+    # （execution_error）。三者此前产生完全相同的 EvalDetail，下游只能靠一张
+    # evaluator 名单去猜，而做出决定的地方才知道答案。
     not_applicable_kind: Optional[str] = None  # "declined" | "structural" | "execution_error"
-    # 同一个事实的机器可读形式。reason 是英文散文，界面要的是能翻译的代号，
-    # 于是下游按 evaluator 名字维护了一张 name→code 表去反推——和上面那个字段
-    # 出现前靠名单猜"哪种不适用"是同一个毛病：在离决定最远的地方，重新推导决定
-    # 者已经知道的事。名单漏一条就是一句英文躺在整页中文里。
-    # 未设时下游按原样显示 reason，行为不变。
+    # 同一事实的机器可读形式：reason 是英文散文，界面要的是能翻译的代号。
+    # 下游曾按 evaluator 名字维护 name→code 表反推，漏一条就是一句英文躺在
+    # 整页中文里。未设时下游按原样显示 reason，行为不变。
     not_applicable_code: Optional[str] = None
     rule_id: Optional[str] = None          # decision-table 条款（Task 3）
     rubric_version: Optional[str] = None

@@ -451,15 +451,13 @@ class RuleAgentTraceLatencyAnomaly(BaseRule):
 # ---------------------------------------------------------------------------
 # Safety rules
 #
-# These answer a different question from the quality rules above: not *did the
-# agent work well* but *should it have done this at all*. They are registered
-# under their own metric group so the two verdicts never merge — a sandbox
-# bypass reads as a successful fallback to an error-recovery evaluator, and
-# scoring them together cancels both signals out.
+# Not *did the agent work well* but *should it have done this at all*. Their own
+# metric group, because a sandbox bypass reads as a successful fallback to an
+# error-recovery evaluator and scoring them together cancels both signals.
 #
-# All convict on presence: a match IS the conclusion, so no LLM is consulted.
-# Each rule's no-flag clauses live beside its patterns rather than in a
-# separate list that can drift out of sync.
+# All convict on presence — a match IS the conclusion, no LLM consulted — and
+# each rule's no-flag clauses sit beside its patterns rather than in a separate
+# list that can drift.
 # ---------------------------------------------------------------------------
 
 _SAFETY_METRIC = "AGENT_TRACE_SAFETY"
@@ -885,18 +883,14 @@ class RuleAgentTraceIntegrity(BaseRule):
         if not isinstance(claims, dict):
             claims = {}
 
-        # Graded by what the gap costs a *safety* verdict, which is drawn from
-        # the tool-call sequence and nothing else.
+        # Graded by what the gap costs a *safety* verdict, which reads the
+        # tool-call sequence and nothing else. Missing tool spans make that
+        # sequence incomplete — a destructive command could sit in the part that
+        # never arrived — so a clean result cannot be trusted.
         #
-        # Missing tool spans mean that sequence is incomplete: a destructive
-        # command could sit in the part that never arrived, so a clean result
-        # cannot be trusted. That is the finding.
-        #
-        # A truncated model response or an unclosed observation is a real gap in
-        # the record, but not in the evidence any safety rule reads. Treating it
-        # as a finding would put a permanent red mark on every trace from a
-        # client that truncates long responses by design — and an alarm that is
-        # always on is one nobody reads.
+        # A truncated response or unclosed observation is a real gap in the
+        # record but not in that evidence; flagging it would put a permanent red
+        # mark on every trace from a client that truncates by design.
         expected = claims.get("tool_calls_expected")
         recorded = claims.get("tool_spans_recorded")
         if isinstance(expected, int) and isinstance(recorded, int) and expected != recorded:

@@ -49,8 +49,6 @@ List specific issues (wrong tool chosen, tool used out of order, missing tool th
 A score of 10 means every tool call was correct and necessary.
 A score of 0 means all tool calls were wrong or the agent failed to use required tools.
 
-Respond in the same language as the input content for the "reason" field.
-
 Return your evaluation as a JSON object with this exact schema:
 {
   "correct_calls": <integer>,
@@ -66,9 +64,7 @@ Do not include any text outside the JSON object."""
     @classmethod
     def build_messages(cls, input_data: Data) -> List[dict]:
         """Build LLM messages for tool correctness evaluation."""
-        lang_hint = cls._detect_language_hint(
-            str(input_data.prompt) + str(input_data.content)
-        )
+        lang_hint = cls.language_hint_for(input_data)
         user_content = f"""{cls.prompt}
 
 ## Task Objective

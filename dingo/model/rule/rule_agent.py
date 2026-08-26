@@ -101,6 +101,14 @@ class RuleAgentTraceLoopDetection(BaseRule):
             # enough — a reader sees the label, and a consumer reads `status`,
             # and both said "checked, clean" for a trace nobody could analyse.
             result.applicable = False
+            # Structural: the question does not arise for a run of this
+            # shape. The test is not whether a rule or a judge is asking — a
+            # rule can meet a genuine gap in the record too — but whether the
+            # thing being checked could have happened and the record is silent
+            # (a gap in the run) or could not have happened at all. Six calls
+            # are needed before repetition is a meaningful question.
+            result.not_applicable_kind = "structural"
+            result.not_applicable_code = "too_few_tool_calls"
             result.reason = [
                 f"{len(calls)} tool calls — too few to analyse for repetition "
                 "(needs 6)"
@@ -247,7 +255,17 @@ class RuleAgentTraceTokenBudget(BaseRule):
             # in the reason was not enough while the label still read GOOD: a
             # reader sees the label, and a consumer reads `status`.
             result.applicable = False
-            result.reason = ["No token usage recorded, so the budget was not checked"]
+            # Structural — see the note on the criterion in
+            # RuleAgentTraceLoopDetection.eval: the test is what kind of
+            # absence this is, not whether a rule or a judge met it.
+            result.not_applicable_kind = "structural"
+            result.not_applicable_code = "no_token_usage"
+            # Same correction: a fact about what this trace format carries,
+            # not a claim that this run's spending is unknown to us.
+            result.reason = [
+                "This trace records no token usage, so there is no spending to "
+                "check against the budget"
+            ]
             return result
 
         if total_tokens > budget:
@@ -373,6 +391,10 @@ class RuleAgentTraceLatencyAnomaly(BaseRule):
                 # different answers. A group needs a few samples before its
                 # statistics mean anything, and the second is not a pass.
                 result.applicable = False
+                # Structural — see the note on the criterion in
+                # RuleAgentTraceLoopDetection.eval.
+                result.not_applicable_kind = "structural"
+                result.not_applicable_code = "too_few_timed_steps"
                 result.label = None
                 result.reason = [
                     "Too few timed steps to test for outliers "
@@ -584,6 +606,10 @@ def _safety_pass(result: EvalDetail, checked: int, what: str) -> EvalDetail:
     """
     if checked == 0:
         result.applicable = False
+        # Structural — see the note on the criterion in
+        # RuleAgentTraceLoopDetection.eval.
+        result.not_applicable_kind = "structural"
+        result.not_applicable_code = "no_tool_calls"
         result.reason = [f"No tool calls to check for {what}"]
         return result
     result.label = [QualityLabel.QUALITY_GOOD]
@@ -909,9 +935,23 @@ class RuleAgentTraceIntegrity(BaseRule):
             # traces in one live import carried a green check whose own text
             # said "unknown, not verified".
             result.applicable = False
+            # Structural — see the note on the criterion in
+            # RuleAgentTraceLoopDetection.eval: the test is what kind of
+            # absence this is, not whether a rule or a judge met it.
+            result.not_applicable_kind = "structural"
+            result.not_applicable_code = "completeness_unstated"
+            # Phrased as a fact about the source, not about this run. Written
+            # as "the source did not state whether this trace is complete —
+            # unknown, not verified" it reads as an epistemic gap in the run,
+            # which is what the other kind of decline means; a reader following
+            # the product's own vocabulary would take "N/A" to promise "says
+            # nothing about the run" and then read a sentence saying "we do not
+            # know". The classification is right — an export format that never
+            # carries completeness cannot be interrogated about it — so the
+            # sentence is what has to change.
             result.reason = [
-                "The source did not state whether this trace is complete — "
-                "unknown, not verified"
+                "This trace format does not report completeness, so there is "
+                "nothing here to check it against"
             ]
             return result
 

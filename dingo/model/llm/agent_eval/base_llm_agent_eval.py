@@ -62,14 +62,47 @@ class BaseLLMAgentEval(BaseOpenAI):
 
     @classmethod
     def _detect_language_hint(cls, text: str) -> str:
-        """Detect if text contains CJK characters and return a language instruction."""
+        """Which language to answer in, said explicitly either way.
+
+        Returning nothing for a non-CJK sample was half the reason the language
+        wandered: with no instruction at the end of the prompt, the only one
+        left standing was a line in the template telling the judge to follow
+        "the input content" — which is a different slice of the trace for every
+        judge, and is exactly what deciding once per trace was meant to stop.
+        Saying "answer in English" is not redundant; it is the half of the
+        instruction that was missing.
+        """
         if not text:
             return ""
         import re
         cjk_count = len(re.findall(r'[一-鿿㐀-䶿]', text[:500]))
         if cjk_count > 5:
             return '\n\n注意：请用中文回答 "reason" 字段。'
-        return ""
+        return '\n\nNote: write the "reason" field in English.'
+
+    @classmethod
+    def language_hint_for(cls, input_data: Data) -> str:
+        """The language every judge of one trace should answer in.
+
+        Derived from the task, not from whatever each judge happens to be
+        looking at. Reading `prompt + content` made the answer depend on the
+        view: the tool-call view of a Chinese run is full of Chinese arguments
+        while its trace summary is mostly English step names, so one trace came
+        back with task completion in English and tool correctness in Chinese,
+        side by side on the same card. The task is what the reader asked, and it
+        is the same for all of them.
+
+        A caller that has already decided for the whole trace says so on
+        ``language_sample``, and that wins. It has to: a task can be too short
+        to carry a signal at all — one live trace asks "1+1=？", which holds no
+        CJK to count — and then each judge is back to choosing for itself, which
+        is the same inconsistency in a smaller window. Deciding per trace is the
+        caller's job because only the caller sees the whole trace.
+        """
+        sample = getattr(input_data, "language_sample", None)
+        if isinstance(sample, str) and sample:
+            return cls._detect_language_hint(sample)
+        return cls._detect_language_hint(str(input_data.prompt or ""))
 
     @classmethod
     def _get_threshold(cls) -> float:
@@ -164,6 +197,10 @@ class BaseLLMAgentEval(BaseOpenAI):
         if data.get("not_applicable") is True:
             result = EvalDetail(metric=cls.__name__)
             result.applicable = False
+            # It read the evidence and could not decide. That is a gap in what
+            # this run recorded, and a caller weighing the run needs to know it
+            # — unlike a check that never applied here at all.
+            result.not_applicable_kind = "declined"
             reason_text = data.get("reason", "")
             result.reason = [reason_text] if reason_text else None
             return result

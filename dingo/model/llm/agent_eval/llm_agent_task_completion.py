@@ -48,7 +48,6 @@ partial progress rather than scoring 0.
         "A step whose call returned nothing did not establish what it was\n"
         "  there to establish, whatever the summary says it established."
     ) + """
-Respond in the same language as the input content for the "reason" field.
 
 Return your evaluation as a JSON object with this exact schema:
 {
@@ -64,9 +63,7 @@ Do not include any text outside the JSON object."""
     @classmethod
     def build_messages(cls, input_data: Data) -> List[dict]:
         """Build LLM messages for task completion evaluation."""
-        lang_hint = cls._detect_language_hint(
-            str(input_data.prompt) + str(input_data.content)
-        )
+        lang_hint = cls.language_hint_for(input_data)
         user_content = f"""{cls.prompt}
 
 ## Task Objective

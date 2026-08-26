@@ -334,6 +334,10 @@ class BaseOpenAI(BaseLLM):
         res = EvalDetail(metric=cls.__name__)
         res.status = False  # 执行失败不是质量问题，绝不伪装成 issue（spec §9.3）
         res.applicable = False  # 执行失败 → effective_verdict="n/a"，不是 pass（final-review #2）
+        # 但要说清是哪一种"不适用"。只留 applicable=False 时，下游把这条读成
+        # "这项检查不适用于你的运行"，而真相是评测器自己挂了——前者是在讲这次
+        # 运行，后者只关乎评测器。名字在这里给，因为只有这里知道答案。
+        res.not_applicable_kind = "execution_error"
         res.score = None
         res.label = [f"{QualityLabel.REVIEW_EXECUTION_ERROR_PREFIX}{except_name}"]
         res.reason = [except_msg]

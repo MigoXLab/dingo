@@ -58,8 +58,6 @@ Assess the overall recovery **score** from 0 to 10:
 - 1-3: Agent attempted recovery but largely failed
 - 0: Agent did not attempt recovery or made errors worse
 
-Respond in the same language as the input content for the "reason" field.
-
 Return your evaluation as a JSON object with this exact schema:
 {
   "errors_encountered": <integer>,
@@ -96,9 +94,7 @@ Do not include any text outside the JSON object."""
     @classmethod
     def build_messages(cls, input_data: Data) -> List[dict]:
         """Build LLM messages for error recovery evaluation."""
-        lang_hint = cls._detect_language_hint(
-            str(input_data.prompt) + str(input_data.content)
-        )
+        lang_hint = cls.language_hint_for(input_data)
         user_content = f"""{cls.prompt}
 
 ## Task Objective
@@ -128,6 +124,15 @@ Evaluate the agent's error recovery and return the JSON evaluation.{lang_hint}""
             result = EvalDetail(metric=cls.__name__)
             result.status = False
             result.applicable = False      # N/A：从聚合分母剔除，而非给满分
+            # Decided before the model was called: this check does not
+            # apply to a run of this shape, which says nothing about the
+            # run's quality either way.
+            result.not_applicable_kind = "structural"
+            # …and which reason, in a form the UI can translate. The prose below
+            # is English by construction, and a reader on a Chinese page was
+            # shown it verbatim. Set here because the branch that declines is
+            # the only place that knows why.
+            result.not_applicable_code = "no_errors"
             result.score = None
             result.verdict = "n/a"
             result.reason = ["No error events found in execution trace; recovery not applicable."]

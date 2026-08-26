@@ -290,7 +290,8 @@ class TestTraceIntegrity:
         """Absent is not the same as complete — silence must not be scored clean."""
         res = RuleAgentTraceIntegrity.eval(self._integrity())
         assert res.status is False
-        assert res.reason and "did not state" in res.reason[0].lower()
+        assert res.applicable is False
+        assert res.reason and "does not report completeness" in res.reason[0].lower()
 
     def test_declares_its_own_input_contract(self):
         assert RuleAgentTraceIntegrity.input_data_type == "agent_trace_integrity"
@@ -357,7 +358,7 @@ class TestIntegritySilenceIsNotAPass:
         assert res.applicable is False
         assert res.status is False
         assert res.label != [QualityLabel.QUALITY_GOOD]
-        assert "not verified" in " ".join(res.reason)
+        assert "nothing here to check" in " ".join(res.reason).lower()
 
     def test_a_source_that_reported_completeness_still_passes(self):
         res = RuleAgentTraceIntegrity.eval(

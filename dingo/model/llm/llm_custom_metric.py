@@ -221,6 +221,10 @@ class LLMCustomMetric(BaseOpenAI):
             metric=self._get_custom_metric().metric,
             status=False,  # 执行/解析失败不是质量问题，绝不伪装成 issue（spec §9.3）
             applicable=False,  # 执行失败 → effective_verdict="n/a"，不是 pass（final-review #2）
+            # 和 base_openai 的兜底分支同理：只说"不适用"会被下游读成"这项检查
+            # 不适用于你的运行"，而实际是评测器自己挂了。下游此前只能靠 label
+            # 前缀反推，那是在猜一件这里已经知道的事。
+            not_applicable_kind="execution_error",
             score=None,
             label=[f"{QualityLabel.REVIEW_EXECUTION_ERROR_PREFIX}{except_name}"],
             reason=[except_msg],

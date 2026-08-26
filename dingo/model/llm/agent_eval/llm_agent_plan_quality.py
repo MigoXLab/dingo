@@ -51,7 +51,6 @@ the score contradict the dimension ratings.
         "A plan step the record shows never happened is not completed,\n"
         "  whatever the plan's own progress notes say."
     ) + """
-IMPORTANT: The "reason" field MUST be in the same language as the Task Objective. If the task objective is in Chinese, respond in Chinese. If in English, respond in English.
 
 Return your evaluation as a JSON object with this exact schema:
 {
@@ -67,9 +66,7 @@ Do not include any text outside the JSON object."""
     @classmethod
     def build_messages(cls, input_data: Data) -> List[dict]:
         """Build LLM messages for plan quality evaluation."""
-        lang_hint = cls._detect_language_hint(
-            str(input_data.prompt) + str(input_data.content)
-        )
+        lang_hint = cls.language_hint_for(input_data)
         user_content = f"""{cls.prompt}
 
 ## Task Objective
@@ -107,6 +104,15 @@ Evaluate the plan quality and return the JSON evaluation.{lang_hint}"""
             result = EvalDetail(metric=cls.__name__)
             result.status = False
             result.applicable = False      # N/A：不再强转满分 pass
+            # Decided before the model was called: this check does not
+            # apply to a run of this shape, which says nothing about the
+            # run's quality either way.
+            result.not_applicable_kind = "structural"
+            # …and which reason, in a form the UI can translate. The prose below
+            # is English by construction, and a reader on a Chinese page was
+            # shown it verbatim. Set here because the branch that declines is
+            # the only place that knows why.
+            result.not_applicable_code = "no_explicit_plan"
             result.score = None
             result.verdict = "n/a"
             result.reason = [data.get("reason", "No planning content reported; plan quality not applicable.")]

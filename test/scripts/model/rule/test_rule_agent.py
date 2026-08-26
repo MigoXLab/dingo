@@ -360,7 +360,12 @@ class TestPassingVerdictsExplainThemselves:
     def test_token_pass_without_usage_does_not_claim_a_check(self):
         res = RuleAgentTraceTokenBudget.eval(_data(json.dumps({"steps": []})))
         assert res.status is False
-        assert "not checked" in res.reason[0]
+        assert res.applicable is False
+        # Says what the trace does not carry, rather than claiming this run's
+        # spending is unknown to us: the first is why the check does not apply,
+        # the second is a gap in the run — a different verdict with a different
+        # meaning downstream.
+        assert "no token usage" in res.reason[0].lower()
 
     def test_latency_pass_reports_what_it_compared(self):
         content = json.dumps(

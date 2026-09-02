@@ -99,8 +99,16 @@ class LLMCustomMetric(BaseOpenAI):
         else:
             model_name = self.client.models.list().data[0].id
 
-        extra_params = self.dynamic_config.model_extra
+        # 走和 BaseOpenAI 同一个入口。同一层里两处调用、一处过滤一处不过滤，
+        # 是这类问题最容易复发的形态。
+        extra_params = self.get_request_extra_params()
         self.validate_config(extra_params)
+
+        request_timeout = self.get_local_config_value("request_timeout")
+        if request_timeout is not None:
+            # 只在配了的时候传。这个类原先没有任何超时，凭空给它一个默认值
+            # 会让本来跑得通的长调用开始失败。
+            extra_params["timeout"] = request_timeout
 
         completions = self.client.chat.completions.create(
             model=model_name,

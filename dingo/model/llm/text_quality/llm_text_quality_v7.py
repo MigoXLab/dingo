@@ -37,4 +37,3 @@ class LLMTextQualityV7(BaseTextQualityV2):
         "description": "Multi-label impact-driven text quality evaluation for LLM pretraining",
     }
     prompt = _build_multi_label_prompt()
-

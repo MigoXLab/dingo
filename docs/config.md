@@ -21,7 +21,10 @@
 | task_name | str | "dingo" | No | 任务名称 |
 | input_path | str | "test/data/test_local_json.json" | Yes | 要检查的文件或目录路径 |
 | output_path | str | "outputs/" | No | 结果输出路径 |
+| exclude_fields | list[str] | ["key"] | No | `summary.json` 的 `input_args` 中不记录的字段名 |
 | log_level | str | "WARNING" | No | 日志级别，可选值：['DEBUG', 'INFO', 'WARNING', 'ERROR'] |
+
+执行结束后，Dingo 会将本次执行参数记录到 `summary.json` 的 `input_args` 字段中，便于后续追溯任务的执行方式。`exclude_fields` 按字段名递归过滤所有层级，无需填写完整路径。例如，默认值 `["key"]` 会删除所有 evaluator 的 `config.key` 字段。若要过滤多个字段，可配置为 `["key", "token", "password"]`；若要保留全部字段，可配置为空列表 `[]`。
 
 ### Dataset 配置 (dataset)
 
@@ -189,6 +192,7 @@ LLM 配置（支持额外字段，所有额外字段会直接透传给 LLM API�
   "task_name": "dingo",
   "input_path": "test/data/test_local_json.json",
   "output_path": "outputs/",
+  "exclude_fields": ["key"],
   "log_level": "WARNING",
   "use_browser": false,
 

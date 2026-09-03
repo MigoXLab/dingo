@@ -22,6 +22,7 @@ class TestSummaryModel:
     def test_input_args_are_serialized(self):
         input_args = InputArgs(**{
             "input_path": "data.jsonl",
+            "exclude_fields": [],
             "evaluator": [{
                 "fields": {"content": "content"},
                 "evals": [{
@@ -35,12 +36,32 @@ class TestSummaryModel:
             }],
         })
 
-        summary = SummaryModel(input_args=input_args.dict())
+        summary = SummaryModel(input_args=input_args.to_dict())
 
         serialized = summary.to_dict()["input_args"]
         assert serialized["input_path"] == "data.jsonl"
         assert serialized["evaluator"][0]["evals"][0]["config"]["model"] == "test-model"
         assert serialized["evaluator"][0]["evals"][0]["config"]["key"] == "secret-key"
+
+    def test_input_args_to_dict_recursively_excludes_fields(self):
+        input_args = InputArgs(**{
+            "evaluator": [{
+                "fields": {"content": "content"},
+                "evals": [{
+                    "name": "LLMTextQualityV7",
+                    "config": {
+                        "model": "test-model",
+                        "key": "secret-key",
+                    },
+                }],
+            }],
+        })
+
+        serialized = input_args.to_dict()
+        config = serialized["evaluator"][0]["evals"][0]["config"]
+
+        assert "key" not in config
+        assert config["model"] == "test-model"
 
     def test_add_metric_score_single(self):
         """测试添加单个指标的多个分数"""

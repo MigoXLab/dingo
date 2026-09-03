@@ -186,7 +186,7 @@ class SparkExecutor(ExecProto):
                 num_good=num_good,
                 num_bad=num_bad,
                 total=total,
-                input_args=self.input_args.dict(),
+                input_args=self.input_args.to_dict(),
             )
             # Generate detailed summary
             self.summary = self.summarize(self.summary)

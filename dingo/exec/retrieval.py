@@ -135,6 +135,7 @@ class RetrievalExecutor:
             input_path=self.input_args.input_path,
             output_path=output_dir,
             create_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            input_args=self.input_args.to_dict(),
         )
 
         all_results: dict[str, Any] = {}
@@ -243,6 +244,7 @@ class RetrievalExecutor:
             "total": summary.total,
             "config": config,
             "metrics": all_results,
+            "input_args": summary.input_args,
         }
         save_json(summary_dict, output_dir, "summary.json")
 
@@ -381,6 +383,7 @@ class RetrievalExecutor:
             input_path=queries_path,
             output_path=output_dir,
             create_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            input_args=self.input_args.to_dict(),
         )
         summary.metrics_score_stats = all_results
         summary.total = len(query_details)
@@ -417,6 +420,7 @@ class RetrievalExecutor:
             "total": summary.total,
             "config": config,
             "metrics": all_results,
+            "input_args": summary.input_args,
         }
         save_json(summary_dict, output_dir, "summary.json")
 

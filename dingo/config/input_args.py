@@ -189,8 +189,32 @@ class InputArgs(BaseModel):
     input_path: str = "test/data/test_local_json.json"
     output_path: str = "outputs/"
 
+    exclude_fields: List[str] = ["key"]
     log_level: str = "WARNING"
 
     dataset: DatasetArgs = DatasetArgs()
     executor: ExecutorArgs = ExecutorArgs()
     evaluator: List[EvalPipline] = []
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a config snapshot, recursively excluding matching field names."""
+        model_dump = getattr(self, "model_dump", None)
+        if callable(model_dump):
+            data = model_dump()
+        else:
+            data = self.dict()
+
+        excluded = set(self.exclude_fields)
+        pending = [data]
+        while pending:
+            value = pending.pop()
+            if isinstance(value, dict):
+                for key in list(value):
+                    if key in excluded:
+                        del value[key]
+                    else:
+                        pending.append(value[key])
+            elif isinstance(value, list):
+                pending.extend(value)
+
+        return data

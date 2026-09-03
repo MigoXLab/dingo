@@ -63,6 +63,7 @@ class LocalExecutor(ExecProto):
             input_path=input_path,
             output_path=output_path if self.input_args.executor.result_save.bad else "",
             create_time=create_time,
+            input_args=self.input_args.dict(),
         )
 
         # Evaluate data

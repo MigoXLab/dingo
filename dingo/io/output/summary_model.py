@@ -25,6 +25,7 @@ class SummaryModel(BaseModel):
     # 结构：{field_key: {metric_name: {scores, score_average, ...}}}
     metrics_score_stats: Dict[str, Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
     token_usage_stats: Dict[str, Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
+    input_args: Dict[str, Any] = Field(default_factory=dict)
 
     def add_metric_score(self, field_key: str, metric_name: str, score: float):
         """
@@ -186,5 +187,7 @@ class SummaryModel(BaseModel):
 
         if self.token_usage_stats:
             result['token_usage'] = self.token_usage_stats
+
+        result['input_args'] = self.input_args
 
         return result

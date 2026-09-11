@@ -1,6 +1,97 @@
 ﻿# Search Result Quality 三指标评测说明
 
-本文档说明检索结果的三类评测指标：相关性、内容有效性、权威性，以及对应的单项评测脚本和端到端综合评测脚本。该方案面向无人工 GT 的检索结果质量检查，既可读取预计算的 query+results，也可从 query 文件直接请求 SciVerse Meta Search 或 OpenAlex，再通过 Dingo Executor 完成评测和分类。
+本文档说明检索结果的三类评测指标：相关性、内容有效性、权威性，以及对应的单项评测脚本和端到端综合评测脚本。该方案面向无人工 GT 的检索结果质量检查，既可读取预计算的 query+results，也可从 query 文件直接请求 SciVerse Agentic Search、Meta Search 或 OpenAlex，再通过 Dingo Executor 完成评测和分类。
+
+## Agentic Search 主观评测
+
+HTML 实体使用独立标签 `Effectiveness.Error_HTML_Entity`（HTML 实体残留），
+例如 `&amp;`、`&#38;`、`&#x26;`、双重转义的 `h&amp;auml;nchen`。
+初筛候选为 `RuleHtmlEntity`，开启 LLM 时仍需二次确认和精确证据校验；
+未开启 LLM 时使用 `Effectiveness.Error_Rule_HTML_Entity` 候选标签。
+`HTML_Tag` 保留给损坏/多余的标签结构，`Special_Char_Noise` 保留给真正的字符噪声，
+并非将所有特殊字符标签统一改名。实体教学代码、正常解码字符及完整图片链接地址不自动扣分。
+历史报告不自动迁移标签；重新评测后生成对应的分项 JSONL。
+
+综合脚本支持 `--retrieval-backend agentic`。相关性使用 `query + title + chunk`
+进行逐条 LLM 判断；有效性采用四个等权子项：`chunk_quality`、`title_quality`、
+`abstract_quality`、`source_quality`，各占 0.25。
+
+`source_quality` 使用 Agentic Search 返回的 `doc_id + offset` 调用 `/content`，
+读取 200 个字符，并严格比较原始 offset 处的前 50 个 chunk 字符（可通过
+`--source-prefix-length` 配置）。只归一化换行符，不去除 HTML、空格、标点，
+不搜索邻近窗口、不校准 offset。完全一致记 1.0；任何
+低于 1.0 的一致性都会标记
+`Effectiveness.Error_Chunk_Source_Inconsistent`。临时接口错误单独标记，不作为
+内容低质量分数。
+
+Authority 会按 `doc_id` 批量调用 `/meta-search`，补充被引百分位、FWCI、被引数、
+高影响力被引数、期刊、出版社与 DOI。引用影响力优先使用学科/年份归一化百分位，
+其次使用 FWCI，最后回退到原始被引数。相同文献的多个 chunk 只参与一次 query 级
+Authority 聚合。
+
+同一批元数据请求也获取 `title` 和 `abstract`，仅补全原结果为空或全为空白的字段，
+不覆盖已有标题、摘要。补全前值保存在 `_metadata_original_fields`，来源记录在
+`_metadata_recovered_fields`。后续评测使用补全后的文本；成功补回的字段不再判定为缺失，
+但仍接受文本质量检查。未命中、请求失败或元数据仍为空时不自动豁免缺失。
+Agentic 评测根据补全来源生成 `Effectiveness.Error_Title_Recovered`（标题缺失，已补全）
+和 `Effectiveness.Error_Abstract_Recovered`（摘要缺失，已补全）两个问题标签。
+同一字段与 `Title_Miss` / `Abstract_Miss` 互斥：补全后仍为空只标记缺失。
+这两个标签无需 LLM 判断，不额外扣分；补全文本仍按正常质量规则计分。
+标签会进入 Executor 的问题分类（即使有效性分数为 1）、问题统计和对应 JSONL，
+用于追踪原始响应完整性，不能将这类问题数量直接解释为补全后文本不合格数量。
+此逻辑用于 Agentic 的元数据补全流程；直接 Meta Search 的原始响应已默认包含标题和摘要，
+不能据此认定所有缺失都能恢复。历史结果需要重新评测才会更新。
+
+```bash
+python examples/retrieval/sdk_eval_search_result.py \
+  --input-queries dingo/retrieval/tasks/cjk_evalset_v1.json \
+  --retrieval-backend agentic \
+  --search-api-url https://api.sciverse.space \
+  --top-k 100 \
+  --max-queries 100 \
+  --save-detailed
+```
+
+鉴权使用 `SCIVERSE_API_TOKEN`；LLM 使用 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、
+`OPENAI_MODEL` 配置，不绑定某个供应商或模型。请求 top100 不保证接口实际返回100条，
+以报告 `result_count` 为准。三个评估器均通过注册系统在 `LocalExecutor` 内执行。
+
+### 缓存结果重评
+
+输入支持每行 `{query, results: [...]}` 或 `{query, response: {hits: [...]}}`。
+以下命令只复用检索结果，仍会请求原文、元数据和 LLM；如果已保存 enrichment 字段，
+省略 `--enrich-precomputed` 即可复用这些证据。
+
+```bash
+python examples/retrieval/sdk_eval_search_result.py \
+  --input-jsonl responses.jsonl --retrieval-backend precomputed \
+  --eval-profile agentic --enrich-precomputed \
+  --search-api-url https://api.sciverse.space --top-k 100 --save-detailed
+```
+
+原文核验保存 `_source_text`、`_source_http_status`，并保留原始 `doc_id`、`offset`。
+200 空文本标记窗口为空；404 标记原文不存在；网络或解析失败标记核验失败。
+source_quality 为存在性 0.3 加一致性 0.7；空窗口或404为0。
+原文未核验、核验失败或必要的 LLM 复核失败时，Agentic 有效性总分为 null，
+不改成三项平均，也不按0分处罚。汇总跳过空分但保留原始排序权重，
+通过 `effectiveness_unscored_count` 披露数量，并将相关 query 标记为评测未完成。
+`issues/*.jsonl` 按问题标签输出原始记录及评测依据；`issue_counts.json` 记录各标签条数，
+同一记录可命中多个标签，不能直接相加作为异常记录总数。复核前端不属于仓库功能。
+
+### 内置中文检索基准（与主观评测独立）
+
+```bash
+dingo eval-retrieval --backend agentic --tasks cjk_evalset_v1 \
+  --api-url https://api.sciverse.space --api-token "$SCIVERSE_API_TOKEN" --limit 100
+```
+
+API token 通过 CLI 支持的配置传入，勿写入数据文件或提交记录。
+`cjk_evalset_v1` 内置100条中文 query、分组及源文档 doc_id qrels，复用
+`RetrievalExecutor` 的检索指标计算，不调用 LLM。数据随 Python 包分发。
+这是 Dingo 内置的 MTEB 风格二元标注任务，不是 MTEB 官方注册任务；不需要本地 corpus，
+直接对照服务返回的文献标识。它衡量已标注源文档的找回能力，其他未标注文献可能也相关，
+不能将未命中标注等同于语义不相关。当前不可与 SciFact/LitSearch 混合在同一次命令中。
+原始 chunk 排序位置保留，重复 doc_id 仅第一次计为命中，不人为补足100条。
 
 ## 1. 适用场景
 
@@ -712,3 +803,15 @@ Import-Csv outputs/search_result_relevancy_97q/query_scores.csv |
 3. 内容有效性当前不按 `metadata_type` 放宽 title、abstract、keywords、author 的字段要求；venue 缺失不再降低有效性分数，由权威性指标统一判断。
 4. 内容有效性使用 `RuleSpecialCharacter` / `RuleInvisibleChar` / `RuleMojibake` 做快速初筛，再用 LLM 二次确认 HTML 泄漏、乱码、不可见字符和严重特殊字符噪声；正常公式、LaTeX、单位符号不应被扣分。
 5. 权威性低不一定表示结果不相关，可能只是 citation、DOI、venue 元数据不足。
+
+### 有效性 LLM 二次确认的误报控制
+
+- 特殊字符初筛支持带分号的已知 HTML 命名实体（如 `&amp;`、`&nbsp;`）及十进制/十六进制数字实体（如 `&#38;`、`&#x26;`）。出现一处即可进入 `RuleSpecialCharacter` 候选，不受字符占比门槛限制；正常 `&`、未知实体名称、图片路径不因此触发。此项仅扩展初筛，未新增实体业务标签或修改 HTML 标签后置校验；启用 LLM 时，命中候选不等于最终扣分，实体教学示例等仍需语境判断。
+
+- 正常的内联 Markdown 图片链接允许保留，包括相对路径、哈希文件名、查询参数和空 alt。规则检测排除图片语法及路径，但继续检查 alt 文本和周围正文；LLM 仅以图片链接或其中路径为证据时，不采纳扣分。此放行不代表图片可访问，不执行图片网络请求，也不改变原文 offset 一致性核验。
+
+- 规则命中只表示异常候选，不代表最终问题。正常 HTML 表格（含 rowspan/colspan、html/body 包装）、作者上标、化学下标、Markdown 和 LaTeX 不应仅因存在标记而扣分；只有确实妨碍阅读的破损或多余标记才属于 HTML 残留。
+- 正常排版空格、页码中的负号以及“凤”“解”等汉字不视为特殊字符噪声；乱码和控制字符仍保留检测。
+- LLM 只判断字段可读性，不判断主题相关性、技术参数重复或科学正确性。扣分必须同时有低分、有效问题类别及原字段中精确存在的 evidence 片段；缺失或无法匹配的证据不支持扣分。
+- 输出中的 `llm_quality_evidence` 保留 LLM 返回的字段证据，便于复核。证据能匹配原文不代表判断必然正确，仍需结合阅读影响审核。
+- 以上 LLM 确认约束仅用于启用 LLM 的模式，缺字段和来源核验仍由各自规则处理。修改提示词不会自动重算历史分数或更新已导出的复核标签。

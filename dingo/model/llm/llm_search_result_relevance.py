@@ -9,9 +9,8 @@ Two prompt modes are available (from Exa's "How we do evals" blog post):
 - ``standard``: minimal 10-line prompt, high correlation with detailed
 - ``detailed``: full 46-line prompt with scoring rubric and examples
 
-This class is used directly by ``RetrievalExecutor`` during the open eval
-phase; it is **not** registered via ``@Model.llm_register`` because it
-operates on search traces rather than ``Data`` rows.
+This registered evaluator supports Data rows through LocalExecutor and direct
+grading of search traces during RetrievalExecutor's open evaluation phase.
 """
 
 from __future__ import annotations
@@ -439,6 +438,7 @@ class LLMSearchResultRelevance:
         max_tokens: int = 1024,
         temperature: float = 0.0,
         timeout: float | None = None,
+        session_id: str | None = None,
     ):
         self.model = model or "gpt-4o"
         self.api_key = api_key
@@ -448,6 +448,7 @@ class LLMSearchResultRelevance:
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.timeout = timeout
+        self.session_id = session_id
         self._client = None
 
     def _get_client(self):
@@ -458,6 +459,8 @@ class LLMSearchResultRelevance:
                 kwargs["api_key"] = self.api_key
             if self.api_url:
                 kwargs["base_url"] = self.api_url
+            if self.session_id:
+                kwargs["default_headers"] = {"X-Session-ID": self.session_id}
             self._client = OpenAI(**kwargs)
         return self._client
 
@@ -535,6 +538,7 @@ class LLMSearchResultRelevance:
             max_tokens=int(cls._config_value("max_tokens", 1024) or 1024),
             temperature=float(cls._config_value("temperature", 0.0) or 0.0),
             timeout=cls._config_value("timeout", None),
+            session_id=cls._config_value("session_id", None),
         )
 
     @staticmethod
@@ -543,7 +547,14 @@ class LLMSearchResultRelevance:
 
     @staticmethod
     def _extract_abstract(result: dict[str, Any]) -> str:
-        return str(result.get("abstract") or result.get("summary") or result.get("content") or "")
+        if result.get("_eval_profile") == "agentic":
+            return str(result.get("chunk") or result.get("abstract") or "")
+        return str(
+            result.get("abstract")
+            or result.get("summary")
+            or result.get("content")
+            or ""
+        )
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
@@ -563,6 +574,8 @@ class LLMSearchResultRelevance:
                 title=title,
                 abstract=abstract,
             )
+        agentic_profile = result.get("_eval_profile") == "agentic"
+        score = grade.query_relevance if agentic_profile else grade.score
         threshold = float(cls._config_value("threshold", cls.default_threshold) or cls.default_threshold)
         content_issue_evidence = _content_issue_evidence(title, abstract) if grade.content_issues else []
         effective_content_issues = bool(content_issue_evidence)
@@ -570,7 +583,7 @@ class LLMSearchResultRelevance:
         labels: list[str] = []
         if grade.error:
             labels.append("Relevance.Error_Parse")
-        if grade.score < threshold:
+        if score < threshold:
             labels.append("Relevance.Error_Relevance_Low")
         if effective_content_issues:
             labels.append("Relevance.Error_Content_Issues")
@@ -580,6 +593,10 @@ class LLMSearchResultRelevance:
             labels = ["QUALITY_GOOD"]
 
         reason = grade.to_dict()
+        if agentic_profile:
+            reason["judge_overall_score"] = grade.score
+            reason["score"] = score
+            reason["score_basis"] = "query_relevance"
         reason["raw_content_issues"] = grade.content_issues
         reason["content_issues"] = effective_content_issues
         reason["content_issue_evidence"] = content_issue_evidence
@@ -587,7 +604,7 @@ class LLMSearchResultRelevance:
         return EvalDetail(
             metric=cls.__name__,
             status=status,
-            score=round(grade.score, 5),
+            score=round(score, 5),
             label=labels,
             reason=[reason],
             usage=grade.usage,

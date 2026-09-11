@@ -23,6 +23,8 @@ def load_query_result_jsonl(path: Path, max_queries: int | None = None) -> list[
                 or item.get("top_results")
                 or item.get("top_api_results")
                 or item.get("search_results")
+                or item.get("hits")
+                or (item.get("response") or {}).get("hits")
                 or []
             )
             if isinstance(results, dict):
@@ -97,12 +99,15 @@ def get_title(result: dict[str, Any]) -> str:
     return str(result.get("title") or result.get("display_name") or "")
 
 
-def rank_discounted_mean(values: list[float]) -> float:
+def rank_discounted_mean(values: list[float | None]) -> float | None:
     """Return a query-level weighted mean that gives higher ranks more weight."""
     if not values:
         return 0.0
     weights = [1.0 / math.log2(rank + 2) for rank in range(len(values))]
-    return sum(value * weight for value, weight in zip(values, weights)) / sum(weights)
+    valid = [(value, weight) for value, weight in zip(values, weights) if value is not None]
+    if not valid:
+        return None
+    return sum(value * weight for value, weight in valid) / sum(weight for _, weight in valid)
 
 
 def summarize(values: list[float]) -> dict[str, float | int]:

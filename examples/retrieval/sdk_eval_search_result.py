@@ -10,6 +10,7 @@ import concurrent.futures
 import json
 import math
 import os
+import re
 import shutil
 import sys
 import time
@@ -29,11 +30,15 @@ from search_result_eval_utils import (add_common_args, get_title, load_queries, 
 from dingo.config import InputArgs  # noqa: E402
 from dingo.exec import Executor  # noqa: E402
 from dingo.model.llm.llm_search_result_relevance import is_doi_query  # noqa: E402
+from dingo.retrieval.sciverse_quality import SciverseQualityEnricher  # noqa: E402
 from dingo.retrieval.search_client import PaperResult, create_client  # noqa: E402
 
 EFFECTIVENESS_LABEL_TO_ISSUE = {
     "Effectiveness.Error_Title_Miss": "missing_title",
     "Effectiveness.Error_Abstract_Miss": "missing_abstract",
+    "Effectiveness.Error_Title_Recovered": "title_recovered",
+    "Effectiveness.Error_Abstract_Recovered": "abstract_recovered",
+    "Effectiveness.Error_Chunk_Miss": "missing_chunk",
     "Effectiveness.Error_Keywords_Miss": "missing_keywords",
     "Effectiveness.Error_Author_Miss": "missing_author",
     "Effectiveness.Error_HTML_Tag": "html_tag",
@@ -43,6 +48,13 @@ EFFECTIVENESS_LABEL_TO_ISSUE = {
     "Effectiveness.Error_Special_Char_Noise": "special_char_noise",
     "Effectiveness.Error_LLM_Quality_Parse": "llm_quality_parse_error",
     "Effectiveness.Error_Effectiveness_Low": "effectiveness_low",
+    "Effectiveness.Error_Source_DocID_Miss": "missing_source_doc_id",
+    "Effectiveness.Error_Source_Offset_Miss": "missing_source_offset",
+    "Effectiveness.Error_Source_Not_Found": "source_not_found",
+    "Effectiveness.Error_Source_Empty": "source_empty",
+    "Effectiveness.Error_Source_Offset_Invalid": "source_offset_invalid",
+    "Effectiveness.Error_Source_Check_Failed": "source_check_failed",
+    "Effectiveness.Error_Chunk_Source_Inconsistent": "chunk_source_inconsistent",
 }
 
 
@@ -67,6 +79,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--openai-api-key", default=os.environ.get("OPENAI_API_KEY"))
     parser.add_argument("--openai-base-url", default=os.environ.get("OPENAI_BASE_URL"))
     parser.add_argument("--openai-model", default=os.environ.get("OPENAI_MODEL", "gpt-5.4-mini"))
+    parser.add_argument(
+        "--openai-session-id",
+        default=os.environ.get("OPENAI_SESSION_ID") or os.environ.get("CODEX_SESSION_ID"),
+        help="Optional X-Session-ID header for agent-only OpenAI-compatible gateways.",
+    )
     parser.add_argument("--openai-temperature", type=float, default=float(os.environ.get("OPENAI_TEMPERATURE", "0.0")))
     parser.add_argument("--prompt-mode", choices=("standard", "detailed"), default="detailed")
     parser.add_argument("--llm-max-tokens", type=int, default=1024)
@@ -82,12 +99,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--threshold",
         type=float,
-        default=0.15,
-        help="Unified query-level threshold for rank-weighted relevance, effectiveness, and authority.",
+        default=None,
+        help="Optional unified threshold override for all three dimensions.",
     )
+    parser.add_argument("--relevance-threshold", type=float, default=0.60)
+    parser.add_argument("--effectiveness-threshold", type=float, default=0.80)
+    parser.add_argument("--authority-threshold", type=float, default=0.30)
     parser.add_argument(
         "--retrieval-backend",
-        choices=("precomputed", "meta_search", "openalex"),
+        choices=("precomputed", "agentic", "meta_search", "openalex"),
         default="precomputed",
         help="Use precomputed results or retrieve queries before evaluation.",
     )
@@ -102,10 +122,32 @@ def parse_args() -> argparse.Namespace:
         help="Optional token override; prefer SCIVERSE_API_TOKEN or OPENALEX_API_KEY.",
     )
     parser.add_argument("--search-type", default=None)
+    parser.add_argument(
+        "--filters-json",
+        default=None,
+        help="Meta-search filters as a JSON object or an array of filter objects.",
+    )
     parser.add_argument("--search-timeout", type=float, default=60.0)
     parser.add_argument("--search-workers", type=int, default=4)
     parser.add_argument("--search-rate-limit", type=float, default=None)
     parser.add_argument("--search-max-retries", type=int, default=3)
+    parser.add_argument(
+        "--source-check-interval",
+        type=float,
+        default=2.0,
+        help="Minimum seconds between Sciverse enrichment requests (default: 2.0).",
+    )
+    parser.add_argument("--source-content-limit", type=int, default=200)
+    parser.add_argument("--source-prefix-length", type=int, default=50)
+    parser.add_argument("--source-offset-tolerance", type=int, choices=(0,), default=0,
+                        help="Original-offset verification only; offset correction is disabled.")
+    parser.add_argument("--metadata-batch-size", type=int, default=100)
+    parser.add_argument("--disable-source-verification", action="store_true")
+    parser.add_argument("--disable-authority-enrichment", action="store_true")
+    parser.add_argument("--eval-profile", choices=("auto", "meta_search", "agentic"), default="auto",
+                        help="Explicit result profile for precomputed input; auto preserves existing metadata.")
+    parser.add_argument("--enrich-precomputed", action="store_true",
+                        help="Fetch source and authority evidence for cached Agentic hits without repeating search.")
     parser.add_argument(
         "--save-detailed",
         action="store_true",
@@ -136,6 +178,14 @@ def _openalex_keywords(raw: dict[str, Any]) -> list[str]:
 def normalize_search_result(paper: PaperResult, backend: str) -> dict[str, Any]:
     """Map backend-specific output to the fields consumed by all three metrics."""
     raw = dict(paper.raw or {})
+    if backend == "agentic":
+        raw["doc_id"] = str(raw.get("doc_id") or paper.paper_id or "")
+        raw["title"] = str(raw.get("title") or paper.title or "")
+        raw["chunk"] = str(raw.get("chunk") or raw.get("snippet") or paper.abstract or "")
+        raw["abstract"] = str(raw.get("abstract") or "")
+        raw["relevance_score"] = paper.score
+        raw["_eval_profile"] = "agentic"
+        return raw
     if backend == "meta_search":
         raw.setdefault("title", paper.title)
         raw.setdefault("abstract", paper.abstract)
@@ -176,7 +226,7 @@ def _build_search_client(args: argparse.Namespace):
         kwargs["api_token"] = args.search_api_token
     if args.search_api_url:
         kwargs["api_url"] = args.search_api_url
-    elif args.retrieval_backend == "meta_search":
+    elif args.retrieval_backend in {"agentic", "meta_search"}:
         kwargs["api_url"] = os.environ.get(
             "SCIVERSE_API_URL", "https://api.sciverse.space"
         )
@@ -186,6 +236,16 @@ def _build_search_client(args: argparse.Namespace):
         )
     if args.search_type:
         kwargs["search_type"] = args.search_type
+    if args.filters_json:
+        filters = json.loads(args.filters_json)
+        if not isinstance(filters, (dict, list)) or (
+            isinstance(filters, list)
+            and not all(isinstance(item, dict) for item in filters)
+        ):
+            raise ValueError(
+                "--filters-json must decode to a JSON object or an array of objects"
+            )
+        kwargs["filters"] = filters
     if args.search_rate_limit is not None:
         kwargs["rate_limit"] = args.search_rate_limit
     return create_client(args.retrieval_backend, **kwargs)
@@ -227,6 +287,9 @@ def retrieve_queries(
             completed.append(future.result())
     completed.sort(key=lambda item: item[0])
 
+    enrichment_summary = enrich_agentic_results(
+        args, [result for _, item, _ in completed for result in item["results"]]
+    ) if args.retrieval_backend == "agentic" else {}
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as result_file, request_log_path.open(
         "w", encoding="utf-8"
@@ -237,7 +300,7 @@ def retrieve_queries(
 
     logs = [log for _, _, log in completed]
     latencies = [float(log["response_time_ms"]) for log in logs]
-    return {
+    summary = {
         "backend": args.retrieval_backend,
         "query_count": len(logs),
         "result_count": sum(int(log["result_count"]) for log in logs),
@@ -247,6 +310,54 @@ def retrieve_queries(
         "mean_response_time_ms": round(sum(latencies) / len(latencies), 3) if latencies else 0.0,
         "max_response_time_ms": round(max(latencies), 3) if latencies else 0.0,
     }
+    if enrichment_summary:
+        summary["enrichment"] = enrichment_summary
+    return summary
+
+
+def enrich_agentic_results(args: argparse.Namespace, results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Enrich fresh or cached Agentic hits identically before LocalExecutor."""
+    enrichment_summary: dict[str, Any] = {}
+    if results:
+        api_token = args.search_api_token or os.environ.get("SCIVERSE_API_TOKEN")
+        if not api_token:
+            raise ValueError("Agentic subjective evaluation requires a Sciverse API token")
+        enricher = SciverseQualityEnricher(
+            api_url=args.search_api_url or os.environ.get("SCIVERSE_API_URL", "https://api.sciverse.space"),
+            api_token=api_token,
+            timeout=args.search_timeout,
+            max_retries=args.search_max_retries,
+            request_interval=args.source_check_interval,
+            content_limit=args.source_content_limit,
+            prefix_length=args.source_prefix_length,
+            offset_tolerance=args.source_offset_tolerance,
+        )
+        all_results = results
+        if not args.disable_authority_enrichment:
+            enrichment_summary["authority_metadata"] = enricher.enrich_authority_metadata(
+                all_results,
+                batch_size=args.metadata_batch_size,
+            )
+        if not args.disable_source_verification:
+            issue_counts: dict[str, int] = {}
+            error_count = 0
+            for result in all_results:
+                verification = enricher.verify_source(result)
+                result.update(verification.to_result_fields())
+                if verification.issue:
+                    issue_counts[verification.issue] = issue_counts.get(verification.issue, 0) + 1
+                if verification.error:
+                    error_count += 1
+            enrichment_summary["source_verification"] = {
+                "checked_results": len(all_results),
+                "prefix_length": args.source_prefix_length,
+                "content_limit": args.source_content_limit,
+                "offset_tolerance": args.source_offset_tolerance,
+                "issue_counts": issue_counts,
+                "error_count": error_count,
+            }
+
+    return enrichment_summary
 
 
 def flatten_query_results(
@@ -255,6 +366,7 @@ def flatten_query_results(
     *,
     top_k: int,
     max_queries: int | None,
+    eval_profile: str = "auto",
 ) -> tuple[int, list[str]]:
     items = load_query_result_jsonl(input_path, max_queries)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -267,6 +379,8 @@ def flatten_query_results(
                 empty_queries.append(query)
             for rank, result in enumerate(item["results"][:top_k], start=1):
                 result_payload = dict(result)
+                if eval_profile != "auto":
+                    result_payload["_eval_profile"] = eval_profile
                 result_payload["_eval_query"] = query
                 row = {
                     "query": query,
@@ -280,7 +394,21 @@ def flatten_query_results(
     return count, empty_queries
 
 
+def metric_thresholds(args: argparse.Namespace) -> dict[str, float]:
+    """Resolve a legacy unified threshold or dimension-specific defaults."""
+    unified = getattr(args, "threshold", None)
+    if unified is not None:
+        value = float(unified)
+        return {"relevance": value, "effectiveness": value, "authority": value}
+    return {
+        "relevance": float(getattr(args, "relevance_threshold", 0.60)),
+        "effectiveness": float(getattr(args, "effectiveness_threshold", 0.80)),
+        "authority": float(getattr(args, "authority_threshold", 0.30)),
+    }
+
+
 def build_executor_input(args: argparse.Namespace, flattened_path: Path) -> dict[str, Any]:
+    thresholds = metric_thresholds(args)
     relevance_config = {
         "model": args.openai_model,
         "key": args.openai_api_key,
@@ -289,7 +417,8 @@ def build_executor_input(args: argparse.Namespace, flattened_path: Path) -> dict
         "prompt_mode": args.prompt_mode,
         "max_tokens": args.llm_max_tokens,
         "timeout": args.llm_timeout,
-        "threshold": args.threshold,
+        "session_id": args.openai_session_id,
+        "threshold": thresholds["relevance"],
     }
     effectiveness_config = {
         "model": args.openai_model,
@@ -298,10 +427,11 @@ def build_executor_input(args: argparse.Namespace, flattened_path: Path) -> dict
         "temperature": args.openai_temperature,
         "max_tokens": args.effectiveness_llm_max_tokens,
         "timeout": args.llm_timeout,
-        "threshold": args.threshold,
+        "session_id": args.openai_session_id,
+        "threshold": thresholds["effectiveness"],
         "enable_llm_quality": not args.disable_effectiveness_llm_quality,
     }
-    authority_config = {"threshold": args.threshold}
+    authority_config = {"threshold": thresholds["authority"]}
     return {
         "task_name": "search_result_quality",
         "input_path": str(flattened_path),
@@ -374,6 +504,10 @@ def build_reports(
     empty_queries: list[str] | None = None,
     retrieval_summary: dict[str, Any] | None = None,
 ) -> tuple[dict, list[dict], list[dict], list[dict], list[dict]]:
+    thresholds = metric_thresholds(args)
+    threshold_config: float | dict[str, float] = (
+        float(args.threshold) if getattr(args, "threshold", None) is not None else thresholds
+    )
     records = sorted(
         records,
         key=lambda r: (
@@ -399,7 +533,8 @@ def build_reports(
         authority_reason = first_reason(authority_detail)
 
         relevance = round(float(relevance_detail.get("score") or 0.0), 5)
-        effectiveness = round(float(effectiveness_detail.get("score") or 0.0), 5)
+        effectiveness_raw = effectiveness_detail.get("score")
+        effectiveness = None if effectiveness_raw is None else round(float(effectiveness_raw), 5)
         authority = round(float(authority_detail.get("score") or 0.0), 5)
 
         relevance_error = str(relevance_reason.get("error") or "")
@@ -412,6 +547,7 @@ def build_reports(
         row = {
             "query": query,
             "rank": raw.get("rank"),
+            "doc_id": str((raw.get("search_result") or {}).get("doc_id") or ""),
             "title": raw.get("title", ""),
             "relevance": relevance,
             "query_relevance": round(float(relevance_reason.get("query_relevance") or 0.0), 5),
@@ -422,6 +558,13 @@ def build_reports(
             "relevance_reasoning": relevance_reason.get("reasoning", ""),
             "effectiveness": effectiveness,
             "effectiveness_issues": filtered_effectiveness_issues(effectiveness_detail),
+            "chunk_score": round(float(effectiveness_reason.get("chunk_score") or 0.0), 5),
+            "title_score": round(float(effectiveness_reason.get("title_score") or 0.0), 5),
+            "abstract_score": round(float(effectiveness_reason.get("abstract_score") or 0.0), 5),
+            "source_score": effectiveness_reason.get("source_score"),
+            "source_exists": effectiveness_reason.get("source_exists"),
+            "chunk_consistency": effectiveness_reason.get("chunk_consistency"),
+            "source_check_error": effectiveness_reason.get("source_check_error", ""),
             "effectiveness_llm_quality_reason": effectiveness_reason.get("llm_quality_reason", ""),
             "effectiveness_llm_quality_error": effectiveness_error,
             "authority": authority,
@@ -430,6 +573,9 @@ def build_reports(
             "venue_score": round(float(authority_reason.get("venue_score") or 0.0), 5),
             "doi_score": round(float(authority_reason.get("doi_score") or 0.0), 5),
             "authority_reason": authority_reason.get("reason", ""),
+            "authority_citation_basis": authority_reason.get("citation_basis", ""),
+            "authority_metadata_status": authority_reason.get("metadata_status", ""),
+            "authority_metadata_error": authority_reason.get("metadata_error", ""),
         }
         result_rows.append(row)
         by_query.setdefault(query, []).append(row)
@@ -448,8 +594,16 @@ def build_reports(
     classified_records = []
     for query, rows in by_query.items():
         relevance_scores = [float(row["relevance"]) for row in rows]
-        effectiveness_scores = [float(row["effectiveness"]) for row in rows]
-        authority_scores = [float(row["authority"]) for row in rows]
+        effectiveness_scores = [row["effectiveness"] for row in rows]
+        authority_rows: list[dict[str, Any]] = []
+        seen_authority_docs: set[str] = set()
+        for row in rows:
+            doc_key = str(row.get("doc_id") or f"__rank_{row.get('rank')}")
+            if doc_key in seen_authority_docs:
+                continue
+            seen_authority_docs.add(doc_key)
+            authority_rows.append(row)
+        authority_scores = [float(row["authority"]) for row in authority_rows]
         if is_doi_query(query):
             query_relevance = round(
                 max(
@@ -465,16 +619,20 @@ def build_reports(
         else:
             query_relevance = round(rank_discounted_mean(relevance_scores), 5)
             relevance_aggregation = "rank_discounted_mean"
-        query_effectiveness = round(rank_discounted_mean(effectiveness_scores), 5)
+        query_effectiveness = rank_discounted_mean(effectiveness_scores)
+        if query_effectiveness is not None:
+            query_effectiveness = round(query_effectiveness, 5)
         query_authority = round(rank_discounted_mean(authority_scores), 5)
 
         labels = []
-        if query_relevance < args.threshold:
+        if query_relevance < thresholds["relevance"]:
             labels.append("QUALITY_BAD.SEARCH_RESULT_RELEVANCE_LOW")
         relevance_errors = sum(1 for row in rows if row["relevance_error"])
-        if query_effectiveness < args.threshold:
+        if any(score is None for score in effectiveness_scores):
+            labels.append("REVIEW_EXECUTION_ERROR.Effectiveness_Incomplete")
+        if query_effectiveness is not None and query_effectiveness < thresholds["effectiveness"]:
             labels.append("QUALITY_BAD.SEARCH_RESULT_EFFECTIVENESS_LOW")
-        if query_authority < args.threshold:
+        if query_authority < thresholds["authority"]:
             labels.append("QUALITY_BAD.SEARCH_RESULT_AUTHORITY_LOW")
 
         eval_status = bool(labels)
@@ -489,7 +647,7 @@ def build_reports(
             "relevance": query_relevance,
             "relevance_aggregation": relevance_aggregation,
             "effectiveness_aggregation": "rank_discounted_mean",
-            "authority_aggregation": "rank_discounted_mean",
+            "authority_aggregation": "rank_discounted_mean_unique_doc",
             "effectiveness": query_effectiveness,
             "authority": query_authority,
             "eval_status": eval_status,
@@ -501,20 +659,20 @@ def build_reports(
         classified_records.append({
             "query": query,
             "metric": "search_result_quality",
-            "threshold": args.threshold,
+            "threshold": threshold_config,
             "eval_status": eval_status,
             "labels": labels,
             "relevance": query_relevance,
             "relevance_aggregation": relevance_aggregation,
             "effectiveness_aggregation": "rank_discounted_mean",
-            "authority_aggregation": "rank_discounted_mean",
+            "authority_aggregation": "rank_discounted_mean_unique_doc",
             "effectiveness": query_effectiveness,
             "authority": query_authority,
             "relevance_error_count": relevance_errors,
             "thresholds": {
-                "relevance": args.threshold,
-                "effectiveness": args.threshold,
-                "authority": args.threshold,
+                "relevance": thresholds["relevance"],
+                "effectiveness": thresholds["effectiveness"],
+                "authority": thresholds["authority"],
             },
             "results": full_results_by_query.get(query, []),
         })
@@ -535,7 +693,7 @@ def build_reports(
                 "doi_exact_match_rank_discount" if is_doi_query(query) else "rank_discounted_mean"
             ),
             "effectiveness_aggregation": "rank_discounted_mean",
-            "authority_aggregation": "rank_discounted_mean",
+            "authority_aggregation": "rank_discounted_mean_unique_doc",
             "effectiveness": 0.0,
             "authority": 0.0,
             "eval_status": True,
@@ -546,7 +704,7 @@ def build_reports(
         classified_records.append({
             "query": query,
             "metric": "search_result_quality",
-            "threshold": args.threshold,
+            "threshold": threshold_config,
             "eval_status": True,
             "labels": labels,
             "relevance": 0.0,
@@ -554,14 +712,14 @@ def build_reports(
                 "doi_exact_match_rank_discount" if is_doi_query(query) else "rank_discounted_mean"
             ),
             "effectiveness_aggregation": "rank_discounted_mean",
-            "authority_aggregation": "rank_discounted_mean",
+            "authority_aggregation": "rank_discounted_mean_unique_doc",
             "effectiveness": 0.0,
             "authority": 0.0,
             "relevance_error_count": 0,
             "thresholds": {
-                "relevance": args.threshold,
-                "effectiveness": args.threshold,
-                "authority": args.threshold,
+                "relevance": thresholds["relevance"],
+                "effectiveness": thresholds["effectiveness"],
+                "authority": thresholds["authority"],
             },
             "results": [],
         })
@@ -570,7 +728,8 @@ def build_reports(
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "metric": "search_result_quality",
         "top_k": args.top_k,
-        "threshold": args.threshold,
+        "threshold": threshold_config,
+        "thresholds": thresholds,
         "query_aggregation": "rank_discounted_mean",
         "llm": {
             "model": args.openai_model,
@@ -585,11 +744,13 @@ def build_reports(
         "run_output_path": str(executor_summary.output_path),
         "metrics": {
             "relevance": summarize([float(row["relevance"]) for row in query_rows]),
-            "effectiveness": summarize([float(row["effectiveness"]) for row in query_rows]),
+            "effectiveness": summarize([float(row["effectiveness"]) for row in query_rows
+                                        if row["effectiveness"] is not None]),
             "authority": summarize([float(row["authority"]) for row in query_rows]),
         },
         "query_count": len(query_rows),
         "result_count": len(result_rows),
+        "effectiveness_unscored_count": sum(row["effectiveness"] is None for row in result_rows),
         "rank_relevance_error_count": rank_relevance_error_count,
         "rank_effectiveness_llm_quality_error_count": rank_effectiveness_llm_quality_error_count,
         "num_bad": sum(1 for row in query_rows if row["eval_status"]),
@@ -631,6 +792,27 @@ def clear_executor_classification_dirs(run_dir: Path) -> None:
             shutil.rmtree(path)
 
 
+def write_issue_lists(run_dir: Path, records: list[dict[str, Any]]) -> None:
+    """Export one JSONL per result-level issue, retaining raw evidence for review."""
+    issues: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        labels = set()
+        for details in (record.get("eval_details") or {}).values():
+            for detail in details:
+                labels.update(label for label in detail.get("label") or []
+                              if label != "QUALITY_GOOD")
+        for label in labels:
+            issues.setdefault(label, []).append(record)
+    issue_dir = run_dir / "issues"
+    issue_dir.mkdir(exist_ok=True)
+    for label, rows in issues.items():
+        name = re.sub(r"[^A-Za-z0-9_.-]", "_", label)
+        with (issue_dir / f"{name}.jsonl").open("w", encoding="utf-8") as handle:
+            for row in rows:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    write_json(run_dir / "issue_counts.json", {label: len(rows) for label, rows in sorted(issues.items())})
+
+
 def main() -> None:
     load_env_file()
     args = parse_args()
@@ -653,11 +835,27 @@ def main() -> None:
             evaluation_input_path = retrieval_results_path
             flatten_max_queries = None
 
+        if args.retrieval_backend == "precomputed" and args.enrich_precomputed:
+            if args.eval_profile != "agentic":
+                raise ValueError("--enrich-precomputed requires --eval-profile agentic")
+            items = load_query_result_jsonl(evaluation_input_path, args.max_queries)
+            for item in items:
+                item["results"] = item["results"][:args.top_k]
+            retrieval_summary["enrichment"] = enrich_agentic_results(
+                args, [result for item in items for result in item["results"]]
+            )
+            with retrieval_results_path.open("w", encoding="utf-8") as handle:
+                for item in items:
+                    handle.write(json.dumps(item, ensure_ascii=False) + "\n")
+            evaluation_input_path = retrieval_results_path
+            flatten_max_queries = None
+
         total, empty_queries = flatten_query_results(
             evaluation_input_path,
             flattened_path,
             top_k=args.top_k,
             max_queries=flatten_max_queries,
+            eval_profile=args.eval_profile,
         )
         if total:
             input_data = build_executor_input(args, flattened_path)
@@ -680,6 +878,7 @@ def main() -> None:
         )
 
         write_json(run_dir / "summary.json", summary)
+        write_issue_lists(run_dir, executor_records)
         if args.save_detailed:
             write_json(run_dir / "detailed_results.json", {"summary": summary, "queries": detailed})
         write_csv(run_dir / "query_scores.csv", query_rows)
@@ -692,11 +891,19 @@ def main() -> None:
         if args.retrieval_backend != "precomputed":
             shutil.copyfile(retrieval_results_path, run_dir / "retrieval_results.jsonl")
             shutil.copyfile(retrieval_log_path, run_dir / "retrieval_request_log.jsonl")
+        elif args.enrich_precomputed:
+            shutil.copyfile(retrieval_results_path, run_dir / "retrieval_results.jsonl")
         print(f"Saved to {run_dir.resolve()}")
     finally:
         for temp_path in (flattened_path, retrieval_results_path, retrieval_log_path):
             if temp_path.exists():
-                temp_path.unlink()
+                try:
+                    temp_path.unlink()
+                except PermissionError:
+                    # A worker may still be releasing a Windows file handle
+                    # after an executor exception. Preserve the reusable input
+                    # instead of masking the original evaluation failure.
+                    pass
 
 
 if __name__ == "__main__":

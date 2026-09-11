@@ -11,19 +11,23 @@ grading) that runs after search and alongside MTEB closed-eval metrics.
 
 from __future__ import annotations
 import concurrent.futures
+import json
 import logging
 import os
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dingo.config.input_args import InputArgs, OpenEvalArgs
 from dingo.exec.base import Executor
 from dingo.io import SummaryModel
 from dingo.model.llm.llm_search_result_relevance import LLMSearchResultRelevance, RelevanceGrade, aggregate_grades
 from dingo.retrieval.eval_utils import compute_query_metrics, make_output_dir, save_json
-from dingo.retrieval.mteb_adapter import SearchClientModel
-from dingo.retrieval.search_client import create_client
+from dingo.retrieval.search_client import SearchResponse, create_client
+from dingo.retrieval.tasks import resolve_builtin_task
+
+if TYPE_CHECKING:
+    from dingo.retrieval.mteb_adapter import SearchClientModel
 
 logger = logging.getLogger(__name__)
 
@@ -96,11 +100,270 @@ class RetrievalExecutor:
         ra = self.retrieval_args
         if ra.input_queries:
             return self._execute_standalone_open_eval()
+
+        task_names = [
+            task.strip() for task in self.input_args.input_path.split(",")
+            if task.strip()
+        ]
+        builtin_tasks = [
+            (task_name, resolve_builtin_task(task_name))
+            for task_name in task_names
+        ]
+        builtin_tasks = [item for item in builtin_tasks if item[1] is not None]
+        if builtin_tasks:
+            if len(task_names) != 1:
+                raise ValueError(
+                    "A bundled local task cannot currently be combined with other tasks"
+                )
+            task_name, task_path = builtin_tasks[0]
+            return self._execute_builtin_qrels_eval(task_name, str(task_path))
         return self._execute_mteb()
+
+    def _execute_builtin_qrels_eval(
+        self,
+        task_label: str,
+        evalset_path: str,
+    ) -> SummaryModel:
+        """Evaluate API-ranked document IDs against a bundled labeled task.
+
+        JSON files may contain either a top-level ``queries`` list or a list of
+        query objects. JSONL is also accepted. Each query requires ``qid``,
+        ``query``, and ``qrels`` (a list of relevant document IDs, or a mapping
+        from document ID to binary relevance, 0 or 1).
+        """
+        ra = self.retrieval_args
+        query_items, evalset_metadata = self._load_qrels_file(evalset_path)
+        declared_name = evalset_metadata.get("name")
+        if declared_name and declared_name != task_label:
+            raise ValueError(
+                f"Bundled task name mismatch: requested {task_label!r}, "
+                f"dataset declares {declared_name!r}"
+            )
+        started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if ra.max_queries and len(query_items) > ra.max_queries:
+            query_items = query_items[:ra.max_queries]
+
+        client, _ = self._build_client()
+        output_dir = make_output_dir(
+            explicit_dir=None,
+            default_prefix=os.path.join(self.input_args.output_path, ra.backend),
+        )
+
+        def _search_item(index_item: tuple[int, dict[str, Any]]):
+            index, item = index_item
+            response = client.search(item["query"], limit=ra.limit)
+            return index, item, response
+
+        completed_rows: list[tuple[dict[str, Any], Any] | None] = [None] * len(query_items)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=ra.max_workers) as pool:
+            futures = {
+                pool.submit(_search_item, pair): pair[0]
+                for pair in enumerate(query_items)
+            }
+            completed = concurrent.futures.as_completed(futures)
+            completed = _tqdm_or_none(
+                completed,
+                total=len(futures),
+                desc=f"Searching {task_label}",
+                unit="query",
+            ) or completed
+            for future in completed:
+                index = futures[future]
+                try:
+                    _, item, response = future.result()
+                except Exception as exc:
+                    item = query_items[index]
+                    response = SearchResponse(
+                        query=item["query"], results=[], response_time_ms=0.0,
+                        status_code=0, error=str(exc),
+                    )
+                completed_rows[index] = (item, response)
+
+        query_details: list[dict[str, Any]] = []
+        errors = 0
+        for row in completed_rows:
+            if row is None:
+                continue
+            item, response = row
+            gold_doc_ids = set(item["qrels"])
+            ranked_doc_ids: list[str] = []
+            seen_ids: set[str] = set()
+            top_api_results: list[dict[str, Any]] = []
+            for rank, paper in enumerate(response.results, start=1):
+                paper_id = str(paper.paper_id or "").strip()
+                if not paper_id:
+                    metric_id = f"__missing_doc_id__{rank}"
+                elif paper_id in seen_ids:
+                    metric_id = f"__duplicate_doc_id__{rank}"
+                else:
+                    metric_id = paper_id
+                    seen_ids.add(paper_id)
+                ranked_doc_ids.append(metric_id)
+                top_api_results.append({
+                    "rank": rank,
+                    "paper_id": paper_id,
+                    "title": paper.title,
+                    "abstract": paper.abstract,
+                    "score": paper.score,
+                    "is_relevant": paper_id in gold_doc_ids,
+                })
+
+            metrics = compute_query_metrics(ranked_doc_ids, gold_doc_ids)
+            if response.error:
+                errors += 1
+            detail = {
+                key: value for key, value in item.items()
+                if key not in {"query", "qrels"}
+            }
+            detail.update({
+                "query_text": item["query"],
+                "gold_doc_ids": sorted(gold_doc_ids),
+                "error": response.error,
+                "status_code": response.status_code,
+                "response_time_ms": response.response_time_ms,
+                "api_results_count": len(response.results),
+                "retrieved_doc_ids": ranked_doc_ids,
+                "metrics": metrics,
+                "top_api_results": top_api_results,
+            })
+            query_details.append(detail)
+
+        overall_metrics = self._aggregate_custom_metrics(query_details)
+        group_metrics: dict[str, dict[str, Any]] = {}
+        groups = sorted({str(q.get("group")) for q in query_details if q.get("group")})
+        for group in groups:
+            group_metrics[group] = self._aggregate_custom_metrics(
+                [q for q in query_details if str(q.get("group")) == group]
+            )
+        task_metrics = {**overall_metrics, "groups": group_metrics}
+        all_results = {task_label: task_metrics}
+
+        finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        summary = SummaryModel(
+            task_id=str(uuid.uuid4())[:8],
+            task_name=self.input_args.task_name or "retrieval_eval",
+            input_path=task_label,
+            output_path=output_dir,
+            create_time=started_at,
+            finish_time=finished_at,
+            score=overall_metrics.get("main_score", 0.0),
+            total=len(query_details),
+        )
+        summary.metrics_score_stats = all_results
+        config = {
+            "mode": "builtin_qrels",
+            "backend": ra.backend,
+            "api_url": ra.api_url,
+            "limit": ra.limit,
+            "max_queries": ra.max_queries,
+            "tasks": [task_label],
+            "dataset_path": evalset_path,
+        }
+        summary_dict = {
+            "task_id": summary.task_id,
+            "task_name": summary.task_name,
+            "input_path": summary.input_path,
+            "output_path": summary.output_path,
+            "create_time": summary.create_time,
+            "finish_time": summary.finish_time,
+            "score": summary.score,
+            "total": summary.total,
+            "config": config,
+            "evalset_metadata": evalset_metadata,
+            "metrics": all_results,
+        }
+        save_json(summary_dict, output_dir, "summary.json")
+        save_json({
+            "config": config,
+            "evalset_metadata": evalset_metadata,
+            "results": all_results,
+            "search_traces": [{
+                "task": task_label,
+                "mode": "builtin_qrels",
+                "total_queries": len(query_details),
+                "errors": errors,
+                "queries": query_details,
+            }],
+        }, output_dir, "detailed_results.json")
+        self.summary = summary
+        return summary
+
+    @staticmethod
+    def _load_qrels_file(path: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        if not os.path.isfile(path):
+            raise ValueError(f"qrels file not found: {path}")
+        with open(path, "r", encoding="utf-8-sig") as file:
+            if path.lower().endswith((".jsonl", ".ndjson")):
+                raw_items = [json.loads(line) for line in file if line.strip()]
+                metadata: dict[str, Any] = {}
+            else:
+                payload = json.load(file)
+                if isinstance(payload, dict):
+                    raw_items = payload.get("queries")
+                    metadata = {key: value for key, value in payload.items() if key != "queries"}
+                else:
+                    raw_items = payload
+                    metadata = {}
+        if not isinstance(raw_items, list) or not raw_items:
+            raise ValueError("qrels file must contain a non-empty query list")
+
+        normalized: list[dict[str, Any]] = []
+        seen_qids: set[str] = set()
+        for index, item in enumerate(raw_items, start=1):
+            if not isinstance(item, dict):
+                raise ValueError(f"query item {index} must be an object")
+            qid = str(item.get("qid") or "").strip()
+            query = str(item.get("query") or "").strip()
+            qrels = item.get("qrels")
+            if isinstance(qrels, dict):
+                # This dataset adapter uses binary judgments; reject graded labels
+                # instead of silently computing binary NDCG for graded qrels.
+                if any(not isinstance(value, (int, float)) or value not in (0, 1)
+                       for value in qrels.values()):
+                    raise ValueError("Bundled qrels support binary relevance (0 or 1) only")
+                qrels = [doc_id for doc_id, relevance in qrels.items() if relevance == 1]
+            if not qid or not query or not isinstance(qrels, list) or not qrels:
+                raise ValueError(
+                    f"query item {index} requires non-empty qid, query, and qrels"
+                )
+            if qid in seen_qids:
+                raise ValueError(f"duplicate qid in qrels file: {qid}")
+            seen_qids.add(qid)
+            normalized.append({
+                **item,
+                "qid": qid,
+                "query": query,
+                "qrels": list(dict.fromkeys(str(doc_id).strip() for doc_id in qrels
+                                            if doc_id is not None and str(doc_id).strip())),
+            })
+            if not normalized[-1]["qrels"]:
+                raise ValueError(f"query item {index} has no valid qrels document IDs")
+        return normalized, metadata
+
+    @staticmethod
+    def _aggregate_custom_metrics(query_details: list[dict[str, Any]]) -> dict[str, Any]:
+        keys = [key for key in METRICS_OF_INTEREST if key != "main_score"]
+        aggregated: dict[str, Any] = {"total_queries": len(query_details)}
+        for key in keys:
+            values = [q.get("metrics", {}).get(key) for q in query_details]
+            values = [float(value) for value in values if value is not None]
+            if values:
+                aggregated[key] = round(sum(values) / len(values), 5)
+        aggregated["main_score"] = aggregated.get("ndcg_at_10", 0.0)
+        aggregated["errors"] = sum(1 for q in query_details if q.get("error"))
+        if query_details:
+            aggregated["avg_results_count"] = round(
+                sum(float(q.get("api_results_count") or 0) for q in query_details)
+                / len(query_details),
+                5,
+            )
+        return aggregated
 
     def _execute_mteb(self) -> SummaryModel:
         """Standard MTEB closed-eval path, optionally followed by open eval."""
         import mteb
+
+        from dingo.retrieval.mteb_adapter import SearchClientModel
 
         task_names = [
             t.strip() for t in self.input_args.input_path.split(",") if t.strip()
@@ -440,7 +703,7 @@ class RetrievalExecutor:
         return summary
 
     @staticmethod
-    def _attach_relevant_docs(model: SearchClientModel, tasks: list[Any]) -> None:
+    def _attach_relevant_docs(model: "SearchClientModel", tasks: list[Any]) -> None:
         """Load task qrels into the search adapter for detailed trace annotation."""
         for task in tasks:
             task.load_data()

@@ -93,7 +93,7 @@ def parse_args():
     )
     ret_parser.add_argument(
         "--tasks", nargs="+", default=["SciFact"],
-        help="MTEB task names to evaluate (default: SciFact)",
+        help="MTEB or bundled task names to evaluate (default: SciFact)",
     )
     ret_parser.add_argument(
         "--api-url", type=str, default="",

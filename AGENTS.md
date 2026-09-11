@@ -70,7 +70,9 @@ dingo/
 │   │   ├── spark.py         ← SparkExecutor (distributed)
 │   │   └── retrieval.py     ← RetrievalExecutor (MTEB retrieval benchmarks)
 │   ├── retrieval/            ← Retrieval evaluation module
+│   │   ├── sciverse_quality.py ← Agentic source verification and authority metadata enrichment
 │   │   ├── search_client.py ← SearchClient ABC + registry + PaperResult/SearchResponse
+│   │   ├── tasks/           ← Bundled retrieval datasets (JSON)
 │   │   ├── backends/
 │   │   │   └── agentic.py   ← AgenticSearchClient (local + public mode)
 │   │   ├── mteb_adapter.py  ← SearchClientModel (MTEB SearchProtocol adapter)
@@ -247,6 +249,8 @@ dingo eval-retrieval --backend agentic --tasks SciFact \
   --api-url https://api.sciverse.space --api-token <token> --limit 100
 dingo eval-retrieval --tasks SciFact LitSearch --max-queries 50 --max-workers 4 \
   --api-url http://localhost:8080
+dingo eval-retrieval --backend agentic --tasks cjk_evalset_v1 \
+  --api-url https://api.sciverse.space --api-token <token> --limit 100
 
 # List available evaluators, groups
 dingo info                                # Show all (rules, LLM, groups)

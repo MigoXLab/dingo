@@ -177,6 +177,9 @@ class AuthorityGrade:
     venue_score: float = 0.0
     doi_score: float = 0.0
     reason: str = ""
+    citation_basis: str = "citation_count"
+    metadata_status: str = ""
+    metadata_error: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -186,6 +189,9 @@ class AuthorityGrade:
             "venue_score": round(self.venue_score, 5),
             "doi_score": round(self.doi_score, 5),
             "reason": self.reason,
+            "citation_basis": self.citation_basis,
+            "metadata_status": self.metadata_status,
+            "metadata_error": self.metadata_error,
         }
 
 
@@ -222,10 +228,28 @@ class LLMSearchResultAuthority:
         venue = _normalize_text(extract_venue(result))
         venue_type = _normalize_text(result.get("publication_venue_type") or "")
         publishers = _extract_publishers(result)
-        citations = extract_citations(result, "citation_count")
-        influential = extract_citations(result, "influential_citation_count")
+        citations = max(0.0, extract_citations(result, "citation_count"))
+        influential = max(0.0, extract_citations(result, "influential_citation_count"))
 
-        citation_score = _clamp(math.log1p(citations) / math.log1p(500.0))
+        normalized_percentile = result.get("citation_normalized_percentile") or {}
+        try:
+            percentile_value = float(
+                normalized_percentile.get("value")
+                if isinstance(normalized_percentile, dict)
+                else normalized_percentile
+            )
+        except (TypeError, ValueError):
+            percentile_value = -1.0
+        fwci = max(0.0, extract_citations(result, "fwci"))
+        if 0.0 <= percentile_value <= 1.0:
+            citation_score = percentile_value
+            citation_basis = "citation_normalized_percentile"
+        elif fwci > 0.0:
+            citation_score = _clamp(math.log1p(fwci) / math.log1p(10.0))
+            citation_basis = "fwci"
+        else:
+            citation_score = _clamp(math.log1p(citations) / math.log1p(500.0))
+            citation_basis = "citation_count"
         influential_score = _clamp(math.log1p(influential) / math.log1p(50.0))
 
         venue_score = 0.25
@@ -269,6 +293,9 @@ class LLMSearchResultAuthority:
             venue_score=venue_score,
             doi_score=doi_score,
             reason=reason,
+            citation_basis=citation_basis,
+            metadata_status=str(result.get("_authority_metadata_status") or ""),
+            metadata_error=str(result.get("_authority_metadata_error") or ""),
         )
 
     @classmethod
@@ -286,6 +313,15 @@ class LLMSearchResultAuthority:
         threshold = float(cls._config_value("threshold", cls.default_threshold) or cls.default_threshold)
 
         labels: list[str] = []
+        if grade.metadata_status == "not_found":
+            labels.append("Authority.Error_Metadata_Not_Found")
+        elif grade.metadata_status == "missing_doc_id":
+            labels.append("Authority.Error_Metadata_DocID_Miss")
+        elif grade.metadata_status == "error":
+            if "HTTP 403" in grade.metadata_error:
+                labels.append("Authority.Error_Metadata_Field_Denied")
+            else:
+                labels.append("Authority.Error_Metadata_Check_Failed")
         if grade.score < threshold:
             labels.append("Authority.Error_Authority_Low")
             if grade.citation_score <= 0.0:

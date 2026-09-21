@@ -1,0 +1,15 @@
+{
+  "name": "dingo",
+  "owner": {
+    "name": "MigoXLab",
+    "url": "https://github.com/MigoXLab/dingo"
+  },
+  "plugins": [
+    {
+      "name": "dingo-saas",
+      "source": "./",
+      "description": "Operate Dingo SaaS through conversation by mapping user requests to backend API actions. Covers dataset, metric, experiment, and report workflows.",
+      "skills": ["./skills/dingo-saas"]
+    }
+  ]
+}

@@ -1,7 +1,0 @@
-interface:
-  display_name: "Dingo SaaS"
-  short_description: "Operate Dingo SaaS through API-backed actions"
-  default_prompt: "Use $dingo-saas to manage my Dingo SaaS resources."
-
-policy:
-  allow_implicit_invocation: true

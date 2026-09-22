@@ -148,7 +148,7 @@ This document provides comprehensive information about all quality metrics used 
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
-| `QUALITY_BAD_EFFECTIVENESS` | RuleMetadataSimilarity, RuleAuthorFieldValidation, RuleQuanliangFieldValidation, RuleSourceFieldValidation | 检查元数据字段与基准数据的相似度匹配，阈值默认为0.6; Validate OpenAlex author fields and report invalid fields; Validate Quanliang metadata f... | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleMetadataSimilarity, RuleAuthorFieldValidation, RulePatentFieldValidation, RuleQuanliangFieldValidation, RuleSourceFieldValidation | 检查元数据字段与基准数据的相似度匹配，阈值默认为0.6; Validate OpenAlex author fields and report invalid fields; Validate patent metadata fields and report invalid fields; Validate Quanliang metadata f... | Internal Implementation | N/A | N/A |
 
 ### Rule-Based RESUME Quality Metrics
 

@@ -62,7 +62,7 @@ class ResultInfo(BaseModel):
         ):
             return value
         try:
-            parsed = json.loads(text)
+            parsed = json.loads(text, strict=False)
         except json.JSONDecodeError:
             try:
                 parsed = ast.literal_eval(text)

@@ -73,6 +73,20 @@ class TestResultInfo:
         assert output["day"] == "2026-06-01"
         assert output["ts"] == "2026-06-01T14:00:00"
 
+    def test_to_raw_dict_parses_container_string_with_unescaped_newline(self):
+        result_info = ResultInfo(
+            dingo_id="dingo-1",
+            raw_data={
+                "claims": '[{"claim_text":"first line\nsecond line"}]',
+            },
+            eval_status=False,
+        )
+
+        output = result_info.to_raw_dict()
+        assert output["claims"] == [
+            {"claim_text": "first line\nsecond line"},
+        ]
+
     def test_to_raw_dict_keeps_original_raw_data_unchanged(self):
         original_raw_data = {
             "dingo_id": "user-id",

@@ -52,6 +52,8 @@ dingo_python.egg-info/*
 CLAUDE.md
 CLAUDE.local.md
 claude_docs/
+.agents/
+skills-lock.json
 
 # Benchmarks and experiment data
 benchmarks/

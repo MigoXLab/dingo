@@ -138,7 +138,7 @@ class TestCLIErrorHandling:
         """--json mode: malformed JSON produces JSON error with exit code 1."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write("{bad json")
-            f.flush()
+            f.close()  # Windows cannot unlink an open NamedTemporaryFile.
             try:
                 _, stderr, code = run_cli("eval", "--input", f.name, "--json", expect_exit=1)
                 data = parse_json_from_output(stderr)
@@ -152,7 +152,7 @@ class TestCLIErrorHandling:
         """--json mode: valid JSON but invalid InputArgs produces JSON error with exit code 1."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump({"evaluator": "not_a_list"}, f)
-            f.flush()
+            f.close()  # Windows cannot unlink an open NamedTemporaryFile.
             try:
                 _, stderr, code = run_cli("eval", "--input", f.name, "--json", expect_exit=1)
                 data = parse_json_from_output(stderr)
@@ -176,7 +176,7 @@ class TestCLIExitCodes:
     def test_exit_1_config_error(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write("not json")
-            f.flush()
+            f.close()  # Windows cannot unlink an open NamedTemporaryFile.
             try:
                 _, _, code = run_cli("eval", "--input", f.name, "--json", expect_exit=1)
             finally:

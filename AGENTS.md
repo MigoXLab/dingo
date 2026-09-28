@@ -56,6 +56,7 @@ dingo/
 │   │   └── llm/             ← LLM-based evaluators
 │   │       ├── base_openai.py ← BaseOpenAI (base class for all LLM evaluators)
 │   │       ├── text_quality/  ← Text quality evaluators (V4, V5)
+│   │       ├── code_quality/  ← Shared core, separate classification/quality evaluators, prompts and pipeline
 │   │       ├── rag/          ← RAG metrics (Faithfulness, Precision, Recall, etc.)
 │   │       ├── llm_search_result_relevance.py ← Search result relevance (Exa-style pointwise)
 │   │       ├── hhh/          ← 3H evaluators (Honest, Helpful, Harmless)

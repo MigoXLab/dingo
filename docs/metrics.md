@@ -4,6 +4,14 @@ This document provides comprehensive information about all quality metrics used 
 
 **Note**: All metrics are backed by academic sources to ensure objectivity and scientific rigor.
 
+### Code Data Quality Metrics
+
+| Metric | Description | Source | Documentation / Example |
+|--------|-------------|--------|-------------------------|
+| `LLMCodeQualityV1` | Four issue dimensions: effectiveness (including LLM low code content classification), completeness, repetition and security; automatic rule review, restricted code checks and all-label Executor output. | Internal implementation, adapted from LLMTextQualityV6 | [Rubric](code_quality/code_quality_v1.md) / [Executor](../examples/code_quality/evaluate_code_executor.py) |
+| `LLMCodeClassificationV1` | Precision-first 0–5 relevance scoring and independent code presence. | Calibrated classification Prompt v5 (adapted) | [Rubric](code_quality/code_quality_v1.md) / [Executor](../examples/code_quality/evaluate_code_executor.py) |
+| `LLMCodeQualityPipeline` | Full code QC: quality/safety review with `bailian/deepseek-v4.1-flash`; classification with `glm-5.3-flash` + `bailian/deepseek-v4.1-flash`. Low code content requires both classifiers to succeed and their unrounded mean score to be ≤2; a classifier failure leaves the classification conclusion unknown and is recorded as an execution error. Deduplicated native Executor output. | Internal implementation | [Rubric](code_quality/code_quality_v1.md) / [Executor](../examples/code_quality/evaluate_code_executor.py) |
+
 ### RAG Evaluation Metrics
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
@@ -195,3 +203,5 @@ Only the following six TC609 rule metrics are currently registered. The 0206 and
 | `ArticleFactChecker` | ArticleFactChecker | Article-level fact checking with autonomous claims extraction and verification | Internal Implementation | N/A | N/A |
 | `LLMCustomMetric` | LLMCustomMetric | Unified metric for user customization | Internal Implementation | N/A | N/A |
 
+
+代码质检 `LLMCodeQualityPipeline` 新增 `Effectiveness.HTML_Markup`（HTML 标记残留），复用 `RuleHtmlEntity` / `RuleHtmlTag` 并由 LLM 复核；规则边界见 [代码质检说明](code_quality/code_quality_v1.md)。

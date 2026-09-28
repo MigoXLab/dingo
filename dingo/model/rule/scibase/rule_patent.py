@@ -1,3 +1,5 @@
+import json
+import re
 from typing import Any, List
 
 from dingo.config.input_args import EvaluatorRuleArgs
@@ -7,7 +9,14 @@ from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
 
 
-MAX_CLAIMS_LENGTH = 1_000
+MAX_CLAIMS_LENGTH = 1_000_000
+IPC_CODE_RE = re.compile(
+    r"^(?P<section>[A-H])"
+    r"(?P<class>0[1-9]|[1-9][0-9])"
+    r"(?P<subclass>[A-Z]) "
+    r"(?P<main_group>[1-9][0-9]{0,2})/"
+    r"(?P<subgroup>[0-9]{2,6})$"
+)
 ValidationResult = tuple[bool, List[str], List[str]]
 
 
@@ -25,8 +34,52 @@ def check_claims(claims: Any) -> ValidationResult:
     return False, [], []
 
 
+def check_ipc(ipc: Any) -> ValidationResult:
+    if ipc is None:
+        return True, ["null"], ["value is null"]
+
+    if isinstance(ipc, str):
+        try:
+            ipc = json.loads(ipc, strict=False)
+        except json.JSONDecodeError:
+            return True, ["invalid_json"], ["value must be a JSON array"]
+
+    if not isinstance(ipc, list):
+        return True, ["wrong_type"], ["value must be a list"]
+
+    for index, ipc_code in enumerate(ipc):
+        if not isinstance(ipc_code, str):
+            return (
+                True,
+                ["wrong_type"],
+                [f"item[{index}] must be a string"],
+            )
+
+        match = IPC_CODE_RE.fullmatch(ipc_code)
+        if match is None:
+            return (
+                True,
+                ["invalid_format"],
+                [
+                    f"item[{index}] must match IPC format "
+                    "'<A-H><01-99><A-Z> <1-999>/<2-6 digits>'"
+                ],
+            )
+
+        subgroup = match.group("subgroup")
+        if subgroup != "00" and int(subgroup) == 0:
+            return (
+                True,
+                ["invalid_format"],
+                [f"item[{index}] subgroup may be zero only when written as '00'"],
+            )
+
+    return False, [], []
+
+
 FIELD_VALIDATORS = {
     "claims": lambda record: check_claims(record.get("claims")),
+    "ipc": lambda record: check_ipc(record.get("ipc")),
 }
 
 

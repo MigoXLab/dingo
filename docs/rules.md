@@ -64,7 +64,7 @@ The specific rules for each quality metric are as follows:
 | RuleOnlyUrl | EFFECTIVENESS | Check whether content consists only of a URL. | |
 | RulePatternSearch | RELEVANCE | Search content using a user-provided pattern. | |
 | RulePIIDetection | SECURITY | Detect personally identifiable information in text. | |
-| RulePatentFieldValidation | EFFECTIVENESS | Validate patent claims and flag serialized content over 1,000,000 characters. | |
+| RulePatentFieldValidation | EFFECTIVENESS | Validate patent claims length and IPC classification-code format. | |
 | RuleQuanliangFieldValidation | EFFECTIVENESS | Validate full-volume scientific metadata fields. | |
 | RuleResumeDateFormat | RESUME_DATE | Check whether a resume uses inconsistent date formats. | |
 | RuleResumeDetailedAddress | RESUME_PRIVACY | Check whether a resume contains a detailed address. | |

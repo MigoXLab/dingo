@@ -8,7 +8,6 @@ from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
 
-
 MAX_CLAIMS_LENGTH = 1_000_000
 IPC_CODE_RE = re.compile(
     r"^(?P<section>[A-H])"

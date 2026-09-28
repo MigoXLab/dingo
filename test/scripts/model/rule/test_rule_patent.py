@@ -1,11 +1,7 @@
 import pytest
 
 from dingo.io.input import Data
-from dingo.model.rule.scibase.rule_patent import (
-    MAX_CLAIMS_LENGTH,
-    RulePatentFieldValidation,
-    check_ipc_unified,
-)
+from dingo.model.rule.scibase.rule_patent import MAX_CLAIMS_LENGTH, RulePatentFieldValidation, check_ipc_unified
 
 
 def _claims_with_string_length(length: int) -> list[dict]:

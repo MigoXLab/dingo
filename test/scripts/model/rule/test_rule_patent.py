@@ -72,7 +72,28 @@ class TestRulePatentFieldValidation:
 
         assert invalid is True
         assert labels == ["invalid_format"]
-        assert reasons
+        assert reasons[0].startswith(f"item[0] value {ipc_code!r}")
+
+    def test_reports_every_invalid_item_with_its_value(self):
+        invalid, labels, reasons = check_ipc_unified(
+            ["B01J 29/40", "C00C 5/27", "B01J 29/18", "C00C 15/08"]
+        )
+
+        assert invalid is True
+        assert labels == ["invalid_format"]
+        assert reasons == [
+            "item[1] value 'C00C 5/27' must match IPC format "
+            "'<A-H><01-99><A-Z> <1-999>/<2-6 digits>'",
+            "item[3] value 'C00C 15/08' must match IPC format "
+            "'<A-H><01-99><A-Z> <1-999>/<2-6 digits>'",
+        ]
+
+    def test_wrong_type_reason_does_not_include_value(self):
+        invalid, labels, reasons = check_ipc_unified([123])
+
+        assert invalid is True
+        assert labels == ["wrong_type"]
+        assert reasons == ["item[0] must be a string"]
 
     @pytest.mark.parametrize(
         ("ipc_unified", "expected_label"),

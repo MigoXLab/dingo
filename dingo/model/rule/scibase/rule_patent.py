@@ -46,34 +46,36 @@ def check_ipc_unified(ipc_unified: Any) -> ValidationResult:
     if not isinstance(ipc_unified, list):
         return True, ["wrong_type"], ["value must be a list"]
 
+    error_labels: List[str] = []
+    reasons: List[str] = []
+
     for index, ipc_code in enumerate(ipc_unified):
         if not isinstance(ipc_code, str):
-            return (
-                True,
-                ["wrong_type"],
-                [f"item[{index}] must be a string"],
-            )
+            if "wrong_type" not in error_labels:
+                error_labels.append("wrong_type")
+            reasons.append(f"item[{index}] must be a string")
+            continue
 
         match = IPC_CODE_RE.fullmatch(ipc_code)
         if match is None:
-            return (
-                True,
-                ["invalid_format"],
-                [
-                    f"item[{index}] must match IPC format "
-                    "'<A-H><01-99><A-Z> <1-999>/<2-6 digits>'"
-                ],
+            if "invalid_format" not in error_labels:
+                error_labels.append("invalid_format")
+            reasons.append(
+                f"item[{index}] value {ipc_code!r} must match IPC format "
+                "'<A-H><01-99><A-Z> <1-999>/<2-6 digits>'"
             )
+            continue
 
         subgroup = match.group("subgroup")
         if subgroup != "00" and int(subgroup) == 0:
-            return (
-                True,
-                ["invalid_format"],
-                [f"item[{index}] subgroup may be zero only when written as '00'"],
+            if "invalid_format" not in error_labels:
+                error_labels.append("invalid_format")
+            reasons.append(
+                f"item[{index}] value {ipc_code!r} subgroup may be zero only "
+                "when written as '00'"
             )
 
-    return False, [], []
+    return bool(error_labels), error_labels, reasons
 
 
 FIELD_VALIDATORS = {

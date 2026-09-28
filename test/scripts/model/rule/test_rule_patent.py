@@ -4,7 +4,7 @@ from dingo.io.input import Data
 from dingo.model.rule.scibase.rule_patent import (
     MAX_CLAIMS_LENGTH,
     RulePatentFieldValidation,
-    check_ipc,
+    check_ipc_unified,
 )
 
 
@@ -18,7 +18,7 @@ class TestRulePatentFieldValidation:
         claims = _claims_with_string_length(MAX_CLAIMS_LENGTH)
         assert len(str(claims)) == MAX_CLAIMS_LENGTH
 
-        result = RulePatentFieldValidation().eval(Data(claims=claims, ipc=[]))
+        result = RulePatentFieldValidation().eval(Data(claims=claims, ipc_unified=[]))
 
         assert result.status is False
         assert result.label == ["QUALITY_GOOD"]
@@ -27,7 +27,7 @@ class TestRulePatentFieldValidation:
         claims = _claims_with_string_length(MAX_CLAIMS_LENGTH + 1)
         assert len(str(claims)) == MAX_CLAIMS_LENGTH + 1
 
-        result = RulePatentFieldValidation().eval(Data(claims=claims, ipc=[]))
+        result = RulePatentFieldValidation().eval(Data(claims=claims, ipc_unified=[]))
 
         assert result.status is True
         assert result.label == ["claims.too_long"]
@@ -36,13 +36,13 @@ class TestRulePatentFieldValidation:
         ]
 
     def test_missing_claims_is_invalid(self):
-        result = RulePatentFieldValidation().eval(Data(ipc=[]))
+        result = RulePatentFieldValidation().eval(Data(ipc_unified=[]))
 
         assert result.status is True
         assert result.label == ["claims.missing_field"]
 
     @pytest.mark.parametrize(
-        "ipc",
+        "ipc_unified",
         [
             [],
             ["A01A 1/00"],
@@ -50,8 +50,8 @@ class TestRulePatentFieldValidation:
             '["B60T 8/48", "B60T 8/58"]',
         ],
     )
-    def test_valid_ipc(self, ipc):
-        assert check_ipc(ipc) == (False, [], [])
+    def test_valid_ipc_unified(self, ipc_unified):
+        assert check_ipc_unified(ipc_unified) == (False, [], [])
 
     @pytest.mark.parametrize(
         "ipc_code",
@@ -72,14 +72,14 @@ class TestRulePatentFieldValidation:
         ],
     )
     def test_invalid_ipc_format(self, ipc_code):
-        invalid, labels, reasons = check_ipc([ipc_code])
+        invalid, labels, reasons = check_ipc_unified([ipc_code])
 
         assert invalid is True
         assert labels == ["invalid_format"]
         assert reasons
 
     @pytest.mark.parametrize(
-        ("ipc", "expected_label"),
+        ("ipc_unified", "expected_label"),
         [
             (None, "null"),
             ({"code": "A01A 1/00"}, "wrong_type"),
@@ -87,18 +87,18 @@ class TestRulePatentFieldValidation:
             ("not-json", "invalid_json"),
         ],
     )
-    def test_invalid_ipc_value(self, ipc, expected_label):
-        invalid, labels, reasons = check_ipc(ipc)
+    def test_invalid_ipc_unified_value(self, ipc_unified, expected_label):
+        invalid, labels, reasons = check_ipc_unified(ipc_unified)
 
         assert invalid is True
         assert labels == [expected_label]
         assert reasons
 
-    def test_rule_reports_invalid_ipc(self):
+    def test_rule_reports_invalid_ipc_unified(self):
         result = RulePatentFieldValidation().eval(
-            Data(claims=[], ipc=["A01A 01/00"])
+            Data(claims=[], ipc_unified=["A01A 01/00"])
         )
 
         assert result.status is True
-        assert result.label == ["ipc.invalid_format"]
-        assert result.reason[0].startswith("ipc: item[0]")
+        assert result.label == ["ipc_unified.invalid_format"]
+        assert result.reason[0].startswith("ipc_unified: item[0]")

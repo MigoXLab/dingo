@@ -34,20 +34,20 @@ def check_claims(claims: Any) -> ValidationResult:
     return False, [], []
 
 
-def check_ipc(ipc: Any) -> ValidationResult:
-    if ipc is None:
+def check_ipc_unified(ipc_unified: Any) -> ValidationResult:
+    if ipc_unified is None:
         return True, ["null"], ["value is null"]
 
-    if isinstance(ipc, str):
+    if isinstance(ipc_unified, str):
         try:
-            ipc = json.loads(ipc, strict=False)
+            ipc_unified = json.loads(ipc_unified, strict=False)
         except json.JSONDecodeError:
             return True, ["invalid_json"], ["value must be a JSON array"]
 
-    if not isinstance(ipc, list):
+    if not isinstance(ipc_unified, list):
         return True, ["wrong_type"], ["value must be a list"]
 
-    for index, ipc_code in enumerate(ipc):
+    for index, ipc_code in enumerate(ipc_unified):
         if not isinstance(ipc_code, str):
             return (
                 True,
@@ -79,7 +79,7 @@ def check_ipc(ipc: Any) -> ValidationResult:
 
 FIELD_VALIDATORS = {
     "claims": lambda record: check_claims(record.get("claims")),
-    "ipc": lambda record: check_ipc(record.get("ipc")),
+    "ipc_unified": lambda record: check_ipc_unified(record.get("ipc_unified")),
 }
 
 

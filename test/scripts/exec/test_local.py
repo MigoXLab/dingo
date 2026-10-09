@@ -43,7 +43,12 @@ class TestLocal:
 
         details = result.eval_details["default"][0]
         assert details.metric == "RuleQuanliangFieldValidation"
-        assert details.label == ["doi", "references", "related_works", "citations"]
+        assert details.label == [
+            "doi.missing_field",
+            "references.missing_field",
+            "related_works.missing_field",
+            "citations.missing_field",
+        ]
 
     def test_write_single_data_limit_per_file(self, tmp_path):
         input_data = {
@@ -272,6 +277,100 @@ class TestLocal:
                 Model.llm_name_map.pop("TokenUsageGoodLLM", None)
             else:
                 Model.llm_name_map["TokenUsageGoodLLM"] = old_model
+
+    def test_statistics_can_include_unsaved_good_eval_details(self):
+        class StatisticsGoodLLM:
+            def eval(self, input_data):
+                return EvalDetail(
+                    metric="StatisticsGoodLLM",
+                    status=False,
+                    label=["QUALITY_GOOD"],
+                    statistics={"items": 2},
+                )
+
+        old_model = Model.llm_name_map.get("StatisticsGoodLLM")
+        Model.llm_name_map["StatisticsGoodLLM"] = StatisticsGoodLLM
+        try:
+            input_args = InputArgs(
+                executor={
+                    "result_save": {
+                        "bad": True,
+                        "good": False,
+                        "all_labels": False,
+                    }
+                },
+                evaluator=[
+                    {
+                        "fields": {"content": "content"},
+                        "evals": [{"name": "StatisticsGoodLLM"}],
+                    }
+                ],
+            )
+            executor = LocalExecutor(input_args)
+
+            result = executor.evaluate_single_data(
+                dingo_id="1",
+                eval_fields={"content": "content"},
+                eval_type="llm",
+                map_data={"content": "ok"},
+                eval_list=input_args.evaluator[0].evals,
+            )
+
+            assert result.eval_details == {}
+            assert result.statistics_details["content"][0].statistics == {"items": 2}
+        finally:
+            if old_model is None:
+                Model.llm_name_map.pop("StatisticsGoodLLM", None)
+            else:
+                Model.llm_name_map["StatisticsGoodLLM"] = old_model
+
+    def test_statistics_are_aggregated_during_execution(self, tmp_path):
+        class StatisticsLLM:
+            def eval(self, input_data):
+                return EvalDetail(
+                    metric="StatisticsLLM",
+                    status=False,
+                    label=["QUALITY_GOOD"],
+                    statistics={"items": 2},
+                )
+
+        input_path = tmp_path / "statistics.jsonl"
+        input_path.write_text(
+            '{"content": "first"}\n{"content": "second"}\n',
+            encoding="utf-8",
+        )
+        old_model = Model.llm_name_map.get("StatisticsLLM")
+        Model.llm_name_map["StatisticsLLM"] = StatisticsLLM
+        try:
+            input_args = InputArgs(
+                input_path=str(input_path),
+                output_path=str(tmp_path / "outputs"),
+                dataset={"source": "local", "format": "jsonl"},
+                executor={
+                    "result_save": {
+                        "bad": False,
+                        "good": False,
+                        "all_labels": False,
+                    }
+                },
+                evaluator=[
+                    {
+                        "fields": {"content": "content"},
+                        "evals": [{"name": "StatisticsLLM"}],
+                    }
+                ],
+            )
+
+            summary = LocalExecutor(input_args).execute()
+
+            assert summary.to_dict()["statistics"] == {
+                "content": {"StatisticsLLM": {"items": 4}}
+            }
+        finally:
+            if old_model is None:
+                Model.llm_name_map.pop("StatisticsLLM", None)
+            else:
+                Model.llm_name_map["StatisticsLLM"] = old_model
 
     def test_all_labels_config(self):
         input_data = {

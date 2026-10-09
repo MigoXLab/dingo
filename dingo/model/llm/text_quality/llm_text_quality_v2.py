@@ -5,6 +5,11 @@ from dingo.model.llm.base_openai import BaseOpenAI
 
 @Model.llm_register("LLMTextQualityV2")
 class LLMTextQualityV2(BaseOpenAI):
+    _metric_info = {
+        "category": "Pretrain Text Quality Assessment Metrics",
+        "metric_name": "LLMTextQualityV2",
+        "description": "Checks validity, relevance, completeness, clarity, fluency, duplication, and safety. It consolidates prior checks.",
+    }
     _required_fields = [RequiredField.CONTENT]
     prompt = """
 ### Role

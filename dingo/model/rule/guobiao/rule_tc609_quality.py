@@ -248,14 +248,14 @@ class Rule_TC609_0201_FormatCompliance(BaseRule):
                 res.status = True
 
         if res.status:
-            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.label = [f"QUALITY_BAD.{cls.__name__}"]
             res.reason = reasons
         else:
             res.label = [QualityLabel.QUALITY_GOOD]
         return res
 
 
-@Model.rule_register("QUALITY_BAD_TC609_0202", ["guobiao_data"])
+# @Model.rule_register("QUALITY_BAD_TC609_0202", ["guobiao_data"])
 class Rule_TC609_0202_SafetyCompliance(Rule_TC609_Composite):
     """0202: Safety compliance, composed from safety and PII rules."""
 
@@ -391,7 +391,7 @@ class Rule_TC609_0203_AnnotationCompliance(BaseRule):
 
         if not isinstance(annotation, dict):
             res.status = True
-            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.label = [f"QUALITY_BAD.{cls.__name__}"]
             res.reason = [
                 "annotation: expected dict or None, "
                 f"got {type(annotation).__name__}"
@@ -438,7 +438,7 @@ class Rule_TC609_0203_AnnotationCompliance(BaseRule):
                 )
 
         if res.status:
-            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.label = [f"QUALITY_BAD.{cls.__name__}"]
             res.reason = reasons
         else:
             res.label = [QualityLabel.QUALITY_GOOD]
@@ -507,7 +507,7 @@ class Rule_TC609_0204_StructuralCompleteness(BaseRule):
                 res.status = True
 
         if res.status:
-            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.label = [f"QUALITY_BAD.{cls.__name__}"]
             res.reason = reasons
         else:
             res.label = [QualityLabel.QUALITY_GOOD]
@@ -537,20 +537,20 @@ class Rule_TC609_0205_ContentAuthenticity(BaseRule):
 
         if not isinstance(source, str) or not source.strip():
             res.status = True
-            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.label = [f"QUALITY_BAD.{cls.__name__}"]
             res.reason = ["source: expected a non-empty string"]
             return res
 
         if not isinstance(source_details, str) or not source_details.strip():
             res.status = True
-            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.label = [f"QUALITY_BAD.{cls.__name__}"]
             res.reason = ["source_details: expected a non-empty string"]
             return res
 
         if source.strip() == "互联网":
             if not cls._is_valid_http_url(source_details):
                 res.status = True
-                res.label = [f"{cls.metric_type}.{cls.__name__}"]
+                res.label = [f"QUALITY_BAD.{cls.__name__}"]
                 res.reason = [
                     "source_details: expected a valid HTTP or HTTPS URL"
                 ]
@@ -579,7 +579,9 @@ class Rule_TC609_0205_ContentAuthenticity(BaseRule):
         return True
 
 
-@Model.rule_register("QUALITY_BAD_TC609_0206", ["guobiao_data"])
+# Replaced by LLM_TC609_0206_ContentConsistency. Keep the implementation for
+# compatibility and offline comparisons, but do not expose it as an evaluator.
+# @Model.rule_register("QUALITY_BAD_TC609_0206", ["guobiao_data"])
 class Rule_TC609_0206_ContentConsistency(BaseRule):
     """Check semantic consistency among text items in data_content."""
 
@@ -689,7 +691,9 @@ class Rule_TC609_0206_ContentConsistency(BaseRule):
         return res
 
 
-@Model.rule_register("QUALITY_BAD_TC609_0207", ["guobiao_data"])
+# Replaced by LLM_TC609_0207_DataTypeConsistency. Keep the implementation for
+# compatibility and offline comparisons, but do not expose it as an evaluator.
+# @Model.rule_register("QUALITY_BAD_TC609_0207", ["guobiao_data"])
 class Rule_TC609_0207_DataTypeConsistency(BaseRule):
     """Check whether text content matches the configured dataset type."""
 
@@ -903,7 +907,7 @@ class Rule_TC609_0208_ContentCleanliness(Rule_TC609_Composite):
         reasons = []
         if not isinstance(input_data.data_content, list):
             res.status = True
-            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.label = [f"QUALITY_BAD.{cls.__name__}"]
             res.reason = [
                 "data_content: expected list, "
                 f"got {type(input_data.data_content).__name__}"
@@ -943,7 +947,7 @@ class Rule_TC609_0208_ContentCleanliness(Rule_TC609_Composite):
                 "data_content: at least one text item is required"
             )
         if res.status:
-            res.label = [f"{cls.metric_type}.{cls.__name__}"]
+            res.label = [f"QUALITY_BAD.{cls.__name__}"]
             res.reason = reasons
             return res
 
@@ -954,7 +958,10 @@ class Rule_TC609_0208_ContentCleanliness(Rule_TC609_Composite):
         text_input = input_data.model_copy(
             update={"content": "\n".join(texts)}
         )
-        return super().eval(text_input)
+        res = super().eval(text_input)
+        if res.status:
+            res.label = [f"QUALITY_BAD.{cls.__name__}"]
+        return res
 
 
 # @Model.rule_register("QUALITY_BAD_TC609_02080101", ["pretrain", "guobiao_text"])

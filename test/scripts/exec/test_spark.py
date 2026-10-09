@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 from dingo.config import InputArgs
 from dingo.exec.spark import SparkExecutor
+from dingo.io.output.eval_detail import EvalDetail
 from dingo.io.output.summary_model import SummaryModel
 
 
@@ -79,6 +80,35 @@ class TestSparkExecutor:
         # 验证 label counts 合并正确
         assert result['label_counts']['field1']['good'] == 3
         assert result['label_counts']['field1']['bad'] == 1
+
+    def test_statistics_are_aggregated_and_merged(self):
+        item = {
+            "eval_details": {},
+            "_statistics_details": {
+                "content": [
+                    EvalDetail(
+                        metric="ExampleMetric",
+                        statistics={"items": 2},
+                    )
+                ]
+            },
+        }
+        left = {
+            "label_counts": {},
+            "metric_scores": {},
+            "statistics": {},
+        }
+        right = {
+            "label_counts": {},
+            "metric_scores": {},
+            "statistics": {},
+        }
+
+        left = SparkExecutor._aggregate_eval_details(left, item)
+        right = SparkExecutor._aggregate_eval_details(right, item)
+        result = SparkExecutor._merge_eval_details(left, right)
+
+        assert result["statistics"]["content"]["ExampleMetric"]["items"] == 4
 
     def test_full_aggregation_workflow(self):
         """测试完整的聚合工作流程（模拟实际的 Spark 聚合）"""

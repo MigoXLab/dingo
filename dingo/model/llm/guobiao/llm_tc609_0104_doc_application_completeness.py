@@ -19,7 +19,7 @@ class LLM_TC609_0104_DocApplicationCompleteness(BaseOpenAI):
         "paper_url": "",
         "paper_authors": "SAC/TC609",
         "evaluation_results": "",
-        "examples": "examples/guobiao/example_doc3.py",
+        "examples": "",
     }
     prompt = """
 # 角色

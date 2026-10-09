@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.io.input import Data
-from dingo.io.output.eval_detail import EvalDetail
+from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.llm.base import LLMCallResult
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.model import Model
@@ -99,8 +99,16 @@ class LLMCustomMetric(BaseOpenAI):
         else:
             model_name = self.client.models.list().data[0].id
 
-        extra_params = self.dynamic_config.model_extra
+        # 走和 BaseOpenAI 同一个入口。同一层里两处调用、一处过滤一处不过滤，
+        # 是这类问题最容易复发的形态。
+        extra_params = self.get_request_extra_params()
         self.validate_config(extra_params)
+
+        request_timeout = self.get_local_config_value("request_timeout")
+        if request_timeout is not None:
+            # 只在配了的时候传。这个类原先没有任何超时，凭空给它一个默认值
+            # 会让本来跑得通的长调用开始失败。
+            extra_params["timeout"] = request_timeout
 
         completions = self.client.chat.completions.create(
             model=model_name,
@@ -219,8 +227,14 @@ class LLMCustomMetric(BaseOpenAI):
 
         result = EvalDetail(
             metric=self._get_custom_metric().metric,
-            status=True,
-            label=[f"QUALITY_BAD.{except_name}"],
+            status=False,  # 执行/解析失败不是质量问题，绝不伪装成 issue（spec §9.3）
+            applicable=False,  # 执行失败 → effective_verdict="n/a"，不是 pass（final-review #2）
+            # 和 base_openai 的兜底分支同理：只说"不适用"会被下游读成"这项检查
+            # 不适用于你的运行"，而实际是评测器自己挂了。下游此前只能靠 label
+            # 前缀反推，那是在猜一件这里已经知道的事。
+            not_applicable_kind="execution_error",
+            score=None,
+            label=[f"{QualityLabel.REVIEW_EXECUTION_ERROR_PREFIX}{except_name}"],
             reason=[except_msg],
         )
         result.usage = usage

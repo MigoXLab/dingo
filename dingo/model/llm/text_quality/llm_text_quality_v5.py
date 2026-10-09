@@ -9,12 +9,12 @@ class LLMTextQualityV5(BaseTextQuality):
     _metric_info = {
         "category": "Pretrain Text Quality Assessment Metrics",
         "metric_name": "LLMTextQualityV5",
-        "description": "Impact-driven text quality evaluation for LLM pretraining, focusing on structural completeness, readability, diversity, and safety with quantitative thresholds",
+        "description": "Checks material structural, readability, duplication, and safety defects. Unlike V4, it adds thresholds and examples.",
         "paper_title": "WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages",
         "paper_url": "https://arxiv.org/abs/2501.14506",
         "paper_authors": "Yu et al., 2025",
         "examples": "examples/llm_and_rule/llm_local.py",
-        "evaluation_results": "docs/eval/prompt/redpajama_data_evaluated_by_prompt.md"
+        "evaluation_results": "docs/eval/prompt/redpajama_data_evaluated_by_prompt.md",
     }
     _required_fields = [RequiredField.CONTENT]
     prompt = """

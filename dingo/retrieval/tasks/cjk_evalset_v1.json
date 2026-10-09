@@ -1,0 +1,1113 @@
+{
+  "name": "cjk_evalset_v1",
+  "created": "2026-08-19",
+  "index_snapshot": "agentic_search_chunk_v2 (lang=zh, 156.7万 chunk)",
+  "matching": "qrels 为源文档 doc_id；指标语义为 known-item 式「找回源文档能力」下界（B/C 组库中可能存在其他相关文档未标注）",
+  "groups": {
+    "known_item": "中文论文标题精确查找(40)",
+    "term_query": "核心术语组合检索(30)",
+    "nl_question": "自然语言中文提问(30)"
+  },
+  "queries": [
+    {
+      "qid": "A01",
+      "group": "known_item",
+      "query": "采用人工表面等离激元电极的慢光铌酸锂电光调制器",
+      "qrels": [
+        "6b5454ca0f05a05729c95739797e3534bfcd6b5c8ec9de2e501b50496b96c775"
+      ],
+      "gold_title": "采用人工表面等离激元电极的慢光铌酸锂电光调制器",
+      "domain": "physical sciences",
+      "date": "2023-01-01"
+    },
+    {
+      "qid": "A02",
+      "group": "known_item",
+      "query": "用于核释热率测定的堆内量热计研究进展",
+      "qrels": [
+        "c62b28b29187933544d29158f5278f70de4e7bb57f095a7c884230d6048a12c7"
+      ],
+      "gold_title": "用于核释热率测定的堆内量热计研究进展",
+      "domain": "life sciences",
+      "date": "2024-07-01"
+    },
+    {
+      "qid": "A03",
+      "group": "known_item",
+      "query": "基于曲率特征的文物点云分类降采样与配准方法",
+      "qrels": [
+        "ff2387db82b4ad5a291e2d74bbf8c3d571ebcfe150550793cddeef9ebb211844"
+      ],
+      "gold_title": "基于曲率特征的文物点云分类降采样与配准方法",
+      "domain": "social sciences",
+      "date": "2023-11-07"
+    },
+    {
+      "qid": "A04",
+      "group": "known_item",
+      "query": "温室大樱桃的栽培管理",
+      "qrels": [
+        "a23038b0b64145a9d522ac0e23c1b1a614763768276dca4536174fe6c71def0a"
+      ],
+      "gold_title": "温室大樱桃的栽培管理",
+      "domain": "unknown",
+      "date": "2023-01-01"
+    },
+    {
+      "qid": "A05",
+      "group": "known_item",
+      "query": "青少年分化型甲状腺癌的诊治:从陌生到规范",
+      "qrels": [
+        "a583f55d76eedaad642f9cb6e73b6b3c0a14266e690fa866f46b16b5bd4cf3fe"
+      ],
+      "gold_title": "青少年分化型甲状腺癌的诊治:从陌生到规范",
+      "domain": "health sciences",
+      "date": "2021-11-01"
+    },
+    {
+      "qid": "A06",
+      "group": "known_item",
+      "query": "采矿工程中的采矿技术与施工安全探析",
+      "qrels": [
+        "fdc9eae10e3f9458b3f5c4ed447be6bb33febc1bd56ee34aec02d13f468cb4d4"
+      ],
+      "gold_title": "采矿工程中的采矿技术与施工安全探析",
+      "domain": "physical sciences",
+      "date": "2023-11-29"
+    },
+    {
+      "qid": "A07",
+      "group": "known_item",
+      "query": "基于智能技术的蜂产品质量可追溯系统研发",
+      "qrels": [
+        "d58ecaa22e24ed86261095111ad1714ef1e26cf096ff81e78a5695da6dbea3aa"
+      ],
+      "gold_title": "基于智能技术的蜂产品质量可追溯系统研发",
+      "domain": "life sciences",
+      "date": "2014-09-01"
+    },
+    {
+      "qid": "A08",
+      "group": "known_item",
+      "query": "具有非线性耦合的分数阶神经网络的聚类同步",
+      "qrels": [
+        "51b55a7e3638750d0b43ae541583cd2927411ed54ac071020214f56f48061994"
+      ],
+      "gold_title": "具有非线性耦合的分数阶神经网络的聚类同步",
+      "domain": "social sciences",
+      "date": "2023-12-01"
+    },
+    {
+      "qid": "A09",
+      "group": "known_item",
+      "query": "铜藻的分类地位、生物地理分布以及2016年底黄海漂浮铜藻源头的初步分析",
+      "qrels": [
+        "7ccc24c6d0c2d91322b2ce8d40b3567ab4754d47a5d31ed9eeb255ba0e4435e9"
+      ],
+      "gold_title": "铜藻的分类地位、生物地理分布以及2016年底黄海漂浮铜藻源头的初步分析",
+      "domain": "unknown",
+      "date": "2018-01-15"
+    },
+    {
+      "qid": "A10",
+      "group": "known_item",
+      "query": "mr多模态成像在直肠癌tn分期及手术方式选择中的应用",
+      "qrels": [
+        "6aa61c5983f8b6182374eddd6c8b264e54b9b37441f57c4aef7214816b77c99d"
+      ],
+      "gold_title": "mr多模态成像在直肠癌tn分期及手术方式选择中的应用",
+      "domain": "health sciences",
+      "date": "2024-04-01"
+    },
+    {
+      "qid": "A11",
+      "group": "known_item",
+      "query": "基于偏振蒙特卡罗法的散射环境前向传输优化算法",
+      "qrels": [
+        "6e12549453923a3f202834b754a656fa37633cfe0af85ef8d7ff28014855c3c4"
+      ],
+      "gold_title": "基于偏振蒙特卡罗法的散射环境前向传输优化算法",
+      "domain": "physical sciences",
+      "date": "2023-01-01"
+    },
+    {
+      "qid": "A12",
+      "group": "known_item",
+      "query": "基于中子位置灵敏探测器对点源的三维定位方法研究",
+      "qrels": [
+        "9171f7bcba4914aa693900f68a7094b9bd68661d9c53c51c10927bab0966b729"
+      ],
+      "gold_title": "基于中子位置灵敏探测器对点源的三维定位方法研究",
+      "domain": "life sciences",
+      "date": "2024-03-01"
+    },
+    {
+      "qid": "A13",
+      "group": "known_item",
+      "query": "关键事件触发的领导与下属交换关系的变化及作用机制",
+      "qrels": [
+        "d0a2e603e666520fdd29464ef978c7abb3aef6a75840c8ddf15d995cbecf098b"
+      ],
+      "gold_title": "关键事件触发的领导与下属交换关系的变化及作用机制",
+      "domain": "social sciences",
+      "date": "2024-01-01"
+    },
+    {
+      "qid": "A14",
+      "group": "known_item",
+      "query": "「統合」概念再考",
+      "qrels": [
+        "aaff9afe64bdc6ae73c85b4f912fbdc913f2286a07405ea450c32c3d21712c60"
+      ],
+      "gold_title": "「統合」概念再考",
+      "domain": "unknown",
+      "date": "2004-06-28"
+    },
+    {
+      "qid": "A15",
+      "group": "known_item",
+      "query": "成人高血压合并2型糖尿病和血脂异常基层防治中国专家共识(2024年版)",
+      "qrels": [
+        "0df7f779b43e5a728f25c530676ab87c629ad5e599fd1eee709ec8399aa689aa"
+      ],
+      "gold_title": "成人高血压合并2型糖尿病和血脂异常基层防治中国专家共识(2024年版)",
+      "domain": "health sciences",
+      "date": "2024-10-01"
+    },
+    {
+      "qid": "A16",
+      "group": "known_item",
+      "query": "转盘式转向架车辆动力学性能分析",
+      "qrels": [
+        "4985aef4d9b453e1953816c1cd7c3a755028753e9bfd743eb4ecdc29a0fe30e6"
+      ],
+      "gold_title": "转盘式转向架车辆动力学性能分析",
+      "domain": "physical sciences",
+      "date": "2024-07-01"
+    },
+    {
+      "qid": "A17",
+      "group": "known_item",
+      "query": "微创介入中智能化光学辅助技术与激光消融治疗的研究进展",
+      "qrels": [
+        "6ab4aa19edd6bd09942747ba8000d38261d980377b778dbe885af66cff995fd7"
+      ],
+      "gold_title": "微创介入中智能化光学辅助技术与激光消融治疗的研究进展",
+      "domain": "life sciences",
+      "date": "2023-01-01"
+    },
+    {
+      "qid": "A18",
+      "group": "known_item",
+      "query": "威胁对创造力的影响:认知与情绪双加工路径",
+      "qrels": [
+        "9e249380b7f5c20c68c5b072096304f1fbe3c993a1dcfbfcc0fb3ce4c402f0ab"
+      ],
+      "gold_title": "威胁对创造力的影响:认知与情绪双加工路径",
+      "domain": "social sciences",
+      "date": "2021-03-30"
+    },
+    {
+      "qid": "A19",
+      "group": "known_item",
+      "query": "子宫内膜癌诊断与治疗指南(2021年版)",
+      "qrels": [
+        "25733218fbd3c959069a749ad9386cdda673629dc587a3f92756b537104c929d"
+      ],
+      "gold_title": "子宫内膜癌诊断与治疗指南(2021年版)",
+      "domain": "unknown",
+      "date": "2021-06-01"
+    },
+    {
+      "qid": "A20",
+      "group": "known_item",
+      "query": "基于星载偏振交火模式的气溶胶层高被动遥感成像反演信息量分析",
+      "qrels": [
+        "dde2255b46618f0b933efa953bd0d72d7ff73564ec98231e91a590ebca6407c3"
+      ],
+      "gold_title": "基于星载偏振交火模式的气溶胶层高被动遥感成像反演信息量分析",
+      "domain": "physical sciences",
+      "date": "2023-01-01"
+    },
+    {
+      "qid": "A21",
+      "group": "known_item",
+      "query": "参数化物理内嵌神经网络求解稳态单能中子扩散解集",
+      "qrels": [
+        "6fa2e863e25ea9cc6330e6e040478a0d413fc542795561bf605dcff76dd4f0b3"
+      ],
+      "gold_title": "参数化物理内嵌神经网络求解稳态单能中子扩散解集",
+      "domain": "life sciences",
+      "date": "2024-06-01"
+    },
+    {
+      "qid": "A22",
+      "group": "known_item",
+      "query": "新疆西昆仑大红柳滩花岗伟晶岩型锂矿叠加改造成矿特征:来自矿石构造、3d成像技术与年代学的约束",
+      "qrels": [
+        "ffe104325e57aaab44774adea66cb5fb9e6bbd0211d0a9d6eb247c2510db4d3e"
+      ],
+      "gold_title": "新疆西昆仑大红柳滩花岗伟晶岩型锂矿叠加改造成矿特征:来自矿石构造、3d成像技术与年代学的约束",
+      "domain": "social sciences",
+      "date": "2024-01-01"
+    },
+    {
+      "qid": "A23",
+      "group": "known_item",
+      "query": "氧气雾化器雾化吸入治疗小儿呼吸系统疾病临床体会",
+      "qrels": [
+        "313572671a995da8d05a0dc0cfb106f5a5043d3ece8d7286f5a0aa689fa33f06"
+      ],
+      "gold_title": "氧气雾化器雾化吸入治疗小儿呼吸系统疾病临床体会",
+      "domain": "physical sciences",
+      "date": "2023-01-01"
+    },
+    {
+      "qid": "A24",
+      "group": "known_item",
+      "query": "山西老陳醋乳酸菌菌群結構及優良菌株的風味代謝特征",
+      "qrels": [
+        "c01f326ce006388383640c9dd18969a14e4ce5af820932255a78ba09d281ef32"
+      ],
+      "gold_title": "山西老陳醋乳酸菌菌群結構及優良菌株的風味代謝特征.",
+      "domain": "life sciences",
+      "date": "2024-07-01"
+    },
+    {
+      "qid": "A25",
+      "group": "known_item",
+      "query": "研究社会文化变迁的新视角——表征相似性分析:以老年人心理健康为例",
+      "qrels": [
+        "b7baeba360a07a8571430a68d4b48736f161b9997201faaaea5a387c2d0cef1c"
+      ],
+      "gold_title": "研究社会文化变迁的新视角——表征相似性分析:以老年人心理健康为例",
+      "domain": "social sciences",
+      "date": "2024-01-01"
+    },
+    {
+      "qid": "A26",
+      "group": "known_item",
+      "query": "考虑抵达时间成本的道路交通事故风险评估方法",
+      "qrels": [
+        "6f28bc7efc64d64404394608efae4bf9a27ed55f55c0970a7401f274cfa34555"
+      ],
+      "gold_title": "考虑抵达时间成本的道路交通事故风险评估方法",
+      "domain": "physical sciences",
+      "date": "2024-03-01"
+    },
+    {
+      "qid": "A27",
+      "group": "known_item",
+      "query": "基于自适应平滑度策略的三维模型分类神经架构搜索",
+      "qrels": [
+        "5d6bfcae0ab6521a672bf530ae098d118d9fe35ca0b73e474ba026941f30f067"
+      ],
+      "gold_title": "基于自适应平滑度策略的三维模型分类神经架构搜索.",
+      "domain": "life sciences",
+      "date": "2024-06-01"
+    },
+    {
+      "qid": "A28",
+      "group": "known_item",
+      "query": "“多”反而少:元认知推断视角下支付渠道数量对个体捐赠的影响",
+      "qrels": [
+        "39ee6992b2cef0f3c4553b5090b2655a1d233b99aacf2b2c032380869328454e"
+      ],
+      "gold_title": "“多”反而少:元认知推断视角下支付渠道数量对个体捐赠的影响",
+      "domain": "social sciences",
+      "date": "2021-04-25"
+    },
+    {
+      "qid": "A29",
+      "group": "known_item",
+      "query": "俄语多模态情感语料库的构建及应用",
+      "qrels": [
+        "2a0cb6c0285ecb3d14a09513c499a0edfae68149677494da072b02741b27e990"
+      ],
+      "gold_title": "俄语多模态情感语料库的构建及应用",
+      "domain": "physical sciences",
+      "date": "2021-11-01"
+    },
+    {
+      "qid": "A30",
+      "group": "known_item",
+      "query": "准噶尔盆地重点领域油气勘探研究进展及潜力方向",
+      "qrels": [
+        "5ac9159f21957bcec6b52964b24cc57324006afd771a4d891685f374f63a9171"
+      ],
+      "gold_title": "准噶尔盆地重点领域油气勘探研究进展及潜力方向.",
+      "domain": "life sciences",
+      "date": "2024-07-01"
+    },
+    {
+      "qid": "A31",
+      "group": "known_item",
+      "query": "rcep对粤港澳大湾区农产品出口的影响与政策启示",
+      "qrels": [
+        "eab9e1cc75b21cac7ee6d0c218d65bbbd00129cb44b410d977816154aeb8e823"
+      ],
+      "gold_title": "rcep对粤港澳大湾区农产品出口的影响与政策启示",
+      "domain": "social sciences",
+      "date": "2023-01-01"
+    },
+    {
+      "qid": "A32",
+      "group": "known_item",
+      "query": "光学显微镜图像恢复及在数字图像相关方法应变测量中的应用",
+      "qrels": [
+        "a8ff5ea40521f8dc661c80f4b1c8a04f8e5d1dcb5446f74ffd8036dbbcd6fc83"
+      ],
+      "gold_title": "光学显微镜图像恢复及在数字图像相关方法应变测量中的应用",
+      "domain": "physical sciences",
+      "date": "2023-01-01"
+    },
+    {
+      "qid": "A33",
+      "group": "known_item",
+      "query": "坝上草原鱼鳞坑生态修复措施的水土保持效应",
+      "qrels": [
+        "f1bdcefbca68bba5651a965394ca2e50af3f8f1210f0302a286bfa39f467db20"
+      ],
+      "gold_title": "坝上草原鱼鳞坑生态修复措施的水土保持效应.",
+      "domain": "life sciences",
+      "date": "2023-12-01"
+    },
+    {
+      "qid": "A34",
+      "group": "known_item",
+      "query": "基于特征对比学习和图卷积的社交网络用户分类",
+      "qrels": [
+        "f0f0461603d986c626b911238d8d0dbc32292037b033df1fc3da62e2de1e0b62"
+      ],
+      "gold_title": "基于特征对比学习和图卷积的社交网络用户分类",
+      "domain": "physical sciences",
+      "date": "2024-04-01"
+    },
+    {
+      "qid": "A35",
+      "group": "known_item",
+      "query": "全景影像在城市研究中的应用进展综述",
+      "qrels": [
+        "105ab0af33a95af987272ee7a38f87be7d4fb4bf04f911fa56b60d5e87687bb9"
+      ],
+      "gold_title": "全景影像在城市研究中的应用进展综述.",
+      "domain": "life sciences",
+      "date": "2024-07-01"
+    },
+    {
+      "qid": "A36",
+      "group": "known_item",
+      "query": "地震逆散射偏移与反演综述",
+      "qrels": [
+        "1520040bcf17b52d68160255df09bf58b5c3a6b0a3105e4fa22b6f9ea9f1e0b8"
+      ],
+      "gold_title": "地震逆散射偏移与反演综述",
+      "domain": "physical sciences",
+      "date": "2021-01-01"
+    },
+    {
+      "qid": "A37",
+      "group": "known_item",
+      "query": "氮肥用量对玉米-油菜和水稻-油菜轮作模式下油菜产量及氮素吸收利用的影响",
+      "qrels": [
+        "2404969df8531bfe2dea8c9fe5a7851463fe7e8abc914768179c6f54d7a1e609"
+      ],
+      "gold_title": "氮肥用量对玉米-油菜和水稻-油菜轮作模式下油菜产量及氮素吸收利用的影响",
+      "domain": "life sciences",
+      "date": "2024-08-01"
+    },
+    {
+      "qid": "A38",
+      "group": "known_item",
+      "query": "大数据背景下计算机网络信息安全及防范策略研究",
+      "qrels": [
+        "e1353ad52b524834f927cd5d6112bfa05625c5fb72cbe1d6344c93beb4216440"
+      ],
+      "gold_title": "大数据背景下计算机网络信息安全及防范策略研究",
+      "domain": "physical sciences",
+      "date": "2022-12-31"
+    },
+    {
+      "qid": "A39",
+      "group": "known_item",
+      "query": "养殖废水灌溉对大蒜生长、产量及水氮利用效率的影响",
+      "qrels": [
+        "78128242da0635c3885537b67ac286ca3d75939a288cc2b3ce9dd5f43b5dac25"
+      ],
+      "gold_title": "养殖废水灌溉对大蒜生长、产量及水氮利用效率的影响.",
+      "domain": "life sciences",
+      "date": "2024-05-01"
+    },
+    {
+      "qid": "A40",
+      "group": "known_item",
+      "query": "基于膦氧化物钝化的热蒸发像素化钙钛矿发光二极管",
+      "qrels": [
+        "5ca7a2a10cd97a3a71793644ac963049ec0aa964339f8242d9b39b3cd195b3ee"
+      ],
+      "gold_title": "基于膦氧化物钝化的热蒸发像素化钙钛矿发光二极管",
+      "domain": "physical sciences",
+      "date": "2024-01-01"
+    },
+    {
+      "qid": "B01",
+      "group": "term_query",
+      "query": "低钠盐腊肉 液熏工艺 感官品质",
+      "qrels": [
+        "5f60cb8006d03bf43b58b72eafcc4fd7cca06ffe6d2871ed652690a993c179f9"
+      ],
+      "gold_title": "study on processing optimization of liquid smoke and baking in low-sodium cured pork  |  低钠盐腊肉液熏及烘烤工艺优化",
+      "domain": "social sciences",
+      "date": "2023-10-01"
+    },
+    {
+      "qid": "B02",
+      "group": "term_query",
+      "query": "积雪草 种植密度 光合特性",
+      "qrels": [
+        "305c19b4512efa7278892523b6591072e9fcac432ac08577feaef9c6ee1b5a5a"
+      ],
+      "gold_title": "不同种植密度对积雪草光合特性、产量及品质的影响  |  effects of different planting densities on photosynthetic characteristics, yield and quality of centella asiatica (l.) urban",
+      "domain": "health sciences",
+      "date": "2022-07-01"
+    },
+    {
+      "qid": "B03",
+      "group": "term_query",
+      "query": "精神分裂症 长效针剂 社区治疗",
+      "qrels": [
+        "617009c8ad44ef85fefec9d4c4a13996e87505bd7cf493bf736a3af1efd5185f"
+      ],
+      "gold_title": "expert consensus on long-acting injectable antipsychotic in the treatment of schizophrenia in community  |  社区应用抗精神病药长效针剂治疗精神分裂症专家共识",
+      "domain": "life sciences",
+      "date": "2022-10-01"
+    },
+    {
+      "qid": "B04",
+      "group": "term_query",
+      "query": "石墨相氮化碳 CO2吸附 表面性质",
+      "qrels": [
+        "585db8523f5dec763609214bd4bd8da24b00b7cbc22bc2e4a07815e8ac64dae9"
+      ],
+      "gold_title": "swelling characteristics of g-c&lt;sub&gt;3&lt;/sub&gt;n&lt;sub&gt;4&lt;/sub&gt; as base catalyst in liquid-phase reaction",
+      "domain": "physical sciences",
+      "date": "2020-01-01"
+    },
+    {
+      "qid": "B05",
+      "group": "term_query",
+      "query": "超超临界汽轮机 二次再热 轴系布置",
+      "qrels": [
+        "a304dc32ee47235200f79d37102c837804fc95fd159dc5bb2f04c5c6d3f4d82d"
+      ],
+      "gold_title": "1350mw超超临界汽轮机技术特点及分析  |  introduction and analysis of the technical specifications of 1 350 mw usc steam turbine",
+      "domain": "social sciences",
+      "date": "2020-01-01"
+    },
+    {
+      "qid": "B06",
+      "group": "term_query",
+      "query": "人工智能 口腔正畸 诊疗应用",
+      "qrels": [
+        "452993515f0689ab6d1d0485d5dcc1ca25c4bba70fb24eb8bbb4e04959e8ff17"
+      ],
+      "gold_title": "人工智能技术在口腔正畸诊疗中的应用研究进展  |  progress on application of artificial intelligence technology in orthodontic diagnosis and treatment",
+      "domain": "health sciences",
+      "date": "2022-04-01"
+    },
+    {
+      "qid": "B07",
+      "group": "term_query",
+      "query": "血尿酸 2型糖尿病 队列研究",
+      "qrels": [
+        "9179d9370403571f80c31acb59d4a7a720711bf8b75fdb15f64b11164f229f0d"
+      ],
+      "gold_title": "血尿酸水平与2型糖尿病发病风险的关联队列研究  |  association between serum uric acid and the risk of type 2 diabetes mellitus:a population-based prospective cohort study",
+      "domain": "life sciences",
+      "date": "2023-05-01"
+    },
+    {
+      "qid": "B08",
+      "group": "term_query",
+      "query": "浑水波涌灌 间歇入渗 泥沙级配",
+      "qrels": [
+        "d826684c0af380287e8f0c9e1085df8c19018cae12fcba7bc57b970c9718f39d"
+      ],
+      "gold_title": "泥沙颗粒级配组成对浑水波涌灌间歇入渗特性的影响研究  |  influence of sediment particle size distribution on intermittent infiltration of water under surge irrigation",
+      "domain": "physical sciences",
+      "date": "2023-10-01"
+    },
+    {
+      "qid": "B09",
+      "group": "term_query",
+      "query": "先秦马车 轮辋制作技艺",
+      "qrels": [
+        "94aa4cd67b9c26438fd2becfa8a89a0b5fa0d5a7b91fc3ffc01a00bf6f7f25d9"
+      ],
+      "gold_title": "先秦辐式双轮马车轮辋制作技艺研究  |  research on the wheel rim making technology of spokes chariot in pre-qin period",
+      "domain": "social sciences",
+      "date": "2022-04-01"
+    },
+    {
+      "qid": "B10",
+      "group": "term_query",
+      "query": "胃肠道黏膜屏障 黏膜保护剂",
+      "qrels": [
+        "e4771ca6166f68536f30a3cbc2ede0a389a2dc96c2933a94906119200259a960"
+      ],
+      "gold_title": "gastrointestinal mucosal barrier and standardization of the application of mucosal protective agents:interpretation on the consensus of clinical experts on gastrointestinal mucosal protection ( 2021, fuzhou)  |  关注胃肠道黏膜屏障,规范黏膜保护剂应用\r——《胃肠道黏膜保护临床专家共识(2021年,福州)》解读",
+      "domain": "health sciences",
+      "date": "2022-09-01"
+    },
+    {
+      "qid": "B11",
+      "group": "term_query",
+      "query": "凝结魏茨曼氏菌 益生菌筛选 16S rDNA",
+      "qrels": [
+        "58e75a8f4b5db8cb356fbf9df08ed9c48849c8b08ccee158fc3653b8c6a11b2a"
+      ],
+      "gold_title": "screening,identification and biological characterization of weizmannia coagulans bc66  |  凝结魏茨曼氏菌bc66的筛选、鉴定及特性研究",
+      "domain": "life sciences",
+      "date": "2023-08-01"
+    },
+    {
+      "qid": "B12",
+      "group": "term_query",
+      "query": "煤矿斜巷 多水平提升 监控系统",
+      "qrels": [
+        "87141e322a46e3ee78384e2a8f25a74558533f4dca9a1535e3db6674a7d8c967"
+      ],
+      "gold_title": "multi-level lifting monitoring system of inclined roadway in tianzhu coal mine based on industrial ethernet  |  基于工业以太网的天祝煤矿斜巷多水平提升监控系统",
+      "domain": "physical sciences",
+      "date": "2021-05-01"
+    },
+    {
+      "qid": "B13",
+      "group": "term_query",
+      "query": "现代密码学 课程改革 翻转教学",
+      "qrels": [
+        "cc5d88758f6e213ecc1289f9e931ee3e8e014928d28f4e505403e98ff7634122"
+      ],
+      "gold_title": "summary and study on the curriculum reform of modern cryptography based on spoc and flip classroom  |  基于spoc和翻转课堂的现代密码学课程改革总结与分析",
+      "domain": "social sciences",
+      "date": "2019-06-01"
+    },
+    {
+      "qid": "B14",
+      "group": "term_query",
+      "query": "多酚 牛乳蛋白 致敏性",
+      "qrels": [
+        "83f0e5fec678f6845cb3560bed7b0c661e28f78411648fc4716b3dda4df6140d"
+      ],
+      "gold_title": "research progress of polyphenols in reducing lactoprotein sensitization  |  植物多酚在消减牛乳蛋白致敏性作用中的研究进展",
+      "domain": "health sciences",
+      "date": "2023-06-01"
+    },
+    {
+      "qid": "B15",
+      "group": "term_query",
+      "query": "棉花纤维 脯氨酸羟化酶 阿拉伯半乳聚糖蛋白",
+      "qrels": [
+        "c957877026865781d4c7afdf40b01e63546ceb4585851e7ab761e8c6c4185d81"
+      ],
+      "gold_title": "脯氨酸羟化酶ghp4h2在棉花纤维发育中的功能研究  |  ghp4h2 encoding a prolyl-4-hydroxylase is involved in regulating cotton fiber development",
+      "domain": "life sciences",
+      "date": "2021-01-01"
+    },
+    {
+      "qid": "B16",
+      "group": "term_query",
+      "query": "格密码 属性加密 抗量子",
+      "qrels": [
+        "80f21678be2f6964104ae70853f1bbe4ec0573165a54f980939f308132fcd4e7"
+      ],
+      "gold_title": "一种基于格的属性多重加密方案  |  an attribute multiple encryption scheme based on lattices",
+      "domain": "physical sciences",
+      "date": "2018-02-01"
+    },
+    {
+      "qid": "B17",
+      "group": "term_query",
+      "query": "变革型领导 团队有效性 多层次模型",
+      "qrels": [
+        "6b9f6fe63b66633e495a8fa03958968e24db79f9b9ac44641c9c0086c9281e71"
+      ],
+      "gold_title": "team leadership and team effectiveness: a multilevel study through the lens of social identity theory",
+      "domain": "social sciences",
+      "date": "2016-01-01"
+    },
+    {
+      "qid": "B18",
+      "group": "term_query",
+      "query": "钛合金 耐压夹层圆柱壳 拓扑优化",
+      "qrels": [
+        "765bc6a011072089375128e2fa33e9a0a34a2f3f5abbb01bbf9498b0f3e2437c"
+      ],
+      "gold_title": "钛合金耐压夹层圆柱壳芯层结构拓扑优化  |  topology optimization of core structure of titanium alloy sandwich cylindrical shell",
+      "domain": "health sciences",
+      "date": "2023-04-01"
+    },
+    {
+      "qid": "B19",
+      "group": "term_query",
+      "query": "大田作物病害 图像数据集 机器学习",
+      "qrels": [
+        "f8c51394ec79645415ebe7495bda59bf391ce93957199ff3f8cb2364fba5b765"
+      ],
+      "gold_title": "大田作物病害识别研究图像数据集  |  an image dataset for field crop disease identification",
+      "domain": "life sciences",
+      "date": "2019-12-01"
+    },
+    {
+      "qid": "B20",
+      "group": "term_query",
+      "query": "新型电力系统 辅助服务市场 第三方独立主体",
+      "qrels": [
+        "0826b6cf5ecbedf6b37ca821e1f8d73665acd0e290c95c920fa5a8c7858277fb"
+      ],
+      "gold_title": "面向新型电力系统的第三方独立主体辅助服务市场探索与实践  |  exploration and practice of the third-party independent entity auxiliary service mar?ket for new power system",
+      "domain": "physical sciences",
+      "date": "2022-08-01"
+    },
+    {
+      "qid": "B21",
+      "group": "term_query",
+      "query": "三维模型检索 代表性视图 光场描述符",
+      "qrels": [
+        "529d274208ea094020a35ae77deea46a1a6ddc9f2b0dd3fd2132911a022dd2be"
+      ],
+      "gold_title": "3 d model retrieval based on representative views  |  基于代表性视图的三维模型检索",
+      "domain": "social sciences",
+      "date": "2021-12-01"
+    },
+    {
+      "qid": "B22",
+      "group": "term_query",
+      "query": "弱视 视觉训练 立体视功能",
+      "qrels": [
+        "cf152c1b34437ae5c6bf65bb4966b87f7e6db5d7db15975ae2698eafac3f6d99"
+      ],
+      "gold_title": "vision therapy system 4d combined with stereoscopic 3d training technology for the treatment of amblyopia  |  4d视觉训练系统联合3d数字化斜弱视视功能矫治系统治疗弱视的效果",
+      "domain": "health sciences",
+      "date": "2023-09-01"
+    },
+    {
+      "qid": "B23",
+      "group": "term_query",
+      "query": "紫薇属 叶绿体基因组 系统发育",
+      "qrels": [
+        "5d7434daed7890cd1499bce6ad1d2cce44a2a14a5211cb0f5c8b3cca568cb9b6"
+      ],
+      "gold_title": "紫薇属植物叶绿体基因组研究进展  |  research progress of chloroplast genome in lagerstroemia spp.",
+      "domain": "life sciences",
+      "date": "2022-10-01"
+    },
+    {
+      "qid": "B24",
+      "group": "term_query",
+      "query": "光子晶体光纤 保偏光纤 熔接损耗",
+      "qrels": [
+        "ed1c6bf7bf10db1573f0989eecbf8a69df8e816592bd1b3e28127550b6bb860d"
+      ],
+      "gold_title": "光子晶体与保偏光纤低损耗、高可靠熔接工艺",
+      "domain": "physical sciences",
+      "date": "2023-01-01"
+    },
+    {
+      "qid": "B25",
+      "group": "term_query",
+      "query": "华文教材 句子复杂度 句型结构",
+      "qrels": [
+        "23557b3ca6e303df41d252a49dde7289be2ef94ca8c994adc5e1f6c7cef6ea07"
+      ],
+      "gold_title": "on the complexity of chinese sentences in singapore primary textbooks",
+      "domain": "social sciences",
+      "date": "2016-12-01"
+    },
+    {
+      "qid": "B26",
+      "group": "term_query",
+      "query": "内脏脂肪面积 胰岛素抵抗 阻塞性睡眠呼吸暂停",
+      "qrels": [
+        "70a90b57036c0a73822626278886bb86acffb11263f5b4e5b95263f5223e2e6d"
+      ],
+      "gold_title": "腹腔内脏脂肪面积及稳态模型胰岛素抵抗指数对高血压合并阻塞性睡眠呼吸暂停低通气综合征的预测价值研究  |  the value of abdominal visceral adipose tissue area and homeostasis model assessment of insulin resistance in predicting essential hypertension complicated with obstructive sleep apnea syndrome",
+      "domain": "health sciences",
+      "date": "2022-01-01"
+    },
+    {
+      "qid": "B27",
+      "group": "term_query",
+      "query": "放射化学纯度 分析方法验证",
+      "qrels": [
+        "7cc1c5fbaf9130496b3a3376b7ea0537bb7e26750442a5346e01141201a5acac"
+      ],
+      "gold_title": "general methods,application development and related problems of radiochemical purity analysis  |  放射化学纯度分析的通用方法、应用发展及相关问题浅析",
+      "domain": "life sciences",
+      "date": "2023-08-01"
+    },
+    {
+      "qid": "B28",
+      "group": "term_query",
+      "query": "虚拟电厂 需求响应 潜力评估",
+      "qrels": [
+        "8e778d70369f09c45dc5e21b059b6df70c5dab836dbc375349d4cf5f1c558266"
+      ],
+      "gold_title": "面向虚拟电厂的需求响应潜力评估方法研究  |  research on a demand response potential evaluation method for virtual power plant",
+      "domain": "physical sciences",
+      "date": "2023-06-01"
+    },
+    {
+      "qid": "B29",
+      "group": "term_query",
+      "query": "SPOC 线上线下混合式教学 护理教育",
+      "qrels": [
+        "106343f375b5133a79501325333ff35122600a0e02c6abb1fcccfa22b4e71aa3"
+      ],
+      "gold_title": "the practice and exploration of spoc-based online-offline mixed teaching mode in traditional chinese medicine nursing teaching",
+      "domain": "health sciences",
+      "date": "2022-11-28"
+    },
+    {
+      "qid": "B30",
+      "group": "term_query",
+      "query": "技术机会识别 研究综述",
+      "qrels": [
+        "2ef7596a575313d9cb606d962234adb17c154b0a7768b2017db704c183c7ae62"
+      ],
+      "gold_title": "技术机会识别研究综述与展望  |  review and prospect of research on technology opportunity identification",
+      "domain": "life sciences",
+      "date": "2023-07-01"
+    },
+    {
+      "qid": "C01",
+      "group": "nl_question",
+      "query": "如何消除线结构光测量中光条畸变导致的标定误差？",
+      "qrels": [
+        "01f82b3cba93f02db87f8405d28a5a8dc4b722ed22242362c276bf06b8305649"
+      ],
+      "gold_title": "surface grid calibration of line structured light based on ray-tracing",
+      "domain": "physical sciences",
+      "date": "2024-01-01"
+    },
+    {
+      "qid": "C02",
+      "group": "nl_question",
+      "query": "咬合紊乱引起的慢性应激会对骨组织产生什么影响？",
+      "qrels": [
+        "399b08e52bd31b5e684417458e4d9c41ec593e7ae70f22c338c286557cbd2ed8"
+      ],
+      "gold_title": "effects of chronic stress caused by occlusal disorder on the body  |  咬合紊乱导致的慢性应激对机体的影响",
+      "domain": "health sciences",
+      "date": "2020-10-01"
+    },
+    {
+      "qid": "C03",
+      "group": "nl_question",
+      "query": "CO2 与 H2S 共存环境下的腐蚀速率预测模型有哪些？",
+      "qrels": [
+        "b4d129e730b97910f468f5b21bf4cd700ad76a342ac89e7be49f93b655316984"
+      ],
+      "gold_title": "research progress on co2 and h2s corrosion prediction models in sour gas field  |  酸性气田中co2和h2s的腐蚀预测模型研究进展",
+      "domain": "life sciences",
+      "date": "2022-03-01"
+    },
+    {
+      "qid": "C04",
+      "group": "nl_question",
+      "query": "麸皮改性处理如何影响全麦馒头的品质？",
+      "qrels": [
+        "13f25563bcd50a079940e186d4ad96359661f6d3af9914f9c4ce1b3ddcd913d1"
+      ],
+      "gold_title": "comparative study on the quality of whole wheat flour steamed bread backfilled with different modified bran  |  不同改性麸皮回填全麦粉馒头品质特性的比较",
+      "domain": "physical sciences",
+      "date": "2023-05-01"
+    },
+    {
+      "qid": "C05",
+      "group": "nl_question",
+      "query": "辽宁省食源性疾病的流行病学特征是什么？",
+      "qrels": [
+        "36570e7415136876acca501dc66a30e3039cd0b78182caa32e021f6d6891211d"
+      ],
+      "gold_title": "2014-2019年辽宁省食源性疾病流行病学分析  |  epidemiological characteristics of foodborne diseases between 2014 and 2019 in liaoning province",
+      "domain": "health sciences",
+      "date": "2021-07-01"
+    },
+    {
+      "qid": "C06",
+      "group": "nl_question",
+      "query": "热处理如何改变鹰嘴豆细胞中淀粉的体外消化特性？",
+      "qrels": [
+        "e4a1809eb9ab92607efe48a27337003b47d81be9f47e0a31eda55e772650bd9a"
+      ],
+      "gold_title": "热诱导desi鹰嘴豆细胞中淀粉结构及体外消化性的变化  |  changes of structure and in vitro digestion properties of starches in desi chickpea cells induced by thermal treatment",
+      "domain": "life sciences",
+      "date": "2023-03-01"
+    },
+    {
+      "qid": "C07",
+      "group": "nl_question",
+      "query": "纤维素如何催化转化为葡萄糖和多元醇？",
+      "qrels": [
+        "94549f17d536131c04ce48c022f47e6bb9852091925da2d82bc898507ef25ba7"
+      ],
+      "gold_title": "纤维素催化转化为葡萄糖及多元醇的研究进展  |  research progress on catalytic conversion of cellulose to glucose and polyols",
+      "domain": "physical sciences",
+      "date": "2023-03-01"
+    },
+    {
+      "qid": "C08",
+      "group": "nl_question",
+      "query": "深度学习能否从病理切片识别结直肠癌的分子分型？",
+      "qrels": [
+        "8eb8ee3eec782e3e11821fdc9c53d12eb93a711b15b8251eb709756eb3397cf9"
+      ],
+      "gold_title": "identifying molecular subtypes of whole-slide image in colorectal cancer via deep learning  |  基于深度学习的结直肠癌全视野数字病理切片分子分型识别研究",
+      "domain": "health sciences",
+      "date": "2021-07-01"
+    },
+    {
+      "qid": "C09",
+      "group": "nl_question",
+      "query": "HPV 分型定量检测能否预测高危型 HPV 持续感染的转归？",
+      "qrels": [
+        "ae22d93cc881df6900d994e9b774ac6d9f4e4167749b8bbaf8e384ccd767d6b3"
+      ],
+      "gold_title": "2784例同步hpv分型及标准化定量检测预测高危型hpv感染转归的临床研究  |  synchronous hpv genotyping and quantification assay to predict the outcome of high risk hpv infection: report of 2 784 cases",
+      "domain": "life sciences",
+      "date": "2020-08-01"
+    },
+    {
+      "qid": "C10",
+      "group": "nl_question",
+      "query": "盾构隧道穿越大粒径卵石层有什么施工技术？",
+      "qrels": [
+        "6c4ad1a5b1f161696694dc8fe5a54bd7dd4a8954fd59deefb0ae1c02a22a391a"
+      ],
+      "gold_title": "technology of slurry shield pebble bed pressurized into the tank",
+      "domain": "physical sciences",
+      "date": "2018-01-01"
+    },
+    {
+      "qid": "C11",
+      "group": "nl_question",
+      "query": "Pilon 骨折中 Tillaux 骨块应如何处理？",
+      "qrels": [
+        "4707128876d279097ace58aa3e9c715ee5ddc24db51430d7b612bc6ea3522148"
+      ],
+      "gold_title": "ruedi-allgowerⅲ型pilon骨折中tillaux骨块的处理  |  the treatment of tillaux bone block in the ruedi-allgower type ⅲ pilon fractures",
+      "domain": "health sciences",
+      "date": "2018-10-15"
+    },
+    {
+      "qid": "C12",
+      "group": "nl_question",
+      "query": "江淮地区冬小麦涝渍害的气候风险有什么时空演变特征？",
+      "qrels": [
+        "d346be9d59d3285a0f1e77365e89c3892b2d61628c99a03ec7a463e00c990dd6"
+      ],
+      "gold_title": "spatiotemporal variation of climate-induced waterlogging for winter wheat in jianghuai region  |  江淮不同亚区冬小麦涝渍害气候风险时空演变",
+      "domain": "life sciences",
+      "date": "2022-06-01"
+    },
+    {
+      "qid": "C13",
+      "group": "nl_question",
+      "query": "超晶格插入层如何调制 InGaN/GaN 多量子阱的应变？",
+      "qrels": [
+        "4cd729c4cd9693e4469166b641d5337e1768f8b5edff664d94b92fca99ddc9ec"
+      ],
+      "gold_title": "超晶格插入层对ingan/gan多量子阱的应变调制作用",
+      "domain": "physical sciences",
+      "date": "2024-01-01"
+    },
+    {
+      "qid": "C14",
+      "group": "nl_question",
+      "query": "卡托普利试验对原发性醛固酮增多症的诊断价值如何？",
+      "qrels": [
+        "9c5fa9276f42f08012126d0b153917ee1d43fb62e46fee31d8054100c9c4542d"
+      ],
+      "gold_title": "the diagnostic value of captopril challenge test for primary aldosteronism  |  卡托普利试验对原发性醛固酮增多症诊断价值的初步探讨",
+      "domain": "health sciences",
+      "date": "2021-01-01"
+    },
+    {
+      "qid": "C15",
+      "group": "nl_question",
+      "query": "不同产地玛瑙红樱桃的品质有什么差异？",
+      "qrels": [
+        "6dbbba9edc0c463534b88cd30e1bfe819b1afb099c59402503bf3932a0158efc"
+      ],
+      "gold_title": "不同地区玛瑙红樱桃品质差异分析  |  analysis on quality difference of agate red cherry in different regions",
+      "domain": "life sciences",
+      "date": "2022-12-01"
+    },
+    {
+      "qid": "C16",
+      "group": "nl_question",
+      "query": "改性粉煤灰怎样去除废水中的六价铬？",
+      "qrels": [
+        "ea7ade719a69ccf5d083ca2a1afa906cbf908c265849be74b0c46ebd7094552e"
+      ],
+      "gold_title": "research on removal of chromium(ⅵ)from waste water on fly ash modified with alkali washing and calcium oxide calcining method  |  碱洗—氧化钙煅烧两段法改性粉煤灰脱除废水中cr(ⅵ)的性能研究",
+      "domain": "physical sciences",
+      "date": "2022-02-01"
+    },
+    {
+      "qid": "C17",
+      "group": "nl_question",
+      "query": "等离子内镜辅助下经口切除咽旁间隙肿瘤是否安全有效？",
+      "qrels": [
+        "f740e4db216f31b33795aaaf2a1af21c6dfb14cf9189b3267bb100467d7b1f0d"
+      ],
+      "gold_title": "等离子及内镜系统辅助下口内径路治疗咽旁间隙肿瘤疗效分析  |  analysis of efficacy of coblation assisted endoscope system for the treatment of parapharyngeal space tumors with transoral approach",
+      "domain": "health sciences",
+      "date": "2021-03-01"
+    },
+    {
+      "qid": "C18",
+      "group": "nl_question",
+      "query": "天麻多糖对非酒精性脂肪肝有什么保护作用机制？",
+      "qrels": [
+        "8c988eb450b9305bbd2652fe222a9df53c1c55944010e22836c4d20dbbd87e49"
+      ],
+      "gold_title": "protective effect of polysaccharide from gastrodia elata blume on non-alcoholic fatty liver induced by high fat diet  |  天麻多糖对高脂饮食诱导的非酒精性脂肪肝的保护作用",
+      "domain": "life sciences",
+      "date": "2022-01-01"
+    },
+    {
+      "qid": "C19",
+      "group": "nl_question",
+      "query": "卫星MIMO通信如何对抗无人机集群的压制式干扰？",
+      "qrels": [
+        "c3a3d0bde2c6ac0ecf531939a5912ff33cc779fcc33d2bcd1510c13cc47e7926"
+      ],
+      "gold_title": "卫星mimo通信系统抗移动无人机集群干扰的在线bss算法",
+      "domain": "physical sciences",
+      "date": "2024-06-01"
+    },
+    {
+      "qid": "C20",
+      "group": "nl_question",
+      "query": "诺如病毒引起的学校食源性胃肠炎暴发如何溯源？",
+      "qrels": [
+        "243293587b4d84a6ab3808e8bebb722ede5471e1f812a920725edad3340fbe8e"
+      ],
+      "gold_title": "a foodborne gastroenteritis outbreak caused by norovirus in a university of wuhan  |  武汉市某高校诺如病毒引起的食源性胃肠炎暴发",
+      "domain": "health sciences",
+      "date": "2023-03-01"
+    },
+    {
+      "qid": "C21",
+      "group": "nl_question",
+      "query": "热凝胶多糖在食品工业中有哪些应用？",
+      "qrels": [
+        "dcf40fe822416431580f02af3f17188fb088f50936b7c309579b1bca9c2d1be2"
+      ],
+      "gold_title": "热凝胶的结构、功能、改性方法及在食品领域的应用进展  |  the structure,function,modification methods and application in food field of curdlan",
+      "domain": "life sciences",
+      "date": "2023-10-01"
+    },
+    {
+      "qid": "C22",
+      "group": "nl_question",
+      "query": "铜纳米线透明电极能否替代ITO材料？",
+      "qrels": [
+        "adf64e96b388d72c98315e8e833d1266a8282f8c257d93fae4d2b3e185dfe895"
+      ],
+      "gold_title": "铜纳米线的合成、优化及其透明电极的应用  |  synthesis, optimization of cu nanowires and application of its transparent electrodes",
+      "domain": "physical sciences",
+      "date": "2019-01-01"
+    },
+    {
+      "qid": "C23",
+      "group": "nl_question",
+      "query": "长期使用降眼压药物对青光眼患者眼表有什么影响？",
+      "qrels": [
+        "46a9e165f6059ff9feac0085337a50a02bd4126519580709210210b8adf132c8"
+      ],
+      "gold_title": "research progress in the effects of intraocular pressure-lowering drugs on the ocular surface of glaucoma patients  |  降眼压药物对青光眼患者眼表影响的研究进展",
+      "domain": "health sciences",
+      "date": "2023-11-01"
+    },
+    {
+      "qid": "C24",
+      "group": "nl_question",
+      "query": "如何用实时荧光PCR快速鉴定婴幼儿配方奶粉中的克罗诺杆菌？",
+      "qrels": [
+        "a3a2684f45b0db5e0549643baeec3cdabbb6cede1fdef97b3fcdd2f4b8191fe7"
+      ],
+      "gold_title": "identification of cronobacter in infant formula using real-time polymerase chain reaction  |  实时荧光pcr鉴定婴幼儿配方食品中克罗诺杆菌的研究",
+      "domain": "life sciences",
+      "date": "2023-06-01"
+    },
+    {
+      "qid": "C25",
+      "group": "nl_question",
+      "query": "t-SNE降维算法如何用于区域化探数据的地质信息提取？",
+      "qrels": [
+        "7a41287a36042505896776e30057c648b8d224b490b329a541a17e3e24b62827"
+      ],
+      "gold_title": "基于t-sne降维算法的区域化探数据中地质体空间分布信息可视化:以英格兰西南部为例",
+      "domain": "physical sciences",
+      "date": "2021-03-01"
+    },
+    {
+      "qid": "C26",
+      "group": "nl_question",
+      "query": "IL-17A如何通过CXCL12活化肺成纤维细胞？",
+      "qrels": [
+        "52c760d9fd8906ac2dd4c535df998d14389bdf49933a752725e019f0f2a196c2"
+      ],
+      "gold_title": "il-17 a activates mouse lung fibroblasts through promoting chemokine cxcl12 secretion  |  趋化因子cxcl12可能参与白细胞介素17a对小鼠肺成纤维细胞的活化",
+      "domain": "health sciences",
+      "date": "2020-12-25"
+    },
+    {
+      "qid": "C27",
+      "group": "nl_question",
+      "query": "核石墨失效概率模型如何验证和优化？",
+      "qrels": [
+        "17f774712a3a0d004e00d63a45bae1470e0eda8bafa836f3777628d19f9f089d"
+      ],
+      "gold_title": "modified-asme失效概率模型的验证与优化  |  verification and optimization of modified-asme failure probability model",
+      "domain": "life sciences",
+      "date": "2021-06-01"
+    },
+    {
+      "qid": "C28",
+      "group": "nl_question",
+      "query": "怎样用液相色谱串联质谱同时测定多种腹泻性贝类毒素？",
+      "qrels": [
+        "f507fd348d21157d3256099748b7f60b27d257226c2b620b274a79901ad43432"
+      ],
+      "gold_title": "9种腹泻性贝类毒素的高效液相色谱-串联质谱测定方法的建立  |  establishment of hplc-ms/ms method for determination of nine diarrhoeal shellfish toxins",
+      "domain": "physical sciences",
+      "date": "2022-07-01"
+    },
+    {
+      "qid": "C29",
+      "group": "nl_question",
+      "query": "T淋巴母细胞淋巴瘤的治疗有什么新进展？",
+      "qrels": [
+        "d49fba7f76620c92d3597226bfe24449cd092d3f82383fb7de216bf7030668be"
+      ],
+      "gold_title": "new progress in the treatment of t-lymphoblastic lymphoma  |  t淋巴母细胞淋巴瘤的治疗新进展",
+      "domain": "health sciences",
+      "date": "2018-11-14"
+    },
+    {
+      "qid": "C30",
+      "group": "nl_question",
+      "query": "不同花期蜂王浆的成分和抗氧化活性有什么差异？",
+      "qrels": [
+        "873586578cd86a8b85f9a1a4159a396acbee0aa70240df723171a64def72ecc9"
+      ],
+      "gold_title": "analysis of the main components and antioxidant activity of royal jelly in different flowering periods  |  不同花期蜂王浆主要成分和抗氧化活性分析",
+      "domain": "life sciences",
+      "date": "2022-09-01"
+    }
+  ]
+}

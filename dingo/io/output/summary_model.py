@@ -25,6 +25,8 @@ class SummaryModel(BaseModel):
     # 结构：{field_key: {metric_name: {scores, score_average, ...}}}
     metrics_score_stats: Dict[str, Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
     token_usage_stats: Dict[str, Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
+    statistics: Dict[str, Dict[str, Dict[str, int]]] = Field(default_factory=dict)
+    input_args: Dict[str, Any] = Field(default_factory=dict)
 
     def add_metric_score(self, field_key: str, metric_name: str, score: float):
         """
@@ -69,7 +71,6 @@ class SummaryModel(BaseModel):
                 'calls': 0,
                 'records': 0,
                 'models': {},
-                'providers': {},
                 'sources': {},
             },
         )
@@ -93,14 +94,24 @@ class SummaryModel(BaseModel):
             usage_stats['models'][usage.model] = (
                 usage_stats['models'].get(usage.model, 0) + calls
             )
-        if usage.provider:
-            usage_stats['providers'][usage.provider] = (
-                usage_stats['providers'].get(usage.provider, 0) + calls
-            )
         if usage.source:
             usage_stats['sources'][usage.source] = (
                 usage_stats['sources'].get(usage.source, 0) + calls
             )
+
+    def add_statistics(
+        self,
+        field_key: str,
+        metric_name: str,
+        statistics: Dict[str, int],
+    ):
+        """Add one evaluator's per-sample statistics to the summary."""
+        metric_counts = self.statistics.setdefault(field_key, {}).setdefault(
+            metric_name,
+            {},
+        )
+        for name, count in statistics.items():
+            metric_counts[name] = metric_counts.get(name, 0) + count
 
     def calculate_metrics_score_averages(self):
         """
@@ -162,6 +173,14 @@ class SummaryModel(BaseModel):
         return round(sum(averages) / len(averages), 2) if averages else 0.0
 
     def to_dict(self):
+        sorted_type_count = {
+            field_key: dict(sorted(type_counts.items()))
+            for field_key, type_counts in sorted(self.type_count.items())
+        }
+        sorted_type_ratio = {
+            field_key: dict(sorted(type_ratios.items()))
+            for field_key, type_ratios in sorted(self.type_ratio.items())
+        }
         result = {
             'task_id': self.task_id,
             'task_name': self.task_name,
@@ -174,8 +193,8 @@ class SummaryModel(BaseModel):
             'num_good': self.num_good,
             'num_bad': self.num_bad,
             'total': self.total,
-            'type_count': self.type_count,
-            'type_ratio': self.type_ratio,
+            'type_count': sorted_type_count,
+            'type_ratio': sorted_type_ratio,
         }
 
         # 如果有指标分数统计，以层级结构添加到输出中（与 type_ratio 结构一致）
@@ -191,5 +210,10 @@ class SummaryModel(BaseModel):
 
         if self.token_usage_stats:
             result['token_usage'] = self.token_usage_stats
+
+        if self.statistics:
+            result['statistics'] = self.statistics
+
+        result['input_args'] = self.input_args
 
         return result

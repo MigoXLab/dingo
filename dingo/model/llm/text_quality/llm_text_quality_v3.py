@@ -10,6 +10,11 @@ from dingo.utils.exception import ConvertJsonError
 
 @Model.llm_register("LLMTextQualityV3")
 class LLMTextQualityV3(BaseOpenAI):
+    _metric_info = {
+        "category": "Pretrain Text Quality Assessment Metrics",
+        "metric_name": "LLMTextQualityV3",
+        "description": "Checks structure, readability, duplication, and safety. Unlike V2, it groups sublabels into four dimensions.",
+    }
     _required_fields = [RequiredField.CONTENT]
     prompt = """
 # Role

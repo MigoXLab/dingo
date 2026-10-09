@@ -48,8 +48,6 @@ Count:
 A score of 10 means perfect adherence (or all deviations were justified).
 A score of 0 means the agent completely ignored its plan without justification.
 
-Respond in the same language as the input content for the "reason" field.
-
 Return your evaluation as a JSON object with this exact schema:
 {
   "followed_steps": <integer>,
@@ -66,9 +64,7 @@ Do not include any text outside the JSON object."""
     def build_messages(cls, input_data: Data) -> List[dict]:
         """Build LLM messages for plan adherence evaluation."""
         task_goal = getattr(input_data, "context", "") or ""
-        lang_hint = cls._detect_language_hint(
-            str(input_data.prompt) + str(input_data.content)
-        )
+        lang_hint = cls.language_hint_for(input_data)
         user_content = f"""{cls.prompt}
 
 ## Task Goal

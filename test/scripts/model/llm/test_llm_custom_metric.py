@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 from dingo.config.input_args import EvaluatorLLMArgs, InputArgs
 from dingo.io.input import Data
-from dingo.io.output.eval_detail import TokenUsage
+from dingo.io.output.eval_detail import QualityLabel, TokenUsage
 from dingo.model.llm.base import LLMCallResult
 from dingo.model.llm.llm_custom_metric import LLMCustomMetric
 from dingo.model.model import Model
@@ -166,8 +166,8 @@ def test_eval_response_requires_status_label_score_and_reason():
     )
 
     assert result.metric == "AnswerRelevance"
-    assert result.status is True
-    assert result.label == ["QUALITY_BAD.ConvertJsonError"]
+    assert result.status is False
+    assert result.label == ["REVIEW_EXECUTION_ERROR.ConvertJsonError"]
     assert "Missing required response fields: label, status" in result.reason[0]
 
 
@@ -246,8 +246,8 @@ def test_eval_detail_response_rejects_missing_fields():
     result = llm.eval(Data(prompt="Check policy", content="bad"))
 
     assert result.metric == "PolicyCheck"
-    assert result.status is True
-    assert result.label == ["QUALITY_BAD.ConvertJsonError"]
+    assert result.status is False
+    assert result.label == ["REVIEW_EXECUTION_ERROR.ConvertJsonError"]
     assert "Missing required response fields: label, reason, score" in result.reason[0]
 
 
@@ -262,8 +262,8 @@ def test_eval_response_rejects_legacy_score_reason_format():
     result = llm.eval(Data(prompt="Can I do this?", content="Unsafe answer"))
 
     assert result.metric == "SafetyCheck"
-    assert result.status is True
-    assert result.label == ["QUALITY_BAD.ConvertJsonError"]
+    assert result.status is False
+    assert result.label == ["REVIEW_EXECUTION_ERROR.ConvertJsonError"]
     assert "Missing required response fields: label, status" in result.reason[0]
 
 
@@ -296,3 +296,27 @@ def test_instances_keep_different_custom_metrics_isolated():
     # User prompt contains criteria text
     assert "The answer must focus on the prompt." in messages_a[1]["content"]
     assert "Second criterion" in messages_b[1]["content"]
+
+
+def test_custom_metric_retry_exhaustion_is_not_faked_as_issue():
+    # P0-0b：重试耗尽（基础设施错误）绝不能伪装成阻塞性 finding（spec §9.3）
+    llm = LLMCustomMetric()
+    Model.set_config_llm(
+        llm, EvaluatorLLMArgs(custom_metric=_custom_metric(metric="Relevance"))
+    )
+    llm.create_client = Mock()
+    llm.send_messages = Mock(side_effect=ConnectionError("boom"))
+
+    result = llm.eval(
+        Data(prompt="What is Paris?", content="Paris is the capital of France.")
+    )
+
+    assert result.status is False
+    assert result.label is not None
+    assert result.label[0].startswith(QualityLabel.REVIEW_EXECUTION_ERROR_PREFIX)
+    assert result.label == ["REVIEW_EXECUTION_ERROR.ConnectionError"]
+    assert "boom" in result.reason[0]
+    assert result.score is None
+    # 执行失败必须在判定层体现为 n/a，而不是伪装成真正的 pass（final-review #2）
+    assert result.applicable is False
+    assert result.effective_verdict == "n/a"

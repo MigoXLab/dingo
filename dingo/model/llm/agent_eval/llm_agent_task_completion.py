@@ -9,7 +9,7 @@ from typing import List
 
 from dingo.io.input import Data, RequiredField
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, evidence_discipline
 
 
 @Model.llm_register("LLMAgentTaskCompletion")
@@ -44,7 +44,10 @@ all 4s → 7-8, all 3s → 5-6, all 2s → 3-4, all 1s → 0-2). Do not let the 
 contradict the dimension ratings. If the run was incomplete, credit verifiable
 partial progress rather than scoring 0.
 
-Respond in the same language as the input content for the "reason" field.
+""" + evidence_discipline(
+        "A step whose call returned nothing did not establish what it was\n"
+        "  there to establish, whatever the summary says it established."
+    ) + """
 
 Return your evaluation as a JSON object with this exact schema:
 {
@@ -60,9 +63,7 @@ Do not include any text outside the JSON object."""
     @classmethod
     def build_messages(cls, input_data: Data) -> List[dict]:
         """Build LLM messages for task completion evaluation."""
-        lang_hint = cls._detect_language_hint(
-            str(input_data.prompt) + str(input_data.content)
-        )
+        lang_hint = cls.language_hint_for(input_data)
         user_content = f"""{cls.prompt}
 
 ## Task Objective

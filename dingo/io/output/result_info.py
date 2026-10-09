@@ -19,12 +19,18 @@ class ResultInfo(BaseModel):
         default_factory=dict,
         exclude=True,
     )
+    statistics_details: Dict[str, List[EvalDetail]] = Field(
+        default_factory=dict,
+        exclude=True,
+    )
 
     @staticmethod
     def _eval_detail_to_dict(model_res: EvalDetail) -> Dict[str, Any]:
         detail = model_res.model_dump()
         if detail.get('usage') is None:
             detail.pop('usage', None)
+        if detail.get('statistics') is None:
+            detail.pop('statistics', None)
         return detail
 
     @staticmethod
@@ -56,7 +62,7 @@ class ResultInfo(BaseModel):
         ):
             return value
         try:
-            parsed = json.loads(text)
+            parsed = json.loads(text, strict=False)
         except json.JSONDecodeError:
             try:
                 parsed = ast.literal_eval(text)

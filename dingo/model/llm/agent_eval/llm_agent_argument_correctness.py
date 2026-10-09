@@ -50,8 +50,6 @@ List specific argument issues found (wrong value, missing required argument, typ
 A score of 10 means all tool calls had perfectly correct arguments.
 A score of 0 means all tool calls had wrong or missing arguments.
 
-Respond in the same language as the input content for the "reason" field.
-
 Return your evaluation as a JSON object with this exact schema:
 {
   "correct_args": <integer>,
@@ -66,9 +64,7 @@ Do not include any text outside the JSON object."""
     @classmethod
     def build_messages(cls, input_data: Data) -> List[dict]:
         """Build LLM messages for argument correctness evaluation."""
-        lang_hint = cls._detect_language_hint(
-            str(input_data.prompt) + str(input_data.content)
-        )
+        lang_hint = cls.language_hint_for(input_data)
         user_content = f"""{cls.prompt}
 
 ## Task Objective

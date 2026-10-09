@@ -11,12 +11,56 @@
 
 import pytest
 
+from dingo.config import InputArgs
 from dingo.io.output.eval_detail import TokenUsage
 from dingo.io.output.summary_model import SummaryModel
 
 
 class TestSummaryModel:
     """测试 SummaryModel 的指标分数统计功能"""
+
+    def test_input_args_are_serialized(self):
+        input_args = InputArgs(**{
+            "input_path": "data.jsonl",
+            "evaluator": [{
+                "fields": {"content": "content"},
+                "evals": [{
+                    "name": "LLMTextQualityV7",
+                    "config": {
+                        "model": "test-model",
+                        "key": "secret-key",
+                        "api_url": "https://example.com/v1",
+                    },
+                }],
+            }],
+        })
+
+        summary = SummaryModel(input_args=input_args.to_dict())
+
+        serialized = summary.to_dict()["input_args"]
+        assert serialized["input_path"] == "data.jsonl"
+        assert serialized["evaluator"][0]["evals"][0]["config"]["model"] == "test-model"
+        assert "key" not in serialized["evaluator"][0]["evals"][0]["config"]
+
+    def test_input_args_to_dict_recursively_excludes_fields(self):
+        input_args = InputArgs(**{
+            "evaluator": [{
+                "fields": {"content": "content"},
+                "evals": [{
+                    "name": "LLMTextQualityV7",
+                    "config": {
+                        "model": "test-model",
+                        "key": "secret-key",
+                    },
+                }],
+            }],
+        })
+
+        serialized = input_args.to_dict()
+        config = serialized["evaluator"][0]["evals"][0]["config"]
+
+        assert "key" not in config
+        assert config["model"] == "test-model"
 
     def test_add_metric_score_single(self):
         """测试添加单个指标的多个分数"""
@@ -222,6 +266,41 @@ class TestSummaryModel:
         # 验证没有分数统计字段
         assert "metrics_score" not in result
 
+    def test_to_dict_sorts_type_mappings_by_key(self):
+        summary = SummaryModel(
+            type_count={
+                "response": {"Similarity.Duplication": 2},
+                "content": {
+                    "Security.Prohibition": 1,
+                    "Completeness.Formula_Missing": 3,
+                    "Effectiveness.Words_Stuck": 2,
+                },
+            },
+            type_ratio={
+                "response": {"Similarity.Duplication": 0.2},
+                "content": {
+                    "Security.Prohibition": 0.1,
+                    "Completeness.Formula_Missing": 0.3,
+                    "Effectiveness.Words_Stuck": 0.2,
+                },
+            },
+        )
+
+        result = summary.to_dict()
+
+        assert list(result["type_count"]) == ["content", "response"]
+        assert list(result["type_count"]["content"]) == [
+            "Completeness.Formula_Missing",
+            "Effectiveness.Words_Stuck",
+            "Security.Prohibition",
+        ]
+        assert list(result["type_ratio"]) == ["content", "response"]
+        assert list(result["type_ratio"]["content"]) == [
+            "Completeness.Formula_Missing",
+            "Effectiveness.Words_Stuck",
+            "Security.Prohibition",
+        ]
+
     def test_add_token_usage_and_to_dict(self):
         """测试 LLM token 使用量统计输出"""
         summary = SummaryModel(task_name="test_task", task_id="test_token_001")
@@ -262,8 +341,31 @@ class TestSummaryModel:
         assert stats["calls"] == 2
         assert stats["records"] == 2
         assert stats["models"] == {"gpt-test": 2}
-        assert stats["providers"] == {"openai": 2}
+        assert "providers" not in stats
         assert stats["sources"] == {"provider": 2}
+
+    def test_add_statistics_and_to_dict(self):
+        summary = SummaryModel(task_name="test_task")
+
+        summary.add_statistics(
+            "content",
+            "ExampleMetric",
+            {"formula_count": 2, "code_count": 1},
+        )
+        summary.add_statistics(
+            "content",
+            "ExampleMetric",
+            {"formula_count": 3, "code_count": 4},
+        )
+
+        assert summary.to_dict()["statistics"] == {
+            "content": {
+                "ExampleMetric": {
+                    "formula_count": 5,
+                    "code_count": 5,
+                }
+            }
+        }
 
     def test_multiple_metrics_different_score_counts(self):
         """测试不同指标有不同数量的分数"""

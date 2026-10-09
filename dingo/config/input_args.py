@@ -194,3 +194,26 @@ class InputArgs(BaseModel):
     dataset: DatasetArgs = DatasetArgs()
     executor: ExecutorArgs = ExecutorArgs()
     evaluator: List[EvalPipline] = []
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a config snapshot, recursively excluding sensitive fields."""
+        model_dump = getattr(self, "model_dump", None)
+        if callable(model_dump):
+            data = model_dump()
+        else:
+            data = self.dict()
+
+        excluded = {"key"}
+        pending = [data]
+        while pending:
+            value = pending.pop()
+            if isinstance(value, dict):
+                for key in list(value):
+                    if key in excluded:
+                        del value[key]
+                    else:
+                        pending.append(value[key])
+            elif isinstance(value, list):
+                pending.extend(value)
+
+        return data

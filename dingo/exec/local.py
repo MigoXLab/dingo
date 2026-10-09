@@ -63,6 +63,7 @@ class LocalExecutor(ExecProto):
             input_path=input_path,
             output_path=output_path if self.input_args.executor.result_save.bad else "",
             create_time=create_time,
+            input_args=self.input_args.to_dict(),
         )
 
         # Evaluate data
@@ -139,6 +140,15 @@ class LocalExecutor(ExecProto):
                             if eval_detail.usage is not None and eval_detail.metric:
                                 self.summary.add_token_usage(
                                     field_key, eval_detail.metric, eval_detail.usage
+                                )
+
+                    for field_key, eval_detail_list in result_info.statistics_details.items():
+                        for eval_detail in eval_detail_list:
+                            if eval_detail.statistics is not None and eval_detail.metric:
+                                self.summary.add_statistics(
+                                    field_key,
+                                    eval_detail.metric,
+                                    eval_detail.statistics,
                                 )
 
                     if result_info.eval_status:
@@ -220,6 +230,13 @@ class LocalExecutor(ExecProto):
         usage_detail_list = [mr for mr in eval_detail_list if mr.usage is not None]
         if usage_detail_list:
             result_info.token_usage_details = {join_fields: usage_detail_list}
+        statistics_detail_list = [
+            mr for mr in eval_detail_list if mr.statistics is not None
+        ]
+        if statistics_detail_list:
+            result_info.statistics_details = {
+                join_fields: statistics_detail_list
+            }
 
         # 根据配置决定保存哪些结果
         if self.input_args.executor.result_save.all_labels or self.input_args.executor.result_save.merge:
@@ -258,6 +275,12 @@ class LocalExecutor(ExecProto):
                     existing_item.token_usage_details[key].extend(value)
                 else:
                     existing_item.token_usage_details[key] = value
+
+            for key, value in new_item.statistics_details.items():
+                if key in existing_item.statistics_details:
+                    existing_item.statistics_details[key].extend(value)
+                else:
+                    existing_item.statistics_details[key] = value
         else:
             existing_list.append(new_item)
 

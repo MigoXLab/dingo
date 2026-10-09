@@ -2,7 +2,7 @@ from typing import List
 
 from dingo.config.input_args import EvaluatorLLMArgs
 from dingo.model.llm.base import LLMCallResult
-from dingo.model.llm.base_openai import BaseOpenAI
+from dingo.model.llm.base_openai import LOCAL_ONLY_CONFIG_KEYS, BaseOpenAI
 from dingo.utils.exception import ExceedMaxTokens
 
 
@@ -78,13 +78,33 @@ class BaseLiteLLM(BaseOpenAI):
         import litellm
 
         model_name = cls.dynamic_config.model or ""
-        extra_params = cls.dynamic_config.model_extra or {}
+        # 这里刻意不走 ``get_request_extra_params``：那个方法按 OpenAI SDK 的
+        # 签名放行，而 litellm 的入参集合更大（api_base、num_retries 等），拿
+        # OpenAI 的签名当判据会把 litellm 自己的参数一并丢掉。
+        #
+        # 换成排除表的代价也小得多：litellm 收 ``**kwargs`` 且开了 drop_params，
+        # 漏登记一个本地键最多是被它悄悄丢弃，不像 OpenAI SDK 那样直接抛
+        # TypeError。要摘掉本地键，仍然是因为「悄悄丢弃」意味着这个键从未
+        # 按配置的意图生效过。
+        extra_params = {
+            k: v
+            for k, v in (cls.dynamic_config.model_extra or {}).items()
+            if k not in LOCAL_ONLY_CONFIG_KEYS
+        }
         cls.validate_config(extra_params)
 
         call_kwargs: dict = {
             "drop_params": True,
             **extra_params,
         }
+        # 摘掉还不够——调用方配了它们是要它们生效的。只在配了的时候传：这个
+        # 路径原先没有超时与重试上限，凭空给默认值会改掉既有行为。
+        request_timeout = cls.get_local_config_value("request_timeout")
+        if request_timeout is not None:
+            call_kwargs["timeout"] = request_timeout
+        max_retries = cls.get_local_config_value("max_retries")
+        if max_retries is not None:
+            call_kwargs["num_retries"] = max_retries
         if cls.dynamic_config.api_url:
             call_kwargs["api_base"] = cls.dynamic_config.api_url
         if cls.dynamic_config.key:

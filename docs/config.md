@@ -23,6 +23,8 @@
 | output_path | str | "outputs/" | No | 结果输出路径 |
 | log_level | str | "WARNING" | No | 日志级别，可选值：['DEBUG', 'INFO', 'WARNING', 'ERROR'] |
 
+执行结束后，Dingo 会将本次执行参数记录到 `summary.json` 的 `input_args` 字段中，便于后续追溯任务的执行方式。为避免泄露 API 密钥，所有层级中名为 `key` 的字段会被自动过滤。
+
 ### Dataset 配置 (dataset)
 
 数据集相关配置：

@@ -52,6 +52,7 @@ class TestBackendRegistry:
         assert "google_scholar" in backends
         assert "meta_search" in backends
         assert "openalex" in backends
+        assert "sciverse_mcp" in backends
 
     def test_create_unknown_backend_raises(self):
         with pytest.raises(ValueError, match="Unknown backend"):

@@ -9,11 +9,11 @@ class LLMTextQualityV4(BaseTextQuality):
     _metric_info = {
         "category": "Pretrain Text Quality Assessment Metrics",
         "metric_name": "LLMTextQualityV4",
-        "description": "Enhanced text quality evaluation covering completeness (formulas, tables, code), effectiveness (garbled text, spacing), similarity (duplicates), and security (politics, prohibited content)",
+        "description": "Checks formula, table, code, readability, duplication, and safety. Unlike V3, it separates structural defect types.",
         "paper_title": "WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages",
         "paper_url": "https://arxiv.org/abs/2501.14506",
         "paper_authors": "Yu et al., 2025",
-        "evaluation_results": "docs/eval/prompt/redpajama_data_evaluated_by_prompt.md"
+        "evaluation_results": "docs/eval/prompt/redpajama_data_evaluated_by_prompt.md",
     }
     _required_fields = [RequiredField.CONTENT]
     prompt = """

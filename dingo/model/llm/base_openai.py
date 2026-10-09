@@ -1,5 +1,7 @@
+import inspect
 import json
 import time
+from functools import lru_cache
 from typing import Dict, List
 
 from pydantic import ValidationError
@@ -11,6 +13,37 @@ from dingo.model.llm.base import BaseLLM, LLMCallResult
 from dingo.model.response.response_class import ResponseScoreReason
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError, ExceedMaxTokens
+
+#: 单次请求的默认超时（秒）。评估器可以在 config 里用 ``request_timeout`` 覆盖它。
+#: 保持 90 是既有行为，不动；输入大、又用推理模型的场景应当显式配大。
+DEFAULT_REQUEST_TIMEOUT = 90
+
+#: 一次请求最多重试几次，与 OpenAI SDK 的默认值一致，所以不配就是原来的行为。
+#: 它和超时要一起定：超时是单次尝试的代价，重试把这个代价乘起来。
+DEFAULT_MAX_RETRIES = 2
+
+#: 已知「给评估器自己看」的配置键。它们和真正的请求参数共用 ``model_extra``
+#: 这一个口袋，所以转发给模型服务之前要摘出来。
+#:
+#: 这张表**不是**过滤的判据——判据是 SDK 签名（见 ``_provider_request_params``）。
+#: 它只决定一个被丢弃的键要不要告警：登记过的是有意为之，不必出声；没登记的
+#: 多半是键名拼错了，值得说一句。
+#:
+#: 判据之所以不用这张表：黑名单要靠人记得为每个新增的本地键登记一次，而这些
+#: 键分散在各个评估器里（``strictness`` 在 RAG、``agent_config`` 有六处在读），
+#: 漏一个的症状是该评估器每次调用必崩——``create()`` 不收未知关键字参数，抛出的
+#: TypeError 又会被上层塑形成「评估失败」，与超时长得一模一样。
+LOCAL_ONLY_CONFIG_KEYS = frozenset(
+    {
+        "request_timeout",  # 本模块自己消费，见 send_messages
+        "max_retries",  # 构造客户端时消费，不是请求体参数
+        "threshold",  # agent_eval / rag / instruction_quality 的判定阈值
+        "strictness",  # rag 的答案相关性
+        "min_difficulty",
+        "max_difficulty",
+        "agent_config",  # agent 评估器自己的编排配置
+    }
+)
 
 
 class BaseOpenAI(BaseLLM):
@@ -36,7 +69,11 @@ class BaseOpenAI(BaseLLM):
         else:
             # 创建主 LLM 客户端
             cls.client = OpenAI(
-                api_key=cls.dynamic_config.key, base_url=cls.dynamic_config.api_url
+                api_key=cls.dynamic_config.key,
+                base_url=cls.dynamic_config.api_url,
+                max_retries=cls.get_local_config_value(
+                    "max_retries", DEFAULT_MAX_RETRIES
+                ),
             )
 
             # 如果配置了 embedding_config，初始化 Embedding 客户端
@@ -82,12 +119,14 @@ class BaseOpenAI(BaseLLM):
         else:
             model_name = cls.client.models.list().data[0].id
 
-        extra_params = cls.dynamic_config.model_extra
+        extra_params = cls.get_request_extra_params()
         cls.validate_config(extra_params)
 
+        request_timeout = cls.get_local_config_value("request_timeout", DEFAULT_REQUEST_TIMEOUT)
         completions = cls.client.chat.completions.create(
             model=model_name,
             messages=messages,
+            timeout=request_timeout,
             **extra_params,
         )
 
@@ -104,6 +143,44 @@ class BaseOpenAI(BaseLLM):
                 provider="openai",
             ),
         )
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def _provider_request_params() -> frozenset:
+        """哪些键是 SDK 真的收的请求参数。取自签名，不靠人维护。"""
+        from openai.resources.chat.completions import Completions
+
+        return frozenset(inspect.signature(Completions.create).parameters) - {"self"}
+
+    @classmethod
+    def get_request_extra_params(cls) -> Dict:
+        """Return evaluator extras that should be sent to the LLM provider.
+
+        放行判据见 ``LOCAL_ONLY_CONFIG_KEYS`` 的说明。过滤只放在这一处：这里是
+        唯一回答「什么该发给模型服务」的地方，写在别处的过滤会被下一个调用点忘掉。
+        """
+        accepted = cls._provider_request_params()
+        sendable: Dict = {}
+        unexpected: List[str] = []
+        for key, value in (cls.dynamic_config.model_extra or {}).items():
+            if key in accepted:
+                sendable[key] = value
+            elif key not in LOCAL_ONLY_CONFIG_KEYS:
+                unexpected.append(key)
+        if unexpected:
+            # 丢弃而不是转发，因为转发必崩；但要出声，否则一个拼错的键名会
+            # 安静地不生效，比崩还难查。
+            log.warning(
+                "evaluator config keys are not request parameters and were not sent: %s",
+                ", ".join(sorted(unexpected)),
+            )
+        return sendable
+
+    @classmethod
+    def get_local_config_value(cls, key: str, default=None):
+        """Read a knob that steers the evaluator itself, never the request."""
+        extras = (cls.dynamic_config.model_extra or {}) if cls.dynamic_config else {}
+        return extras.get(key, default)
 
     @staticmethod
     def _usage_value(data, key: str):
@@ -206,8 +283,6 @@ class BaseOpenAI(BaseLLM):
         current.calls += int(new_usage.calls or 1)
         if current.model != new_usage.model:
             current.model = current.model or new_usage.model
-        if current.provider != new_usage.provider:
-            current.provider = current.provider or new_usage.provider
         if current.source != new_usage.source:
             current.source = current.source or new_usage.source
         return current
@@ -327,14 +402,14 @@ class BaseOpenAI(BaseLLM):
                 except_name = e.__class__.__name__
 
         res = EvalDetail(metric=cls.__name__)
-        # res.eval_status = True
-        # res.eval_details = {
-        #     "label": [f"QUALITY_BAD.{except_name}"],
-        #     "metric": [cls.__name__],
-        #     "reason": [except_msg]
-        # }
-        res.status = True
-        res.label = [f"QUALITY_BAD.{except_name}"]
+        res.status = False  # 执行失败不是质量问题，绝不伪装成 issue（spec §9.3）
+        res.applicable = False  # 执行失败 → effective_verdict="n/a"，不是 pass（final-review #2）
+        # 但要说清是哪一种"不适用"。只留 applicable=False 时，下游把这条读成
+        # "这项检查不适用于你的运行"，而真相是评测器自己挂了——前者是在讲这次
+        # 运行，后者只关乎评测器。名字在这里给，因为只有这里知道答案。
+        res.not_applicable_kind = "execution_error"
+        res.score = None
+        res.label = [f"{QualityLabel.REVIEW_EXECUTION_ERROR_PREFIX}{except_name}"]
         res.reason = [except_msg]
         res.usage = usage
         return res

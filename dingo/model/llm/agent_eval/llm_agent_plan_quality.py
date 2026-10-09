@@ -10,7 +10,7 @@ from typing import List
 from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, evidence_discipline
 from dingo.utils import log
 
 
@@ -47,7 +47,10 @@ Compute an overall **score** from 0 to 10 that is CONSISTENT with the three
 dimensions above (e.g. all 5s → 9-10, all 3s → 5-6, all 1s → 0-2). Do not let
 the score contradict the dimension ratings.
 
-IMPORTANT: The "reason" field MUST be in the same language as the Task Objective. If the task objective is in Chinese, respond in Chinese. If in English, respond in English.
+""" + evidence_discipline(
+        "A plan step the record shows never happened is not completed,\n"
+        "  whatever the plan's own progress notes say."
+    ) + """
 
 Return your evaluation as a JSON object with this exact schema:
 {
@@ -63,9 +66,7 @@ Do not include any text outside the JSON object."""
     @classmethod
     def build_messages(cls, input_data: Data) -> List[dict]:
         """Build LLM messages for plan quality evaluation."""
-        lang_hint = cls._detect_language_hint(
-            str(input_data.prompt) + str(input_data.content)
-        )
+        lang_hint = cls.language_hint_for(input_data)
         user_content = f"""{cls.prompt}
 
 ## Task Objective
@@ -98,12 +99,23 @@ Evaluate the plan quality and return the JSON evaluation.{lang_hint}"""
             raw_score = 0.0
 
         if raw_score < 0:
-            log.info(f"{cls.__name__}: No planning content found in trace, defaulting to pass")
+            log.info(f"{cls.__name__}: model reports no planning content, marking N/A")
+            # TODO(计划②): 用 manifest window.plan 硬确认"确实无计划"，而非只采信模型 -1
             result = EvalDetail(metric=cls.__name__)
             result.status = False
-            result.label = [QualityLabel.QUALITY_GOOD]
-            result.score = 1.0
-            result.reason = [data.get("reason", "No planning content found; evaluation skipped.")]
+            result.applicable = False      # N/A：不再强转满分 pass
+            # Decided before the model was called: this check does not
+            # apply to a run of this shape, which says nothing about the
+            # run's quality either way.
+            result.not_applicable_kind = "structural"
+            # …and which reason, in a form the UI can translate. The prose below
+            # is English by construction, and a reader on a Chinese page was
+            # shown it verbatim. Set here because the branch that declines is
+            # the only place that knows why.
+            result.not_applicable_code = "no_explicit_plan"
+            result.score = None
+            result.verdict = "n/a"
+            result.reason = [data.get("reason", "No planning content reported; plan quality not applicable.")]
             return result
 
         return super().process_response(response)

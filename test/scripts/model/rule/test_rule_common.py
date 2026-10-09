@@ -4,8 +4,7 @@ from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
 from dingo.io.output.eval_detail import QualityLabel
 from dingo.model.rule.guobiao.rule_tc609_quality import (Rule_TC609_0101_DocBasicInfoCompleteness, Rule_TC609_0102_DocContentFeatureCompleteness, Rule_TC609_0103_DocConstructionProcessCompleteness,
-                                                         Rule_TC609_0104_DocApplicationCompleteness, Rule_TC609_0207_DataTypeConsistency, Rule_TC609_0303_DataTimeRange,
-                                                         Rule_TC609_02080101_TextPerplexity)
+                                                         Rule_TC609_0104_DocApplicationCompleteness, Rule_TC609_0303_DataTimeRange, Rule_TC609_02080101_TextPerplexity)
 from dingo.model.rule.guobiao.rule_tc609_quality_base import Rule_TC609_01_DocCompleteness
 from dingo.model.rule.rule_common import RuleDocFormulaRepeat, RulePIIDetection, RuleUnsafeWords, RuleWatermark
 
@@ -207,97 +206,6 @@ class TestRule_TC609_02080101_TextPerplexity:
             assert "dingo-python[hhem]" in str(exc)
         else:
             raise AssertionError("expected ImportError for missing transformers")
-
-
-class TestRule_TC609_0207_DataTypeConsistency:
-    @staticmethod
-    def _mock_classification(monkeypatch, predicted_type, scores):
-        monkeypatch.setattr(
-            Rule_TC609_0207_DataTypeConsistency,
-            "_classify_dataset_type",
-            classmethod(lambda cls, *args: (predicted_type, scores)),
-        )
-        monkeypatch.setattr(
-            Rule_TC609_0207_DataTypeConsistency,
-            "dynamic_config",
-            EvaluatorRuleArgs(
-                dataset_type="通识数据集",
-                threshold=0.6,
-                model="test-model",
-                device=-1,
-            ),
-        )
-
-    def test_text_matching_dataset_type_is_good(self, monkeypatch):
-        self._mock_classification(
-            monkeypatch,
-            "通识数据集",
-            {"通识数据集": 0.85, "行业通识数据集": 0.1, "行业专识数据集": 0.05},
-        )
-        result = Rule_TC609_0207_DataTypeConsistency.eval(
-            Data(
-                data_id="type-match",
-                data_content=[
-                    {"media_type": "text", "content": "普通生活常识"},
-                    {"media_type": "image", "content": "image.png"},
-                ],
-            )
-        )
-
-        assert result.status is False
-        assert result.score == 0.85
-        assert result.label == [QualityLabel.QUALITY_GOOD]
-
-    def test_text_not_matching_dataset_type_is_bad(self, monkeypatch):
-        self._mock_classification(
-            monkeypatch,
-            "行业专识数据集",
-            {"通识数据集": 0.25, "行业通识数据集": 0.2, "行业专识数据集": 0.55},
-        )
-        result = Rule_TC609_0207_DataTypeConsistency.eval(
-            Data(
-                data_id="type-mismatch",
-                data_content=[{"media_type": "text", "content": "专业行业知识"}],
-            )
-        )
-
-        assert result.status is True
-        assert result.score == 0.25
-        assert result.label == [
-            "QUALITY_BAD_TC609_0207.Rule_TC609_0207_DataTypeConsistency"
-        ]
-
-    def test_no_text_content_is_bad(self):
-        result = Rule_TC609_0207_DataTypeConsistency.eval(
-            Data(
-                data_id="no-text",
-                data_content=[{"media_type": "image", "content": "image.png"}],
-            )
-        )
-
-        assert result.status is True
-        assert "at least one text item" in result.reason[0]
-
-    def test_invalid_dataset_type_raises_value_error(self, monkeypatch):
-        monkeypatch.setattr(
-            Rule_TC609_0207_DataTypeConsistency,
-            "dynamic_config",
-            EvaluatorRuleArgs(
-                dataset_type="医疗数据集",
-                threshold=0.6,
-                model="test-model",
-                device=-1,
-            ),
-        )
-        with pytest.raises(ValueError, match="dataset_type must be one of"):
-            Rule_TC609_0207_DataTypeConsistency.eval(
-                Data(
-                    data_id="invalid-type",
-                    data_content=[
-                        {"media_type": "text", "content": "医疗知识"}
-                    ],
-                )
-            )
 
 
 class TestRule_TC609_0303_DataTimeRange:

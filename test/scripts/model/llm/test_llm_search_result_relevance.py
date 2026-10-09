@@ -1,4 +1,7 @@
-from dingo.model.llm.llm_search_result_relevance import _extract_result_dois, _grade_doi_result, _normalize_doi, is_doi_query
+from types import SimpleNamespace
+
+from dingo.io.input import Data
+from dingo.model.llm.llm_search_result_relevance import LLMSearchResultRelevance, RelevanceGrade, _extract_result_dois, _grade_doi_result, _normalize_doi, is_doi_query
 
 
 def test_normalize_doi_variants():
@@ -46,3 +49,42 @@ def test_doi_query_uses_exact_match():
 
 def test_non_doi_query_falls_back_to_llm():
     assert _grade_doi_result("PBPK相关综述", {"doi": "10.1000/test"}) is None
+
+
+def test_agentic_relevance_uses_query_relevance_only(monkeypatch):
+    grader = SimpleNamespace(
+        grade=lambda **_: RelevanceGrade(
+            score=0.4,
+            query_relevance=0.9,
+            result_quality=0.2,
+            confidence=0.8,
+        )
+    )
+    monkeypatch.setattr(
+        LLMSearchResultRelevance,
+        "_build_from_config",
+        classmethod(lambda cls: grader),
+    )
+
+    detail = LLMSearchResultRelevance.eval(
+        Data(
+            query="中文查询",
+            search_result={
+                "_eval_profile": "agentic",
+                "title": "相关标题",
+                "chunk": "相关证据",
+            },
+        )
+    )
+
+    assert detail.score == 0.9
+    assert detail.reason[0]["judge_overall_score"] == 0.4
+    assert detail.reason[0]["score_basis"] == "query_relevance"
+
+
+def test_meta_and_agentic_select_different_relevance_evidence():
+    from dingo.model.llm.llm_search_result_relevance import LLMSearchResultRelevance
+    result = {"abstract": "paper abstract", "chunk": "retrieved evidence"}
+    assert LLMSearchResultRelevance._extract_abstract(result) == "paper abstract"
+    result["_eval_profile"] = "agentic"
+    assert LLMSearchResultRelevance._extract_abstract(result) == "retrieved evidence"

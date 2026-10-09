@@ -124,3 +124,29 @@ def test_ebook_platform_and_academic_publisher_are_recognized():
     assert ebook_grade.reason == "academic_book_series"
     assert publisher_grade.venue_score == 0.75
     assert publisher_grade.reason == "recognized_scholarly_publisher_or_venue"
+
+
+def test_normalized_citation_percentile_takes_priority():
+    grade = LLMSearchResultAuthority().grade(
+        result={
+            "citation_count": 1,
+            "fwci": 8.0,
+            "citation_normalized_percentile": {"value": 0.93},
+        }
+    )
+
+    assert grade.citation_score == 0.93
+    assert grade.citation_basis == "citation_normalized_percentile"
+
+
+def test_negative_citation_counts_are_treated_as_zero():
+    grade = LLMSearchResultAuthority().grade(
+        result={
+            "citation_count": -1,
+            "influential_citation_count": -1,
+            "fwci": -1,
+        }
+    )
+
+    assert grade.citation_score == 0.0
+    assert grade.influential_citation_score == 0.0

@@ -56,6 +56,7 @@ dingo/
 │   │   └── llm/             ← LLM-based evaluators
 │   │       ├── base_openai.py ← BaseOpenAI (base class for all LLM evaluators)
 │   │       ├── text_quality/  ← Text quality evaluators (V4, V5)
+│   │       ├── code_quality/  ← Shared core, separate classification/quality evaluators, prompts and pipeline
 │   │       ├── rag/          ← RAG metrics (Faithfulness, Precision, Recall, etc.)
 │   │       ├── llm_search_result_relevance.py ← Search result relevance (Exa-style pointwise)
 │   │       ├── hhh/          ← 3H evaluators (Honest, Helpful, Harmless)
@@ -70,7 +71,9 @@ dingo/
 │   │   ├── spark.py         ← SparkExecutor (distributed)
 │   │   └── retrieval.py     ← RetrievalExecutor (MTEB retrieval benchmarks)
 │   ├── retrieval/            ← Retrieval evaluation module
+│   │   ├── sciverse_quality.py ← Agentic source verification and authority metadata enrichment
 │   │   ├── search_client.py ← SearchClient ABC + registry + PaperResult/SearchResponse
+│   │   ├── tasks/           ← Bundled retrieval datasets (JSON)
 │   │   ├── backends/
 │   │   │   └── agentic.py   ← AgenticSearchClient (local + public mode)
 │   │   ├── mteb_adapter.py  ← SearchClientModel (MTEB SearchProtocol adapter)
@@ -84,6 +87,7 @@ dingo/
 │   ├── env/                 ← Test environment configs
 │   └── scripts/             ← Test scripts (pytest)
 └── docs/                    ← Documentation
+    └── tc609/              ← TC609-specific rule and LLM documentation
 ```
 
 ## Core Concepts
@@ -246,6 +250,8 @@ dingo eval-retrieval --backend agentic --tasks SciFact \
   --api-url https://api.sciverse.space --api-token <token> --limit 100
 dingo eval-retrieval --tasks SciFact LitSearch --max-queries 50 --max-workers 4 \
   --api-url http://localhost:8080
+dingo eval-retrieval --backend agentic --tasks cjk_evalset_v1 \
+  --api-url https://api.sciverse.space --api-token <token> --limit 100
 
 # List available evaluators, groups
 dingo info                                # Show all (rules, LLM, groups)
@@ -306,6 +312,7 @@ When these events occur, update the corresponding files:
 | Event | Update |
 |-------|--------|
 | New evaluator added | Ensure registration decorator is correct; update `docs/metrics.md` |
+| TC609 documentation added or changed | Keep TC609-specific Markdown in `docs/tc609/`; keep the shared `docs/metrics.md` in place |
 | New datasource added | Update `requirements/runtime.txt`, `setup.py` extras if heavy, README install section |
 | New dependency added | Decide: `runtime.txt` (core) vs `setup.py` extras (heavy/optional); use lazy import for optional |
 | New MCP tool added | Update MCP Tools table in this file |

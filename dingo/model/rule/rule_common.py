@@ -171,20 +171,19 @@ class RuleAudioDataFormat(BaseRule):
         "category": "Rule-Based TEXT Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
         "metric_name": "RuleAudioDataFormat",
-        "description": "Check whether the audio data format is right",
+        "description": "Check whether the audio data format is right, include id, audio, text fields",
         "evaluation_results": ""
     }
 
-    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
 
-        raw_data = input_data.raw_data
+        record = input_data.to_dict()
         key_list = ["id", "audio", "text"]
-        if all(key in raw_data for key in key_list):
+        if all(key in record for key in key_list):
             res.label = [QualityLabel.QUALITY_GOOD]
         else:
             res.status = True
@@ -1305,20 +1304,19 @@ class RuleImageDataFormat(BaseRule):
         "category": "Rule-Based TEXT Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
         "metric_name": "RuleImageDataFormat",
-        "description": "Check whether the image data format is right",
+        "description": "Check whether the image data format is right, include img_id, image fields",
         "evaluation_results": ""
     }
 
-    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
 
-        raw_data = input_data.raw_data
+        record = input_data.to_dict()
         key_list = ["img_id", "image"]
-        if all(key in raw_data for key in key_list):
+        if all(key in record for key in key_list):
             res.label = [QualityLabel.QUALITY_GOOD]
         else:
             res.status = True
@@ -1655,20 +1653,19 @@ class RuleNlpDataFormat(BaseRule):
         "category": "Rule-Based TEXT Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
         "metric_name": "RuleNlpDataFormat",
-        "description": "Check whether the nlp data format is right",
+        "description": "Check whether the nlp data format is right, include track_id, content fields",
         "evaluation_results": ""
     }
 
-    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
 
-        raw_data = input_data.raw_data
+        record = input_data.to_dict()
         key_list = ["track_id", "content"]
-        if all(key in raw_data for key in key_list):
+        if all(key in record for key in key_list):
             res.label = [QualityLabel.QUALITY_GOOD]
         else:
             res.status = True
@@ -1826,20 +1823,19 @@ class RuleSftDataFormat(BaseRule):
         "category": "Rule-Based TEXT Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
         "metric_name": "RuleSftDataFormat",
-        "description": "Check whether the sft data format is right",
+        "description": "Check whether the sft data format is right, include track_id, type, prompt, completion fields",
         "evaluation_results": ""
     }
 
-    _required_fields = [RequiredField.CONTENT]
     dynamic_config = EvaluatorRuleArgs()
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
 
-        raw_data = input_data.raw_data
+        record = input_data.to_dict()
         key_list = ["track_id", "type", "prompt", "completion"]
-        if all(key in raw_data for key in key_list):
+        if all(key in record for key in key_list):
             res.label = [QualityLabel.QUALITY_GOOD]
         else:
             res.status = True
@@ -2204,19 +2200,17 @@ class RuleVedioDataFormat(BaseRule):
         "category": "Rule-Based TEXT Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
         "metric_name": "RuleVedioDataFormat",
-        "description": "Check whether the vedio data format is right",
+        "description": "Check whether the vedio data format is right, include id, video, text fields",
         "evaluation_results": ""
     }
     dynamic_config = EvaluatorRuleArgs()
 
-    _required_fields = [RequiredField.CONTENT]
-
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=cls.__name__)
-        raw_data = input_data.raw_data
+        record = input_data.to_dict()
         key_list = ["id", "video", "text"]
-        if all(key in raw_data for key in key_list):
+        if all(key in record for key in key_list):
             res.label = [QualityLabel.QUALITY_GOOD]
         else:
             res.status = True

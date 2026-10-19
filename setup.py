@@ -1,4 +1,59 @@
+import os
+import re
+import subprocess
+
 from setuptools import find_packages, setup
+from setuptools.command.build_py import build_py
+from setuptools.command.sdist import sdist
+
+_BUILD_INFO_RELPATH = os.path.join("dingo", "_build.py")
+_BUILD_INFO_TEMPLATE = (
+    '"""Build metadata, overwritten by the packaging script at release time."""\n\n'
+    'GIT_SHA = "{sha}"\n'
+)
+
+
+def _git_short_sha(repo_dir):
+    """Short commit sha of ``repo_dir`` when it is a git checkout, else None."""
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "--short=12", "HEAD"],
+            cwd=repo_dir, capture_output=True, text=True, timeout=10, check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    sha = completed.stdout.strip()
+    return sha if re.fullmatch(r"[0-9a-f]{7,40}", sha) else None
+
+
+def _stamp_build_info(target_root, repo_dir=None):
+    """Write the git sha into ``<target_root>/dingo/_build.py``.
+
+    Only ever touches the build/sdist copy, never the tracked source file, so a
+    build does not dirty the working tree. Without a git checkout (e.g. building
+    from an sdist, which already carries the stamped file) nothing changes and
+    GIT_SHA stays whatever the file holds, 'unknown' by default.
+    """
+    sha = _git_short_sha(repo_dir or os.path.dirname(os.path.abspath(__file__)))
+    if sha is None:
+        return
+    target = os.path.join(target_root, _BUILD_INFO_RELPATH)
+    if os.path.isfile(target):
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(_BUILD_INFO_TEMPLATE.format(sha=sha))
+
+
+class _StampedBuildPy(build_py):
+    def run(self):
+        super().run()
+        _stamp_build_info(self.build_lib)
+
+
+class _StampedSdist(sdist):
+    def make_release_tree(self, base_dir, files):
+        super().make_release_tree(base_dir, files)
+        _stamp_build_info(base_dir)
+
 
 with open("README.md", "r", encoding='utf-8') as fh:
     long_description = fh.read()
@@ -45,6 +100,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/MigoXLab/dingo",
+    cmdclass={"build_py": _StampedBuildPy, "sdist": _StampedSdist},
     packages=find_packages(),
     package_data={"dingo.retrieval.tasks": ["*.json"]},
     include_package_data=True,

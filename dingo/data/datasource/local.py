@@ -51,7 +51,7 @@ class LocalDataSource(DataSource):
         for _f in os.listdir(path):
             f = os.path.join(path, _f)
             if os.path.isfile(f):
-                if getattr(self.input_args.dataset, "format", None) == "jsonl":
+                if getattr(self.input_args.dataset, "format", None) in ("jsonl", "ms_swift"):
                     if f.lower().endswith(".jsonl"):
                         file_list.append(f)
                 elif getattr(self.input_args.dataset, "format", None) == "json":

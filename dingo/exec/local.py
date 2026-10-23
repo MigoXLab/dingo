@@ -90,7 +90,11 @@ class LocalExecutor(ExecProto):
                 futures_results = []
                 for data in batch:
                     dingo_id += 1
-                    r_i = ResultInfo(dingo_id = str(dingo_id), raw_data = data.to_dict())
+                    r_i = ResultInfo(
+                        dingo_id=str(dingo_id),
+                        raw_data=data.to_dict(),
+                        derived_fields=data._derived_fields,
+                    )
                     futures_results.append(r_i)
 
                     for e_p in self.input_args.evaluator:
@@ -419,6 +423,8 @@ class LocalExecutor(ExecProto):
 
     def _build_output_json(self, input_args: InputArgs, result_info: ResultInfo) -> str:
         field_list = self._resolve_field_list(input_args)
+        if input_args.dataset.format == "ms_swift":
+            result_info = result_info.without_derived_fields()
         if input_args.executor.result_save.raw:
             output_data = result_info.to_raw_dict(field_list=field_list)
         else:

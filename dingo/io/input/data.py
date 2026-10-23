@@ -1,6 +1,6 @@
-from typing import Any, Dict
+from typing import Any, Dict, Set
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 
 
 class Data(BaseModel):
@@ -8,6 +8,9 @@ class Data(BaseModel):
     Data, output of converter.
     Flexible data structure that allows any fields to be configured.
     """
+
+    # Per-record converter metadata; never included in evaluator field mappings.
+    _derived_fields: Set[str] = PrivateAttr(default_factory=set)
 
     class Config:
         extra = "allow"

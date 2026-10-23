@@ -7,6 +7,40 @@ from dingo.io.output.result_info import ResultInfo
 
 
 class TestResultInfo:
+    @pytest.mark.parametrize("raw", [False, True])
+    def test_without_derived_fields_preserves_source_and_results(self, raw):
+        field = "RuleAgentTraceLoopDetection_content"
+        original = {
+            "messages": [{"role": "user", "content": "test"}],
+            "metadata": {field: "nested source value"},
+            "LLMAgentTaskCompletion_prompt": "untracked source value",
+            field: "derived value",
+            "dingo_id": "source-id",
+            "dingo_result": {"source": True},
+            "dingo_id_old_v1": "earlier-id",
+        }
+        result = ResultInfo(
+            dingo_id="new-id", raw_data=original, eval_status=True,
+            derived_fields={field},
+        )
+        cleaned = result.without_derived_fields()
+        assert cleaned.raw_data == {key: value for key, value in original.items() if key != field}
+        assert result.raw_data == original
+        assert cleaned.without_derived_fields().raw_data == cleaned.raw_data
+        assert "derived_fields" not in cleaned.model_dump()
+        output = cleaned.to_raw_dict() if raw else cleaned.to_dict()
+        source = output if raw else output["raw_data"]
+        assert field not in source
+        assert source["metadata"][field] == "nested source value"
+        assert source["LLMAgentTaskCompletion_prompt"] == "untracked source value"
+        if raw:
+            assert output["dingo_id_old_v1"] == "earlier-id"
+            assert output["dingo_id_old_v2"] == "source-id"
+            assert output["dingo_result_old_v1"] == {"source": True}
+        else:
+            assert source["dingo_id"] == "source-id"
+            assert output["eval_status"] is True
+
     def test_to_raw_dict_field_list_none_no_filter(self):
         result_info = ResultInfo(
             dingo_id="dingo-1",

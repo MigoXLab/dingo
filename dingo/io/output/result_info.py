@@ -3,7 +3,7 @@ import json
 from collections.abc import Mapping
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +23,15 @@ class ResultInfo(BaseModel):
         default_factory=dict,
         exclude=True,
     )
+    derived_fields: Set[str] = Field(default_factory=set, exclude=True)
+
+    def without_derived_fields(self) -> "ResultInfo":
+        """Return an output copy without converter-generated top-level raw fields."""
+        cleaned_raw_data = {
+            key: value for key, value in self.raw_data.items()
+            if key not in self.derived_fields
+        }
+        return self.model_copy(update={"raw_data": cleaned_raw_data})
 
     @staticmethod
     def _eval_detail_to_dict(model_res: EvalDetail) -> Dict[str, Any]:

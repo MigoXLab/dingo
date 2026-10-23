@@ -33,7 +33,7 @@
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
 | source | str | "hugging_face" | Yes | 数据源类型，可选值：['hugging_face', 'local'] |
-| format | str | "json" | Yes | 数据格式，可选值：['json', 'jsonl', 'plaintext', 'listjson', 'csv', 'parquet', 'md', 'mineru', 'mineru_v2'] |
+| format | str | "json" | Yes | 数据格式，可选值：['json', 'jsonl', 'ms_swift', 'plaintext', 'listjson', 'csv', 'parquet', 'md', 'mineru', 'mineru_v2'] |
 | field | object | - | Yes | 字段映射配置 |
 | hf_config | object | - | No | HuggingFace 特定配置 |
 | mineru_config | object | - | No | MinerU 格式特定配置（仅 mineru / mineru_v2 格式使用） |
@@ -54,6 +54,13 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 - `mineru_v2`：对应 MinerU 的 `content_list_v2.json`，顶层为页面数组，每页包含 block 数组
 
 每个 block 会被转换为一条 `Data` 记录。block 的 `type`、`bbox`、`page_idx` 等原始字段会通过 Pydantic `extra="allow"` 保留在 Data 对象上。
+
+#### ms-swift 格式 (dataset.format = "ms_swift")
+
+读取 Agent 轨迹 JSONL，每行一个包含 `messages` 数组的对象。保留原始字段，
+只为 `evaluator[].evals` 中选中的已支持指标生成 `<指标名>_<字段名>` 字段。
+每个指标使用独立的 `fields` 映射配置块。当前支持四个指标，映射及配置示例见
+[ms-swift converter 使用说明](ms_swift_converter.md)。
 
 #### DatasetField 配置 (dataset.field)
 

@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from dingo.config import InputArgs
@@ -8,6 +10,89 @@ from dingo.model import Model
 
 
 class TestLocal:
+    @pytest.mark.parametrize("raw", [False, True])
+    @pytest.mark.parametrize("merge", [False, True])
+    def test_ms_swift_evaluates_derived_fields_and_cleans_saved_records(
+        self, tmp_path, monkeypatch, raw, merge,
+    ):
+        monkeypatch.setenv("LOCAL_DEPLOYMENT_MODE", "true")
+        field = "RuleAgentTraceLoopDetection_content"
+        records = []
+        for index in range(2):
+            records.append({
+                "data_id": f"trace-{index}",
+                "metadata": {field: "nested source value"},
+                "LLMAgentToolCorrectness_content": "unselected source field",
+                "messages": [{"role": "assistant", "tool_calls": [
+                    {"function": {"name": "search", "arguments": {
+                        "query": "same" if index == 0 else str(call),
+                    }}} for call in range(6)
+                ]}],
+            })
+        input_path = tmp_path / "traces.jsonl"
+        input_path.write_text(
+            "\n".join(json.dumps(record) for record in records), encoding="utf-8",
+        )
+        args = InputArgs(
+            input_path=str(input_path), output_path=str(tmp_path / "outputs"),
+            dataset={"source": "local", "format": "ms_swift"},
+            executor={"batch_size": 2, "max_workers": 2, "result_save": {
+                "raw": raw, "merge": merge, "good": True, "all_labels": True,
+            }},
+            evaluator=[{"fields": {"content": field}, "evals": [
+                {"name": "RuleAgentTraceLoopDetection"},
+            ]}],
+        )
+        executor = LocalExecutor(args)
+        summary = executor.execute()
+        assert (summary.total, summary.num_bad, summary.num_good) == (2, 1, 1)
+        good = executor.get_good_info_list()
+        bad = executor.get_bad_info_list()
+        assert len(good) == len(bad) == 1
+        for output in bad + good:
+            source = output if raw else output["raw_data"]
+            assert field not in source
+            assert "derived_fields" not in output
+            assert "_derived_fields" not in source
+            index = int(source["data_id"].split("-")[1])
+            assert {key: source[key] for key in records[index]} == records[index]
+            details = output["dingo_result"]["eval_details"] if raw else output["eval_details"]
+            assert details[field][0]["metric"] == "RuleAgentTraceLoopDetection"
+
+    @pytest.mark.parametrize("raw", [False, True])
+    def test_ms_swift_cleanup_precedes_field_filter_and_full_field_samples(self, raw):
+        args = InputArgs(
+            dataset={"source": "local", "format": "ms_swift"},
+            executor={"result_save": {
+                "raw": raw, "full_field_sample_count": 1,
+                "field_list": ["dingo_id"] if raw else ["dingo_id", "raw_data"],
+            }},
+        )
+        executor = LocalExecutor(args)
+        result = ResultInfo(
+            dingo_id="1", raw_data={"data_id": "source", "derived": "temporary"},
+            derived_fields={"derived"},
+        )
+        first = json.loads(executor._build_output_json(args, result))
+        second = json.loads(executor._build_output_json(args, result))
+        assert "derived" not in (first if raw else first["raw_data"])
+        if raw:
+            assert first["data_id"] == "source"
+            assert second == {"dingo_id": "1"}
+        else:
+            assert second == {"dingo_id": "1", "raw_data": {"data_id": "source"}}
+        assert result.raw_data["derived"] == "temporary"
+
+    @pytest.mark.parametrize("raw", [False, True])
+    def test_non_ms_swift_output_does_not_remove_tracked_fields(self, raw):
+        args = InputArgs(
+            dataset={"source": "local", "format": "jsonl"},
+            executor={"result_save": {"raw": raw}},
+        )
+        result = ResultInfo(raw_data={"content": "original"}, derived_fields={"content"})
+        output = json.loads(LocalExecutor(args)._build_output_json(args, result))
+        assert (output if raw else output["raw_data"])["content"] == "original"
+
     def test_execute_preserves_user_provided_task_id(self, tmp_path):
         input_path = tmp_path / "input.jsonl"
         input_path.write_text('{"content": "test"}\n', encoding="utf-8")

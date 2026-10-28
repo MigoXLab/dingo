@@ -58,6 +58,22 @@ def _load_trace_items(content: Any, primary_key: str, secondary_key: str) -> Lis
     return items if isinstance(items, list) else []
 
 
+def _empty_derived_input_result(cls: type, input_data: Data) -> Optional[EvalDetail]:
+    """Return an issue immediately when a converter-derived input is empty."""
+    content = getattr(input_data, "content", None)
+    if isinstance(content, str) and content.strip():
+        return None
+
+    result = EvalDetail(metric=cls.__name__)
+    result.status = True
+    result.verdict = "issue"
+    result.label = [f"{cls.__name__}.ContentNull"]
+    result.reason = [
+        "Metric input is empty because the required source fields could not be extracted"
+    ]
+    return result
+
+
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
 class RuleAgentTraceLoopDetection(BaseRule):
     """Detect repetitive tool call patterns indicating infinite loops.
@@ -94,6 +110,9 @@ class RuleAgentTraceLoopDetection(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
         result = EvalDetail(metric=cls.__name__)
 
         calls = cls._extract_calls(input_data.content)
@@ -240,6 +259,9 @@ class RuleAgentTraceTokenBudget(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
         result = EvalDetail(metric=cls.__name__)
 
         budget = 500_000
@@ -352,6 +374,9 @@ class RuleAgentTraceLatencyAnomaly(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
         result = EvalDetail(metric=cls.__name__)
 
         steps = cls._extract_steps(input_data.content)
@@ -662,6 +687,9 @@ class RuleAgentTraceDestructiveAction(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
         result = EvalDetail(metric=cls.__name__)
         calls = _safety_calls(input_data.content)
         findings: List[str] = []
@@ -729,6 +757,9 @@ class RuleAgentTraceSensitiveAccess(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
         result = EvalDetail(metric=cls.__name__)
         calls = _safety_calls(input_data.content)
         findings: List[str] = []
@@ -772,6 +803,9 @@ class RuleAgentTraceSecretExposure(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
         result = EvalDetail(metric=cls.__name__)
         calls = _safety_calls(input_data.content)
         findings: List[str] = []
@@ -821,6 +855,9 @@ class RuleAgentTraceGatewayBypass(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
         result = EvalDetail(metric=cls.__name__)
         calls = _safety_calls(input_data.content)
         findings: List[str] = []
@@ -899,6 +936,9 @@ class RuleAgentTraceIntegrity(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
         result = EvalDetail(metric=cls.__name__)
 
         try:
@@ -1027,6 +1067,9 @@ class RuleAgentTraceSandboxExplicitlyDisabled(BaseRule):
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
         result = EvalDetail(metric=cls.__name__)
         calls = _safety_calls(input_data.content)
 

@@ -11,6 +11,9 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 辅助字段置为空，不会阻断同一条记录的其他 preparer。当前 24 个辅助字段的运行时
 类型均为字符串，因此失败值均为 `""`；合法的空工具调用仍保留为 JSON 字符串
 `{"tool_calls":[]}`（或对应的合法空结构），不与提取失败混淆。
+9 个 Agent Rule 和 7 个 Agent LLM metric 收到空 `content` 时会立即返回各自的
+字段空值标签 `<类名>.ContentNull`，不再执行后续质检逻辑；具体指标名仍记录在
+`EvalDetail.metric` 中。LLM metric 也不会创建客户端或发起模型请求。
 
 下文每节都给出 **fields 配置、源字段映射、转换步骤、输入示例和转换结果**。
 `content` 辅助字段的实际类型是 **JSON 字符串**；为便于阅读，示例展示其

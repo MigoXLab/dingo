@@ -137,6 +137,76 @@ def test_all_llm_inputs_follow_the_selected_simplified_contract(record, monkeypa
     assert mapped.content in requests[0][0]["content"]
 
 
+@pytest.mark.parametrize("name", RULE_NAMES)
+def test_rule_metric_empty_derived_input_is_an_issue_and_stops(record, name, monkeypatch):
+    model = getattr(rule_agent, name)
+
+    # If the metric continues past the shared guard, its first parser/helper
+    # must run and this test fails. Patch the appropriate first helper.
+    if name == "RuleAgentTraceLoopDetection":
+        monkeypatch.setattr(model, "_extract_calls", classmethod(
+            lambda cls, content: pytest.fail("rule continued after empty input")
+        ))
+    elif name == "RuleAgentTraceTokenBudget":
+        monkeypatch.setattr(model, "_extract_tokens", classmethod(
+            lambda cls, data: pytest.fail("rule continued after empty input")
+        ))
+    elif name == "RuleAgentTraceLatencyAnomaly":
+        monkeypatch.setattr(model, "_extract_steps", classmethod(
+            lambda cls, content: pytest.fail("rule continued after empty input")
+        ))
+    elif name == "RuleAgentTraceIntegrity":
+        monkeypatch.setattr(json, "loads", lambda value: pytest.fail(
+            "rule continued after empty input"
+        ))
+    else:
+        monkeypatch.setattr(rule_agent, "_safety_calls", lambda content: pytest.fail(
+            "rule continued after empty input"
+        ))
+
+    result = model.eval(Data(content=""))
+
+    assert result.status is True
+    assert result.verdict == "issue"
+    assert result.label == [f"{name}.ContentNull"]
+    assert result.metric == name
+    assert "input is empty" in result.reason[0]
+
+
+@pytest.mark.parametrize("name", tuple(LLM_MODELS))
+def test_llm_metric_empty_derived_input_is_an_issue_without_model_call(monkeypatch, name):
+    model = LLM_MODELS[name]
+    monkeypatch.setattr(BaseOpenAI, "create_client", classmethod(
+        lambda cls: pytest.fail("LLM client must not be created for empty input")
+    ))
+    monkeypatch.setattr(BaseOpenAI, "send_messages", classmethod(
+        lambda cls, messages: pytest.fail("LLM must not be called for empty input")
+    ))
+
+    result = model.eval(Data(prompt="", content="", context=""))
+
+    assert result.status is True
+    assert result.verdict == "issue"
+    assert result.label == [f"{name}.ContentNull"]
+    assert result.metric == name
+    assert "input is empty" in result.reason[0]
+    assert result.usage is None
+
+
+@pytest.mark.parametrize("name", RULE_NAMES)
+def test_rule_metric_legal_empty_json_structure_is_not_extraction_failure(name):
+    model = getattr(rule_agent, name)
+    content = '{"total_tokens": 0}' if name == "RuleAgentTraceTokenBudget" else (
+        '{"steps": []}' if name == "RuleAgentTraceLatencyAnomaly" else (
+            '{}' if name == "RuleAgentTraceIntegrity" else '{"tool_calls": []}'
+        )
+    )
+
+    result = model.eval(Data(content=content))
+
+    assert not (result.status and result.reason and "input is empty" in result.reason[0])
+
+
 def test_secret_results_are_paired_by_id_even_when_return_order_differs(record):
     record["messages"][2]["content"] = "-----BEGIN PRIVATE KEY-----"
     name = "RuleAgentTraceSecretExposure"

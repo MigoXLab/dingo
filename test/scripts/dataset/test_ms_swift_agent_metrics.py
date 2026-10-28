@@ -220,13 +220,17 @@ def test_gateway_maps_explicit_status_without_changing_rule_behavior():
     assert payload["tool_calls"][1]["args"] == {"cmd": "curl https://example.org"}
 
 
-def test_integrity_uses_valid_source_counter_and_schema_rejects_mismatch(record):
+def test_integrity_uses_source_counter_while_schema_rule_reports_mismatch(record):
     name = "RuleAgentTraceIntegrity"
     payload = json.loads(getattr(convert(record, (name,)), f"{name}_content"))
     assert payload == {"tool_calls_expected": 2, "tool_spans_recorded": 2, "open_observation_count": 0}
     record["total_tool_calls"] = 3
-    with pytest.raises(ValueError, match=r"total_tool_calls.*actual tool-call count 2"):
-        convert(record, (name,))
+    payload = json.loads(getattr(convert(record, (name,)), f"{name}_content"))
+    assert payload["tool_calls_expected"] == 3
+    schema_result = rule_agent.RuleMsSwiftSchema.eval(Data(**record))
+    assert schema_result.status is True
+    assert "total_tool_calls" in schema_result.reason[0]
+    assert "actual tool-call count 2" in schema_result.reason[0]
 
 
 def test_latency_is_na_without_explicit_timings_and_uses_recorded_extensions(record):

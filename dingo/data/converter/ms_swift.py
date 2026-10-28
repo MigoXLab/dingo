@@ -11,7 +11,6 @@ from typing import Any, Callable, Dict, Union
 
 from dingo.config import InputArgs
 from dingo.data.converter.base import BaseConverter
-from dingo.data.converter.ms_swift_schema import validate_ms_swift_record
 from dingo.io import Data
 
 
@@ -415,7 +414,6 @@ class MsSwiftConverter(BaseConverter):
                     ) from error
             else:
                 record = raw
-            validate_ms_swift_record(record)
 
             converted = dict(record)
             derived_fields = set()

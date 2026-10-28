@@ -5,7 +5,8 @@ import pytest
 
 from dingo.config import InputArgs
 from dingo.data.converter import converters
-from dingo.data.converter.ms_swift_schema import validate_ms_swift_record
+from dingo.io import Data
+from dingo.model.rule.rule_agent import RuleMsSwiftSchema
 
 REQUIRED_TOP_LEVEL_FIELDS = (
     "messages", "tools", "termination", "source", "harness", "model",
@@ -21,6 +22,14 @@ def convert(record, names=()):
         evaluator=[{"evals": [{"name": name}]} for name in names],
     )
     return converters["ms_swift"].convertor(args)(record)
+
+
+def validate_ms_swift_record(record):
+    """Exercise schema validation through its evaluator, not the converter."""
+    result = RuleMsSwiftSchema.eval(Data(**record))
+    if result.status:
+        raise ValueError(result.reason[0])
+    return result
 
 
 @pytest.mark.parametrize("field", REQUIRED_TOP_LEVEL_FIELDS)
@@ -53,7 +62,7 @@ def test_developer_message_role_is_valid():
     assert '"role": "developer"' in converted.LLMAgentTaskCompletion_content
 
 
-def test_validation_runs_before_any_derived_field_preparer(monkeypatch):
+def test_converter_does_not_run_schema_validation_before_preparer(monkeypatch):
     import dingo.data.converter.ms_swift as module
 
     calls = []
@@ -65,9 +74,9 @@ def test_validation_runs_before_any_derived_field_preparer(monkeypatch):
     monkeypatch.setitem(module._PREPARERS, "RuleAgentTraceLoopDetection", prepare)
     record = standard_ms_swift_record()
     record.pop("tools")
-    with pytest.raises(ValueError, match=r"missing required field.*tools"):
-        convert(record, ("RuleAgentTraceLoopDetection",))
-    assert calls == []
+    converted = convert(record, ("RuleAgentTraceLoopDetection",))
+    assert calls == ["called"]
+    assert converted.RuleAgentTraceLoopDetection_content == "{}"
 
 
 @pytest.mark.parametrize("message, missing", [
@@ -155,5 +164,6 @@ def test_mismatch_detail_requires_its_standard_fields():
 
 
 def test_invalid_json_has_format_error():
+    # JSON syntax must still be parsed before a Data object can reach any rule.
     with pytest.raises(ValueError, match=r"malformed: invalid JSON"):
         convert("{not json")

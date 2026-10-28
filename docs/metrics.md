@@ -189,6 +189,12 @@ Only the following six TC609 rule metrics are currently registered. The 0206 and
 |------|--------|-------------|--------------|-------------------|----------|
 | `AgentHallucination` | AgentHallucination | Agent-based hallucination detection with automatic web search for missing context | Internal Implementation | N/A | N/A |
 
+### Agent Trace Schema Metrics
+
+| Type | Metric | Description | Paper Source | Evaluation Results | Examples |
+|------|--------|-------------|--------------|-------------------|----------|
+| `AGENT_TRACE_QUALITY` | RuleMsSwiftSchema | Checks a raw ms-swift record for required fields, field types, nested message and tool-call structure, and declared-count consistency. It reads the complete record directly and requires no converter-derived field. | Internal Implementation | N/A | N/A |
+
 ### Text Generation
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |

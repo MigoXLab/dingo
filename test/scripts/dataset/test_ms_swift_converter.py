@@ -111,10 +111,13 @@ def test_generates_only_selected_evaluator_fields(record, name):
     assert data._derived_fields == expected
 
 
-def test_format_validation_precedes_llm_projection(record):
+def test_llm_projection_does_not_perform_full_schema_validation(record):
     record["messages"][2]["tool_calls"] = "not a valid tool call list"
-    with pytest.raises(ValueError, match="tool_calls must be a list"):
-        converters["ms_swift"].convertor(make_args(("LLMAgentTaskCompletion",)))(record)
+    converted = converters["ms_swift"].convertor(
+        make_args(("LLMAgentTaskCompletion",))
+    )(record)
+    assert converted.messages[2]["tool_calls"] == "not a valid tool call list"
+    assert converted.LLMAgentTaskCompletion_content
 
 
 @pytest.mark.parametrize("names", [(), ("RuleAbnormalChar",)])
@@ -227,20 +230,20 @@ def test_local_dataset_reads_jsonl_records_and_filters_directory(tmp_path, recor
     assert all(json.loads(item.RuleAgentTraceLoopDetection_content)["tool_calls"] for item in data)
 
 
-def test_missing_required_delivery_fields_has_actionable_error():
-    with pytest.raises(ValueError, match=r"missing required field.*tools"):
-        converters["ms_swift"].convertor(make_args(()))({"messages": []})
+def test_converter_preserves_record_without_running_full_schema_validation():
+    converted = converters["ms_swift"].convertor(make_args(()))({"messages": []})
+    assert converted.messages == []
 
 
-@pytest.mark.parametrize("mutate, message", [
-    (lambda item: item.update(messages=[None]), r"messages\[0\] must be an object"),
-    (lambda item: item.update(messages=[{
+@pytest.mark.parametrize("mutate", [
+    lambda item: item.update(messages=[None]),
+    lambda item: item.update(messages=[{
         "role": "assistant", "content": "", "reasoning_content": "", "tool_calls": {},
-    }]), "tool_calls must be a list"),
-    (lambda item: item["messages"][0].pop("content"), r"messages\[0\].*missing required field.*content"),
+    }]),
+    lambda item: item["messages"][0].pop("content"),
 ])
-def test_invalid_structure_has_actionable_error(mutate, message):
+def test_converter_leaves_invalid_structure_for_schema_rule(mutate):
     record = standard_ms_swift_record(messages=[{"role": "user", "content": "x"}])
     mutate(record)
-    with pytest.raises(ValueError, match=message):
-        converters["ms_swift"].convertor(make_args(()))(record)
+    converted = converters["ms_swift"].convertor(make_args(()))(record)
+    assert converted.messages == record["messages"]

@@ -180,13 +180,16 @@ def test_rule_preparers_accept_non_object_arguments_allowed_by_standard(record, 
     "RuleAgentTraceLatencyAnomaly", "RuleAgentTraceSecretExposure",
 ))
 @pytest.mark.parametrize("duplicate_call", [False, True])
-def test_ambiguous_call_ids_fail_instead_of_using_the_wrong_result(record, name, duplicate_call):
+def test_ambiguous_call_ids_produce_empty_metric_input(record, name, duplicate_call):
     if duplicate_call:
         record["messages"][1]["tool_calls"][1]["id"] = "a"
     else:
         record["messages"][2]["tool_call_id"] = "a"
-    with pytest.raises(ValueError, match="duplicate"):
-        convert(record, (name,))
+    converted = convert(record, (name,))
+    assert getattr(converted, f"{name}_content") == ""
+    schema_result = rule_agent.RuleMsSwiftSchema.eval(Data(**record))
+    assert schema_result.status is True
+    assert "duplicate" in schema_result.reason[0]
 
 
 def test_gateway_maps_explicit_status_without_changing_rule_behavior():

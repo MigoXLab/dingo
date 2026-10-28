@@ -23,6 +23,9 @@ EVALUATORS = (
     "LLMAgentToolCorrectness",
     "RuleAgentTraceDestructiveAction",
 )
+ALL_PREPARER_NAMES = tuple(
+    importlib.import_module("dingo.data.converter.ms_swift")._PREPARERS
+)
 
 
 def make_args(names=EVALUATORS, **kwargs):
@@ -99,14 +102,13 @@ def test_independent_fields_and_source_preservation(record, as_json):
         ]}
 
 
-@pytest.mark.parametrize("name", EVALUATORS)
+@pytest.mark.parametrize("name", ALL_PREPARER_NAMES)
 def test_generates_only_selected_evaluator_fields(record, name):
+    module = importlib.import_module("dingo.data.converter.ms_swift")
     data = converters["ms_swift"].convertor(make_args((name,)))(record)
     converted = data.to_dict()
     added = set(converted) - set(record)
-    expected = {f"{name}_content"}
-    if name.startswith("LLM"):
-        expected.add(f"{name}_prompt")
+    expected = set(module._PREPARER_EMPTY_OUTPUTS[name])
     assert added == expected
     assert data._derived_fields == expected
 
@@ -140,6 +142,87 @@ def test_tracks_actual_fields_per_record_without_a_static_list(monkeypatch):
     assert first._derived_fields == {"custom_first"}
     assert second._derived_fields == {"custom_second"}
     assert pickle.loads(pickle.dumps(first))._derived_fields == {"custom_first"}
+
+
+def test_every_preparer_has_an_explicit_typed_empty_output_contract():
+    module = importlib.import_module("dingo.data.converter.ms_swift")
+
+    assert set(module._PREPARER_EMPTY_OUTPUTS) == set(module._PREPARERS)
+    assert all(
+        isinstance(value, str)
+        for fields in module._PREPARER_EMPTY_OUTPUTS.values()
+        for value in fields.values()
+    )
+
+
+@pytest.mark.parametrize("name", ALL_PREPARER_NAMES)
+def test_preparer_failure_sets_only_its_declared_fields_to_typed_empty_values(
+    monkeypatch, record, name,
+):
+    module = importlib.import_module("dingo.data.converter.ms_swift")
+
+    def fail(_record):
+        raise RuntimeError("extraction failed")
+
+    monkeypatch.setitem(module._PREPARERS, name, fail)
+    converted = converters["ms_swift"].convertor(make_args((name,)))(record)
+    expected = module._PREPARER_EMPTY_OUTPUTS[name]
+
+    assert {field: getattr(converted, field) for field in expected} == expected
+    assert converted._derived_fields == set(expected)
+
+
+def test_one_preparer_failure_does_not_block_other_preparers(monkeypatch, record):
+    module = importlib.import_module("dingo.data.converter.ms_swift")
+
+    def fail(_record):
+        raise TypeError("bad source type")
+
+    monkeypatch.setitem(module._PREPARERS, "RuleAgentTraceLoopDetection", fail)
+    converted = converters["ms_swift"].convertor(make_args((
+        "RuleAgentTraceLoopDetection",
+        "RuleAgentTraceTokenBudget",
+    )))(record)
+
+    assert converted.RuleAgentTraceLoopDetection_content == ""
+    assert json.loads(converted.RuleAgentTraceTokenBudget_content) == {}
+
+
+def test_missing_shared_source_only_empties_dependent_preparers(record):
+    record.pop("messages")
+    converted = converters["ms_swift"].convertor(make_args(ALL_PREPARER_NAMES))(record)
+
+    for name in ALL_PREPARER_NAMES:
+        content = getattr(converted, f"{name}_content")
+        if name == "RuleAgentTraceTokenBudget":
+            assert json.loads(content) == {}
+        else:
+            assert content == ""
+
+
+@pytest.mark.parametrize("messages", [None, {}, [None], [{"role": 1, "content": "x"}]])
+def test_invalid_shared_message_structure_empties_dependent_preparers(record, messages):
+    record["messages"] = messages
+    converted = converters["ms_swift"].convertor(make_args(ALL_PREPARER_NAMES))(record)
+
+    for name in ALL_PREPARER_NAMES:
+        content = getattr(converted, f"{name}_content")
+        if name == "RuleAgentTraceTokenBudget":
+            assert json.loads(content) == {}
+        else:
+            assert content == ""
+
+
+def test_invalid_message_content_empties_llm_fields_but_not_rule_fields(record):
+    record["messages"][0]["content"] = None
+    converted = converters["ms_swift"].convertor(make_args(ALL_PREPARER_NAMES))(record)
+
+    for name in ALL_PREPARER_NAMES:
+        content = getattr(converted, f"{name}_content")
+        if name.startswith("LLM"):
+            assert content == ""
+        else:
+            assert content != ""
 
 
 def test_rejects_derived_field_collision_without_overwriting_source(record):

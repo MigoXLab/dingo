@@ -14,11 +14,25 @@ from dingo.data.converter.base import BaseConverter
 from dingo.io import Data
 
 
+def _messages(record: Dict[str, Any]) -> list:
+    """Return messages only when their shared structure is extractable."""
+    messages = record.get("messages")
+    if not isinstance(messages, list):
+        raise TypeError("ms_swift messages must be a list")
+    for index, message in enumerate(messages):
+        if not isinstance(message, dict):
+            raise TypeError(f"ms_swift messages[{index}] must be an object")
+        if not isinstance(message.get("role"), str):
+            raise TypeError(f"ms_swift messages[{index}].role must be a string")
+    return messages
+
+
 def _messages_content(record: Dict[str, Any]) -> str:
-    messages = [
-        {"role": message.get("role", ""), "content": message.get("content", "")}
-        for message in record["messages"]
-    ]
+    messages = []
+    for index, message in enumerate(_messages(record)):
+        if not isinstance(message.get("content"), str):
+            raise TypeError(f"ms_swift messages[{index}].content must be a string")
+        messages.append({"role": message["role"], "content": message["content"]})
     return json.dumps(messages, ensure_ascii=False)
 
 
@@ -46,7 +60,7 @@ def prepare_llm_agent_task_completion(record: Dict[str, Any]) -> Dict[str, str]:
 def prepare_rule_agent_trace_loop_detection(record: Dict[str, Any]) -> Dict[str, str]:
     """Prepare ordered names and arguments for loop detection."""
     calls = []
-    for message_index, message in enumerate(record["messages"]):
+    for message_index, message in enumerate(_messages(record)):
         if message.get("role") != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
@@ -76,7 +90,7 @@ def prepare_llm_agent_tool_correctness(record: Dict[str, Any]) -> Dict[str, str]
 def prepare_rule_agent_trace_destructive_action(record: Dict[str, Any]) -> Dict[str, str]:
     """Prepare tool arguments as recorded, including unchanged ``cmd`` keys."""
     calls = []
-    for message_index, message in enumerate(record["messages"]):
+    for message_index, message in enumerate(_messages(record)):
         if message.get("role") != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
@@ -98,7 +112,7 @@ def prepare_rule_agent_trace_destructive_action(record: Dict[str, Any]) -> Dict[
 def prepare_rule_agent_trace_gateway_bypass(record: Dict[str, Any]) -> Dict[str, str]:
     """Associate policy responses and explicit execution status by call ID."""
     observations = {}
-    for index, message in enumerate(record["messages"]):
+    for index, message in enumerate(_messages(record)):
         call_id = message.get("tool_call_id")
         if message.get("role") == "tool" and isinstance(call_id, str) and call_id:
             if call_id in observations:
@@ -106,7 +120,7 @@ def prepare_rule_agent_trace_gateway_bypass(record: Dict[str, Any]) -> Dict[str,
             observations[call_id] = message
     calls = []
     seen_ids = set()
-    for message_index, message in enumerate(record["messages"]):
+    for message_index, message in enumerate(_messages(record)):
         if message.get("role") != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
@@ -145,7 +159,7 @@ def prepare_rule_agent_trace_gateway_bypass(record: Dict[str, Any]) -> Dict[str,
 def prepare_rule_agent_trace_integrity(record: Dict[str, Any]) -> Dict[str, str]:
     """Check delivered-file counters without claiming upstream completeness."""
     observations = {}
-    for index, message in enumerate(record["messages"]):
+    for index, message in enumerate(_messages(record)):
         call_id = message.get("tool_call_id")
         if message.get("role") == "tool" and isinstance(call_id, str) and call_id:
             if call_id in observations:
@@ -154,7 +168,7 @@ def prepare_rule_agent_trace_integrity(record: Dict[str, Any]) -> Dict[str, str]
     tool_spans_recorded = 0
     open_observation_count = 0
     seen_ids = set()
-    for message_index, message in enumerate(record["messages"]):
+    for message_index, message in enumerate(_messages(record)):
         if message.get("role") != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
@@ -189,7 +203,7 @@ def prepare_rule_agent_trace_integrity(record: Dict[str, Any]) -> Dict[str, str]
 def prepare_rule_agent_trace_latency_anomaly(record: Dict[str, Any]) -> Dict[str, str]:
     """Use only explicitly recorded per-call timings and peer groups."""
     observations = {}
-    for index, message in enumerate(record["messages"]):
+    for index, message in enumerate(_messages(record)):
         call_id = message.get("tool_call_id")
         if message.get("role") == "tool" and isinstance(call_id, str) and call_id:
             if call_id in observations:
@@ -197,7 +211,7 @@ def prepare_rule_agent_trace_latency_anomaly(record: Dict[str, Any]) -> Dict[str
             observations[call_id] = message
     steps = []
     seen_ids = set()
-    for message_index, message in enumerate(record["messages"]):
+    for message_index, message in enumerate(_messages(record)):
         if message.get("role") != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
@@ -236,7 +250,7 @@ def prepare_rule_agent_trace_latency_anomaly(record: Dict[str, Any]) -> Dict[str
 def prepare_rule_agent_trace_sandbox_explicitly_disabled(record: Dict[str, Any]) -> Dict[str, str]:
     """Preserve the explicit sandbox-disable argument."""
     calls = []
-    for message_index, message in enumerate(record["messages"]):
+    for message_index, message in enumerate(_messages(record)):
         if message.get("role") != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
@@ -258,7 +272,7 @@ def prepare_rule_agent_trace_sandbox_explicitly_disabled(record: Dict[str, Any])
 def prepare_rule_agent_trace_secret_exposure(record: Dict[str, Any]) -> Dict[str, str]:
     """Supply actual tool observations matched by ID, never by array position."""
     observations = {}
-    for index, message in enumerate(record["messages"]):
+    for index, message in enumerate(_messages(record)):
         call_id = message.get("tool_call_id")
         if message.get("role") == "tool" and isinstance(call_id, str) and call_id:
             if call_id in observations:
@@ -266,7 +280,7 @@ def prepare_rule_agent_trace_secret_exposure(record: Dict[str, Any]) -> Dict[str
             observations[call_id] = message
     calls = []
     seen_ids = set()
-    for message_index, message in enumerate(record["messages"]):
+    for message_index, message in enumerate(_messages(record)):
         if message.get("role") != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
@@ -305,7 +319,7 @@ def prepare_rule_agent_trace_secret_exposure(record: Dict[str, Any]) -> Dict[str
 def prepare_rule_agent_trace_sensitive_access(record: Dict[str, Any]) -> Dict[str, str]:
     """Preserve parameter structure for the rule's sensitive-path scan."""
     calls = []
-    for message_index, message in enumerate(record["messages"]):
+    for message_index, message in enumerate(_messages(record)):
         if message.get("role") != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
@@ -390,6 +404,54 @@ _PREPARERS = {
     "LLMAgentStepEfficiency": prepare_llm_agent_step_efficiency,
 }
 
+# Empty values follow each preparer's public output contract. All current
+# ms-swift derived fields are strings: rule ``content`` fields contain JSON
+# strings on success, while LLM ``prompt``/``content``/``context`` fields are
+# plain strings. Keep this mapping explicit so a future list/dict field can use
+# []/{} here instead of being guessed from its name.
+_PREPARER_EMPTY_OUTPUTS = {
+    "LLMAgentTaskCompletion": {
+        "LLMAgentTaskCompletion_prompt": "",
+        "LLMAgentTaskCompletion_content": "",
+    },
+    "RuleAgentTraceLoopDetection": {"RuleAgentTraceLoopDetection_content": ""},
+    "LLMAgentToolCorrectness": {
+        "LLMAgentToolCorrectness_prompt": "",
+        "LLMAgentToolCorrectness_content": "",
+    },
+    "RuleAgentTraceDestructiveAction": {"RuleAgentTraceDestructiveAction_content": ""},
+    "RuleAgentTraceGatewayBypass": {"RuleAgentTraceGatewayBypass_content": ""},
+    "RuleAgentTraceIntegrity": {"RuleAgentTraceIntegrity_content": ""},
+    "RuleAgentTraceLatencyAnomaly": {"RuleAgentTraceLatencyAnomaly_content": ""},
+    "RuleAgentTraceSandboxExplicitlyDisabled": {
+        "RuleAgentTraceSandboxExplicitlyDisabled_content": "",
+    },
+    "RuleAgentTraceSecretExposure": {"RuleAgentTraceSecretExposure_content": ""},
+    "RuleAgentTraceSensitiveAccess": {"RuleAgentTraceSensitiveAccess_content": ""},
+    "RuleAgentTraceTokenBudget": {"RuleAgentTraceTokenBudget_content": ""},
+    "LLMAgentArgumentCorrectness": {
+        "LLMAgentArgumentCorrectness_prompt": "",
+        "LLMAgentArgumentCorrectness_content": "",
+    },
+    "LLMAgentErrorRecovery": {
+        "LLMAgentErrorRecovery_prompt": "",
+        "LLMAgentErrorRecovery_content": "",
+    },
+    "LLMAgentPlanAdherence": {
+        "LLMAgentPlanAdherence_prompt": "",
+        "LLMAgentPlanAdherence_content": "",
+        "LLMAgentPlanAdherence_context": "",
+    },
+    "LLMAgentPlanQuality": {
+        "LLMAgentPlanQuality_prompt": "",
+        "LLMAgentPlanQuality_content": "",
+    },
+    "LLMAgentStepEfficiency": {
+        "LLMAgentStepEfficiency_prompt": "",
+        "LLMAgentStepEfficiency_content": "",
+    },
+}
+
 
 @BaseConverter.register("ms_swift")
 class MsSwiftConverter(BaseConverter):
@@ -402,7 +464,11 @@ class MsSwiftConverter(BaseConverter):
             for pipeline in input_args.evaluator
             for evaluator in pipeline.evals
         }
-        preparers = [prepare for name, prepare in _PREPARERS.items() if name in selected_names]
+        preparers = [
+            (name, prepare)
+            for name, prepare in _PREPARERS.items()
+            if name in selected_names
+        ]
 
         def _convert(raw: Union[str, Dict[str, Any]]) -> Data:
             if isinstance(raw, str):
@@ -417,8 +483,15 @@ class MsSwiftConverter(BaseConverter):
 
             converted = dict(record)
             derived_fields = set()
-            for prepare in preparers:
-                extra_fields = prepare(record)
+            for name, prepare in preparers:
+                try:
+                    extra_fields = prepare(record)
+                except Exception:
+                    # Extraction failures are data-level gaps for this metric,
+                    # not a reason to discard the record or block other metrics.
+                    # Each evaluator receives empty values of its declared type
+                    # and decides how to report the missing input.
+                    extra_fields = dict(_PREPARER_EMPTY_OUTPUTS[name])
                 conflicts = extra_fields.keys() & converted.keys()
                 if conflicts:
                     raise ValueError(

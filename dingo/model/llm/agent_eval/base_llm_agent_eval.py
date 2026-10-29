@@ -61,6 +61,29 @@ class BaseLLMAgentEval(BaseOpenAI):
     default_threshold: float = 0.6
 
     @classmethod
+    def _empty_input_result(cls, input_data: Data) -> Optional[EvalDetail]:
+        """Return an issue before creating a client when derived content is empty."""
+        content = getattr(input_data, "content", None)
+        if isinstance(content, str) and content.strip():
+            return None
+
+        result = EvalDetail(metric=cls.__name__)
+        result.status = True
+        result.verdict = "issue"
+        result.label = [f"{cls.__name__}.ContentNull"]
+        result.reason = [
+            "Metric input is empty because the required source fields could not be extracted"
+        ]
+        return result
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = cls._empty_input_result(input_data)
+        if empty_result is not None:
+            return empty_result
+        return super().eval(input_data)
+
+    @classmethod
     def _detect_language_hint(cls, text: str) -> str:
         """Which language to answer in, said explicitly either way.
 

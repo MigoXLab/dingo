@@ -7,6 +7,13 @@
 converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并保留原始记录。
 每个指标单独配置 `evaluator[].fields`，映射到自己的 `<指标名>_<字段名>`。
 全部指标同时选择时共生成 24 个辅助字段；同一指标重复配置时，每条记录只转换一次。
+每个 preparer 独立提取；源字段缺失、类型错误或其他提取异常只会使该指标负责的
+辅助字段置为空，不会阻断同一条记录的其他 preparer。当前 24 个辅助字段的运行时
+类型均为字符串，因此失败值均为 `""`；合法的空工具调用仍保留为 JSON 字符串
+`{"tool_calls":[]}`（或对应的合法空结构），不与提取失败混淆。
+9 个 Agent Rule 和 7 个 Agent LLM metric 收到空 `content` 时会立即返回各自的
+字段空值标签 `<类名>.ContentNull`，不再执行后续质检逻辑；具体指标名仍记录在
+`EvalDetail.metric` 中。LLM metric 也不会创建客户端或发起模型请求。
 
 下文每节都给出 **fields 配置、源字段映射、转换步骤、输入示例和转换结果**。
 `content` 辅助字段的实际类型是 **JSON 字符串**；为便于阅读，示例展示其
@@ -15,7 +22,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 ## 一、输入约定
 
-- converter 按《轨迹数据的标准化格式》的完整交付口径校验每条记录，校验与所选指标无关，并且发生在生成任何辅助字段之前。
+- converter 保留原始记录并为所选指标生成辅助字段，不执行完整交付格式校验。需要检查《轨迹数据的标准化格式》时，配置不带 `fields` 映射的 `RuleMsSwiftSchema`；该规则直接读取完整原始记录，并与其他指标独立执行。
 - 顶层必选字段为：`messages`、`tools`、`termination`、`source`、`harness`、`model`、`total_rounds`、`total_tool_calls`、`tool_counts`、`reasoning_total_tokens`、`tool_defs_tag`、`missing_tool_defs`、`tool_call_tag`、`tool_call_check`、`server_tool_calls`、`metadata`、`completeness_tag`、`completeness`。字段必须存在且类型正确，允许规范明确支持的空字符串、空数组或空对象。
 - `sub_agent_trajectory` 和 `sub_agent_relay_mounts` 是可选字段；存在 `sub_agent_trajectory` 时递归校验每个子轨迹。子轨迹不要求顶层专属的 `completeness_tag` 和 `completeness`。
 - 所有消息必须包含字符串型 `role` 和 `content`；允许的角色为 `system`、`developer`、`user`、`assistant`、`tool`。assistant 消息还必须包含字符串型 `reasoning_content`；tool 消息还必须包含字符串型 `tool_call_id` 和 `name`。

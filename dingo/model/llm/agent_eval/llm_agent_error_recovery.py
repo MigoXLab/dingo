@@ -117,6 +117,10 @@ Evaluate the agent's error recovery and return the JSON evaluation.{lang_hint}""
         this class's ``build_messages`` and inherited ``process_response`` — no
         need to duplicate the retry loop and error fallback here.
         """
+        empty_result = cls._empty_input_result(input_data)
+        if empty_result is not None:
+            return empty_result
+
         content = getattr(input_data, "content", "") or ""
 
         if not cls._has_error_events(content):

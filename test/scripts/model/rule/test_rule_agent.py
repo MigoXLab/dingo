@@ -7,6 +7,7 @@ cases (JSON ``null`` values, non-dict items) that previously raised
 """
 
 import json
+from test.scripts.ms_swift_test_utils import standard_ms_swift_record
 
 import pytest
 
@@ -14,7 +15,7 @@ from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
 from dingo.io.output.eval_detail import QualityLabel
 from dingo.model.model import Model
-from dingo.model.rule.rule_agent import RuleAgentTraceLatencyAnomaly, RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget
+from dingo.model.rule.rule_agent import RuleAgentTraceLatencyAnomaly, RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget, RuleMsSwiftSchema
 
 
 def _data(content: str) -> Data:
@@ -381,3 +382,51 @@ class TestPassingVerdictsExplainThemselves:
         res = RuleAgentTraceLatencyAnomaly.eval(_data(content))
         assert res.status is False
         assert "Too few timed steps" in res.reason[0]
+
+
+class TestRuleMsSwiftSchema:
+    def test_complete_record_passes(self):
+        result = RuleMsSwiftSchema.eval(Data(**standard_ms_swift_record()))
+
+        assert result.status is False
+        assert result.label == [QualityLabel.QUALITY_GOOD]
+        assert "matches" in result.reason[0]
+
+    def test_missing_field_is_flagged_with_path(self):
+        record = standard_ms_swift_record()
+        record["tool_call_check"]["mismatches"] = [{
+            "tool": "read",
+            "tool_call_id": "call-1",
+            "message_index": 0,
+            "reasons": ["type_mismatch"],
+            "extra_args": [],
+            "missing_required": [],
+        }]
+
+        result = RuleMsSwiftSchema.eval(Data(**record))
+
+        assert result.status is True
+        assert result.label == ["AGENT_TRACE_QUALITY.RuleMsSwiftSchema"]
+        assert "tool_call_check.mismatches[0]" in result.reason[0]
+        assert "type_mismatch" in result.reason[0]
+
+    def test_wrong_field_type_is_flagged(self):
+        record = standard_ms_swift_record()
+        record["messages"] = None
+
+        result = RuleMsSwiftSchema.eval(Data(**record))
+
+        assert result.status is True
+        assert "ms_swift.messages must be a list" in result.reason[0]
+
+    def test_converter_derived_fields_do_not_affect_schema_result(self):
+        record = standard_ms_swift_record()
+        record["RuleAgentTraceLoopDetection_content"] = '{"tool_calls": []}'
+
+        result = RuleMsSwiftSchema.eval(Data(**record))
+
+        assert result.status is False
+
+    def test_rule_is_registered_without_field_requirements(self):
+        assert Model.rule_name_map["RuleMsSwiftSchema"] is RuleMsSwiftSchema
+        assert RuleMsSwiftSchema._required_fields == []

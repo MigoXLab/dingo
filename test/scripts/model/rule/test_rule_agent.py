@@ -7,10 +7,9 @@ cases (JSON ``null`` values, non-dict items) that previously raised
 """
 
 import json
+from test.scripts.ms_swift_test_utils import standard_ms_swift_record
 
 import pytest
-
-from test.scripts.ms_swift_test_utils import standard_ms_swift_record
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data

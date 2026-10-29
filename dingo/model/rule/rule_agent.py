@@ -1444,6 +1444,7 @@ def _validate_trajectory(record: Any, path: str, *, top_level: bool) -> None:
                 trajectory, f"{path}.sub_agent_trajectory[{call_id!r}]", top_level=False,
             )
 
+
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
 class RuleMsSwiftSchema(BaseRule):
     """Validate one raw ms-swift record against the delivery schema.

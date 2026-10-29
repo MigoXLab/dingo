@@ -90,10 +90,14 @@ Evaluate whether this text is suitable for LLM pretraining. Flag only clear, mat
   - If only a LaTeX delimiter, required brace, or environment terminator is missing and parsing fails, use Formula_Unparseable instead.
   - Do not flag valid shorthand, an omitted derivation, or a term that is only suspected to be absent from domain knowledge.
 
-  **Formula_Token_Corruption** — Formula characters, numbers, variables, or symbols are misrecognized, substituted, split, merged, or replaced by garbage.
-  - Examples include `1.18` becoming `1 1 8`, `10^{-3}` becoming `1 0^{-3}`, `N_2` becoming `\Nu_2`, `lx` becoming `1x`, a variable becoming `�` or `□`, or `Var` becoming `V a r`.
-  - Include corrupted decimal points, Greek/Latin letter substitutions, wrong OCR lookalikes, repeated garbage characters, and damaged chemical symbols when the input itself supports the corruption.
-  - Do not flag valid Unicode math, legitimate variable naming, harmless LaTeX spacing, or unfamiliar notation.
+  **Formula_Token_Corruption** — Formula characters, numbers, variables, or symbols are misrecognized, substituted, merged, or replaced by garbage. A split is corruption only when it changes parsing, rendered output, or mathematical/scientific meaning.
+  - Judge the parsed and rendered expression, not cosmetic source tokenization. Before flagging whitespace, apply normal LaTeX math-mode whitespace semantics: ordinary unescaped spaces and line breaks between digits, letters, decimal points, signs, or before brace arguments are normally ignored.
+  - If removing only such ordinary whitespace leaves the same parsed structure, visible glyph sequence, and meaning, do not flag it. For example, `$3 7 ^ { \circ } \mathrm { C }$`, `$1 1 . 8 \times 1 0 ^ { 3 }$`, `$2 0 4 8 ^ { 2 }$`, and `$1 . 0 \times 1 0 ^ { - 1 4 }$` are not corrupted solely because of those spaces.
+  - Flag a split only when it is output-bearing or changes token identity, such as visible spaces in plain-text math, spaces preserved inside `\text{...}`, explicit spacing commands inserted inside one number, or a command name broken into invalid pieces. If the split instead makes the formula unparseable, use Formula_Unparseable.
+  - Clear corruption examples include `N_2` becoming `\Nu_2`, `SO_2` becoming `S0_2`, `lx` becoming `1x`, `1.18` losing its decimal point and becoming `118`, or a variable becoming `�` or `□`.
+  - Include corrupted decimal points, Greek/Latin letter substitutions, wrong OCR lookalikes, repeated garbage characters, and damaged chemical symbols only when visible evidence supports an actual rendered or semantic change.
+  - Do not flag valid Unicode math, legitimate variable naming, unfamiliar notation, harmless LaTeX spacing, whitespace used to terminate a control word, or source formatting that merely increases tokenizer segmentation.
+  - Do not cite ignored source whitespace as defect evidence, and do not count a formula under `Formula_Token_Corruption` or `error_formula_count` solely because of it.
   - If an external citation, page number, question number, or word is inserted into a formula, use Formula_Extra_Content instead.
   - Do not use domain knowledge alone to replace one valid-looking symbol with another.
 
@@ -134,6 +138,7 @@ Evaluate whether this text is suitable for LLM pretraining. Flag only clear, mat
   - Normal `\\` line breaks in alignment, cases, or matrix environments.
   - Correct formula-related HTML such as `<sub>x</sub>` and `<sup>2</sup>`.
   - Mixing LaTeX and HTML in web-extracted content when the expressions remain correct and readable.
+  - Ordinary ignored whitespace inside LaTeX math, including spaced digits, decimals, scientific notation, and exponents, when the rendered expression is unchanged.
   - Plain-text math such as `a^2 + b^2 = c^2` without LaTeX delimiters when the target format allows it and the expression is complete.
   - A prose passage that mentions a result without displaying its derivation.
   - An isolated recoverable OCR typo that does not materially affect formula meaning.
@@ -511,6 +516,10 @@ Input: "def total(values):
 
 print(total([1, 2, 3]))"
 Output: [{"score": 1, "type": "Good", "name": "None", "reason": "The Python code has clear boundaries, valid indentation, and intact syntax even without a Markdown fence"}]
+
+**Example 1.11 (Good - Render-Equivalent LaTeX Spacing)**:
+Input: "The culture was maintained at $3 7 ^ { \circ } \mathrm { C }$. The measured value was $1 1 . 8 \times 1 0 ^ { 3 }$, and the simulation used $2 0 4 8 ^ { 2 }$ grid points."
+Output: [{"score": 1, "type": "Good", "name": "None", "reason": "Ordinary spaces inside these LaTeX math expressions are ignored by the renderer, so 37°C, 11.8 × 10³, and 2048² remain intact"}]
 
 **Example 2 (Bad - Entire Formula Missing)**:
 Input: "The compound has the following structure: [Chemical Formula 1]. In Formula 1, R is hydrogen and n is an integer from 1 to 6."

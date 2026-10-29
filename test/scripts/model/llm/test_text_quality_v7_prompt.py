@@ -41,6 +41,20 @@ def test_v7_prompt_uses_detailed_formula_labels():
         assert f"`0 / Completeness / {label}`" in LLMTextQualityV7.prompt
 
 
+def test_v7_prompt_treats_render_equivalent_formula_spacing_as_good():
+    prompt = LLMTextQualityV7.prompt
+
+    assert "Judge the parsed and rendered expression" in prompt
+    assert "not corrupted solely because of those spaces" in prompt
+    assert "Do not cite ignored source whitespace as defect evidence" in prompt
+    assert "Good - Render-Equivalent LaTeX Spacing" in prompt
+    assert "$3 7 ^ { \\circ } \\mathrm { C }$" in prompt
+    assert "$1 1 . 8 \\times 1 0 ^ { 3 }$" in prompt
+    assert "$2 0 4 8 ^ { 2 }$" in prompt
+    assert "$1 . 0 \\times 1 0 ^ { - 1 4 }$" in prompt
+    assert "Examples include `1.18` becoming `1 1 8`" not in prompt
+
+
 def test_v7_prompt_uses_detailed_table_labels_in_expected_order():
     table_labels = [
         "Table_Missing",

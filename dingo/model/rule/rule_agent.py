@@ -1447,15 +1447,13 @@ def _validate_trajectory(record: Any, path: str, *, top_level: bool) -> None:
 
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
 class RuleMsSwiftSchema(BaseRule):
-    """Validate one raw ms-swift record against the delivery schema.
+    """Validate one raw ms-swift dataset record against the delivery schema.
 
-    Unlike the other agent rules, this rule consumes the complete ``Data``
-    object directly. It therefore has no converter preparer and requires no
-    ``fields`` mapping in evaluator configuration.
+    This is a regular record-level rule rather than an Agent Trace evaluator.
+    It consumes the complete ``Data`` object directly, so it has no converter
+    preparer and requires no ``fields`` mapping in evaluator configuration.
     """
 
-    eval_layer = "schema"
-    input_data_type = "ms_swift_record"
     _required_fields = []
 
     _metric_info = {

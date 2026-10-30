@@ -6,7 +6,7 @@ import pytest
 from dingo.config import InputArgs
 from dingo.data.converter import converters
 from dingo.io import Data
-from dingo.model.rule.rule_agent import RuleMsSwiftSchema
+from dingo.model.rule.agent_trace.rule_ms_swift import RuleMsSwiftSchema
 
 REQUIRED_TOP_LEVEL_FIELDS = (
     "messages", "tools", "termination", "source", "harness", "model",

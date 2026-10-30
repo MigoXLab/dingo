@@ -15,7 +15,8 @@ from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io import Data
 from dingo.io.output.eval_detail import QualityLabel
 from dingo.model.model import Model
-from dingo.model.rule.rule_agent import RuleAgentTraceLatencyAnomaly, RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget, RuleMsSwiftSchema
+from dingo.model.rule.agent_trace.rule_ms_swift import RuleMsSwiftSchema
+from dingo.model.rule.rule_agent import RuleAgentTraceLatencyAnomaly, RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget
 
 
 def _data(content: str) -> Data:
@@ -430,3 +431,5 @@ class TestRuleMsSwiftSchema:
     def test_rule_is_registered_without_field_requirements(self):
         assert Model.rule_name_map["RuleMsSwiftSchema"] is RuleMsSwiftSchema
         assert RuleMsSwiftSchema._required_fields == []
+        assert not hasattr(RuleMsSwiftSchema, "eval_layer")
+        assert not hasattr(RuleMsSwiftSchema, "input_data_type")

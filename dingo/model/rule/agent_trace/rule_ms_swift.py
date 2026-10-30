@@ -383,4 +383,3 @@ class RuleMsSwiftSchema(BaseRule):
         result.label = [QualityLabel.QUALITY_GOOD]
         result.reason = ["The record matches the standardized ms-swift schema"]
         return result
-

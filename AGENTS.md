@@ -50,6 +50,8 @@ dingo/
 │   │   ├── rule/            ← Rule-based evaluators (80+ built-in)
 │   │   │   ├── base.py      ← BaseRule
 │   │   │   ├── rule_common.py ← Common rules (text quality, format, PII, etc.)
+│   │   │   ├── agent_trace/
+│   │   │   │   └── rule_ms_swift.py ← ms-swift standardized-delivery validation
 │   │   │   ├── guobiao/
 │   │   │   │   └── rule_tc609_quality.py ← TC609 quality metrics and placeholders
 │   │   │   ├── rule_search_ranking.py ← IR ranking metrics (NDCG, MRR, Recall, Precision, MAP, HitRate)
@@ -174,7 +176,7 @@ MinerU formats automatically flatten blocks into `Data` objects, preserving all 
 
 The `ms_swift` converter lives in `dingo/data/converter/ms_swift.py`. Full
 standardized-delivery validation belongs to `RuleMsSwiftSchema` in
-`dingo/model/rule/rule_agent.py`; converter preparation is independent of schema validation. It prepares
+`dingo/model/rule/agent_trace/rule_ms_swift.py`; converter preparation is independent of schema validation. It prepares
 independent `<EvaluatorName>_<field>` fields for all 9 deterministic Agent rules
 and 7 Agent LLM metrics, only when selected in `evaluator[].evals`.
 Each deterministic rule owns its parsing and field assembly in its `prepare_*`

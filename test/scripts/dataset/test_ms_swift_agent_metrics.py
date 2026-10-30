@@ -14,6 +14,7 @@ from dingo.io import Data, ResultInfo
 from dingo.model import Model
 from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.model.rule import rule_agent
+from dingo.model.rule.agent_trace.rule_ms_swift import RuleMsSwiftSchema
 
 RULE_NAMES = (
     "RuleAgentTraceDestructiveAction", "RuleAgentTraceGatewayBypass", "RuleAgentTraceIntegrity",
@@ -257,7 +258,7 @@ def test_ambiguous_call_ids_produce_empty_metric_input(record, name, duplicate_c
         record["messages"][2]["tool_call_id"] = "a"
     converted = convert(record, (name,))
     assert getattr(converted, f"{name}_content") == ""
-    schema_result = rule_agent.RuleMsSwiftSchema.eval(Data(**record))
+    schema_result = RuleMsSwiftSchema.eval(Data(**record))
     assert schema_result.status is True
     assert "duplicate" in schema_result.reason[0]
 
@@ -300,7 +301,7 @@ def test_integrity_uses_source_counter_while_schema_rule_reports_mismatch(record
     record["total_tool_calls"] = 3
     payload = json.loads(getattr(convert(record, (name,)), f"{name}_content"))
     assert payload["tool_calls_expected"] == 3
-    schema_result = rule_agent.RuleMsSwiftSchema.eval(Data(**record))
+    schema_result = RuleMsSwiftSchema.eval(Data(**record))
     assert schema_result.status is True
     assert "total_tool_calls" in schema_result.reason[0]
     assert "actual tool-call count 2" in schema_result.reason[0]

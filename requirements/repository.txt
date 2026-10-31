@@ -1,0 +1,2 @@
+# Repository-code syntax and truncation checks (optional)
+tree-sitter-language-pack>=0.9.0

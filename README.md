@@ -136,7 +136,10 @@ pip install "dingo-python[hhem]"
 # With retrieval benchmark evaluation (MTEB + pytrec-eval-terrier)
 pip install "dingo-python[retrieval]"
 
-# With all features (HHEM + Agent + Retrieval)
+# With repository-code Tree-sitter truncation detection
+pip install "dingo-python[repository]"
+
+# With all features (HHEM + Agent + Retrieval + Repository)
 pip install "dingo-python[all]"
 ```
 

@@ -207,6 +207,7 @@ pip install dingo-python                # Core (includes all datasource support)
 pip install "dingo-python[hhem]"        # + HHEM hallucination detection (transformers + torch)
 pip install "dingo-python[agent]"       # + Agent-based evaluation (langchain)
 pip install "dingo-python[retrieval]"   # + Retrieval benchmark evaluation (mteb, tqdm)
+pip install "dingo-python[repository]"  # + Tree-sitter repository truncation detection
 pip install "dingo-python[all]"         # + Everything
 ```
 

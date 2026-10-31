@@ -29,6 +29,7 @@ class LocalExecutor(ExecProto):
         self.summary: SummaryModel = SummaryModel()
         self._full_field_written_count: int = 0
         self._file_written_count: Dict[str, int] = {}
+        self._evaluator_prepare_states: Dict[str, object] = {}
 
     def load_data(self) -> Generator[Data, None, None]:
         """
@@ -90,6 +91,7 @@ class LocalExecutor(ExecProto):
                 futures_results = []
                 for data in batch:
                     dingo_id += 1
+                    self._prepare_data_for_evaluators(data, str(dingo_id))
                     r_i = ResultInfo(
                         dingo_id=str(dingo_id),
                         raw_data=data.to_dict(),
@@ -102,6 +104,11 @@ class LocalExecutor(ExecProto):
                             map_data = {k: data.to_dict().get(v) for k, v in e_p.fields.items()}
                         else:
                             map_data = data.to_dict()
+                        for eval_config in e_p.evals:
+                            model_cls = Model.llm_name_map.get(eval_config.name)
+                            for field in getattr(model_cls, "_prepared_fields", ()) if model_cls else ():
+                                if hasattr(data, field):
+                                    map_data[field] = getattr(data, field)
                         eval_list_rule = [eval for eval in e_p.evals if eval.name in Model.rule_name_map]
                         eval_list_llm = [eval for eval in e_p.evals if eval.name in Model.llm_name_map]
                         # rule
@@ -184,6 +191,18 @@ class LocalExecutor(ExecProto):
         self.write_summary(self.summary.output_path, self.input_args, self.summary)
 
         return self.summary
+
+    def _prepare_data_for_evaluators(self, data: Data, ref: str) -> None:
+        """Run opt-in streaming preprocessors before concurrent evaluation."""
+        for evaluator_group in self.input_args.evaluator:
+            for eval_config in evaluator_group.evals:
+                model_cls = Model.llm_name_map.get(eval_config.name)
+                if model_cls is None or not hasattr(model_cls, "prepare_record"):
+                    continue
+                state_key = eval_config.name
+                if state_key not in self._evaluator_prepare_states:
+                    self._evaluator_prepare_states[state_key] = model_cls.prepare_state(eval_config.config)
+                model_cls.prepare_record(data, self._evaluator_prepare_states[state_key], ref)
 
     def evaluate_single_data(self, dingo_id: str, eval_fields: dict, eval_type: str, map_data: dict, eval_list: list) -> ResultInfo:
         """

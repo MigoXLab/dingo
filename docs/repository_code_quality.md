@@ -28,7 +28,8 @@ It combines per-record model review with deterministic and cross-record rules.
 | Token-shingle near duplicate | `Similarity.Token_Shingle_Near_Duplicate` | 5-token shingles, token ratio at least 0.80, Jaccard at least 0.90 |
 | Repeated license header | `Similarity.License_Header_Duplicate` | Normalized leading comment/license block |
 
-Cross-record findings are prepared in input order before concurrent evaluation. The first
+Cross-record findings are annotated by the `repository_jsonl` converter in input order
+during the load phase, before concurrent evaluation. The first
 record in a duplicate group is retained as the representative and is not marked duplicate.
 Schema, input/content, and truncation checks are hard gates: a hit marks the record bad and
 skips all LLM stages for that record. Truncation applies to code with 80–2,000,000 characters,
@@ -77,5 +78,11 @@ PYTHONPATH=. python examples/repository_code_quality/evaluate_repository_executo
 
 Use `--start-index` and `--end-index` for bounded smoke tests. Evaluator field mapping
 is intentionally empty so all repository metadata remains available to tokenization,
-duplicate grouping, and result traceability. Input uses Dingo's standard `jsonl` converter;
-malformed JSON is treated as a data-loading error rather than a repository quality label.
+duplicate grouping, and result traceability. Input uses the `repository_jsonl` converter:
+standard JSONL parsing plus streaming cross-record duplicate annotation; malformed JSON is
+treated as a data-loading error rather than a repository quality label. The derived field
+findings travel to the evaluator as the extra field `repository_duplicate_findings`;
+because Dingo only auto-strips derived fields for ms-swift outputs, flagged records also
+keep that field in saved result raw_data as duplicate provenance. Under distributed Spark
+execution the converter state is worker-local, so cross-record checks degrade to
+within-partition scope.

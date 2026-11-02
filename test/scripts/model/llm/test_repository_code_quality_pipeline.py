@@ -268,7 +268,7 @@ def test_pipeline_merges_prepared_and_stage_findings(monkeypatch):
     monkeypatch.setattr(LLMRepositoryCodeQualityPipeline, "_run_stage", classmethod(fake_stage))
     data = repository_data(
         'password = "actual-production-password"\n' + ("repeat line\n" * 100),
-        _repository_duplicate_findings=[{"label": "Similarity.License_Header_Duplicate", "reason": "duplicate"}],
+        repository_duplicate_findings=[{"label": "Similarity.License_Header_Duplicate", "reason": "duplicate"}],
     )
     result = LLMRepositoryCodeQualityPipeline.eval(data)
     assert result.applicable

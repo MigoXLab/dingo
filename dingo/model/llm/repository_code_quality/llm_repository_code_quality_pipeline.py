@@ -13,7 +13,7 @@ from dingo.model.llm.repository_code_quality.llm_repository_security_review impo
 from dingo.model.llm.repository_code_quality.llm_repository_sensitive_review import LLMRepositorySensitiveReview
 from dingo.model.llm.repository_code_quality.schema_rules import REQUIRED_FIELDS, schema_findings
 from dingo.model.llm.repository_code_quality.sensitive_rules import confirmed_security_findings, contextual_security_candidates, security_candidates, security_evidence
-from dingo.model.llm.repository_code_quality.similarity_rules import RepositoryDuplicateIndex, intra_document_repetition, record_reference
+from dingo.model.llm.repository_code_quality.similarity_rules import intra_document_repetition
 from dingo.model.llm.repository_code_quality.truncation_rules import code_truncation_finding
 
 
@@ -21,7 +21,6 @@ from dingo.model.llm.repository_code_quality.truncation_rules import code_trunca
 class LLMRepositoryCodeQualityPipeline(BaseCodeEvaluation):
     """Schema, completeness, security, effectiveness, and similarity review."""
 
-    _prepared_fields = ("_repository_duplicate_findings",)
     # The schema hard gate in eval() validates exactly these fields, so they are
     # the metric contract. Field-mapping consumers (e.g. Dingo SaaS) project each
     # record down to the required fields; advertising only `content` made every
@@ -43,15 +42,6 @@ class LLMRepositoryCodeQualityPipeline(BaseCodeEvaluation):
         ),
         "examples": "examples/repository_code_quality/evaluate_repository_executor.py",
     }
-
-    @classmethod
-    def prepare_state(cls, _config=None):
-        return RepositoryDuplicateIndex()
-
-    @classmethod
-    def prepare_record(cls, data, state, ref):
-        findings = state.annotate(data, record_reference(data, ref))
-        object.__setattr__(data, "_repository_duplicate_findings", findings)
 
     @classmethod
     def _run_stage(cls, evaluator, input_data, config):
@@ -99,7 +89,7 @@ class LLMRepositoryCodeQualityPipeline(BaseCodeEvaluation):
             except Exception as exc:
                 stage_results.append((name, execution_error(evaluator.__name__, type(exc).__name__)))
 
-        findings = list(getattr(input_data, "_repository_duplicate_findings", []) or [])
+        findings = list(getattr(input_data, "repository_duplicate_findings", []) or [])
         findings.extend(confirmed_security_findings(candidates))
         repeated = intra_document_repetition(input_data.content)
         if repeated:

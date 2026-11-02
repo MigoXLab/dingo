@@ -66,7 +66,7 @@ def test_runner_uses_local_executor_and_preserves_repository_fields(
 
     config = configs[0]
     assert config.executor.max_workers == 3
-    assert config.dataset.format == "jsonl"
+    assert config.dataset.format == "repository_jsonl"
     assert config.evaluator[0].fields == {}
     evaluator = config.evaluator[0].evals[0]
     assert evaluator.name == "LLMRepositoryCodeQualityPipeline"

@@ -35,6 +35,66 @@ _SSN_CONTEXT = re.compile(r"(?i)\b(?:ssn|social[_ -]?security)\b")
 _EIN_CONTEXT = re.compile(r"(?i)\b(?:ein|employer[_ -]?identification|tax[_ -]?(?:id|number))\b")
 _COOKIE_CONTEXT = re.compile(r"(?i)\b(?:set-cookie|cookie|session(?:id)?|csrf)\b")
 _INTERNAL_DOMAIN = re.compile(r"\b[a-z0-9.-]+\.(?:corp|internal|intranet|lan|localdomain)\b", re.I)
+_IMPORT_LINE = re.compile(r"^\s*(?:import|package|from|use|require|include|namespace|xmlns)\b", re.I)
+_NAME_LABEL = re.compile(
+    r"(?i)^(?:(?:full|person|customer|client|user|contact|patient|student|candidate|employee|first|"
+    r"last|middle|display|account|member|guest|vendor|buyer|seller|owner|applicant|recipient|sender|"
+    r"party|individual)[ _-]?)+names?$"
+)
+_ROLE_EMAIL_LOCAL = re.compile(
+    r"(?i)^(?:info|information|support|help|helpdesk|admin|administrator|webmaster|postmaster|"
+    r"hostmaster|abuse|noreply|no-reply|donotreply|do-not-reply|contact|contacts|sales|marketing|"
+    r"office|hello|feedback|mail|email|team|legal|privacy|newsletter|news|jobs?|careers?|press|"
+    r"service|services|root|null|none|test|testing|example|user|users|everyone|all|license|"
+    r"licensing|bugs?|ops|noc|notifications?|subscribe|unsubscribe|git|github|web|www|ftp|lists?|"
+    r"listserv|billing|invoices?|orders?|donations?|donate|general|nobody|daemon|security|"
+    r"enquir(?:y|ies)|inquiries|reception|dev(?:elopment)?|devs?|devops)$"
+)
+_AUTHOR_MARKER = re.compile(
+    r"(?i)\b(?:copyright|authors?|maintainers?|created by|written by|maintained by|modified by|"
+    r"updated by|©|\(c\))"
+)
+_AUTHOR_PREFIX = re.compile(r"(?i)(?:\d{4}|by|copyright|authors?|created|written|maintained|modified|updated|from|of|c)$")
+_TEST_CARD_NUMBERS = (
+    "4242424242424242", "5555555555554444", "2223000048400010", "4012888888881881",
+    "378282246310005", "371449635398431", "6011111111111117", "3530111333300000",
+    "4000056655665556", "5200828282828210", "5105105105105100", "4111111111111111",
+)
+_MAX_CANDIDATES = 500
+_MAX_EVIDENCE_ITEMS = 20
+_ORG_NAME = re.compile(
+    r"(?i)\b(?:inc|llc|ltd|limited|corp|corporation|company|foundation|fund|team|authors?|"
+    r"contributors?|reserved|rights|university|universit\w*|institute|institutes?|labs?|"
+    r"laboratory|gmbh|plc|group|project|software|solutions?|services?|systems?|technologies|"
+    r"technology|holdings?|enterprises?|association|society|center|centre|council|committee|"
+    r"department|ministry|studio|studios?|media|holders?|partners?|bank|schools?|college|"
+    r"academy|agency|network|community|consortium|corporations?|industries|works)\b"
+)
+_CONN_STRING = re.compile(r"(?i)\b(?:jdbc:|data\s+source\s*=|initial\s+catalog\s*=|connection\s*string|server\s*=)")
+_VERSION_CONTEXT = re.compile(r"(?i)\b(?:version|release|revision|build|tag)\b|<version>|\bv\d+\.\d+")
+_OPENVPN_STATIC_KEY = re.compile(r"-----BEGIN OpenVPN Static key(?: V\d)?-----")
+_URL_CREDENTIAL_PARAM = re.compile(
+    r"(?i)[?&;][\w.-]*(?:api[_-]?key|apikey|key|token|access[_-]?token|auth[_-]?token|password|passwd|pwd|"
+    r"secret|signature|sig)=(?P<value>[A-Za-z0-9_./+~=-]{6,})"
+)
+_DOCUMENTATION_NETWORKS = (
+    ipaddress.ip_network("192.0.2.0/24"),
+    ipaddress.ip_network("198.51.100.0/24"),
+    ipaddress.ip_network("203.0.113.0/24"),
+)
+_PUBLIC_RESOLVERS = {"8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9", "208.67.222.222", "208.67.220.220"}
+_NAME_STOPWORDS = {
+    "all", "and", "any", "as", "at", "author", "authors", "be", "by", "code", "contract", "copyright",
+    "documentation", "each", "for", "from", "granted", "hereby", "in", "is", "it", "license", "licensed",
+    "not", "of", "on", "open", "or", "other", "others", "permission", "private", "project", "public",
+    "redistribution", "reserved", "rights", "same", "see", "software", "source", "team", "terms", "that",
+    "the", "this", "to", "under", "use", "used", "version", "warranty", "we", "with", "without",
+    "written", "you", "your",
+}
+_NAME_PARTICLES = {
+    "al", "bin", "da", "de", "del", "della", "der", "di", "dos", "du", "el", "ibn", "la", "le", "mac",
+    "mc", "st", "ten", "ter", "van", "von",
+}
 
 _CN_PROVINCES = {
     "11", "12", "13", "14", "15", "21", "22", "23", "31", "32", "33", "34", "35", "36", "37",
@@ -141,6 +201,133 @@ def _not_placeholder(value: str) -> bool:
     return bool(stripped) and not _PLACEHOLDER.fullmatch(stripped)
 
 
+_CREDENTIAL_NOISE = re.compile(
+    r"(?i)\b(?:process|env|environ|getenv|system|config|settings|self|this|ctx|context|require|"
+    r"import|function|return|new|null|undefined|true|false)\b"
+)
+
+
+def _credential_literal(value: str) -> str:
+    """Normalize an assignment value; return an empty string when it is not a literal."""
+    stripped = value.strip().strip("'\"").rstrip(",;")
+    if len(stripped) < 6 or re.search(r"[\[\]{}()<>]", stripped):
+        return ""
+    if stripped[0] in "$%&!~^|/.-":
+        return ""
+    if _CREDENTIAL_NOISE.search(stripped):
+        return ""
+    if "://" in stripped:
+        return ""
+    if re.fullmatch(r"\d+(?:\.\d+)*", stripped) or re.fullmatch(r"[0-9a-fA-F]{1,15}", stripped):
+        return ""
+    if re.fullmatch(r"(?:[A-Za-z_][A-Za-z0-9_]*\.)+[A-Za-z_][A-Za-z0-9_]*", stripped):
+        return ""
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", stripped) and not any(char.isdigit() for char in stripped):
+        return ""
+    if re.fullmatch(
+        r"(?i)(?:change[_-]?me|example|sample|demo|test|testing|dummy|placeholder|todo|"
+        r"foo|bar|baz|xxx+|your[_-]?\w*|<.*>)(?:[_-]\w+)*",
+        stripped,
+    ):
+        return ""
+    return stripped
+
+
+def _strong_unquoted_credential(value: str) -> bool:
+    """High-confidence literal: mixed classes or a long key-shaped token."""
+    stripped = _credential_literal(value)
+    if not stripped:
+        return False
+    if re.fullmatch(r"[0-9a-fA-F]{16,}", stripped):
+        return True
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", stripped):
+        return False
+    return bool(re.search(r"\d", stripped)) or bool(re.search(r"[-_@:/+=~%]", stripped))
+
+
+def _weak_unquoted_credential(value: str) -> bool:
+    """Identifier-shaped literal: keep as a contextual candidate for LLM adjudication."""
+    return bool(_credential_literal(value)) and not _strong_unquoted_credential(value)
+
+
+def _valid_url_credential(value: str) -> bool:
+    stripped = value.strip()
+    if len(stripped) < 6 or re.search(r"[\[\]{}()<>]", stripped) or stripped[0] in "$%&!~^|":
+        return False
+    return not re.fullmatch(
+        r"(?i)(?:example|sample|demo|dummy|test|your[_-]?\w*|xxx+|<.*>)(?:[_-]\w+)*", stripped
+    )
+
+
+def _valid_cookie_literal(value: str) -> bool:
+    if re.search(r"[A-Za-z_]\(", value):
+        return False
+    if re.fullmatch(r"(?:[A-Za-z_][A-Za-z0-9_]*\.)+[A-Za-z_][A-Za-z0-9_]*", value):
+        return False
+    return bool(re.search(r"\d", value)) or bool(re.search(r"[-/=%]", value))
+
+
+def _is_name_token(word: str) -> bool:
+    if len(word) < 2 or not word[0].isupper() or word.isupper():
+        return False
+    if any(char.isdigit() for char in word) or not any(char.islower() for char in word):
+        return False
+    return not _ORG_NAME.search(word) and word.lower() not in _NAME_STOPWORDS
+
+
+def _author_name_spans(line: str) -> list[tuple[int, int, str]]:
+    """Collect capitalized person-name sequences from a copyright/author line."""
+    tokens = [
+        (match.start(), match.end(), match.group(0))
+        for match in re.finditer(r"[A-Za-z'\u00c0-\u024f.-]+", line)
+    ]
+    spans: list[tuple[int, int, str]] = []
+    cursor = 0
+    while cursor < len(tokens):
+        start, previous_end, word = tokens[cursor]
+        if not _is_name_token(word):
+            cursor += 1
+            continue
+        name_end = previous_end
+        taken = 1
+        following = cursor + 1
+        while following < len(tokens):
+            next_start, next_end, next_word = tokens[following]
+            if next_start - previous_end != 1:
+                break
+            if _is_name_token(next_word):
+                previous_end = name_end = next_end
+                taken += 1
+                following += 1
+                continue
+            if next_word.lower() in _NAME_PARTICLES:
+                previous_end = next_end
+                following += 1
+                continue
+            break
+        if taken >= 2:
+            value = line[start:name_end].rstrip(".,;:")
+            prefix = line[:start].rstrip(" \t")
+            if len(value) >= 5 and " " in value and (
+                not prefix or prefix[-1] in ":<(=[\"'*/#,-" or _AUTHOR_PREFIX.search(prefix)
+            ):
+                spans.append((start, start + len(value), value))
+        cursor = max(following, cursor + 1)
+    return spans
+
+
+def _is_public_routable(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """True for real routable IPv4 literals worth reviewing as personal network identifiers."""
+    if address.version != 4:
+        return False
+    if (address.is_private or address.is_loopback or address.is_reserved or address.is_multicast
+            or address.is_unspecified or address.is_link_local):
+        return False
+    if str(address) in _PUBLIC_RESOLVERS:
+        return False
+    return not any(address in network for network in _DOCUMENTATION_NETWORKS)
+
+
 def _context_hint(line: str, start: int, end: int, kind: str) -> str:
     """Retain code structure while removing all likely values from the line."""
     hint = f"{line[:start]}[REDACTED:{kind}]{line[end:]}"
@@ -153,7 +340,7 @@ def _context_hint(line: str, start: int, end: int, kind: str) -> str:
 
 
 def _append(
-    output: list[dict[str, Any]], line: str, line_number: int, match: re.Match[str], *,
+    output: list[dict[str, Any]], line: str, line_number: int, match: re.Match[str] | None, *,
     category: str, kind: str, severity: str, confidence: str, validator: str,
     span: tuple[int, int] | None = None, matched_value: str | None = None,
 ) -> None:
@@ -177,10 +364,11 @@ def _scan(
 ) -> None:
     compiled = re.compile(pattern) if isinstance(pattern, str) else pattern
     for match in compiled.finditer(line):
-        value = match.groupdict().get("value", match.group(0))
+        groups = match.groupdict()
+        value = groups["value"] if groups.get("value") is not None else match.group(0)
         if not _not_placeholder(value) or (validate is not None and not validate(value)):
             continue
-        span = match.span("value") if "value" in match.groupdict() else match.span()
+        span = match.span("value") if "value" in groups else match.span()
         _append(output, line, line_number, match, category=category, kind=kind, severity=severity,
                 confidence=confidence, validator=validator, span=span, matched_value=value)
 
@@ -202,7 +390,11 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
             "context_hint": "[REDACTED:PRIVATE_KEY_BLOCK]",
             "matched_value": match.group(0),
         })
-    for line_number, line in enumerate(content.splitlines(), 1):
+    lines = content.splitlines()
+    test_card_fixture = any(number in content for number in _TEST_CARD_NUMBERS)
+    for line_number, line in enumerate(lines, 1):
+        if len(candidates) >= _MAX_CANDIDATES:
+            break
         # Credentials and authentication material.
         secret_rules = (
             ("AWS_ACCESS_KEY", re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"), "provider prefix and length"),
@@ -236,20 +428,59 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
                 category="secret", kind="PRIVATE_KEY", confidence="contextual",
                 validator="private-key marker without complete block",
             )
+        _scan(
+            candidates, line, line_number, _OPENVPN_STATIC_KEY,
+            category="secret", kind="PRIVATE_KEY", validator="OpenVPN static key block",
+        )
 
         _scan(
             candidates, line, line_number,
-            re.compile(r"(?i)\b(?:password|passwd|pwd|passphrase|pin)\s*[:=]\s*['\"](?P<value>[^'\"]{6,})['\"]"),
+            re.compile(
+                r"(?i)[A-Za-z0-9_.\-]*(?:password|passwd|pwd|passphrase|pin)[A-Za-z0-9_\-]*\s*[:=]\s*"
+                r"['\"](?P<value>[^'\"]{6,})['\"]"
+            ),
             category="secret", kind="PASSWORD", confidence="contextual", validator="credential assignment",
         )
         _scan(
             candidates, line, line_number,
             re.compile(
-                r"(?i)\b(?:api[_-]?key|access[_-]?token|client[_-]?secret)\s*[:=]\s*"
-                r"['\"](?P<value>[A-Za-z0-9_./+=-]{16,})['\"]"
+                r"(?i)[A-Za-z0-9_.\-]*(?:api[_-]?key|apikey|access[_-]?token|auth[_-]?token|"
+                r"client[_-]?secret|secret[_-]?key|private[_-]?key|secret|token)[A-Za-z0-9_\-]*\s*[:=]\s*"
+                r"['\"](?P<value>[A-Za-z0-9_./+=~-]{16,})['\"]"
             ),
             category="secret", kind="API_KEY", confidence="contextual", validator="credential assignment",
         )
+        _scan(
+            candidates, line, line_number,
+            re.compile(
+                r"(?i)[A-Za-z0-9_.\-]*(?:password|passwd|pwd|passphrase|secret|token|api[_-]?key|apikey|"
+                r"access[_-]?key|client[_-]?secret)[A-Za-z0-9_\-]*\s*,\s*['\"](?P<value>[^'\"]{6,})['\"]"
+            ),
+            category="secret", kind="PASSWORD", confidence="contextual", validator="credential argument",
+        )
+        for confidence, validate in (("high", _strong_unquoted_credential), ("contextual", _weak_unquoted_credential)):
+            _scan(
+                candidates, line, line_number,
+                re.compile(
+                    r"(?i)[A-Za-z0-9_.\-]*(?:password|passwd|pwd|passphrase|secret|token|api[_-]?key|apikey|"
+                    r"access[_-]?key|client[_-]?secret|auth[_-]?token)[A-Za-z0-9_\-]*(?:\s*:=\s*|\s*=\s*|\s*:\s+)"
+                    r"(?P<value>[^\s'\"#][^\s'\"#]{5,})"
+                ),
+                category="secret", kind="PASSWORD", confidence=confidence,
+                validator="unquoted credential assignment", validate=validate,
+            )
+        _scan(
+            candidates, line, line_number, _URL_CREDENTIAL_PARAM,
+            category="secret", kind="API_KEY", confidence="contextual",
+            validator="URL query credential parameter", validate=_valid_url_credential,
+        )
+        if _CONN_STRING.search(line):
+            _scan(
+                candidates, line, line_number,
+                re.compile(r"(?i)\b(?:password|pwd)\s*=\s*(?P<value>[^;\s'\"]{3,})"),
+                category="secret", kind="PASSWORD", confidence="contextual",
+                validator="connection-string credential segment",
+            )
         if _COOKIE_CONTEXT.search(line):
             _scan(
                 candidates, line, line_number,
@@ -258,6 +489,7 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
                     r"['\"]?(?P<value>[A-Za-z0-9_./+=%-]{16,})"
                 ),
                 category="secret", kind="COOKIE", confidence="contextual", validator="cookie context",
+                validate=_valid_cookie_literal,
             )
 
         # Strongly validated identity and financial identifiers.
@@ -277,7 +509,7 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
             category="pii", kind="TAX_ID_IT", validator="Italian codice fiscale checksum",
             validate=_valid_italian_tax_id,
         )
-        if _CARD_CONTEXT.search(line) and not _IMEI_CONTEXT.search(line):
+        if _CARD_CONTEXT.search(line) and not _IMEI_CONTEXT.search(line) and not test_card_fixture:
             _scan(candidates, line, line_number, re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)"),
                   category="pii", kind="CREDIT_CARD", validator="Luhn and card field context",
                   validate=lambda value: _luhn(value, 13, 19))
@@ -295,18 +527,25 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
                   category="pii", kind="TAX_ID_US", validator="US EIN structure and tax-ID context")
 
         # Contact data and context-dependent identifiers require LLM adjudication.
-        email_pattern = re.compile(r"\b[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)\b")
+        email_pattern = re.compile(r"\b([A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+)@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)\b")
         for match in email_pattern.finditer(line):
-            if _EXAMPLE_EMAIL_DOMAIN.fullmatch(match.group(1)) or re.search(r"\w+://[^\s]*$", line[:match.start()]):
+            if _EXAMPLE_EMAIL_DOMAIN.fullmatch(match.group(2)) or _ROLE_EMAIL_LOCAL.fullmatch(match.group(1)):
+                continue
+            if re.search(r"\w+://[^\s]*$", line[:match.start()]):
                 continue
             _append(candidates, line, line_number, match, category="pii", kind="EMAIL", severity="medium",
                     confidence="contextual", validator="RFC-like email structure")
+        if _AUTHOR_MARKER.search(line):
+            for start, end, value in _author_name_spans(line):
+                _append(candidates, line, line_number, None, category="pii", kind="PERSON_NAME", severity="medium",
+                        confidence="contextual", validator="copyright or author attribution", span=(start, end),
+                        matched_value=value)
         _scan(candidates, line, line_number, re.compile(r"(?<!\d)(?:\+?86[- ]?)?1[3-9]\d{9}(?!\d)"),
               category="pii", kind="PHONE", severity="medium", confidence="contextual", validator="CN mobile structure")
-        _scan(candidates, line, line_number, re.compile(r"(?<!\d)0\d{2,3}[- ]?\d{7,8}(?!\d)"),
-              category="pii", kind="PHONE", severity="medium", confidence="contextual",
-              validator="CN landline structure")
         if _PHONE_CONTEXT.search(line):
+            _scan(candidates, line, line_number, re.compile(r"(?<!\d)0\d{2,3}[- ]?\d{7,8}(?!\d)"),
+                  category="pii", kind="PHONE", severity="medium", confidence="contextual",
+                  validator="CN landline structure")
             _scan(candidates, line, line_number, re.compile(r"(?<!\w)\+[1-9]\d{6,14}(?!\d)"),
                   category="pii", kind="PHONE", severity="medium", confidence="contextual", validator="E.164 structure")
         if _PERSON_CONTEXT.search(line):
@@ -315,19 +554,20 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
                 re.compile(r"(?P<value>[A-Z][a-z]{1,30}(?:[ '-][A-Z][a-z]{1,30}){1,3})"),
                 category="pii", kind="PERSON_NAME", severity="medium", confidence="contextual",
                 validator="name field context",
+                validate=lambda value: not _NAME_LABEL.fullmatch(value.lower().strip()),
             )
         if _BANK_CONTEXT.search(line) and not re.search(r"\b[A-Z]{2}\d{2}", line, re.I):
             _scan(candidates, line, line_number, re.compile(r"(?<!\d)(?:\d[ -]?){8,30}(?!\d)"),
                   category="pii", kind="BANK_ACCOUNT", confidence="contextual", validator="bank-account context")
-        if _CVV_CONTEXT.search(line):
-            _scan(candidates, line, line_number, re.compile(r"(?<!\d)\d{3,4}(?!\d)"),
-                  category="pii", kind="CVV", confidence="contextual", validator="CVV field context")
-        _scan(
-            candidates, line, line_number,
-            re.compile(r"\b(?:0x[a-fA-F0-9]{40}|(?:bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59})\b"),
-            category="pii", kind="CRYPTO_ADDRESS", severity="medium", confidence="contextual",
-            validator="blockchain address structure",
-        )
+        if _CVV_CONTEXT.search(line) and not test_card_fixture:
+            _scan(
+                candidates, line, line_number,
+                re.compile(
+                    r"(?i)\b(?:cvv2?|cvc2?|card[_ -]?security[_ -]?code|安全码)\b"
+                    r"[^0-9\n]{0,40}(?P<value>(?<!\d)\d{3,4}(?!\d))"
+                ),
+                category="pii", kind="CVV", confidence="contextual", validator="CVV field context",
+            )
 
         for match in re.finditer(r"(?<![\w:])(?:\d{1,3}\.){3}\d{1,3}(?![\w:])", line):
             try:
@@ -335,7 +575,8 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
             except ValueError:
                 continue
             if not _IP_CONTEXT.search(line) and not _INFRA_CONTEXT.search(line):
-                continue
+                if not _is_public_routable(address) or _VERSION_CONTEXT.search(line):
+                    continue
             category = "internal_endpoint" if address.is_private and _INFRA_CONTEXT.search(line) else "pii"
             _append(candidates, line, line_number, match, category=category, kind="IP_V4", severity="medium",
                     confidence="contextual", validator="IPv4 parser and context")
@@ -352,7 +593,7 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
             _scan(candidates, line, line_number,
                   re.compile(r"(?i)(?<![0-9a-f])(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}(?![0-9a-f])"),
                   category="pii", kind="MAC", severity="medium", confidence="contextual", validator="MAC field context")
-        if _INFRA_CONTEXT.search(line):
+        if _INFRA_CONTEXT.search(line) and not _IMPORT_LINE.search(line):
             _scan(candidates, line, line_number, _INTERNAL_DOMAIN, category="internal_endpoint",
                   kind="INTERNAL_DOMAIN", severity="medium", confidence="contextual",
                   validator="internal-domain suffix and infrastructure context")
@@ -402,8 +643,11 @@ def security_evidence(candidates: list[dict[str, Any]], category: str) -> str:
 
 
 def _format_evidence(candidates: list[dict[str, Any]]) -> str:
-    return ", ".join(
+    shown = ", ".join(
         f"[{candidate['kind']}] line {candidate['line']} value="
         f"{json.dumps(candidate['matched_value'], ensure_ascii=False)}"
-        for candidate in candidates
+        for candidate in candidates[:_MAX_EVIDENCE_ITEMS]
     )
+    if len(candidates) > _MAX_EVIDENCE_ITEMS:
+        shown += f", ... (+{len(candidates) - _MAX_EVIDENCE_ITEMS} more matches)"
+    return shown

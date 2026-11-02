@@ -82,7 +82,6 @@ def test_input_hard_gate_skips_every_llm_stage(monkeypatch):
 
 def test_repository_sensitive_rules_cover_requested_pii_taxonomy():
     content = """email = "person@company.cn"
-wallet = "0xdcf8acaa9f47586ce15136f4b172c8eec93fe863"
 full_name = "Lynn Marshall"
 ipv4 = "147.46.27.126"
 phone = "0755-27357825"
@@ -103,7 +102,7 @@ routing = "211372378"
     candidates = security_candidates(content)
     kinds = {candidate["kind"] for candidate in candidates}
     assert kinds >= {
-        "EMAIL", "CRYPTO_ADDRESS", "PERSON_NAME", "IP_V4", "PHONE", "IP_V6", "MAC", "SSN",
+        "EMAIL", "PERSON_NAME", "IP_V4", "PHONE", "IP_V6", "MAC", "SSN",
         "TAX_ID_US", "CREDIT_CARD", "CVV", "TAX_ID_AU", "IMEI", "IBAN", "ID_CARD_CN",
         "BANK_ACCOUNT", "TAX_ID_IT", "ABA_ROUTING",
     }
@@ -153,6 +152,78 @@ version = "1.2.3.999"
 number = "123456789"
 mail = "user@example.com"
 password = "${PASSWORD}"
+"""
+    assert security_candidates(content) == []
+
+
+def test_public_ledger_addresses_and_version_strings_are_not_flagged():
+    content = """wallet = "0xdcf8acaa9f47586ce15136f4b172c8eec93fe863"
+donation = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
+release = "1.2.3.4"
+"""
+    kinds = {candidate["kind"] for candidate in security_candidates(content)}
+    assert "CRYPTO_ADDRESS" not in kinds
+    assert "IP_V4" not in kinds
+
+
+def test_author_attribution_names_are_contextual_pii():
+    candidates = security_candidates(
+        "// Copyright 2008-2010 by Robert Fernie\n// Copyright 2020 PrestaShop SA\n"
+    )
+    assert [item["matched_value"] for item in candidates if item["kind"] == "PERSON_NAME"] == ["Robert Fernie"]
+    assert all(item["confidence"] == "contextual" for item in candidates)
+
+
+def test_routable_public_ip_is_contextual_pii_without_context_words():
+    candidates = security_candidates('"185.53.88.104"\n"127.0.0.1"\n"192.0.2.1"\n"8.8.8.8"\n')
+    assert [item["matched_value"] for item in candidates] == ["185.53.88.104"]
+    assert candidates[0]["category"] == "pii"
+    assert candidates[0]["confidence"] == "contextual"
+
+
+def test_unquoted_credentials_are_split_by_literal_strength():
+    strong = security_candidates("db_password:=foobar-bizz-buzz\n")
+    assert [(item["kind"], item["confidence"], item["matched_value"]) for item in strong] == [
+        ("PASSWORD", "high", "foobar-bizz-buzz")
+    ]
+
+    weak = security_candidates("keyStorePassword: passw0rd\n")
+    assert [(item["kind"], item["confidence"]) for item in weak] == [("PASSWORD", "contextual")]
+
+    references = security_candidates(
+        "token = context.getCurrentToken();\npassword_file = ${PWD}/secrets/db.password\n"
+    )
+    assert references == []
+
+
+def test_url_query_and_connection_string_credentials_are_contextual():
+    query = security_candidates('url = "https://api.example.org/?t=x&apikey=6637725e"\n')
+    assert [(item["kind"], item["matched_value"]) for item in query] == [("API_KEY", "6637725e")]
+
+    template = security_candidates("url = `https://api.example.org/?api_key=${MOVIE_DB_API_KEY}`\n")
+    assert template == []
+
+    connection = security_candidates('<add ConnectionString="Server=DB01;User Id=ST;Password=Amdocs11;" />\n')
+    assert any(item["matched_value"] == "Amdocs11" for item in connection)
+
+
+def test_openvpn_static_key_marker_is_confirmed():
+    candidates = security_candidates("-----BEGIN OpenVPN Static key V1-----\n")
+    assert [item["kind"] for item in candidates] == ["PRIVATE_KEY"]
+    assert candidates[0]["confidence"] == "high"
+
+
+def test_role_based_contacts_are_excluded_but_personal_header_emails_are_kept():
+    assert security_candidates('mail = "info@company.org"\nirc = "support@company.org"\n') == []
+
+    header = security_candidates("# Copyright 2015 Roland Meier <roland@rptd.ch>\n")
+    assert [item["matched_value"] for item in header if item["kind"] == "EMAIL"] == ["roland@rptd.ch"]
+
+
+def test_context_guards_avoid_common_identifier_false_positives():
+    content = """order_ref = "0755-27357825"
+sessionId = crypto.randomUUID()
+import com.host.internal.service
 """
     assert security_candidates(content) == []
 

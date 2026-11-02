@@ -48,15 +48,28 @@ High-confidence rule matches are reported directly. These include Chinese identi
 (region/date/checksum), context-bound US SSN/EIN and credit cards, IMEI (Luhn), IBAN (mod-97),
 Australian TFN/ABN, Italian tax IDs, ABA routing numbers, private-key markers, provider
 API/cloud-token signatures, JWT/Bearer authorization, password hashes, literal passwords,
-complete PEM private-key blocks, and credential-bearing database/HTTP URLs.
+complete PEM private-key blocks, OpenVPN static-key blocks, credential-bearing database/HTTP
+URLs, and unquoted credential assignments whose value is a key-shaped literal (mixed character
+classes or 16+ hex characters).
 
-Email, phone, person name, IP address, MAC address, blockchain address, bank account,
-CVV, cookie, password/API-key assignments, standalone private-key markers, and internal
-endpoint candidates depend on source-code context. They are
-passed to `LLMRepositorySensitiveReview` with only the candidate type, line number,
-validator name, and a scrubbed line hint. The original source and matched sensitive value
-are not included in that LLM request. Placeholder and example values are excluded before
-review where deterministic checks can establish that safely.
+Email, phone, person name, copyright/author attributions, routable public IP addresses, MAC
+address, bank account, CVV, cookie, quoted password/API-key assignments, URL query credential
+parameters, connection-string password segments, identifier-shaped unquoted credentials,
+standalone private-key markers, and internal endpoint candidates depend on source-code
+context. They are passed to `LLMRepositorySensitiveReview` with only the candidate type, line
+number, validator name, and a scrubbed line hint. The original source and matched sensitive
+value are not included in that LLM request. Prompt size stays bounded by sending at most six
+candidates per kind (40 overall, credentials first) together with the total candidate count.
+Scanning stops after 500 candidates per record and reported evidence lists at most 20 matched
+values, each with an explicit overflow marker, so huge generated files stay bounded.
+
+Deterministic exclusions are applied before review where they can be established safely:
+placeholder values, example domains, role-based mailboxes (`info@`, `support@`, `noreply@`),
+organization/team names inside attributions, environment-variable and identifier references,
+version-shaped quads, documentation/reserved ranges, well-known public resolvers, import and
+package lines, code package names that merely look like internal domains, landline numbers
+without phone context, session identifiers that are not literal cookie values, and blockchain
+or smart-contract addresses (public ledger identifiers).
 
 ## LocalExecutor entry point
 

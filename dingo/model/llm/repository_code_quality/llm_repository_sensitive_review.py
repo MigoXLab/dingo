@@ -25,25 +25,62 @@ You are an independent security reviewer for repository source-code training dat
 Review only the supplied candidate metadata and redacted context hints. The original
 source and matched values are deliberately unavailable.
 
-Confirm pii_exposure only when a context hint indicates private contact/account data,
-an individual IP/MAC, a private person's name, or a personal blockchain address. Public
-author contacts, documentation metadata, dummy identities, versions, timestamps,
-institutional routing details, and ordinary account names are excluded.
+Confirm pii_exposure when a context hint indicates a real person's contact or account
+data: personal email, phone, ID, bank/card detail, individual IP/MAC, or a person's name.
+Real-looking personal emails and personal names count even inside tests, demos, sample
+data, ordinary code, and copyright or license headers; treat name@university,
+name@webmail, or name@company values as personal. Hardcoded routable public IP addresses
+in source or configuration also count. Exclude placeholders and example domains,
+role-based or shared project contacts (info@, support@, admin@, sales@, noreply@),
+organization, company, team, or project names inside attributions, dummy identities such
+as a@a.a, documentation metadata, version strings, timestamps, standard payment test
+fixtures (published test card numbers and their CVVs), and IP addresses that are clearly
+illustrative examples inside README or documentation prose. Blockchain and smart-contract
+addresses are public ledger identifiers: never confirm them.
 
 Confirm internal_endpoint_exposure only when context exposes a non-public service layout,
 port, route, private infrastructure address, or internal domain. localhost, documentation
-ranges, generic demos, and IP-shaped version strings are excluded.
+ranges, generic demos, IP-shaped version strings, markdown or docs illustrative
+hostnames, and code package or module names are excluded.
 
-Confirm secret_credentials only for a plausible sensitive cookie or other contextual
-credential candidate. Strongly validated passwords, keys, tokens, and connection strings
-are handled before this review. Environment-variable references, public keys, placeholders,
-known demo values, and test fixtures are excluded. Never claim a credential is active and
-never reproduce sensitive values.
+Confirm secret_credentials for plausible literal credential values, quoted or unquoted,
+including hardcoded credentials inside tests or localhost-only connections, credential
+values carried in URL query parameters, and connection-string password segments. Exclude
+environment-variable references, identifiers and method calls, public keys, placeholders,
+and markdown tutorial examples that merely show a format. Strongly validated passwords,
+keys, tokens, and connection strings are handled before this review. Never claim a
+credential is active and never reproduce sensitive values.
+
+The candidate list may be a capped sample of a longer file. Judge only what is shown and
+confirm a category when at least one shown candidate is genuinely sensitive.
 
 Return only JSON:
 {"pii_exposure":true|false,"internal_endpoint_exposure":true|false,
 "secret_credentials":true|false,"reason":"brief redacted explanation"}
 """
+
+    _CATEGORY_PRIORITY = {"secret": 0, "internal_endpoint": 1, "pii": 2}
+    _MAX_CANDIDATES_PER_KIND = 6
+    _MAX_CANDIDATES = 40
+
+    @classmethod
+    def _select_candidates(cls, candidates):
+        """Bound the prompt: keep the most security-relevant sample of each candidate kind."""
+        ordered = sorted(
+            candidates,
+            key=lambda item: (cls._CATEGORY_PRIORITY.get(item.get("category"), 3), item.get("kind", "")),
+        )
+        selected = []
+        per_kind = {}
+        for candidate in ordered:
+            if len(selected) >= cls._MAX_CANDIDATES:
+                break
+            kind = candidate.get("kind", "")
+            if per_kind.get(kind, 0) >= cls._MAX_CANDIDATES_PER_KIND:
+                continue
+            per_kind[kind] = per_kind.get(kind, 0) + 1
+            selected.append(candidate)
+        return selected
 
     @classmethod
     def build_messages(cls, input_data):
@@ -52,7 +89,8 @@ Return only JSON:
             for candidate in getattr(input_data, "repository_security_candidates", [])
         ]
         payload = {
-            "candidates": candidates,
+            "candidates": cls._select_candidates(candidates),
+            "total_candidates": len(candidates),
         }
         return [
             {"role": "system", "content": cls.prompt},

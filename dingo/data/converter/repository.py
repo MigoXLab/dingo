@@ -1,7 +1,6 @@
 """JSONL converter with streaming cross-record duplicate annotation."""
 
 from __future__ import annotations
-
 import json
 from typing import Callable, Dict, Union
 

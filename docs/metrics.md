@@ -92,6 +92,16 @@ This document provides comprehensive information about all quality metrics used 
 | `QUALITY_BAD_SIMILARITY` | RuleDocRepeat, RuleDocFormulaRepeat | Evaluates text for consecutive repeated content and multiple occurrences of special characters; Evaluates text for co... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
 | `QUALITY_BAD_UNDERSTANDABILITY` | RuleCapitalWords, RuleCurlyBracket, RuleLineStartWithBulletpoint, RuleUniqueWords | Checks whether the ratio of capital words is above threshold, indicating poor readability; Checks whether the ratio o... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
 
+### Rule-Based Structured Training Data Metrics
+
+Deterministic structural checks for reasoning, RL and agent-trajectory training data. Map the structured field to `content` (see [ncp stage1 survey](ncp_stage1_dataset_survey.md)).
+
+| Type | Metric | Description | Input (`content`) | Group |
+|------|--------|-------------|-------------------|-------|
+| `QUALITY_BAD_COMPLETENESS` | RuleThinkTagIntegrity | Checks that `<think>` blocks are closed, not stray or repeated, and followed by a non-empty final answer (`threshold`: min answer chars, default 20) | Model response | `reasoning` |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleRLTestCaseValidity | Checks that an RL `ground_truth` JSON has non-empty, equal-length `inputs`/`outputs`, no empty expected outputs and no duplicated cases (`threshold`: min cases, default 1) | `ground_truth` JSON string | `rl` |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleAgentTextToolCallValidity | Checks text-encoded tool calls (`<function=...>` / `<tool_call>`) against the trajectory's tool definitions: undefined tools, unknown or missing required arguments, malformed call blocks | `{"messages": [...], "tools": [...]}` JSON string | `agent_trace_text` |
+
 ### Rule-Based IMG Quality Metrics
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |

@@ -335,7 +335,6 @@ def test_duplicate_index_covers_cross_record_rules():
     assert "Similarity.Token_Shingle_Near_Duplicate" in near_labels
 
 
-
 def test_builtin_security_parsers_emit_public_labels():
     prohibited = LLMRepositorySecurityProhibition.process_response(
         '{"porn":"neg","gamble":"pos","drug":"neg"}'

@@ -12,6 +12,7 @@ TOKEN_SHINGLE_SIZE = 5
 MIN_NEAR_TOKENS = 30
 MIN_NEAR_SHINGLES = 10
 
+
 def intra_document_repetition(content: str) -> dict[str, Any] | None:
     if len(content) < 200:
         return None

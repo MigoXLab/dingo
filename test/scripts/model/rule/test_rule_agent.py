@@ -16,7 +16,7 @@ from dingo.io import Data
 from dingo.io.output.eval_detail import QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.agent_trace.rule_ms_swift import RuleMsSwiftSchema
-from dingo.model.rule.rule_agent import RuleAgentTraceLatencyAnomaly, RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget
+from dingo.model.rule.rule_agent import RuleAgentTextToolCallValidity, RuleAgentTraceLatencyAnomaly, RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget
 
 
 def _data(content: str) -> Data:
@@ -433,3 +433,63 @@ class TestRuleMsSwiftSchema:
         assert RuleMsSwiftSchema._required_fields == []
         assert not hasattr(RuleMsSwiftSchema, "eval_layer")
         assert not hasattr(RuleMsSwiftSchema, "input_data_type")
+
+
+_TOOLS = [{"name": "get_weather", "parameters": {
+    "type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"],
+}}]
+
+
+def _traj(assistant_contents, tools):
+    import json as _json
+    msgs = [{"role": "user", "content": "do it"}] + [
+        {"role": "assistant", "content": c} for c in assistant_contents
+    ]
+    return Data(data_id="1", content=_json.dumps({"messages": msgs, "tools": tools}))
+
+
+class TestRuleAgentTextToolCallValidity:
+    def test_no_calls_passes(self):
+        assert RuleAgentTextToolCallValidity.eval(_traj(["Which city?"], _TOOLS)).status is False
+
+    def test_valid_xml_call_passes(self):
+        call = "<function=get_weather>\n<parameter=city>Paris</parameter>\n</function>"
+        assert RuleAgentTextToolCallValidity.eval(_traj([call], _TOOLS)).status is False
+
+    def test_valid_tool_call_tag_passes(self):
+        call = '<tool_call>\n{"name": "get_weather", "arguments": {"city": "Paris"}}\n</tool_call>'
+        assert RuleAgentTextToolCallValidity.eval(_traj([call], _TOOLS)).status is False
+
+    def test_openai_style_tool_definition(self):
+        tools = [{"type": "function", "function": _TOOLS[0]}]
+        call = '<tool_call>{"name": "get_weather", "arguments": "{\\"city\\": \\"Paris\\"}"}</tool_call>'
+        assert RuleAgentTextToolCallValidity.eval(_traj([call], tools)).status is False
+
+    def test_undefined_tool(self):
+        call = '<tool_call>{"name": "book_flight", "arguments": {}}</tool_call>'
+        res = RuleAgentTextToolCallValidity.eval(_traj([call], _TOOLS))
+        assert res.status is True
+        assert res.label == ["QUALITY_BAD_EFFECTIVENESS.RuleAgentTextToolCallValidity"]
+        assert "undefined tools" in res.reason[0]
+
+    def test_unknown_and_missing_arguments(self):
+        call = "<function=get_weather>\n<parameter=town>Paris</parameter>\n</function>"
+        res = RuleAgentTextToolCallValidity.eval(_traj([call], _TOOLS))
+        assert res.status is True
+        assert any("not declared" in r for r in res.reason)
+        assert any("Missing required" in r for r in res.reason)
+
+    def test_empty_properties_schema_skips_argument_check(self):
+        tools = [{"name": "lookup", "parameters": {"type": "dict", "properties": {}, "required": []}}]
+        call = "<function=lookup>\n<parameter=ip>1.1.1.1</parameter>\n</function>"
+        assert RuleAgentTextToolCallValidity.eval(_traj([call], tools)).status is False
+
+    def test_malformed_tool_call(self):
+        res = RuleAgentTextToolCallValidity.eval(_traj(["<tool_call>{broken</tool_call>"], _TOOLS))
+        assert res.status is True
+        assert "malformed" in res.reason[0]
+
+    def test_invalid_trajectory_json(self):
+        res = RuleAgentTextToolCallValidity.eval(Data(data_id="1", content="not json"))
+        assert res.status is True
+        assert "not valid JSON" in res.reason[0]

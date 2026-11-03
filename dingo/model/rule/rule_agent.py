@@ -1103,3 +1103,149 @@ class RuleAgentTraceSandboxExplicitlyDisabled(BaseRule):
             return result
 
         return _safety_pass(result, len(calls), "calls running outside the sandbox")
+
+
+# --------------------------------------------------------------------------- #
+# Text-encoded tool-call validity rule
+# --------------------------------------------------------------------------- #
+
+_XML_CALL = re.compile(r"<function=([^>\s]+)>(.*?)</function>", re.S)
+_XML_PARAM = re.compile(r"<parameter=([^>\s]+)>")
+_TAG_CALL = re.compile(r"<tool_call>\s*(.*?)\s*</tool_call>", re.S)
+
+
+def _parse_text_tool_calls(text):
+    """Extract (name, argument_names_or_None) from text-encoded tool calls.
+
+    Supports ``<function=NAME><parameter=ARG>...</function>`` and
+    ``<tool_call>{"name": ..., "arguments": {...}}</tool_call>``.
+    Returns (calls, malformed_count); argument_names is None when the
+    arguments block could not be parsed as an object.
+    """
+    calls, malformed = [], 0
+    for name, body in _XML_CALL.findall(text):
+        calls.append((name, set(_XML_PARAM.findall(body))))
+    for body in _TAG_CALL.findall(text):
+        try:
+            obj = json.loads(body)
+        except ValueError:
+            malformed += 1
+            continue
+        if not isinstance(obj, dict) or not obj.get("name"):
+            malformed += 1
+            continue
+        args = obj.get("arguments")
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except ValueError:
+                args = None
+        calls.append((obj["name"], set(args) if isinstance(args, dict) else None))
+    return calls, malformed
+
+
+@Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["agent_trace_text"])
+class RuleAgentTextToolCallValidity(BaseRule):
+    """Check text-encoded tool calls in an agent trajectory against its tool definitions.
+
+    ``content`` must be a JSON string ``{"messages": [...], "tools": [...]}``
+    where assistant messages encode tool calls as plain text rather than the
+    structured ``tool_calls`` field. Two text formats are supported:
+
+    - ``<function=NAME><parameter=ARG>value</parameter></function>``
+    - ``<tool_call>{"name": "...", "arguments": {...}}</tool_call>``
+
+    Flags calls to undefined tools, arguments not declared in the tool schema,
+    missing required arguments, and malformed call blocks.
+    """
+
+    _metric_info = {
+        "category": "Rule-Based TEXT Quality Metrics",
+        "quality_dimension": "EFFECTIVENESS",
+        "metric_name": "RuleAgentTextToolCallValidity",
+        "description": (
+            "Checks text-encoded tool calls (<function=...> / <tool_call>) in agent "
+            "trajectories against the tool definitions: undefined tools, unknown or "
+            "missing required arguments, malformed call blocks"
+        ),
+        "paper_title": "",
+        "paper_url": "",
+        "paper_authors": "",
+    }
+
+    _required_fields = [RequiredField.CONTENT]
+    dynamic_config = EvaluatorRuleArgs()
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        result = EvalDetail(metric=cls.__name__)
+        try:
+            traj = (
+                json.loads(input_data.content)
+                if isinstance(input_data.content, str)
+                else input_data.content
+            )
+        except (TypeError, ValueError) as e:
+            result.status = True
+            result.label = [f"{cls.metric_type}.{cls.__name__}"]
+            result.reason = [f"Trajectory is not valid JSON: {e}"]
+            return result
+        if not isinstance(traj, dict) or not isinstance(traj.get("messages"), list):
+            result.status = True
+            result.label = [f"{cls.metric_type}.{cls.__name__}"]
+            result.reason = ["Trajectory must be a JSON object with a 'messages' list."]
+            return result
+
+        tools: dict = {}
+        for t in traj.get("tools") or []:
+            fn = t.get("function", t) if isinstance(t, dict) else {}
+            if fn.get("name"):
+                tools[fn["name"]] = fn.get("parameters") or {}
+
+        calls: list = []
+        malformed = 0
+        for msg in traj["messages"]:
+            if isinstance(msg, dict) and msg.get("role") == "assistant":
+                c, m = _parse_text_tool_calls(msg.get("content") or "")
+                calls += c
+                malformed += m
+
+        if not calls and not malformed:
+            result.label = [QualityLabel.QUALITY_GOOD]
+            return result
+
+        reasons: list = []
+        if malformed:
+            reasons.append(f"{malformed} malformed <tool_call> block(s).")
+        if not tools:
+            reasons.append(f"{len(calls)} tool call(s) but the trajectory defines no tools.")
+            result.status = True
+            result.label = [f"{cls.metric_type}.{cls.__name__}"]
+            result.reason = reasons
+            return result
+
+        undefined = sorted({name for name, _ in calls if name not in tools})
+        if undefined:
+            reasons.append(f"Calls to undefined tools: {undefined[:5]}.")
+        unknown: set = set()
+        missing: set = set()
+        for name, args in calls:
+            if name not in tools or args is None:
+                continue
+            props = set(tools[name].get("properties") or {})
+            required = set(tools[name].get("required") or [])
+            if props:
+                unknown |= {f"{name}.{a}" for a in args - props}
+            missing |= {f"{name}.{a}" for a in required - args}
+        if unknown:
+            reasons.append(f"Arguments not declared in the tool schema: {sorted(unknown)[:5]}.")
+        if missing:
+            reasons.append(f"Missing required arguments: {sorted(missing)[:5]}.")
+
+        if reasons:
+            result.status = True
+            result.label = [f"{cls.metric_type}.{cls.__name__}"]
+            result.reason = reasons
+        else:
+            result.label = [QualityLabel.QUALITY_GOOD]
+        return result

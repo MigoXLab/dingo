@@ -1,3 +1,4 @@
+import json
 import re
 import string
 from typing import Tuple
@@ -2779,3 +2780,137 @@ class RuleDictConsistency(BaseRule):
 if __name__ == "__main__":
     data = Data(data_id="", prompt="", content="\n \n \n \n hello \n \n ")
     tmp = RuleEnterAndSpace().eval(data)
+
+
+# --------------------------------------------------------------------------- #
+# Reasoning data quality rules
+# --------------------------------------------------------------------------- #
+
+def _rule_bad(cls, reasons):
+    res = EvalDetail(metric=cls.__name__)
+    res.status = True
+    res.label = [f"{cls.metric_type}.{cls.__name__}"]
+    res.reason = reasons
+    return res
+
+
+def _rule_good(cls):
+    res = EvalDetail(metric=cls.__name__)
+    res.label = [QualityLabel.QUALITY_GOOD]
+    return res
+
+
+@Model.rule_register("QUALITY_BAD_COMPLETENESS", ["reasoning"])
+class RuleThinkTagIntegrity(BaseRule):
+    """Check that <think> reasoning blocks are closed and followed by a final answer.
+
+    Catches truncated reasoning outputs where the model stopped mid-thought
+    without producing a final answer after </think>.
+    """
+
+    _metric_info = {
+        "category": "Rule-Based TEXT Quality Metrics",
+        "quality_dimension": "COMPLETENESS",
+        "metric_name": "RuleThinkTagIntegrity",
+        "description": "Checks that <think> reasoning blocks are closed, not stray or repeated, "
+                       "and followed by a non-empty final answer",
+        "paper_title": "",
+        "paper_url": "",
+        "paper_authors": "",
+    }
+
+    _required_fields = [RequiredField.CONTENT]
+    # threshold: minimum characters of answer text required after the last </think>
+    dynamic_config = EvaluatorRuleArgs(threshold=20)
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        content = input_data.content or ""
+        opened = content.count("<think>")
+        closed = content.count("</think>")
+        if opened == 0 and closed == 0:
+            return _rule_good(cls)
+
+        reasons = []
+        if opened > closed:
+            reasons.append(
+                f"Unclosed <think> block: {opened} opening tag(s), {closed} closing tag(s); "
+                f"reasoning is likely truncated."
+            )
+        elif closed > opened:
+            reasons.append(f"Stray </think>: {opened} opening tag(s), {closed} closing tag(s).")
+        elif opened > 1:
+            reasons.append(f"Multiple <think> blocks ({opened}) in one response.")
+
+        if closed and closed >= opened:
+            answer = content.rsplit("</think>", 1)[1].strip()
+            if len(answer) < cls.dynamic_config.threshold:
+                reasons.append(
+                    f"Final answer after </think> is empty or too short ({len(answer)} chars)."
+                )
+
+        return _rule_bad(cls, reasons) if reasons else _rule_good(cls)
+
+
+# --------------------------------------------------------------------------- #
+# RL / test-case data quality rules
+# --------------------------------------------------------------------------- #
+
+@Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["rl"])
+class RuleRLTestCaseValidity(BaseRule):
+    """Check that an RL ground_truth JSON carries usable, paired test cases.
+
+    ``content`` should be a JSON string produced by a competitive-programming
+    style reward model: ``{"call_type": "std", "inputs": [...], "outputs": [...]}``.
+    """
+
+    _metric_info = {
+        "category": "Rule-Based TEXT Quality Metrics",
+        "quality_dimension": "EFFECTIVENESS",
+        "metric_name": "RuleRLTestCaseValidity",
+        "description": "Checks that an RL ground_truth JSON has non-empty, equal-length inputs/outputs "
+                       "lists, no empty expected outputs and no duplicated test cases",
+        "paper_title": "",
+        "paper_url": "",
+        "paper_authors": "",
+    }
+
+    _required_fields = [RequiredField.CONTENT]
+    # threshold: minimum number of test cases
+    dynamic_config = EvaluatorRuleArgs(threshold=1)
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        try:
+            gt = json.loads(input_data.content) if isinstance(input_data.content, str) \
+                else input_data.content
+        except (TypeError, ValueError) as e:
+            return _rule_bad(cls, [f"ground_truth is not valid JSON: {e}"])
+        if not isinstance(gt, dict):
+            return _rule_bad(cls, [f"ground_truth must be a JSON object, got {type(gt).__name__}."])
+
+        inputs, outputs = gt.get("inputs"), gt.get("outputs")
+        if not isinstance(inputs, list) or not isinstance(outputs, list):
+            return _rule_bad(cls, ["ground_truth must contain list fields 'inputs' and 'outputs'."])
+
+        reasons = []
+        if len(inputs) < cls.dynamic_config.threshold:
+            reasons.append(
+                f"Too few test cases: {len(inputs)} (minimum {cls.dynamic_config.threshold})."
+            )
+        if len(inputs) != len(outputs):
+            reasons.append(
+                f"inputs/outputs length mismatch: {len(inputs)} vs {len(outputs)}."
+            )
+        empty = sum(1 for o in outputs if not str(o).strip())
+        if empty:
+            reasons.append(f"{empty} test case(s) have an empty expected output.")
+        pairs = [
+            json.dumps([i, o], ensure_ascii=False, sort_keys=True)
+            for i, o in zip(inputs, outputs)
+        ]
+        dup = len(pairs) - len(set(pairs))
+        if dup:
+            reasons.append(f"{dup} duplicated test case(s).")
+
+        return _rule_bad(cls, reasons) if reasons else _rule_good(cls)

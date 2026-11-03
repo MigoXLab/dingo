@@ -6,7 +6,7 @@ from dingo.io.output.eval_detail import QualityLabel
 from dingo.model.rule.guobiao.rule_tc609_quality import (Rule_TC609_0101_DocBasicInfoCompleteness, Rule_TC609_0102_DocContentFeatureCompleteness, Rule_TC609_0103_DocConstructionProcessCompleteness,
                                                          Rule_TC609_0104_DocApplicationCompleteness, Rule_TC609_0303_DataTimeRange, Rule_TC609_02080101_TextPerplexity)
 from dingo.model.rule.guobiao.rule_tc609_quality_base import Rule_TC609_01_DocCompleteness
-from dingo.model.rule.rule_common import RuleDocFormulaRepeat, RulePIIDetection, RuleUnsafeWords, RuleWatermark
+from dingo.model.rule.rule_common import RuleDocFormulaRepeat, RulePIIDetection, RuleRLTestCaseValidity, RuleThinkTagIntegrity, RuleUnsafeWords, RuleWatermark
 
 
 class TestRuleDocFormulaRepeat:
@@ -561,3 +561,73 @@ class TestRuleDatasetDocCompleteness:
         )
         assert res.status is True
         assert "missing or empty" in res.reason[0]
+
+
+class TestRuleThinkTagIntegrity:
+    def test_no_think_tag_passes(self):
+        data = Data(data_id="1", content="user:\nhi\n\nassistant:\nhello there")
+        res = RuleThinkTagIntegrity.eval(data)
+        assert res.status is False
+        assert res.label == [QualityLabel.QUALITY_GOOD]
+
+    def test_closed_think_with_answer_passes(self):
+        data = Data(data_id="1", content="<think>\nreason\n</think>\nThe answer is 42, as derived above.")
+        assert RuleThinkTagIntegrity.eval(data).status is False
+
+    def test_unclosed_think_flags_truncation(self):
+        data = Data(data_id="1", content="<think>\nOkay, let me compute d=2: multiples")
+        res = RuleThinkTagIntegrity.eval(data)
+        assert res.status is True
+        assert res.label == ["QUALITY_BAD_COMPLETENESS.RuleThinkTagIntegrity"]
+        assert "Unclosed <think>" in res.reason[0]
+
+    def test_empty_answer_after_think(self):
+        data = Data(data_id="1", content="<think>\nlong reasoning\n</think>\n\n")
+        res = RuleThinkTagIntegrity.eval(data)
+        assert res.status is True
+        assert "empty or too short" in res.reason[0]
+
+    def test_stray_closing_tag(self):
+        data = Data(data_id="1", content="reasoning</think>\nThe final answer is twelve apples.")
+        res = RuleThinkTagIntegrity.eval(data)
+        assert res.status is True
+        assert "Stray </think>" in res.reason[0]
+
+
+class TestRuleRLTestCaseValidity:
+    @staticmethod
+    def _eval(gt):
+        import json as _json
+        return RuleRLTestCaseValidity.eval(
+            Data(data_id="1", content=gt if isinstance(gt, str) else _json.dumps(gt))
+        )
+
+    def test_valid_cases_pass(self):
+        res = self._eval({"call_type": "std", "inputs": ["1 2\n", "3 4\n"], "outputs": ["3\n", "7\n"]})
+        assert res.status is False
+
+    def test_invalid_json(self):
+        res = self._eval("{not json")
+        assert res.status is True
+        assert "not valid JSON" in res.reason[0]
+
+    def test_missing_lists(self):
+        res = self._eval({"call_type": "std"})
+        assert res.status is True
+        assert "'inputs' and 'outputs'" in res.reason[0]
+
+    def test_length_mismatch_and_empty_output(self):
+        res = self._eval({"inputs": ["1\n", "2\n"], "outputs": [" "]})
+        assert res.status is True
+        assert any("length mismatch" in r for r in res.reason)
+        assert any("empty expected output" in r for r in res.reason)
+
+    def test_no_cases(self):
+        res = self._eval({"inputs": [], "outputs": []})
+        assert res.status is True
+        assert "Too few test cases" in res.reason[0]
+
+    def test_duplicated_cases(self):
+        res = self._eval({"inputs": ["1\n", "1\n"], "outputs": ["2\n", "2\n"]})
+        assert res.status is True
+        assert "duplicated" in res.reason[0]

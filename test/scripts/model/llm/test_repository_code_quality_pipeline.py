@@ -8,7 +8,7 @@ from dingo.model.llm.repository_code_quality.llm_repository_security_review impo
 from dingo.model.llm.repository_code_quality.llm_repository_sensitive_review import LLMRepositorySensitiveReview
 from dingo.model.llm.repository_code_quality.schema_rules import schema_findings
 from dingo.model.llm.repository_code_quality.sensitive_rules import confirmed_security_findings, security_candidates
-from dingo.model.llm.repository_code_quality.similarity_rules import RepositoryDuplicateIndex, intra_document_repetition, license_header
+from dingo.model.llm.repository_code_quality.similarity_rules import RepositoryDuplicateIndex, intra_document_repetition
 
 
 def repository_data(content, **kwargs):
@@ -228,6 +228,70 @@ import com.host.internal.service
     assert security_candidates(content) == []
 
 
+def test_organizations_prose_and_version_quads_are_not_flagged():
+    content = """// Copyright (C) 2003, International Business Machines
+ * Copyright (C) 2018 - 2021 Hedera Hashgraph, LLC
+ * Copyright Metaparadigm Pte. Ltd. 2004.
+ * Copyright (C) 2016 Fraunhofer Institut IOSB, Fraunhoferstr. 1
+//COPYRIGHT:    University of California, San Francisco, 2008
+<link rel="copyright" href="ln-idm46082189555600.html" title="Legal Notice">
+<p>When only 1 file is created by one API call it is stored by Google Drive</p>
+LogSupport.debug(ctx, MODULE, "Tax Authority is null for trans " + trans.getResponsibleBAN());
+[assembly: AssemblyVersion("1.0.0.0")]
+ * $Id: DictionarySerializer.java,v 1.5.2.2 2006-03-06 12:39:21 mclark Exp $
+"""
+    assert security_candidates(content) == []
+
+
+def test_real_attributions_and_contacts_are_still_flagged():
+    content = """// Copyright 2016 Mitchell Kember. Subject to the MIT License.
+ * Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)
+"""
+    values = {candidate["matched_value"] for candidate in security_candidates(content)}
+    assert {"Mitchell Kember", "davem@caip.rutgers.edu"} <= values
+
+
+def test_prose_attributions_are_flagged_but_collective_names_are_not():
+    content = """<p>The Java mascot was created by Joe Palrang. Palrang also worked on Hollywood.</p>
+              Ivan Fratric is a security researcher at Google Project Zero, where he focuses on fuzzing.
+"""
+    values = {candidate["matched_value"] for candidate in security_candidates(content) if candidate["kind"] == "PERSON_NAME"}
+    assert {"Joe Palrang", "Ivan Fratric"} <= values
+
+
+def test_prose_without_attribution_context_is_not_flagged():
+    content = """ * Author: UC San Diego Intermediate Software Development MOOC team
+ *  (c) 2017 Semantic Access and Retrieval group, All rights reserved
+               When Microsoft announced the change there was an audible sigh of relief.
+<p>When only 1 file is created by one API call it is stored by Google Drive.</p>
+"""
+    assert security_candidates(content) == []
+
+
+def test_code_identifiers_and_type_names_are_not_credentials():
+    content = """var cancellationToken = _transaction?.CancellationToken ?? _cancellationToken;
+static const String isPINAvailable = 'isPINAvailable';
+c.PasswordSalt = "mobile"
+"""
+    assert security_candidates(content) == []
+
+
+def test_quoted_literal_passwords_are_still_flagged():
+    content = """final String password = "thanh112002";//change accordingly
+PASSWORD = 'Todd.Test123'
+"""
+    values = {candidate["matched_value"] for candidate in security_candidates(content)}
+    assert values == {"thanh112002", "Todd.Test123"}
+
+
+def test_asset_paths_and_dummy_addresses_are_not_emails():
+    content = """img = "/assets/s-site-assets-template-stylesheets/images/bc_logo_black_1@1x.png"
+user = new LdoDUser(this.ldoD, "ars1", "ars", "Antonio", "Silva", "a@a.a");
+tracker = "bug-Spreadsheet-WriteExcel@rt.cpan.org"
+"""
+    assert security_candidates(content) == []
+
+
 def test_confirmed_matches_are_rule_first_and_contextual_matches_are_separate():
     candidates = security_candidates(
         'card = "4202297003827029"\nemail = "private.person@company.cn"\n'
@@ -254,7 +318,7 @@ def test_intra_document_repetition_uses_handoff_thresholds():
     assert intra_document_repetition("print('useful')\n") is None
 
 
-def test_duplicate_index_covers_three_cross_record_rules():
+def test_duplicate_index_covers_cross_record_rules():
     index = RepositoryDuplicateIndex(near_threshold=0.80)
     header = "# Copyright 2020 Example\n# Licensed under the Apache License, Version 2.0\n"
     body = "\n".join(
@@ -267,15 +331,9 @@ def test_duplicate_index_covers_three_cross_record_rules():
     assert index.annotate(first, "first") == []
     exact_labels = {item["label"] for item in index.annotate(exact, "exact")}
     assert "Similarity.Normalized_Token_Duplicate" in exact_labels
-    assert "Similarity.License_Header_Duplicate" in exact_labels
     near_labels = {item["label"] for item in index.annotate(near, "near")}
     assert "Similarity.Token_Shingle_Near_Duplicate" in near_labels
-    assert "Similarity.License_Header_Duplicate" in near_labels
 
-
-def test_license_header_requires_license_language():
-    assert license_header("# ordinary module header\nprint(1)\n") is None
-    assert license_header("# SPDX-License-Identifier: MIT\n# Copyright 2024 Team\n")
 
 
 def test_builtin_security_parsers_emit_public_labels():
@@ -339,13 +397,13 @@ def test_pipeline_merges_prepared_and_stage_findings(monkeypatch):
     monkeypatch.setattr(LLMRepositoryCodeQualityPipeline, "_run_stage", classmethod(fake_stage))
     data = repository_data(
         'password = "actual-production-password"\n' + ("repeat line\n" * 100),
-        repository_duplicate_findings=[{"label": "Similarity.License_Header_Duplicate", "reason": "duplicate"}],
+        repository_duplicate_findings=[{"label": "Similarity.Normalized_Token_Duplicate", "reason": "duplicate"}],
     )
     result = LLMRepositoryCodeQualityPipeline.eval(data)
     assert result.applicable
     assert set(result.label) >= {
         "Effectiveness.Advertisement", "Security.Secret_Credentials",
-        "Similarity.Intra_Document_Repetition", "Similarity.License_Header_Duplicate",
+        "Similarity.Intra_Document_Repetition",
     }
 
 

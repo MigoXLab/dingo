@@ -26,7 +26,6 @@ It combines per-record model review with deterministic and cross-record rules.
 | Repetition inside one record | `Similarity.Intra_Document_Repetition` | zlib ratio below 8%, or at least 20 non-empty lines with unique-line ratio below 8% |
 | Normalized token duplicate | `Similarity.Normalized_Token_Duplicate` | Comment/whitespace-insensitive token hash |
 | Token-shingle near duplicate | `Similarity.Token_Shingle_Near_Duplicate` | 5-token shingles, token ratio at least 0.80, Jaccard at least 0.90 |
-| Repeated license header | `Similarity.License_Header_Duplicate` | Normalized leading comment/license block |
 
 Cross-record findings are annotated by the `repository_jsonl` converter in input order
 during the load phase, before concurrent evaluation. The first
@@ -65,11 +64,21 @@ values, each with an explicit overflow marker, so huge generated files stay boun
 
 Deterministic exclusions are applied before review where they can be established safely:
 placeholder values, example domains, role-based mailboxes (`info@`, `support@`, `noreply@`),
-organization/team names inside attributions, environment-variable and identifier references,
-version-shaped quads, documentation/reserved ranges, well-known public resolvers, import and
-package lines, code package names that merely look like internal domains, landline numbers
-without phone context, session identifiers that are not literal cookie values, and blockchain
-or smart-contract addresses (public ledger identifiers).
+asset paths and dummy addresses that merely look like email, organization/team/company names
+inside attributions (including `Pte. Ltd.` / `, LLC` suffixes, `University of X, City` forms,
+commercial/product nouns such as `Forklift Rentals`, and collective nouns such as
+`… Software Development team` / `… Retrieval group` that follow the candidate span),
+sentence-initial function words that merely look like a first name (`When Microsoft …`),
+attribution wording outside header comments unless the line reads as prose (a documentation
+or markup sentence carrying `created by` / `written by` wording or a profession/biography
+predicate such as `is a security researcher at …`), environment-variable and identifier
+references, type names
+and string concatenations instead of credential literals, version-shaped quads (assembly
+attributes, RCS `$Id:` keywords), documentation/reserved ranges, well-known public resolvers,
+import and package lines, code package names that merely look like internal domains, landline
+numbers without phone context, session identifiers that are not literal cookie values,
+published payment test fixtures, and blockchain or smart-contract addresses (public ledger
+identifiers).
 
 ## LocalExecutor entry point
 

@@ -48,11 +48,35 @@ _ROLE_EMAIL_LOCAL = re.compile(
     r"service|services|root|null|none|test|testing|example|user|users|everyone|all|license|"
     r"licensing|bugs?|ops|noc|notifications?|subscribe|unsubscribe|git|github|web|www|ftp|lists?|"
     r"listserv|billing|invoices?|orders?|donations?|donate|general|nobody|daemon|security|"
-    r"enquir(?:y|ies)|inquiries|reception|dev(?:elopment)?|devs?|devops)$"
+    r"enquir(?:y|ies)|inquiries|reception|dev(?:elopment)?|devs?|devops)(?:[._+-].*)?$"
 )
-_AUTHOR_MARKER = re.compile(
-    r"(?i)\b(?:copyright|authors?|maintainers?|created by|written by|maintained by|modified by|"
-    r"updated by|©|\(c\))"
+_EMAIL_TLD_BLOCKLIST = {
+    "png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "bmp", "tif", "tiff", "css", "js", "jsx", "ts",
+    "tsx", "html", "htm", "json", "xml", "yaml", "yml", "md", "txt", "pdf", "zip", "gz", "tar", "mp3",
+    "mp4", "woff", "woff2", "ttf", "eot", "log", "csv", "sql", "sh", "py", "java", "class", "min",
+}
+_STRONG_AUTHOR_MARKER = re.compile(
+    r"(?i)(?:\bcopyright\b|©|\(c\)|[@\\]authors?\b|[\"']authors?[\"']|\bauthors?\s*[:=]|"
+    r"\bmaintainers?\s*[:=])"
+)
+_WEAK_AUTHOR_MARKER = re.compile(
+    r"(?i)\b(?:authors?|maintainers?|created by|written by|maintained by|modified by|updated by)\b"
+)
+_COMMENT_LINE = re.compile(r"^\s*(?://+|#+|\*+|/\*+|;+|--+|<!--|%+|\\|\{#)")
+_PROFESSION_CONTEXT = re.compile(
+    r"(?i)\b(?:researcher|professor|lecturer|speaker|engineer|developer|designer|architect|scientist|"
+    r"consultant|analyst|attorney|lawyer|physician|doctor|nurse|founder|cofounder|ceo|cto|cfo|coo|president|"
+    r"chairman|chairwoman|director|manager|author|writer|editor|translator|illustrator|photographer|artist|"
+    r"musician|journalist|student|teacher|accountant|librarian)\b"
+)
+_HTML_TAG = re.compile(r"</?[A-Za-z][^>]{0,300}>")
+_CODE_PUNCTUATION = re.compile(r"[;{}()\[\]<>]|=>|::|\|\||&&|[!=<>]=|[-+*/%&|^]=|\\")
+_ATTRIBUTION_WORDS = re.compile(
+    r"(?i)\b(?:copyright|authors?|maintainers?|created|written|maintained|modified|updated|by|from|of|c)\b"
+)
+_ORG_SUFFIX = re.compile(
+    r"(?i)^\s*[,.;]?\s*(?:llc|ltd|limited|inc|incorporated|gmbh|pty|pte|pvt|llp|plc|corp|corporation|"
+    r"co|ag|bv|nv|ab|oy|sa|s\.a\.|ltda|institut\w*|institute|university|foundation|company|group)\b"
 )
 _AUTHOR_PREFIX = re.compile(r"(?i)(?:\d{4}|by|copyright|authors?|created|written|maintained|modified|updated|from|of|c)$")
 _TEST_CARD_NUMBERS = (
@@ -64,14 +88,33 @@ _MAX_CANDIDATES = 500
 _MAX_EVIDENCE_ITEMS = 20
 _ORG_NAME = re.compile(
     r"(?i)\b(?:inc|llc|ltd|limited|corp|corporation|company|foundation|fund|team|authors?|"
-    r"contributors?|reserved|rights|university|universit\w*|institute|institutes?|labs?|"
+    r"contributors?|reserved|rights|university|universit\w*|institut\w*|institutes?|labs?|"
     r"laboratory|gmbh|plc|group|project|software|solutions?|services?|systems?|technologies|"
     r"technology|holdings?|enterprises?|association|society|center|centre|council|committee|"
     r"department|ministry|studio|studios?|media|holders?|partners?|bank|schools?|college|"
-    r"academy|agency|network|community|consortium|corporations?|industries|works)\b"
+    r"academy|agency|network|community|consortium|corporations?|industries|works|business|"
+    r"machines|pty|pte|pvt|llp|press|publishing|publications?|research|engineering|consulting|"
+    r"logistics|motors|electric|electrical|electronics|communications|healthcare|insurance|pharma|"
+    r"robotics|sciences?|acad\w*|journal|proceedings|transactions|letters|bulletin|magazine|"
+    r"national|federal|review|"
+    r"rentals?|sales|parts|supplies|equipment|machinery|trading|wholesale|retail|stores?|shops?|"
+    r"markets?|outlets?|associates|contractors?|builders?|construction|distributors?|products?|goods|"
+    r"furniture|appliances?|forklifts?|trucks?|casino|betting|lottery|gaming|entertainment|productions?|"
+    r"publishers?|printing|advertising|marketing|transport(?:ation)?|airlines?|hotels?|resorts?|"
+    r"restaurants?|catering|foods?|beverages?|clinic|hospital|pharmacy|properties|realty|estates|"
+    r"ventures|capital|investments?|securities|assets?|banking|mortgage|loans|accounting|payroll|"
+    r"staffing|recruiting|cleaning|roofing|plumbing|solar|mining|chemicals|plastics|metals|steel|"
+    r"timber|textiles|apparel|fashion|jewelry|cosmetics|pharmaceuticals|biotech|hardware|hosting|"
+    r"travel|tours|tourism|promotions?)\b"
+)
+_COLLECTIVE_ORG = re.compile(
+    r"(?i)\b(?:group|team|llc|ltd|limited|inc|incorporated|corp|corporation|company|foundation|"
+    r"association|society|committee|department|ministry|institute|institut\w*|university|universit\w*|"
+    r"college|schools?|labs?|laboratory|studios?|agency|council|cent(?:er|re)|consortium|partners?|"
+    r"holdings?|enterprises?|technologies|systems?|solutions?|services?|software|projects?)\b"
 )
 _CONN_STRING = re.compile(r"(?i)\b(?:jdbc:|data\s+source\s*=|initial\s+catalog\s*=|connection\s*string|server\s*=)")
-_VERSION_CONTEXT = re.compile(r"(?i)\b(?:version|release|revision|build|tag)\b|<version>|\bv\d+\.\d+")
+_VERSION_CONTEXT = re.compile(r"(?i)version|release|revision|build|\btag\b|\$id:|\$header:|,v\s+\d|\bv\d+\.\d+")
 _OPENVPN_STATIC_KEY = re.compile(r"-----BEGIN OpenVPN Static key(?: V\d)?-----")
 _URL_CREDENTIAL_PARAM = re.compile(
     r"(?i)[?&;][\w.-]*(?:api[_-]?key|apikey|key|token|access[_-]?token|auth[_-]?token|password|passwd|pwd|"
@@ -89,7 +132,18 @@ _NAME_STOPWORDS = {
     "not", "of", "on", "open", "or", "other", "others", "permission", "private", "project", "public",
     "redistribution", "reserved", "rights", "same", "see", "software", "source", "team", "terms", "that",
     "the", "this", "to", "under", "use", "used", "version", "warranty", "we", "with", "without",
-    "written", "you", "your",
+    "written", "you", "your", "legal", "notice", "statement", "agreement", "policy", "disclaimer",
+    "trademark", "trademarks", "page", "site", "website", "web", "guide", "manual", "tutorial",
+    "chapter", "section", "figure", "table", "appendix", "note", "notes", "warning", "tip", "drive",
+    "geek", "developer", "developers", "subject", "sentence", "document", "documents", "file", "files",
+    "when", "where", "what", "which", "while", "whom", "whose", "why", "how", "then", "than", "there",
+    "here", "these", "those", "after", "before", "during", "until", "unless", "although", "however",
+    "therefore", "moreover", "also", "both", "many", "most", "some", "several", "because", "since",
+    "once", "every", "into", "onto", "over", "between", "among", "through", "about", "above", "below",
+    "upon", "within", "such", "very", "only", "just", "even", "still", "again", "does", "did", "been",
+    "being", "are", "was", "were", "has", "have", "had", "should", "would", "could", "shall", "might",
+    "please", "thanks", "welcome", "hello", "maybe", "perhaps", "actually", "really", "usually",
+    "currently", "previously", "recently", "finally", "additionally",
 }
 _NAME_PARTICLES = {
     "al", "bin", "da", "de", "del", "della", "der", "di", "dos", "du", "el", "ibn", "la", "le", "mac",
@@ -205,6 +259,7 @@ _CREDENTIAL_NOISE = re.compile(
     r"(?i)\b(?:process|env|environ|getenv|system|config|settings|self|this|ctx|context|require|"
     r"import|function|return|new|null|undefined|true|false)\b"
 )
+_EMAIL_PATTERN = re.compile(r"\b([A-Za-z0-9.!#$%&'*+=?^_`{|}~-]+)@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)\b")
 
 
 def _credential_literal(value: str) -> str:
@@ -212,7 +267,7 @@ def _credential_literal(value: str) -> str:
     stripped = value.strip().strip("'\"").rstrip(",;")
     if len(stripped) < 6 or re.search(r"[\[\]{}()<>]", stripped):
         return ""
-    if stripped[0] in "$%&!~^|/.-":
+    if stripped[0] in "$%&!~^|/.-+*" or "?" in stripped:
         return ""
     if _CREDENTIAL_NOISE.search(stripped):
         return ""
@@ -231,6 +286,24 @@ def _credential_literal(value: str) -> str:
     ):
         return ""
     return stripped
+
+
+def _quoted_credential_value(value: str) -> bool:
+    """Validate a quoted credential literal; reject identifiers, type names and concatenations."""
+    stripped = value.strip()
+    if len(stripped) < 6 or re.search(r"[\[\]{}<>]", stripped):
+        return False
+    if stripped.startswith("+") or " + " in stripped or stripped.endswith(" +"):
+        return False
+    if _CREDENTIAL_NOISE.search(stripped):
+        return False
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", stripped) and not any(char.isdigit() for char in stripped):
+        return False
+    return not re.fullmatch(
+        r"(?i)(?:change[_-]?me|example|sample|demo|test|testing|dummy|placeholder|todo|"
+        r"foo|bar|baz|xxx+|your[_-]?\w*|<.*>)(?:[_-]\w+)*",
+        stripped,
+    )
 
 
 def _strong_unquoted_credential(value: str) -> bool:
@@ -268,11 +341,61 @@ def _valid_cookie_literal(value: str) -> bool:
 
 
 def _is_name_token(word: str) -> bool:
-    if len(word) < 2 or not word[0].isupper() or word.isupper():
+    """True for a capitalized word that can be part of a person name."""
+    core = word.strip(".,;:!?'\"`-")
+    if len(core) < 2 or not core[0].isupper() or core.isupper():
         return False
-    if any(char.isdigit() for char in word) or not any(char.islower() for char in word):
+    if any(char.isdigit() for char in core) or not any(char.islower() for char in core):
         return False
-    return not _ORG_NAME.search(word) and word.lower() not in _NAME_STOPWORDS
+    return not _ORG_NAME.search(core) and core.lower() not in _NAME_STOPWORDS
+
+
+def _is_person_attribution(line: str, start: int, name_end: int) -> bool:
+    """Keep only spans that sit in an attribution slot and are not organization names."""
+    prefix = line[:start].rstrip(" \t")
+    if prefix and prefix[-1] not in ":<(=[\"'*/#,-" and not _AUTHOR_PREFIX.search(prefix):
+        return False
+    if _ORG_SUFFIX.match(line[name_end:]):
+        return False
+    if prefix.endswith(","):
+        segment = _ATTRIBUTION_WORDS.sub(" ", prefix[:-1].rsplit(",", 1)[-1])
+        if _ORG_NAME.search(segment):
+            return False
+    return not _collective_suffix(line, name_end)
+
+
+def _collective_suffix(line: str, name_end: int) -> bool:
+    """True when the words directly after a span name an organization rather than a person."""
+    tail = line[name_end:]
+    seen = 0
+    for match in re.finditer(r"[A-Za-z\u00c0-\u024f']+", tail):
+        if re.search(r"[.,;:]", tail[:match.start()]):
+            return False
+        word = match.group(0)
+        if _COLLECTIVE_ORG.fullmatch(word):
+            return True
+        if word.lower() in _NAME_STOPWORDS or word.lower() in _NAME_PARTICLES:
+            continue
+        seen += 1
+        if seen >= 3:
+            return False
+    return False
+
+
+def _is_prose_line(line: str) -> bool:
+    """True for natural-language lines (documentation, HTML/Markdown prose) without code syntax."""
+    text = _HTML_TAG.sub(" ", line)
+    if _CODE_PUNCTUATION.search(text):
+        return False
+    return len(re.findall(r"[A-Za-z\u00c0-\u024f']+", text)) >= 5
+
+
+def _is_plausible_email(local: str, domain: str) -> bool:
+    """Reject file paths, dummy identities, example domains and role-based mailboxes."""
+    tld = domain.rsplit(".", 1)[-1].lower()
+    if len(tld) < 2 or not tld.isalpha() or tld in _EMAIL_TLD_BLOCKLIST:
+        return False
+    return not _EXAMPLE_EMAIL_DOMAIN.fullmatch(domain) and not _ROLE_EMAIL_LOCAL.fullmatch(local)
 
 
 def _author_name_spans(line: str) -> list[tuple[int, int, str]]:
@@ -291,7 +414,8 @@ def _author_name_spans(line: str) -> list[tuple[int, int, str]]:
         name_end = previous_end
         taken = 1
         following = cursor + 1
-        while following < len(tokens):
+        sentence_end = word[-1] in ".,;:"
+        while following < len(tokens) and not sentence_end:
             next_start, next_end, next_word = tokens[following]
             if next_start - previous_end != 1:
                 break
@@ -299,18 +423,16 @@ def _author_name_spans(line: str) -> list[tuple[int, int, str]]:
                 previous_end = name_end = next_end
                 taken += 1
                 following += 1
+                sentence_end = next_word[-1] in ".,;:"
                 continue
-            if next_word.lower() in _NAME_PARTICLES:
+            if next_word.strip(".,;:").lower() in _NAME_PARTICLES:
                 previous_end = next_end
                 following += 1
                 continue
             break
-        if taken >= 2:
+        if taken >= 2 and _is_person_attribution(line, start, name_end):
             value = line[start:name_end].rstrip(".,;:")
-            prefix = line[:start].rstrip(" \t")
-            if len(value) >= 5 and " " in value and (
-                not prefix or prefix[-1] in ":<(=[\"'*/#,-" or _AUTHOR_PREFIX.search(prefix)
-            ):
+            if len(value) >= 5 and " " in value:
                 spans.append((start, start + len(value), value))
         cursor = max(following, cursor + 1)
     return spans
@@ -440,6 +562,7 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
                 r"['\"](?P<value>[^'\"]{6,})['\"]"
             ),
             category="secret", kind="PASSWORD", confidence="contextual", validator="credential assignment",
+            validate=_quoted_credential_value,
         )
         _scan(
             candidates, line, line_number,
@@ -449,6 +572,7 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
                 r"['\"](?P<value>[A-Za-z0-9_./+=~-]{16,})['\"]"
             ),
             category="secret", kind="API_KEY", confidence="contextual", validator="credential assignment",
+            validate=_quoted_credential_value,
         )
         _scan(
             candidates, line, line_number,
@@ -457,6 +581,7 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
                 r"access[_-]?key|client[_-]?secret)[A-Za-z0-9_\-]*\s*,\s*['\"](?P<value>[^'\"]{6,})['\"]"
             ),
             category="secret", kind="PASSWORD", confidence="contextual", validator="credential argument",
+            validate=_quoted_credential_value,
         )
         for confidence, validate in (("high", _strong_unquoted_credential), ("contextual", _weak_unquoted_credential)):
             _scan(
@@ -527,15 +652,16 @@ def security_candidates(content: str) -> list[dict[str, Any]]:
                   category="pii", kind="TAX_ID_US", validator="US EIN structure and tax-ID context")
 
         # Contact data and context-dependent identifiers require LLM adjudication.
-        email_pattern = re.compile(r"\b([A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+)@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)\b")
-        for match in email_pattern.finditer(line):
-            if _EXAMPLE_EMAIL_DOMAIN.fullmatch(match.group(2)) or _ROLE_EMAIL_LOCAL.fullmatch(match.group(1)):
+        for match in _EMAIL_PATTERN.finditer(line):
+            if not _is_plausible_email(match.group(1), match.group(2)):
                 continue
             if re.search(r"\w+://[^\s]*$", line[:match.start()]):
                 continue
             _append(candidates, line, line_number, match, category="pii", kind="EMAIL", severity="medium",
                     confidence="contextual", validator="RFC-like email structure")
-        if _AUTHOR_MARKER.search(line):
+        if (_STRONG_AUTHOR_MARKER.search(line)
+                or (_WEAK_AUTHOR_MARKER.search(line) and (_COMMENT_LINE.search(line) or _is_prose_line(line)))
+                or (_PROFESSION_CONTEXT.search(line) and _is_prose_line(line))):
             for start, end, value in _author_name_spans(line):
                 _append(candidates, line, line_number, None, category="pii", kind="PERSON_NAME", severity="medium",
                         confidence="contextual", validator="copyright or author attribution", span=(start, end),

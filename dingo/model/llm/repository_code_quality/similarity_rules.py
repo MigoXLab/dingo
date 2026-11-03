@@ -12,12 +12,6 @@ TOKEN_SHINGLE_SIZE = 5
 MIN_NEAR_TOKENS = 30
 MIN_NEAR_SHINGLES = 10
 
-_LICENSE_MARKER = re.compile(
-    r"(?i)\b(?:copyright|licensed? under|spdx-license-identifier|permission is hereby granted|apache license|gnu (?:general public|lesser general public) license|mozilla public license|redistribution and use)\b"
-)
-_COMMENT_LINE = re.compile(r"^\s*(?://+|#+|;+|--+|/\*+|\*+|<!--|REM\b)", re.I)
-
-
 def intra_document_repetition(content: str) -> dict[str, Any] | None:
     if len(content) < 200:
         return None
@@ -82,24 +76,6 @@ def _shingles(tokens: list[str]) -> frozenset[int]:
     )
 
 
-def license_header(content: str) -> str | None:
-    lines = content.splitlines()[:100]
-    marked = [index for index, line in enumerate(lines) if _LICENSE_MARKER.search(line)]
-    if not marked:
-        return None
-    end = min(len(lines), max(marked) + 8)
-    selected = []
-    for line in lines[:end]:
-        if _COMMENT_LINE.search(line) or _LICENSE_MARKER.search(line) or (selected and not line.strip()):
-            selected.append(line)
-        elif selected:
-            break
-    text = "\n".join(selected)
-    text = re.sub(r"(?i)copyright\s*(?:\(c\)|©)?\s*\d{4}(?:\s*[-,]\s*\d{4})?", "copyright <year>", text)
-    text = re.sub(r"\s+", " ", text).strip().lower()
-    return text if len(text) >= 40 else None
-
-
 @dataclass(frozen=True)
 class _Fingerprint:
     ref: str
@@ -109,12 +85,11 @@ class _Fingerprint:
 
 
 class RepositoryDuplicateIndex:
-    """Streaming index for normalized, near, and license-header duplicates."""
+    """Streaming index for normalized and near token duplicates."""
 
     def __init__(self, near_threshold: float = 0.90):
         self.near_threshold = near_threshold
         self.normalized: dict[str, str] = {}
-        self.license_headers: dict[str, str] = {}
         self.representatives: list[_Fingerprint] = []
         self.bands: dict[tuple[int, tuple[int, ...]], set[int]] = defaultdict(set)
 
@@ -134,13 +109,6 @@ class RepositoryDuplicateIndex:
         language = str(getattr(data, "language", "") or "")
         file_name = str(getattr(data, "file_name", "") or getattr(data, "path", "") or "")
         findings: list[dict[str, Any]] = []
-        header = license_header(content)
-        if header:
-            digest = hashlib.sha256(header.encode()).hexdigest()
-            first = self.license_headers.setdefault(digest, ref)
-            if first != ref:
-                findings.append({"label": "Similarity.License_Header_Duplicate", "reason": f"License header duplicates {first}."})
-
         tokens = code_tokens(content, language, file_name)
         if len(tokens) < MIN_NEAR_TOKENS:
             return findings

@@ -170,7 +170,7 @@ input_data = {
 | List JSON | `listjson` | Top-level `{key: [...]}` structure |
 | MinerU V1 | `mineru` | MinerU `content_list.json` (flat block array) |
 | MinerU V2 | `mineru_v2` | MinerU `content_list_v2.json` (pages × blocks) |
-| Repository JSONL | `repository_jsonl` | JSONL parsing plus streaming cross-record duplicate annotation carried as an extra field |
+| Repository Code JSONL | `repository_code_jsonl` | JSONL parsing plus streaming cross-record duplicate annotation carried as an extra field |
 
 MinerU formats automatically flatten blocks into `Data` objects, preserving all original fields (type, bbox, page_idx, etc.) via Pydantic `extra="allow"`. Use `dataset.mineru_config.include_types` to filter by block type.
 

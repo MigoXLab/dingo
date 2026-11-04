@@ -26,7 +26,7 @@ def make_config(
         task_name="repository_code_quality_executor",
         input_path=str(input_path.resolve()),
         output_path=str(output_path.resolve()),
-        dataset={"source": "local", "format": "repository_jsonl"},
+        dataset={"source": "local", "format": "repository_code_jsonl"},
         executor={
             "start_index": start_index,
             "end_index": end_index,

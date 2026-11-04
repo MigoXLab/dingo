@@ -27,7 +27,7 @@ It combines per-record model review with deterministic and cross-record rules.
 | Normalized token duplicate | `Similarity.Normalized_Token_Duplicate` | Comment/whitespace-insensitive token hash |
 | Token-shingle near duplicate | `Similarity.Token_Shingle_Near_Duplicate` | 5-token shingles, token ratio at least 0.80, Jaccard at least 0.90 |
 
-Cross-record findings are annotated by the `repository_jsonl` converter in input order
+Cross-record findings are annotated by the `repository_code_jsonl` converter in input order
 during the load phase, before concurrent evaluation. The first
 record in a duplicate group is retained as the representative and is not marked duplicate.
 Schema, input/content, and truncation checks are hard gates: a hit marks the record bad and
@@ -100,7 +100,7 @@ PYTHONPATH=. python examples/repository_code_quality/evaluate_repository_executo
 
 Use `--start-index` and `--end-index` for bounded smoke tests. Evaluator field mapping
 is intentionally empty so all repository metadata remains available to tokenization,
-duplicate grouping, and result traceability. Input uses the `repository_jsonl` converter:
+duplicate grouping, and result traceability. Input uses the `repository_code_jsonl` converter:
 standard JSONL parsing plus streaming cross-record duplicate annotation; malformed JSON is
 treated as a data-loading error rather than a repository quality label. The derived field
 findings travel to the evaluator as the extra field `repository_duplicate_findings`;

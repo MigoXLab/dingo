@@ -11,8 +11,8 @@ from dingo.io import Data
 DERIVED_DUPLICATE_FIELD = "repository_duplicate_findings"
 
 
-@BaseConverter.register("repository_jsonl")
-class RepositoryJsonlConverter(BaseConverter):
+@BaseConverter.register("repository_code_jsonl")
+class RepositoryCodeJsonlConverter(BaseConverter):
     """JSONL parsing plus sequential cross-record duplicate annotation.
 
     The duplicate index lives in the converter closure, so annotation runs in

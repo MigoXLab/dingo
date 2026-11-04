@@ -2,9 +2,9 @@ import json
 from pathlib import Path
 
 from dingo.data.converter import converters
-from dingo.data.converter.repository_jsonl import DERIVED_DUPLICATE_FIELD
+from dingo.data.converter.repository_code_jsonl import DERIVED_DUPLICATE_FIELD
 
-REPOSITORY_CONVERTER = converters["repository_jsonl"]
+REPOSITORY_CONVERTER = converters["repository_code_jsonl"]
 
 DUPLICATE_CODE = (
     "def add_left_pad(a, b):\n    total = a + b\n    return total\n\n\n"
@@ -65,7 +65,7 @@ def test_local_executor_surfaces_cross_record_duplicates_and_strips_derived_fiel
         task_name="repository_converter_executor",
         input_path=str(source),
         output_path=str(tmp_path / "output"),
-        dataset={"source": "local", "format": "repository_jsonl"},
+        dataset={"source": "local", "format": "repository_code_jsonl"},
         executor={"max_workers": 2, "batch_size": 2, "result_save": {"bad": True, "good": True, "merge": True}},
         evaluator=[
             {

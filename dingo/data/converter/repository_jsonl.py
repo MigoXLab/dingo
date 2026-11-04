@@ -25,7 +25,7 @@ class RepositoryJsonlConverter(BaseConverter):
 
     @classmethod
     def convertor(cls, input_args: InputArgs) -> Callable:
-        from dingo.model.llm.repository_code_quality.similarity_rules import RepositoryDuplicateIndex, record_reference
+        from dingo.model.llm.repository_code_quality.common.rules_similarity import RepositoryDuplicateIndex, record_reference
 
         index = RepositoryDuplicateIndex()
         sequence = 0

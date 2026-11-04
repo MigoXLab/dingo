@@ -2,13 +2,14 @@ import hashlib
 
 from dingo.io.input import Data
 from dingo.io.output.eval_detail import EvalDetail
-from dingo.model.llm.repository_code_quality import LLMRepositoryCodeQualityPipeline, truncation_rules
-from dingo.model.llm.repository_code_quality.input_content_rules import input_content_findings
-from dingo.model.llm.repository_code_quality.llm_repository_security_review import LLMRepositorySecurityPolitics, LLMRepositorySecurityProhibition
-from dingo.model.llm.repository_code_quality.llm_repository_sensitive_review import LLMRepositorySensitiveReview
-from dingo.model.llm.repository_code_quality.schema_rules import schema_findings
-from dingo.model.llm.repository_code_quality.sensitive_rules import confirmed_security_findings, security_candidates
-from dingo.model.llm.repository_code_quality.similarity_rules import RepositoryDuplicateIndex, intra_document_repetition
+from dingo.model.llm.repository_code_quality import LLMRepositoryCodeQualityPipeline
+from dingo.model.llm.repository_code_quality.common import rules_truncation as truncation_rules
+from dingo.model.llm.repository_code_quality.common.llm_repository_security_review import LLMRepositorySecurityPolitics, LLMRepositorySecurityProhibition
+from dingo.model.llm.repository_code_quality.common.llm_repository_sensitive_review import LLMRepositorySensitiveReview
+from dingo.model.llm.repository_code_quality.common.rules_input_content import input_content_findings
+from dingo.model.llm.repository_code_quality.common.rules_schema import schema_findings
+from dingo.model.llm.repository_code_quality.common.rules_sensitive import confirmed_security_findings, security_candidates
+from dingo.model.llm.repository_code_quality.common.rules_similarity import RepositoryDuplicateIndex, intra_document_repetition
 
 
 def repository_data(content, **kwargs):
@@ -252,7 +253,8 @@ def test_real_attributions_and_contacts_are_still_flagged():
 
 
 def test_prose_attributions_are_flagged_but_collective_names_are_not():
-    content = """<p>The Java mascot was created by Joe Palrang. Palrang also worked on Hollywood.</p>
+    content = """<p>Ivan Fratric is a security researcher at Google Project Zero, where he focuses on fuzzing.</p>
+<p>The Java mascot was created by Joe Palrang. Palrang also worked on Hollywood.</p>
               Ivan Fratric is a security researcher at Google Project Zero, where he focuses on fuzzing.
 """
     values = {candidate["matched_value"] for candidate in security_candidates(content) if candidate["kind"] == "PERSON_NAME"}

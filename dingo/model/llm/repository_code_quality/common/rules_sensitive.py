@@ -70,6 +70,7 @@ _PROFESSION_CONTEXT = re.compile(
     r"musician|journalist|student|teacher|accountant|librarian)\b"
 )
 _HTML_TAG = re.compile(r"</?[A-Za-z][^>]{0,300}>")
+_MARKUP_PREFIX = re.compile(r"(?:\s|</?[A-Za-z][^>]{0,300}>)*")
 _CODE_PUNCTUATION = re.compile(r"[;{}()\[\]<>]|=>|::|\|\||&&|[!=<>]=|[-+*/%&|^]=|\\")
 _ATTRIBUTION_WORDS = re.compile(
     r"(?i)\b(?:copyright|authors?|maintainers?|created|written|maintained|modified|updated|by|from|of|c)\b"
@@ -353,8 +354,9 @@ def _is_name_token(word: str) -> bool:
 def _is_person_attribution(line: str, start: int, name_end: int) -> bool:
     """Keep only spans that sit in an attribution slot and are not organization names."""
     prefix = line[:start].rstrip(" \t")
-    if prefix and prefix[-1] not in ":<(=[\"'*/#,-" and not _AUTHOR_PREFIX.search(prefix):
-        return False
+    if prefix and not _MARKUP_PREFIX.fullmatch(prefix):
+        if prefix[-1] not in ":<(=[\"'*/#,-" and not _AUTHOR_PREFIX.search(prefix):
+            return False
     if _ORG_SUFFIX.match(line[name_end:]):
         return False
     if prefix.endswith(","):

@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from dingo.data.converter import converters
-from dingo.data.converter.repository import DERIVED_DUPLICATE_FIELD
+from dingo.data.converter.repository_jsonl import DERIVED_DUPLICATE_FIELD
 
 REPOSITORY_CONVERTER = converters["repository_jsonl"]
 

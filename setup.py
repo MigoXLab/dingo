@@ -16,6 +16,7 @@ agent_requirements = _read_requirements("./requirements/agent.txt")
 hhem_requirements = _read_requirements("./requirements/hhem_integration.txt")
 litellm_requirements = ["litellm>=1.80.0,<1.87.0"]
 retrieval_requirements = _read_requirements("./requirements/retrieval.txt")
+repository_requirements = _read_requirements("./requirements/repository.txt")
 # lmdeploy 单独成组：它硬性要求 transformers>=4.56 并拉入大量重依赖，作为可选推理后端不并入
 # optional/all，保持默认环境轻量。需要时单独 pip install dingo-python[lmdeploy]。
 # （注：幻觉检测模型已从 Vectara HHEM 换为标准 T5 的 MiniCheck，不再有 transformers<4.49 上限，
@@ -29,8 +30,10 @@ extras_require = {
     'hhem': hhem_requirements,
     'litellm': litellm_requirements,
     'retrieval': retrieval_requirements,
+    'repository': repository_requirements,
     'lmdeploy': lmdeploy_requirements,
-    'all': optional_requirements + hhem_requirements + agent_requirements + litellm_requirements + retrieval_requirements,
+    'all': (optional_requirements + hhem_requirements + agent_requirements + litellm_requirements
+            + retrieval_requirements + repository_requirements),
 }
 
 

@@ -13,3 +13,5 @@ class RequiredField(Enum):
     SOURCE_DETAILS = "source_details"
     ANNOTATION = "annotation"
     DATA_CONTENT = "data_content"
+    TRACK_ID = "track_id"
+    LANGUAGE = "language"

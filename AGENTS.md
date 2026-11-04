@@ -171,6 +171,7 @@ input_data = {
 | List JSON | `listjson` | Top-level `{key: [...]}` structure |
 | MinerU V1 | `mineru` | MinerU `content_list.json` (flat block array) |
 | MinerU V2 | `mineru_v2` | MinerU `content_list_v2.json` (pages × blocks) |
+| Repository Code JSONL | `repository_code_jsonl` | JSONL parsing plus streaming cross-record duplicate annotation carried as an extra field |
 
 MinerU formats automatically flatten blocks into `Data` objects, preserving all original fields (type, bbox, page_idx, etc.) via Pydantic `extra="allow"`. Use `dataset.mineru_config.include_types` to filter by block type.
 
@@ -207,6 +208,7 @@ pip install dingo-python                # Core (includes all datasource support)
 pip install "dingo-python[hhem]"        # + HHEM hallucination detection (transformers + torch)
 pip install "dingo-python[agent]"       # + Agent-based evaluation (langchain)
 pip install "dingo-python[retrieval]"   # + Retrieval benchmark evaluation (mteb, tqdm)
+pip install "dingo-python[repository]"  # + Tree-sitter repository truncation detection
 pip install "dingo-python[all]"         # + Everything
 ```
 

@@ -90,7 +90,10 @@ dingo/
 │   ├── env/                 ← Test environment configs
 │   └── scripts/             ← Test scripts (pytest)
 └── docs/                    ← Documentation
-    └── tc609/              ← TC609-specific rule and LLM documentation
+    ├── config.md            ← InputArgs and nested configuration reference
+    ├── dataset/             ← Datasource and dataset-format guides
+    │   └── s3.md            ← S3/Ceph/MinIO configuration and usage
+    └── tc609/               ← TC609-specific rule and LLM documentation
 ```
 
 ## Core Concepts
@@ -329,6 +332,24 @@ Framework: FastMCP
 | `DEFAULT_OUTPUT_DIR` | Default output directory |
 | `LOG_LEVEL` | Logging level (default: info) |
 
+## Documentation Impact
+
+Treat user-facing configuration and datasource documentation as part of the same change as the implementation:
+
+1. If `InputArgs`, `DatasetArgs`, or any nested configuration model changes, update `docs/config.md` in the same task. Document field names, types, defaults, required conditions, accepted values, and security-sensitive serialization behavior.
+2. If a datasource's URI syntax, authentication, supported formats, loading behavior, or limitations change, update the corresponding `docs/dataset/<source>.md` guide and runnable example under `examples/dataset/`.
+3. If a converter or `dataset.format` is added, removed, or changes behavior, update the supported-format table in `docs/config.md` and any specialized dataset guide.
+4. Do not copy real credentials, tokens, internal cookies, or passwords into documentation or examples. Examples must read secrets from environment variables or use obvious placeholders.
+5. Internal refactoring that does not change a documented contract does not require artificial documentation edits; state that documentation is not affected in the final report.
+
+Before completing a configuration or datasource change, report these checks:
+
+| Area | Result | Reason |
+|------|--------|--------|
+| `docs/config.md` | Updated / Not affected | Explain the changed configuration contract or why none changed |
+| `docs/dataset` | Updated / Not affected | Explain the datasource/format behavior change or why none changed |
+| `examples/dataset` | Updated / Not affected | Explain whether runnable usage changed |
+
 ## Config Maintenance Rules
 
 When these events occur, update the corresponding files:
@@ -338,6 +359,8 @@ When these events occur, update the corresponding files:
 | New evaluator added | Ensure registration decorator is correct; update `docs/metrics.md` |
 | TC609 documentation added or changed | Keep TC609-specific Markdown in `docs/tc609/`; keep the shared `docs/metrics.md` in place |
 | New datasource added | Update `requirements/runtime.txt`, `setup.py` extras if heavy, README install section |
+| Public dataset or datasource configuration changed | Update `docs/config.md`, the relevant `docs/dataset/<source>.md`, examples, and tests in the same task |
+| Dataset format added, removed, or changed | Update the format table in `docs/config.md` and the relevant specialized guide/example |
 | New dependency added | Decide: `runtime.txt` (core) vs `setup.py` extras (heavy/optional); use lazy import for optional |
 | New MCP tool added | Update MCP Tools table in this file |
 | New CLI subcommand added | Update CLI Reference section in this file |

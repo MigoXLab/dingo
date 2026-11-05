@@ -10,9 +10,7 @@ from typing import List
 from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import (
-    BaseLLMAgentEval, agent_metric_info, evidence_discipline,
-)
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, agent_metric_info, evidence_discipline
 from dingo.utils import log
 
 

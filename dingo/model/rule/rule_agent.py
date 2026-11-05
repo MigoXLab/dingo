@@ -17,7 +17,6 @@ from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
 
-
 _MS_SWIFT_DESCRIPTION_SUFFIX = (
     ' Requires the ms-swift dataset format (dataset.format: "ms_swift") so '
     "Dingo can convert the "

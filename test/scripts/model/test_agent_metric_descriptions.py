@@ -5,18 +5,8 @@ from dingo.model.llm.agent_eval.llm_agent_plan_quality import LLMAgentPlanQualit
 from dingo.model.llm.agent_eval.llm_agent_step_efficiency import LLMAgentStepEfficiency
 from dingo.model.llm.agent_eval.llm_agent_task_completion import LLMAgentTaskCompletion
 from dingo.model.llm.agent_eval.llm_agent_tool_correctness import LLMAgentToolCorrectness
-from dingo.model.rule.rule_agent import (
-    RuleAgentTraceDestructiveAction,
-    RuleAgentTraceGatewayBypass,
-    RuleAgentTraceIntegrity,
-    RuleAgentTraceLatencyAnomaly,
-    RuleAgentTraceLoopDetection,
-    RuleAgentTraceSandboxExplicitlyDisabled,
-    RuleAgentTraceSecretExposure,
-    RuleAgentTraceSensitiveAccess,
-    RuleAgentTraceTokenBudget,
-)
-
+from dingo.model.rule.rule_agent import (RuleAgentTraceDestructiveAction, RuleAgentTraceGatewayBypass, RuleAgentTraceIntegrity, RuleAgentTraceLatencyAnomaly, RuleAgentTraceLoopDetection,
+                                         RuleAgentTraceSandboxExplicitlyDisabled, RuleAgentTraceSecretExposure, RuleAgentTraceSensitiveAccess, RuleAgentTraceTokenBudget)
 
 AGENT_METRICS = (
     RuleAgentTraceDestructiveAction,

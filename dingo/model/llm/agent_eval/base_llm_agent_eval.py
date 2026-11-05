@@ -23,7 +23,6 @@ from dingo.model.llm.base_openai import BaseOpenAI
 from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
-
 MS_SWIFT_DESCRIPTION_SUFFIX = (
     ' Requires the ms-swift dataset format (dataset.format: "ms_swift") so '
     "Dingo can convert the "

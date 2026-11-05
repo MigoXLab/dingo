@@ -9,13 +9,12 @@ if __name__ == '__main__':
     S3_ACCESS_KEY = ""
     S3_SECRET_KEY = ""
     S3_ENDPOINT_URL = ""
-    S3_BUCKET = ""
 
     input_data = {
-        # 数据文件路径；S3 数据源传对象 Key，不包含 s3://bucket/
-        "input_path": "",
-        # 单个文件示例："input_path": "path/to/your/data.jsonl",
+        # 完整 S3 URI，包含 bucket 和对象 Key/前缀
+        # 单个文件示例："input_path": "s3://bucket-name/path/to/data.jsonl",
         # 目录路径以 / 结尾，会读取目录下所有文件
+        "input_path": "s3://bucket-name/path/to/your/data/",
 
         # 数据集配置
         "dataset": {
@@ -26,8 +25,6 @@ if __name__ == '__main__':
                 "s3_ak": S3_ACCESS_KEY,
                 "s3_sk": S3_SECRET_KEY,
                 "s3_endpoint_url": S3_ENDPOINT_URL,
-                "s3_bucket": S3_BUCKET,
-                "s3_addressing_style": "path",  # 可选值: "path" 或 "virtual"
             }
         },
         "evaluator": [

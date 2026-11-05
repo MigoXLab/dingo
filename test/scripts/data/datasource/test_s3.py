@@ -18,7 +18,7 @@ class TestS3DataSource(unittest.TestCase):
 
         # 基础配置
         self.base_config = {
-            "input_path": "test/data.jsonl",
+            "input_path": "s3://test-bucket/test/data.jsonl",
             "dataset": {
                 "source": "s3",
                 "format": "jsonl",
@@ -29,7 +29,6 @@ class TestS3DataSource(unittest.TestCase):
                     "s3_ak": "test_access_key",
                     "s3_sk": "test_secret_key",
                     "s3_endpoint_url": "https://s3.amazonaws.com",
-                    "s3_bucket": "test-bucket",
                     "s3_addressing_style": "path"
                 }
             }
@@ -48,6 +47,27 @@ class TestS3DataSource(unittest.TestCase):
             self.assertEqual(datasource.path, "test/data.jsonl")
             self.assertEqual(datasource.bucket, "test-bucket")
             self.assertIsNotNone(datasource.client)
+
+    def test_init_requires_full_s3_uri(self):
+        """测试 input_path 必须是包含 bucket 的完整 S3 URI"""
+        for input_path in ["test/data.jsonl", "s3:///test/data.jsonl"]:
+            config = self.base_config.copy()
+            config["input_path"] = input_path
+
+            with self.assertRaises(ValueError) as context:
+                S3DataSource(input_args=InputArgs(**config))
+
+            self.assertIn("S3 input_path must be a full URI", str(context.exception))
+
+    def test_removed_s3_bucket_is_rejected(self):
+        """测试已删除的 s3_bucket 配置不会被静默忽略"""
+        config = json.loads(json.dumps(self.base_config))
+        config["dataset"]["s3_config"]["s3_bucket"] = "legacy-bucket"
+
+        with self.assertRaises(ValueError) as context:
+            InputArgs(**config)
+
+        self.assertIn("s3_bucket", str(context.exception))
 
     def test_init_missing_credentials(self):
         """测试缺少 S3 凭证时抛出异常"""
@@ -113,7 +133,7 @@ class TestS3DataSource(unittest.TestCase):
     def test_load_directory_multiple_files(self):
         """测试加载目录中的多个文件"""
         config = self.base_config.copy()
-        config["input_path"] = "test/data/"  # 以 / 结尾表示目录
+        config["input_path"] = "s3://test-bucket/test/data/"  # 以 / 结尾表示目录
 
         # Mock list_objects 响应
         mock_list_response = {
@@ -210,17 +230,18 @@ class TestS3DataSource(unittest.TestCase):
 
             result = datasource.to_dict()
 
-            self.assertEqual(result["path"], "test/data.jsonl")
+            self.assertEqual(result["path"], "s3://test-bucket/test/data.jsonl")
             self.assertEqual(result["config_name"], "test_config")
 
     def test_different_addressing_styles(self):
         """测试不同的 S3 addressing styles"""
-        for style in ["path", "virtual"]:
+        for style in ["auto", "path", "virtual"]:
             config = self.base_config.copy()
             config["dataset"]["s3_config"]["s3_addressing_style"] = style
 
             with patch('dingo.data.datasource.s3.boto3.client') as mock_client:
                 mock_client.return_value = self.mock_s3_client
+                S3DataSource(input_args=InputArgs(**config))
 
                 # 验证 boto3.client 使用了正确的配置
                 call_args = mock_client.call_args

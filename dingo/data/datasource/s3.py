@@ -1,4 +1,5 @@
 from typing import Any, Dict, Generator, Optional
+from urllib.parse import unquote, urlsplit
 
 import boto3
 import boto3.s3
@@ -10,6 +11,8 @@ from dingo.data.datasource.base import DataSource
 
 @DataSource.register()
 class S3DataSource(DataSource):
+    SUPPORTED_FORMATS = {"jsonl", "ms_swift", "plaintext"}
+
     def __init__(
         self,
         input_args: InputArgs = None,
@@ -20,16 +23,28 @@ class S3DataSource(DataSource):
             input_args: A `InputArgs` instance to load the dataset from.
             config_name: Optional configuration name.
         """
+        self.uri = input_args.input_path
+        self.bucket, self.path = self._parse_s3_uri(self.uri)
         self.client = self._get_client(
             input_args.dataset.s3_config.s3_ak,
             input_args.dataset.s3_config.s3_sk,
             input_args.dataset.s3_config.s3_endpoint_url,
             input_args.dataset.s3_config.s3_addressing_style,
         )
-        self.path = input_args.input_path
-        self.bucket = input_args.dataset.s3_config.s3_bucket
         self.config_name = config_name
         super().__init__(input_args=input_args)
+
+    @staticmethod
+    def _parse_s3_uri(uri: str) -> tuple[str, str]:
+        parsed = urlsplit(uri)
+        if parsed.scheme.lower() != "s3" or not parsed.netloc:
+            raise ValueError(
+                "S3 input_path must be a full URI such as "
+                "'s3://bucket/path/to/data.jsonl'."
+            )
+        if parsed.query or parsed.fragment:
+            raise ValueError("S3 input_path must not contain a query or fragment.")
+        return parsed.netloc, unquote(parsed.path.lstrip("/"))
 
     @staticmethod
     def _get_client(ak: str, sk: str, endpoint_url: str, addressing_style: str):
@@ -58,12 +73,13 @@ class S3DataSource(DataSource):
         Returns:
             An instance of `Iterable`.
         """
-        if self.input_args.dataset.format in ["json", "listjson"]:
-            raise RuntimeError("Format must in be 'jsonl' or 'plaintext'")
+        if self.input_args.dataset.format not in self.SUPPORTED_FORMATS:
+            supported = ", ".join(sorted(self.SUPPORTED_FORMATS))
+            raise RuntimeError(f"S3 format must be one of: {supported}")
         return self._load()
 
     def _load(self) -> Generator[str, None, None]:
-        if not self.path.endswith("/"):
+        if self.path and not self.path.endswith("/"):
             obj = self.client.get_object(
                 Bucket=self.bucket, Key=self.path
             )
@@ -82,6 +98,6 @@ class S3DataSource(DataSource):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "path": self.path,
+            "path": self.uri,
             "config_name": self.config_name,
         }

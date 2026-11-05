@@ -350,8 +350,8 @@ def test_executor_routes_all_code_findings_and_preserves_details(tmp_path, monke
         path = Path(summary.output_path) / 'content' / (label.replace('.', '/') + '.jsonl')
         records = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines()]
         assert len(records) == 1
-        assert records[0]['raw_data']['sample_id'] == row['sample_id']
-        detail = records[0]['eval_details']['content'][0]
+        assert records[0]['sample_id'] == row['sample_id']
+        detail = records[0]['dingo_result']['eval_details']['content'][0]
         assert len(detail['details']['rules']) == 11
         assert len(detail['label']) == len(detail['reason']) == 2
         assert detail['details']['type'] == 'Completeness'
@@ -481,8 +481,8 @@ def test_required_check_reaches_executor_output(label, tmp_path, monkeypatch):
     path = Path(summary.output_path) / 'content' / kind / (name + '.jsonl')
     records = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines()]
     assert len(records) == 1
-    assert records[0]['raw_data'] == row
-    detail = records[0]['eval_details']['content'][0]
+    assert {key: records[0][key] for key in row} == row
+    detail = records[0]['dingo_result']['eval_details']['content'][0]
     assert detail['applicable'] is True
     assert detail['label'] == [label]
     assert len(detail['details']['rules']) == 11

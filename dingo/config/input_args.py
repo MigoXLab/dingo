@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel
 
@@ -12,8 +12,7 @@ class DatasetS3ConfigArgs(BaseModel):
     s3_ak: str = ""
     s3_sk: str = ""
     s3_endpoint_url: str = ""
-    s3_bucket: str = ""
-    s3_addressing_style: str = "path"
+    s3_addressing_style: Literal["auto", "path", "virtual"] = "path"
 
 
 class DatasetSqlArgs(BaseModel):
@@ -76,7 +75,7 @@ class ExecutorResultSaveArgs(BaseModel):
     bad: bool = True
     good: bool = False
     all_labels: bool = False
-    raw: bool = False
+    raw: bool = True
     merge: bool = False  # 如果为True，所有数据写入同一个jsonl文件，不分文件夹
     limit: Optional[int] = None  # 每个输出文件最多写入条数，None表示不限制
     field_list: Optional[List[str]] = None  # 仅保存指定字段；若均不存在则报错
@@ -214,7 +213,6 @@ class InputArgs(BaseModel):
                 },
                 "s3_config": {
                     "s3_endpoint_url",
-                    "s3_bucket",
                     "s3_addressing_style",
                 },
                 "sql_config": {

@@ -49,6 +49,6 @@ class TestContinue:
             for line in f:
                 j = json.loads(line)
                 print(j)
-                id = j['raw_data']['id']
+                id = j['id']
                 break
         assert id == 1

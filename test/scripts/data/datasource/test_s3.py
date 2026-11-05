@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
 
 from dingo.config import InputArgs
+from dingo.data.dataset.s3 import S3Dataset
 from dingo.data.datasource.s3 import S3DataSource
 
 
@@ -18,7 +19,7 @@ class TestS3DataSource(unittest.TestCase):
 
         # 基础配置
         self.base_config = {
-            "input_path": "test/data.jsonl",
+            "input_path": "s3://test-bucket/test/data.jsonl",
             "dataset": {
                 "source": "s3",
                 "format": "jsonl",
@@ -29,7 +30,6 @@ class TestS3DataSource(unittest.TestCase):
                     "s3_ak": "test_access_key",
                     "s3_sk": "test_secret_key",
                     "s3_endpoint_url": "https://s3.amazonaws.com",
-                    "s3_bucket": "test-bucket",
                     "s3_addressing_style": "path"
                 }
             }
@@ -48,6 +48,17 @@ class TestS3DataSource(unittest.TestCase):
             self.assertEqual(datasource.path, "test/data.jsonl")
             self.assertEqual(datasource.bucket, "test-bucket")
             self.assertIsNotNone(datasource.client)
+
+    def test_init_requires_full_s3_uri(self):
+        """测试 input_path 必须是包含 bucket 的完整 S3 URI"""
+        for input_path in ["test/data.jsonl", "s3:///test/data.jsonl"]:
+            config = self.base_config.copy()
+            config["input_path"] = input_path
+
+            with self.assertRaises(ValueError) as context:
+                S3DataSource(input_args=InputArgs(**config))
+
+            self.assertIn("S3 input_path must be a full URI", str(context.exception))
 
     def test_init_missing_credentials(self):
         """测试缺少 S3 凭证时抛出异常"""
@@ -113,7 +124,7 @@ class TestS3DataSource(unittest.TestCase):
     def test_load_directory_multiple_files(self):
         """测试加载目录中的多个文件"""
         config = self.base_config.copy()
-        config["input_path"] = "test/data/"  # 以 / 结尾表示目录
+        config["input_path"] = "s3://test-bucket/test/data/"  # 以 / 结尾表示目录
 
         # Mock list_objects 响应
         mock_list_response = {
@@ -188,6 +199,32 @@ class TestS3DataSource(unittest.TestCase):
             self.assertEqual(len(result), 3)
             self.assertEqual(result[0], "第一行文本")
 
+    def test_load_ms_swift_format(self):
+        """测试从 S3 逐行读取并转换 ms-swift 轨迹"""
+        config = json.loads(json.dumps(self.base_config))
+        config["dataset"]["format"] = "ms_swift"
+        record = {
+            "messages": [
+                {"role": "user", "content": "检查这条轨迹"},
+                {"role": "assistant", "content": "轨迹正常"},
+            ],
+            "trajectory_id": "trace-001",
+        }
+        mock_body = MagicMock()
+        mock_body.iter_lines.return_value = [
+            json.dumps(record, ensure_ascii=False).encode("utf-8")
+        ]
+        self.mock_s3_client.get_object.return_value = {"Body": mock_body}
+
+        with patch('dingo.data.datasource.s3.boto3.client', return_value=self.mock_s3_client):
+            input_args = InputArgs(**config)
+            dataset = S3Dataset(source=S3DataSource(input_args=input_args))
+            result = list(dataset.get_data())
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].trajectory_id, "trace-001")
+        self.assertEqual(result[0].messages, record["messages"])
+
     def test_load_unsupported_format_error(self):
         """测试加载不支持的格式时抛出异常"""
         config = self.base_config.copy()
@@ -200,7 +237,10 @@ class TestS3DataSource(unittest.TestCase):
             with self.assertRaises(RuntimeError) as context:
                 list(datasource.load())
 
-            self.assertIn("Format must in be 'jsonl' or 'plaintext'", str(context.exception))
+            self.assertIn(
+                "S3 format must be one of: jsonl, ms_swift, plaintext",
+                str(context.exception),
+            )
 
     def test_to_dict(self):
         """测试转换为字典"""
@@ -210,17 +250,18 @@ class TestS3DataSource(unittest.TestCase):
 
             result = datasource.to_dict()
 
-            self.assertEqual(result["path"], "test/data.jsonl")
+            self.assertEqual(result["path"], "s3://test-bucket/test/data.jsonl")
             self.assertEqual(result["config_name"], "test_config")
 
     def test_different_addressing_styles(self):
         """测试不同的 S3 addressing styles"""
-        for style in ["path", "virtual"]:
+        for style in ["auto", "path", "virtual"]:
             config = self.base_config.copy()
             config["dataset"]["s3_config"]["s3_addressing_style"] = style
 
             with patch('dingo.data.datasource.s3.boto3.client') as mock_client:
                 mock_client.return_value = self.mock_s3_client
+                S3DataSource(input_args=InputArgs(**config))
 
                 # 验证 boto3.client 使用了正确的配置
                 call_args = mock_client.call_args

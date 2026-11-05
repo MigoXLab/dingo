@@ -124,7 +124,7 @@ python -m pytest test/scripts/model/llm/test_code_quality_pipeline.py test/scrip
 
 ### 使用 Dingo Executor 按一级/二级问题输出
 
-完整流程注册名为 `LLMCodeQualityPipeline`，设置 `result_save` 为 `{"bad": true, "good": true, "all_labels": true}`。标准 `dingo eval --input config.json` 或 `LocalExecutor(InputArgs(...)).execute()` 均可运行，使用原生按标签输出能力。单独配置 `LLMCodeQualityV1` 仍只运行综合质检组件。配置隔离仅在代码质检公共基类 BaseCodeEvaluation 内实现：Executor 为实例设置配置后，由实例创建独立运行类执行原有类方法，并在结束（包括异常）时关闭客户端。实例从声明时的默认配置开始，不继承其他任务留在注册类上的参数；直接通过 configured_evaluator 调用类方法的方式保持兼容。LocalExecutor 保持 dev 实现，不改变其他业务评估器的执行方式。
+完整流程注册名为 `LLMCodeQualityPipeline`，设置 `result_save` 为 `{"bad": true, "good": true, "all_labels": true, "raw": false}`。标准 `dingo eval --input config.json` 或 `LocalExecutor(InputArgs(...)).execute()` 均可运行，使用原生按标签输出能力。单独配置 `LLMCodeQualityV1` 仍只运行综合质检组件。配置隔离仅在代码质检公共基类 BaseCodeEvaluation 内实现：Executor 为实例设置配置后，由实例创建独立运行类执行原有类方法，并在结束（包括异常）时关闭客户端。实例从声明时的默认配置开始，不继承其他任务留在注册类上的参数；直接通过 configured_evaluator 调用类方法的方式保持兼容。LocalExecutor 保持 dev 实现，不改变其他业务评估器的执行方式。
 
 ```text
 content/

@@ -86,8 +86,24 @@ def sample_file(path, count, seed, category, language):
                     'seed': seed, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
+def result_of(record):
+    if 'dingo_result' in record:
+        return record['dingo_result']
+    return record
+
+
+def raw_of(record):
+    if 'raw_data' in record:
+        return record['raw_data']
+    return {
+        key: value
+        for key, value in record.items()
+        if key not in {'dingo_id', 'dingo_result'}
+    }
+
+
 def detail_of(record):
-    details = record['eval_details']['content']
+    details = result_of(record)['eval_details']['content']
     if len(details) != 1 or details[0]['metric'] != 'LLMCodeQualityPipeline':
         raise ValueError('Checkpoint must contain exactly one code-quality result')
     detail = details[0]
@@ -110,9 +126,10 @@ def latest_records(group, samples=None, rubric=None):
     for attempt in sorted((group / 'attempts').glob('*')):
         for path in sorted((attempt / 'content').rglob('*.jsonl')):
             for record in read_rows(path, allow_incomplete_tail=True):
-                sample_id = record['raw_data']['sample_id']
+                raw_data = raw_of(record)
+                sample_id = raw_data['sample_id']
                 if expected is not None:
-                    if sample_id not in expected or record['raw_data'] != expected[sample_id]:
+                    if sample_id not in expected or raw_data != expected[sample_id]:
                         raise ValueError('Checkpoint does not match the sampled input')
                 detail = detail_of(record)
                 if detail['metric'] != 'LLMCodeQualityPipeline' or type(detail['applicable']) is not bool:
@@ -131,7 +148,7 @@ def make_config(input_path, output_path, model, session_id, workers, max_tokens,
                      output_path=str(output_path.resolve()),
                      dataset={'source': 'local', 'format': 'jsonl'},
                      executor={'max_workers': workers, 'batch_size': workers * 2,
-                               'result_save': {'bad': True, 'good': True, 'all_labels': True}},
+                               'result_save': {'bad': True, 'good': True, 'all_labels': True, 'raw': False}},
                      evaluator=[{'fields': {'content': 'content'}, 'evals': [{
                          'name': 'LLMCodeQualityPipeline', 'config': {
                              'key': os.environ['OPENAI_API_KEY'], 'api_url': os.environ['OPENAI_BASE_URL'],
@@ -156,8 +173,9 @@ def export_final(group, rows, records, config):
         detail = detail_of(record)
         outcome = 'execution_error' if not detail['applicable'] else ('candidate' if detail['status'] else 'good')
         counts[outcome] += 1
-        info = ResultInfo(dingo_id=record['dingo_id'], raw_data=record['raw_data'],
-                          eval_status=record['eval_status'],
+        result = result_of(record)
+        info = ResultInfo(dingo_id=record['dingo_id'], raw_data=raw_of(record),
+                          eval_status=result['eval_status'],
                           eval_details={'content': [CodeQualityDetail.model_validate(detail)]})
         writer.write_single_data(str(final), config, info)
         for label in set(detail.get('label') or []):

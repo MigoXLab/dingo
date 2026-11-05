@@ -19,6 +19,9 @@ from dingo.io.output.summary_model import SummaryModel
 class TestSummaryModel:
     """测试 SummaryModel 的指标分数统计功能"""
 
+    def test_result_save_raw_defaults_to_true(self):
+        assert InputArgs().executor.result_save.raw is True
+
     def test_label_stats_expand_paths_and_deduplicate_per_sample(self):
         summary = SummaryModel(total=2)
 
@@ -87,7 +90,8 @@ class TestSummaryModel:
                 "s3_config": {
                     "s3_ak": "access-key",
                     "s3_sk": "secret-key",
-                    "s3_bucket": "test-bucket",
+                    "s3_endpoint_url": "https://s3.amazonaws.com",
+                    "s3_addressing_style": "path",
                 },
                 "sql_config": {
                     "username": "test-user",
@@ -120,7 +124,7 @@ class TestSummaryModel:
 
         assert "s3_ak" not in serialized["dataset"]["s3_config"]
         assert "s3_sk" not in serialized["dataset"]["s3_config"]
-        assert serialized["dataset"]["s3_config"]["s3_bucket"] == "test-bucket"
+        assert serialized["dataset"]["s3_config"]["s3_addressing_style"] == "path"
         assert "password" not in serialized["dataset"]["sql_config"]
         assert serialized["dataset"]["sql_config"]["username"] == "test-user"
         assert "api_token" not in serialized["executor"]["retrieval"]

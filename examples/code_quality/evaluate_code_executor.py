@@ -131,7 +131,7 @@ def make_config(input_path, output_path, model, session_id, workers, max_tokens,
                      output_path=str(output_path.resolve()),
                      dataset={'source': 'local', 'format': 'jsonl'},
                      executor={'max_workers': workers, 'batch_size': workers * 2,
-                               'result_save': {'bad': True, 'good': True, 'all_labels': True}},
+                               'result_save': {'bad': True, 'good': True, 'all_labels': True, 'raw': False}},
                      evaluator=[{'fields': {'content': 'content'}, 'evals': [{
                          'name': 'LLMCodeQualityPipeline', 'config': {
                              'key': os.environ['OPENAI_API_KEY'], 'api_url': os.environ['OPENAI_BASE_URL'],

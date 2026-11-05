@@ -105,6 +105,6 @@ standard JSONL parsing plus streaming cross-record duplicate annotation; malform
 treated as a data-loading error rather than a repository quality label. The derived field
 findings travel to the evaluator as the extra field `repository_duplicate_findings`;
 because Dingo only auto-strips derived fields for ms-swift outputs, flagged records also
-keep that field in saved result raw_data as duplicate provenance. Under distributed Spark
+when `result_save.raw=false`, keep that field in saved result raw_data as duplicate provenance. Under distributed Spark
 execution the converter state is worker-local, so cross-record checks degrade to
 within-partition scope.

@@ -11,6 +11,8 @@ from dingo.data.datasource.base import DataSource
 
 @DataSource.register()
 class S3DataSource(DataSource):
+    SUPPORTED_FORMATS = {"jsonl", "ms_swift", "plaintext"}
+
     def __init__(
         self,
         input_args: InputArgs = None,
@@ -71,8 +73,9 @@ class S3DataSource(DataSource):
         Returns:
             An instance of `Iterable`.
         """
-        if self.input_args.dataset.format in ["json", "listjson"]:
-            raise RuntimeError("Format must in be 'jsonl' or 'plaintext'")
+        if self.input_args.dataset.format not in self.SUPPORTED_FORMATS:
+            supported = ", ".join(sorted(self.SUPPORTED_FORMATS))
+            raise RuntimeError(f"S3 format must be one of: {supported}")
         return self._load()
 
     def _load(self) -> Generator[str, None, None]:

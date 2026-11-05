@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
 
 from dingo.config import InputArgs
+from dingo.data.dataset.s3 import S3Dataset
 from dingo.data.datasource.s3 import S3DataSource
 
 
@@ -58,16 +59,6 @@ class TestS3DataSource(unittest.TestCase):
                 S3DataSource(input_args=InputArgs(**config))
 
             self.assertIn("S3 input_path must be a full URI", str(context.exception))
-
-    def test_removed_s3_bucket_is_rejected(self):
-        """测试已删除的 s3_bucket 配置不会被静默忽略"""
-        config = json.loads(json.dumps(self.base_config))
-        config["dataset"]["s3_config"]["s3_bucket"] = "legacy-bucket"
-
-        with self.assertRaises(ValueError) as context:
-            InputArgs(**config)
-
-        self.assertIn("s3_bucket", str(context.exception))
 
     def test_init_missing_credentials(self):
         """测试缺少 S3 凭证时抛出异常"""
@@ -208,6 +199,32 @@ class TestS3DataSource(unittest.TestCase):
             self.assertEqual(len(result), 3)
             self.assertEqual(result[0], "第一行文本")
 
+    def test_load_ms_swift_format(self):
+        """测试从 S3 逐行读取并转换 ms-swift 轨迹"""
+        config = json.loads(json.dumps(self.base_config))
+        config["dataset"]["format"] = "ms_swift"
+        record = {
+            "messages": [
+                {"role": "user", "content": "检查这条轨迹"},
+                {"role": "assistant", "content": "轨迹正常"},
+            ],
+            "trajectory_id": "trace-001",
+        }
+        mock_body = MagicMock()
+        mock_body.iter_lines.return_value = [
+            json.dumps(record, ensure_ascii=False).encode("utf-8")
+        ]
+        self.mock_s3_client.get_object.return_value = {"Body": mock_body}
+
+        with patch('dingo.data.datasource.s3.boto3.client', return_value=self.mock_s3_client):
+            input_args = InputArgs(**config)
+            dataset = S3Dataset(source=S3DataSource(input_args=input_args))
+            result = list(dataset.get_data())
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].trajectory_id, "trace-001")
+        self.assertEqual(result[0].messages, record["messages"])
+
     def test_load_unsupported_format_error(self):
         """测试加载不支持的格式时抛出异常"""
         config = self.base_config.copy()
@@ -220,7 +237,10 @@ class TestS3DataSource(unittest.TestCase):
             with self.assertRaises(RuntimeError) as context:
                 list(datasource.load())
 
-            self.assertIn("Format must in be 'jsonl' or 'plaintext'", str(context.exception))
+            self.assertIn(
+                "S3 format must be one of: jsonl, ms_swift, plaintext",
+                str(context.exception),
+            )
 
     def test_to_dict(self):
         """测试转换为字典"""

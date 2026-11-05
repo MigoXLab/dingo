@@ -84,7 +84,7 @@
 | `image` | 含图像字段的 JSON/JSONL | 用于图像类评估器 |
 | `repository_code_jsonl` | 仓库代码 JSONL | 支持跨记录重复标注 |
 
-数据源还会施加额外限制：S3 当前仅支持 `jsonl` 和 `plaintext`；SQL 推荐使用 `jsonl`；CSV、Excel、Parquet、Markdown、MinerU 和仓库代码格式由本地数据源读取。
+数据源还会施加额外限制：S3 当前支持 `jsonl`、`ms_swift` 和 `plaintext`；SQL 推荐使用 `jsonl`；CSV、Excel、Parquet、Markdown、MinerU 和仓库代码格式由本地数据源读取。
 
 #### DatasetHFConfig 配置 (dataset.hf_config)
 

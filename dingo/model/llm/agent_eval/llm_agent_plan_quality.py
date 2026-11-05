@@ -10,7 +10,9 @@ from typing import List
 from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, evidence_discipline
+from dingo.model.llm.agent_eval.base_llm_agent_eval import (
+    BaseLLMAgentEval, agent_metric_info, evidence_discipline,
+)
 from dingo.utils import log
 
 
@@ -27,6 +29,13 @@ class LLMAgentPlanQuality(BaseLLMAgentEval):
     returns score=1.0 (pass) because absence of planning may be
     acceptable for simple tasks.
     """
+
+    _metric_info = agent_metric_info(
+        "LLMAgentPlanQuality",
+        "Uses an LLM judge to score the agent's reasoning plan for coherence, "
+        "completeness, and feasibility; a trace with no planning content passes "
+        "directly.",
+    )
 
     eval_layer = "reasoning"
     input_data_type = "trace_summary"

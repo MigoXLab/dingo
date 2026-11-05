@@ -24,6 +24,21 @@ from dingo.utils import log
 from dingo.utils.exception import ConvertJsonError
 
 
+MS_SWIFT_DESCRIPTION_SUFFIX = (
+    ' Requires the ms-swift dataset format (dataset.format: "ms_swift") so '
+    "Dingo can convert the "
+    "source trajectory into this metric's input fields."
+)
+
+
+def agent_metric_info(metric_name: str, description: str) -> dict:
+    """Build discoverability metadata shared by ms-swift Agent metrics."""
+    return {
+        "metric_name": metric_name,
+        "description": description + MS_SWIFT_DESCRIPTION_SUFFIX,
+    }
+
+
 def evidence_discipline(specific_bullet: str) -> str:
     """The rules every judge shown a record must follow, said once.
 

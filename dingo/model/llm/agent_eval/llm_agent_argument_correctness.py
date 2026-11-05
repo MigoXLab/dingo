@@ -10,7 +10,7 @@ from typing import List
 
 from dingo.io.input import Data, RequiredField
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, agent_metric_info
 
 
 @Model.llm_register("LLMAgentArgumentCorrectness")
@@ -26,6 +26,12 @@ class LLMAgentArgumentCorrectness(BaseLLMAgentEval):
     each tool received correct, well-formed, and contextually appropriate
     arguments, without requiring ground-truth argument values.
     """
+
+    _metric_info = agent_metric_info(
+        "LLMAgentArgumentCorrectness",
+        "Uses a referenceless LLM judge to assess whether every tool call "
+        "supplies complete, well-typed, and contextually appropriate arguments.",
+    )
 
     eval_layer = "action"
     input_data_type = "tool_calls"

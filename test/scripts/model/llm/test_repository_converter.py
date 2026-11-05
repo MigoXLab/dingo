@@ -92,6 +92,6 @@ def test_local_executor_surfaces_cross_record_duplicates_and_strips_derived_fiel
     assert "Similarity.Normalized_Token_Duplicate" in labels
 
     results_path = Path(summary.output_path) / "all_results.jsonl"
-    rows = {row["raw_data"]["track_id"]: row for line in results_path.read_text(encoding="utf-8").splitlines() if line.strip() for row in [json.loads(line)]}
-    assert DERIVED_DUPLICATE_FIELD not in rows["one"]["raw_data"]
-    assert rows["two"]["raw_data"][DERIVED_DUPLICATE_FIELD][0]["label"] == "Similarity.Normalized_Token_Duplicate"
+    rows = {row["track_id"]: row for line in results_path.read_text(encoding="utf-8").splitlines() if line.strip() for row in [json.loads(line)]}
+    assert DERIVED_DUPLICATE_FIELD not in rows["one"]
+    assert rows["two"][DERIVED_DUPLICATE_FIELD][0]["label"] == "Similarity.Normalized_Token_Duplicate"

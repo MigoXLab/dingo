@@ -209,9 +209,10 @@ def test_good_pipeline_result_is_exported_without_losing_source_fields(tmp_path)
     summary = export_final(tmp_path, [row], {'good': record}, config)
     assert summary['good'] == 1 and summary['automatic_candidates'] == 0
     saved = json.loads((Path(summary['output_path']) / 'content/QUALITY_GOOD.jsonl').read_text(encoding='utf-8'))
-    assert saved['raw_data'] == row
-    assert saved['eval_details']['content'][0]['label'] == ['QUALITY_GOOD']
-    assert saved['eval_details']['content'][0]['details']['all_labels'] == []
+    assert {key: saved[key] for key in row} == row
+    detail = saved['dingo_result']['eval_details']['content'][0]
+    assert detail['label'] == ['QUALITY_GOOD']
+    assert detail['details']['all_labels'] == []
 
 
 @pytest.mark.parametrize('quality_failure', [False, True])
@@ -246,7 +247,7 @@ def test_executor_full_pipeline_calls_stages_and_writes_results(tmp_path, monkey
     folder = Path(summary.output_path) / 'content'
     low = folder / 'Effectiveness/Low_Code_Content.jsonl'
     assert low.exists()
-    result = json.loads(low.read_text(encoding='utf-8'))['eval_details']['content'][0]
+    result = json.loads(low.read_text(encoding='utf-8'))['dingo_result']['eval_details']['content'][0]
     assert result['applicable'] is not quality_failure
     assert (folder / 'Security/Secret_Credentials.jsonl').exists() is not quality_failure
     assert (folder / 'REVIEW_EXECUTION_ERROR/quality.jsonl').exists() is quality_failure

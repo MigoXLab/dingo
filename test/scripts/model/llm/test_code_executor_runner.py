@@ -75,9 +75,20 @@ def record(sample_id, applicable, label):
                                           'label': [label], 'reason': ['Test reason'], 'details': {}}]}}
 
 
+def flat_record(value):
+    return {
+        **value['raw_data'],
+        'dingo_id': value['dingo_id'],
+        'dingo_result': {
+            'eval_status': value['eval_status'],
+            'eval_details': value['eval_details'],
+        },
+    }
+
+
 def test_resume_uses_successful_record_and_deduplicates_label_files(tmp_path):
     failed = record('one', False, 'REVIEW_EXECUTION_ERROR.ConvertJsonError')
-    good = record('one', True, 'Effectiveness.Syntax_Error')
+    good = flat_record(record('one', True, 'Effectiveness.Syntax_Error'))
     for attempt, value in [('01', failed), ('02', good), ('03', failed)]:
         path = tmp_path / 'attempts' / attempt / 'content' / 'result.jsonl'
         path.parent.mkdir(parents=True)

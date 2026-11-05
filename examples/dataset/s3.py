@@ -6,25 +6,16 @@ from dingo.exec import Executor
 if __name__ == '__main__':
     # S3 配置信息
     # 可以从环境变量中获取，或者直接设置
-    S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "your_access_key")
-    S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "your_secret_key")
-    S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "https://s3.amazonaws.com")
-    S3_BUCKET = os.getenv("S3_BUCKET", "your_bucket_name")  # qa-huawei
-
-    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek-chat")
-    OPENAI_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
-    OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
-
-    llm_config = {
-        "model": OPENAI_MODEL,
-        "key": OPENAI_KEY,
-        "api_url": OPENAI_URL,
-    }
+    S3_ACCESS_KEY = ""
+    S3_SECRET_KEY = ""
+    S3_ENDPOINT_URL = ""
+    S3_BUCKET = ""
 
     input_data = {
-        # 数据文件路径
-        "input_path": "dingo/test_local_jsonl.jsonl",  # 单个文件路径
-        # 或者 "input_path": "path/to/your/data/",  # 目录路径（以 / 结尾会读取目录下所有文件）
+        # 数据文件路径；S3 数据源传对象 Key，不包含 s3://bucket/
+        "input_path": "",
+        # 单个文件示例："input_path": "path/to/your/data.jsonl",
+        # 目录路径以 / 结尾，会读取目录下所有文件
 
         # 数据集配置
         "dataset": {
@@ -39,35 +30,17 @@ if __name__ == '__main__':
                 "s3_addressing_style": "path",  # 可选值: "path" 或 "virtual"
             }
         },
-
-        # 执行器配置
-        "executor": {
-            "max_workers": 10,
-            "batch_size": 10,
-            "result_save": {
-                "good": True,
-                "bad": True,
-                "all_labels": True
-            }
-        },
         "evaluator": [
             {
                 "fields": {"content": "content"},
                 "evals": [
-                    {"name": "LLMTextQualityV4", "config": llm_config}
+                    {"name": "RuleColonEnd"}
                 ]
             }
         ]
     }
 
-    # 创建 InputArgs 实例
     input_args = InputArgs(**input_data)
-
-    # 创建执行器
     executor = Executor.exec_map["local"](input_args)
-
-    # 执行评估
     result = executor.execute()
-
-    # 打印结果
     print(result)

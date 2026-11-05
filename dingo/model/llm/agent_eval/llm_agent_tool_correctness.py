@@ -10,7 +10,7 @@ from typing import List
 
 from dingo.io.input import Data, RequiredField
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, agent_metric_info
 
 
 @Model.llm_register("LLMAgentToolCorrectness")
@@ -26,6 +26,12 @@ class LLMAgentToolCorrectness(BaseLLMAgentEval):
     each tool choice was appropriate given the task and execution context,
     without requiring a ground-truth tool sequence.
     """
+
+    _metric_info = agent_metric_info(
+        "LLMAgentToolCorrectness",
+        "Uses a referenceless LLM judge to assess whether every selected tool was "
+        "appropriate and necessary for the task and its execution context.",
+    )
 
     eval_layer = "action"
     input_data_type = "tool_calls"

@@ -11,7 +11,7 @@ from typing import List
 from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, agent_metric_info
 from dingo.utils import log
 
 
@@ -27,6 +27,13 @@ class LLMAgentErrorRecovery(BaseLLMAgentEval):
     If no errors are found in the content, the evaluator short-circuits
     and returns score=1.0 (pass) without calling the LLM.
     """
+
+    _metric_info = agent_metric_info(
+        "LLMAgentErrorRecovery",
+        "Uses an LLM judge to assess whether the agent detected execution errors, "
+        "chose appropriate recovery actions, and recovered successfully; traces "
+        "without errors pass directly.",
+    )
 
     eval_layer = "recovery"
     input_data_type = "error_events"

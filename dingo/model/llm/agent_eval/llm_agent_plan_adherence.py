@@ -10,7 +10,7 @@ from typing import List
 
 from dingo.io.input import Data, RequiredField
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, agent_metric_info
 
 
 @Model.llm_register("LLMAgentPlanAdherence")
@@ -26,6 +26,13 @@ class LLMAgentPlanAdherence(BaseLLMAgentEval):
     Deviations are classified as justified (e.g., adapting to unexpected
     obstacles) or unjustified (e.g., skipping steps without reason).
     """
+
+    _metric_info = agent_metric_info(
+        "LLMAgentPlanAdherence",
+        "Compares the agent's original plan with its actual execution and "
+        "distinguishes justified adaptations from skipped, unrelated, or "
+        "otherwise unjustified deviations.",
+    )
 
     eval_layer = "reasoning"
     input_data_type = "plan_vs_execution"

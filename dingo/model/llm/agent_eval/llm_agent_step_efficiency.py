@@ -9,7 +9,7 @@ from typing import List
 
 from dingo.io.input import Data, RequiredField
 from dingo.model import Model
-from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, evidence_discipline
+from dingo.model.llm.agent_eval.base_llm_agent_eval import BaseLLMAgentEval, agent_metric_info, evidence_discipline
 
 
 @Model.llm_register("LLMAgentStepEfficiency")
@@ -24,6 +24,13 @@ class LLMAgentStepEfficiency(BaseLLMAgentEval):
     Output score reflects how efficiently the agent reached its goal,
     penalizing redundant steps, loops, and unnecessary operations.
     """
+
+    _metric_info = agent_metric_info(
+        "LLMAgentStepEfficiency",
+        "Scores how efficiently the agent executed the task by identifying "
+        "necessary steps, redundant or wasted operations, and repetitive loops "
+        "in the trace.",
+    )
 
     eval_layer = "execution"
     input_data_type = "trace_summary"

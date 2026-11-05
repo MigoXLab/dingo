@@ -19,6 +19,9 @@ from dingo.io.output.summary_model import SummaryModel
 class TestSummaryModel:
     """测试 SummaryModel 的指标分数统计功能"""
 
+    def test_result_save_raw_defaults_to_true(self):
+        assert InputArgs().executor.result_save.raw is True
+
     def test_label_stats_expand_paths_and_deduplicate_per_sample(self):
         summary = SummaryModel(total=2)
 

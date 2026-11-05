@@ -199,7 +199,7 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 | bad        | bool | false   | No       | 是否保存错误结果    |
 | good       | bool | false   | No       | 是否保存正确结果    |
 | all_labels | bool | false   | No       | 是否保存所有标签    |
-| raw        | bool | false   | No       | 是否保存原始数据    |
+| raw        | bool | true    | No       | 是否将原始字段直接保存在结果记录中；设为 false 时保存在 `raw_data` 字段中 |
 
 ### LLM Token 使用量输出
 
@@ -306,7 +306,7 @@ LLM 配置（支持额外字段，所有额外字段会直接透传给 LLM API�
       "bad": false,
       "good": false,
       "all_labels": false,
-      "raw": false
+      "raw": true
     }
   },
   "evaluator": [

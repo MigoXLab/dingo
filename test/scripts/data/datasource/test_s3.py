@@ -130,7 +130,9 @@ class TestS3DataSource(unittest.TestCase):
         mock_list_response = {
             "Contents": [
                 {"Key": "test/data/file1.jsonl"},
-                {"Key": "test/data/file2.jsonl"}
+                {"Key": "test/data/file2.JSONL"},
+                {"Key": "test/data/notes.txt"},
+                {"Key": "test/data/metadata.json"},
             ]
         }
         self.mock_s3_client.list_objects.return_value = mock_list_response
@@ -157,12 +159,50 @@ class TestS3DataSource(unittest.TestCase):
             self.assertEqual(len(result), 2)
             self.assertIn('{"content": "file1 data"}', result)
             self.assertIn('{"content": "file2 data"}', result)
+            loaded_keys = {
+                call.kwargs["Key"]
+                for call in self.mock_s3_client.get_object.call_args_list
+            }
+            self.assertEqual(
+                loaded_keys,
+                {"test/data/file1.jsonl", "test/data/file2.JSONL"},
+            )
 
             # 验证 S3 调用
             self.mock_s3_client.list_objects.assert_called_once_with(
                 Bucket="test-bucket",
                 Prefix="test/data/"
             )
+
+    def test_load_ms_swift_directory_skips_non_jsonl_objects(self):
+        """ms-swift 前缀读取只加载 .jsonl 对象。"""
+        config = json.loads(json.dumps(self.base_config))
+        config["input_path"] = "s3://test-bucket/test/traces/"
+        config["dataset"]["format"] = "ms_swift"
+        self.mock_s3_client.list_objects.return_value = {
+            "Contents": [
+                {"Key": "test/traces/trace.jsonl"},
+                {"Key": "test/traces/readme.txt"},
+            ]
+        }
+        mock_body = MagicMock()
+        mock_body.iter_lines.return_value = [
+            b'{"messages": [], "trajectory_id": "trace-001"}'
+        ]
+        self.mock_s3_client.get_object.return_value = {"Body": mock_body}
+
+        with patch('dingo.data.datasource.s3.boto3.client', return_value=self.mock_s3_client):
+            datasource = S3DataSource(input_args=InputArgs(**config))
+            result = list(datasource.load())
+
+        self.assertEqual(
+            result,
+            ['{"messages": [], "trajectory_id": "trace-001"}'],
+        )
+        self.mock_s3_client.get_object.assert_called_once_with(
+            Bucket="test-bucket",
+            Key="test/traces/trace.jsonl",
+        )
 
     def test_load_empty_file(self):
         """测试加载空文件"""

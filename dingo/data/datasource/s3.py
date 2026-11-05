@@ -88,6 +88,11 @@ class S3DataSource(DataSource):
             contents = self.client.list_objects(
                 Bucket=self.bucket, Prefix=self.path
             )["Contents"]
+            if self.input_args.dataset.format in ("jsonl", "ms_swift"):
+                contents = [
+                    obj for obj in contents
+                    if obj["Key"].lower().endswith(".jsonl")
+                ]
             obj_list = [
                 self.client.get_object(Bucket=self.bucket, Key=obj["Key"])
                 for obj in contents

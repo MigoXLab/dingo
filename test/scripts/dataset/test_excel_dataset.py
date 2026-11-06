@@ -477,8 +477,12 @@ def test_stream_large_xlsx():
         print("=" * 60)
 
     finally:
-        # 清理临时文件
+        # 清理临时文件前先释放流式数据集及其工作簿句柄（Windows 独占打开）。
+        import gc
         import shutil
+        if 'dataset' in locals():
+            del dataset
+        gc.collect()
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
             print(f"\n✓ 清理临时文件: {temp_dir}")

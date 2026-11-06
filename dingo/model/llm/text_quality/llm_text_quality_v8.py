@@ -39,7 +39,7 @@ class LLMTextQualityV8(BaseTextQualityV2):
     _metric_info = {
         "category": "Pretrain Text Quality Assessment Metrics",
         "metric_name": "LLMTextQualityV8",
-        "description": "Checks formula, table, code, readability, duplication, and safety in detail. Unlike V6, it supports multiple findings and counts formula, table, and code structures.",
+        "description": "Checks formula, table, code, readability, duplication, and safety in detail. Unlike V7, it tightens garbled-character detection with explicit coverage calculations and exclusions.",
         "paper_title": "WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages",
         "paper_url": "https://arxiv.org/abs/2501.14506",
         "paper_authors": "Yu et al., 2025",

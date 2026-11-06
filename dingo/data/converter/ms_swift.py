@@ -57,6 +57,45 @@ def prepare_llm_agent_task_completion(record: Dict[str, Any]) -> Dict[str, str]:
     }
 
 
+def prepare_rule_agent_trace_loss_mask(record: Dict[str, Any]) -> Dict[str, str]:
+    """Prepare role and loss flag per message, keeping the flag as delivered.
+
+    The flag is passed through unchanged (bool or its string form): the rule
+    accepts both, and normalising here would hide a source that writes neither.
+    """
+    messages = [
+        {"role": message.get("role"), "loss": message.get("loss")}
+        for message in _messages(record)
+    ]
+    return {
+        "RuleAgentTraceLossMask_content": json.dumps(
+            {"messages": messages}, ensure_ascii=False,
+        ),
+    }
+
+
+def prepare_rule_agent_trace_empty_supervision(record: Dict[str, Any]) -> Dict[str, str]:
+    """Prepare per-message signal presence for the supervised-turn emptiness check.
+
+    Carries text, the tool-call presence and reasoning presence rather than the
+    full payloads: the rule only asks whether each exists.
+    """
+    messages = []
+    for message in _messages(record):
+        messages.append({
+            "role": message.get("role"),
+            "loss": message.get("loss"),
+            "content": message.get("content") or "",
+            "tool_calls": bool(message.get("tool_calls")),
+            "reasoning_content": message.get("reasoning_content") or "",
+        })
+    return {
+        "RuleAgentTraceEmptySupervision_content": json.dumps(
+            {"messages": messages}, ensure_ascii=False,
+        ),
+    }
+
+
 def prepare_rule_agent_trace_loop_detection(record: Dict[str, Any]) -> Dict[str, str]:
     """Prepare ordered names and arguments for loop detection."""
     calls = []
@@ -388,6 +427,8 @@ def prepare_llm_agent_step_efficiency(record: Dict[str, Any]) -> Dict[str, str]:
 _PREPARERS = {
     "LLMAgentTaskCompletion": prepare_llm_agent_task_completion,
     "RuleAgentTraceLoopDetection": prepare_rule_agent_trace_loop_detection,
+    "RuleAgentTraceLossMask": prepare_rule_agent_trace_loss_mask,
+    "RuleAgentTraceEmptySupervision": prepare_rule_agent_trace_empty_supervision,
     "LLMAgentToolCorrectness": prepare_llm_agent_tool_correctness,
     "RuleAgentTraceDestructiveAction": prepare_rule_agent_trace_destructive_action,
     "RuleAgentTraceGatewayBypass": prepare_rule_agent_trace_gateway_bypass,
@@ -415,6 +456,8 @@ _PREPARER_EMPTY_OUTPUTS = {
         "LLMAgentTaskCompletion_content": "",
     },
     "RuleAgentTraceLoopDetection": {"RuleAgentTraceLoopDetection_content": ""},
+    "RuleAgentTraceLossMask": {"RuleAgentTraceLossMask_content": ""},
+    "RuleAgentTraceEmptySupervision": {"RuleAgentTraceEmptySupervision_content": ""},
     "LLMAgentToolCorrectness": {
         "LLMAgentToolCorrectness_prompt": "",
         "LLMAgentToolCorrectness_content": "",

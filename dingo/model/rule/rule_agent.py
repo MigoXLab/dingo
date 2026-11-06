@@ -1293,3 +1293,283 @@ class RuleAgentTextToolCallValidity(BaseRule):
         else:
             result.label = [QualityLabel.QUALITY_GOOD]
         return result
+
+
+@Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
+class RuleAgentTraceLossMask(BaseRule):
+    """Check that the loss mask trains on the agent's own output and nothing else.
+
+    Input: ``content`` = JSON ``{"messages": [...]}`` where each message carries
+    ``role`` and ``loss``. Mirrors the training-side convention: only what the
+    agent produced (``assistant``) is supervised; the prompt, the user's turns
+    and everything a tool handed back are masked out.
+
+    Three failures are reported separately, because they need different fixes:
+
+    - ``under_masked`` — a non-assistant message is supervised. Tool output and
+      user turns are not the model's own words; training on them teaches it to
+      predict whatever the environment happened to return.
+    - ``over_masked`` — an assistant message is masked out. The agent's own
+      output carries no gradient, so that turn is dead weight in the batch.
+    - ``no_supervision`` — nothing in the record is supervised at all. The whole
+      record contributes no gradient; it is wasted batch space.
+
+    ``over_masked`` is reported because the same mask bug produces both
+    directions, and measured on one delivery it was the common one: in a
+    self-roll sample 1,692 of 7,112 assistant messages (24%) were masked out
+    while structurally identical ones were not. Some pipelines mask certain
+    intermediate turns deliberately, so the three labels stay separate — a
+    consumer that treats over-masking as intentional can filter it out, which it
+    could not do if all three were folded into one verdict.
+
+    Only the mask is checked here. Whether a supervised message is empty or
+    truncated is a content question, and belongs to the content rules.
+    """
+
+    _metric_info = {
+        "metric_name": "RuleAgentTraceLossMask",
+        "metric_group": "AGENT_TRACE_QUALITY",
+        "description": (
+            "Checks the loss mask against the convention that only assistant "
+            "output is supervised: flags supervised tool/user/system messages "
+            "(under-masked), masked-out assistant messages (over-masked), and "
+            "records with no supervised message at all."
+        ),
+    }
+
+    eval_layer = "trajectory"
+    input_data_type = "agent_trace_json"
+
+    _required_fields = [RequiredField.CONTENT]
+
+    # Deliveries write the flag as a bool or as its string form; both appear in
+    # the same corpus, so neither spelling is normalised away upstream.
+    _TRUE = (True, "True", "true", 1, "1")
+    _FALSE = (False, "False", "false", 0, "0")
+
+    @classmethod
+    def _messages(cls, content: Any) -> Optional[List[dict]]:
+        """Return the message list, or None when the payload has no messages."""
+        try:
+            data = json.loads(content) if isinstance(content, str) else content
+        except (json.JSONDecodeError, TypeError):
+            return None
+        if isinstance(data, dict):
+            messages = data.get("messages")
+        elif isinstance(data, list):
+            messages = data
+        else:
+            return None
+        if not isinstance(messages, list):
+            return None
+        return [m for m in messages if isinstance(m, dict)]
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
+        result = EvalDetail(metric=cls.__name__)
+
+        messages = cls._messages(input_data.content)
+        if not messages:
+            # No messages to inspect: the check never ran. Reporting GOOD here
+            # would claim a clean mask on a record we never looked at.
+            result.applicable = False
+            result.not_applicable_kind = "structural"
+            result.not_applicable_code = "no_messages"
+            result.reason = ["The payload carries no message list to check."]
+            return result
+
+        unlabelled = [i for i, m in enumerate(messages)
+                      if m.get("loss") not in cls._TRUE + cls._FALSE]
+        if len(unlabelled) == len(messages):
+            # Every message lacks a usable flag — this format does not record a
+            # mask, which is a fact about the source, not a verdict on it.
+            result.applicable = False
+            result.not_applicable_kind = "structural"
+            result.not_applicable_code = "no_loss_field"
+            result.reason = ["No message carries a readable 'loss' flag."]
+            return result
+
+        under, over, supervised = [], [], 0
+        for index, message in enumerate(messages):
+            flag = message.get("loss")
+            role = message.get("role")
+            if flag in cls._TRUE:
+                supervised += 1
+                if role != "assistant":
+                    under.append((index, role))
+            elif flag in cls._FALSE and role == "assistant":
+                over.append(index)
+
+        labels, reasons = [], []
+        if under:
+            roles = sorted({r for _, r in under})
+            labels.append(f"{cls.metric_type}.{cls.__name__}.under_masked")
+            reasons.append(
+                f"{len(under)} non-assistant message(s) are supervised "
+                f"(roles: {roles}); first at index {under[0][0]}."
+            )
+        if supervised == 0:
+            labels.append(f"{cls.metric_type}.{cls.__name__}.no_supervision")
+            reasons.append(
+                f"No supervised message in {len(messages)} message(s): "
+                "the record contributes no gradient."
+            )
+        elif over:
+            # Only meaningful when something *is* supervised; with nothing
+            # supervised, no_supervision already says it.
+            labels.append(f"{cls.metric_type}.{cls.__name__}.over_masked")
+            reasons.append(
+                f"{len(over)} assistant message(s) are masked out of "
+                f"{len(over) + supervised} assistant message(s); "
+                f"first at index {over[0]}."
+            )
+        if unlabelled:
+            reasons.append(
+                f"{len(unlabelled)} message(s) carry no readable 'loss' flag "
+                "and were not counted."
+            )
+
+        if labels:
+            result.status = True
+            result.label = labels
+            result.reason = reasons
+            return result
+
+        result.label = [QualityLabel.QUALITY_GOOD]
+        result.reason = reasons or [
+            f"All {supervised} supervised message(s) are assistant output."
+        ]
+        return result
+
+
+@Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
+class RuleAgentTraceEmptySupervision(BaseRule):
+    """Flag supervised assistant turns that carry nothing to learn from.
+
+    Input: ``content`` = JSON ``{"messages": [...]}`` with ``role``, ``loss``,
+    ``content``, ``tool_calls`` and ``reasoning_content`` per message. Only
+    supervised assistant turns are examined — everything else is masked out and
+    contributes no gradient either way.
+
+    A turn counts as carrying signal when it has *any* of: message text, a tool
+    call, or reasoning content. Judging on text length alone would condemn the
+    normal shape of an agent trace: measured across the four stage-3 sources,
+    18,993 supervised assistant turns had empty text while carrying a tool call
+    — the agent acting without narrating — and another 196 carried reasoning
+    only. A length threshold would also flag the short answers that are simply
+    correct: ``ok``, ``可以，继续``, or the ``C`` of a multiple-choice reply.
+
+    What remains after those three checks is a turn with no text, no call and
+    no reasoning: supervised on nothing. Also flagged is a turn whose entire
+    text is an end-of-turn marker, which is the truncation signature — the
+    token survived, the answer did not.
+    """
+
+    _metric_info = {
+        "metric_name": "RuleAgentTraceEmptySupervision",
+        "metric_group": "AGENT_TRACE_QUALITY",
+        "description": (
+            "Flags supervised assistant turns with no text, no tool call and no "
+            "reasoning, or whose text is only an end-of-turn marker. Tool calls "
+            "and reasoning count as signal, so silent-but-acting turns and short "
+            "valid answers are not mistaken for truncation."
+        ),
+    }
+
+    eval_layer = "trajectory"
+    input_data_type = "agent_trace_json"
+
+    _required_fields = [RequiredField.CONTENT]
+
+    _TRUE = (True, "True", "true", 1, "1")
+
+    # Text that is only an end-of-turn marker: the generation stopped before
+    # producing an answer and left the stop token behind.
+    _MARKER_ONLY = re.compile(
+        r"^(?:<\|?(?:im_end|endoftext|eot_id|eos)\|?>|</s>|\[END\]|\.{3}|…)+$",
+        re.IGNORECASE,
+    )
+
+    @classmethod
+    def _messages(cls, content: Any) -> Optional[List[dict]]:
+        try:
+            data = json.loads(content) if isinstance(content, str) else content
+        except (json.JSONDecodeError, TypeError):
+            return None
+        if isinstance(data, dict):
+            messages = data.get("messages")
+        elif isinstance(data, list):
+            messages = data
+        else:
+            return None
+        if not isinstance(messages, list):
+            return None
+        return [m for m in messages if isinstance(m, dict)]
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        empty_result = _empty_derived_input_result(cls, input_data)
+        if empty_result is not None:
+            return empty_result
+        result = EvalDetail(metric=cls.__name__)
+
+        messages = cls._messages(input_data.content)
+        if not messages:
+            result.applicable = False
+            result.not_applicable_kind = "structural"
+            result.not_applicable_code = "no_messages"
+            result.reason = ["The payload carries no message list to check."]
+            return result
+
+        supervised = [
+            m for m in messages
+            if m.get("role") == "assistant" and m.get("loss") in cls._TRUE
+        ]
+        if not supervised:
+            # Nothing supervised to judge. Whether that itself is a defect is
+            # RuleAgentTraceLossMask's question, not this rule's.
+            result.applicable = False
+            result.not_applicable_kind = "structural"
+            result.not_applicable_code = "no_supervised_turn"
+            result.reason = ["No supervised assistant turn to check."]
+            return result
+
+        empty, marker = [], []
+        for index, message in enumerate(messages):
+            if message.get("role") != "assistant" or message.get("loss") not in cls._TRUE:
+                continue
+            text = (message.get("content") or "").strip()
+            has_call = bool(message.get("tool_calls"))
+            has_reasoning = bool((message.get("reasoning_content") or "").strip())
+            if text and cls._MARKER_ONLY.match(text) and not has_call and not has_reasoning:
+                marker.append((index, text[:20]))
+            elif not text and not has_call and not has_reasoning:
+                empty.append(index)
+
+        reasons = []
+        if empty:
+            reasons.append(
+                f"{len(empty)} supervised assistant turn(s) carry no text, no "
+                f"tool call and no reasoning; first at index {empty[0]}."
+            )
+        if marker:
+            reasons.append(
+                f"{len(marker)} supervised assistant turn(s) contain only an "
+                f"end-of-turn marker (e.g. {marker[0][1]!r} at index {marker[0][0]})."
+            )
+
+        if reasons:
+            result.status = True
+            result.label = [f"{cls.metric_type}.{cls.__name__}"]
+            result.reason = reasons
+            return result
+
+        result.label = [QualityLabel.QUALITY_GOOD]
+        result.reason = [
+            f"All {len(supervised)} supervised assistant turn(s) carry text, a "
+            "tool call or reasoning."
+        ]
+        return result

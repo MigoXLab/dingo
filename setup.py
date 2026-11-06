@@ -1,7 +1,6 @@
 import os
 import re
 import subprocess
-
 from setuptools import find_packages, setup
 from setuptools.command.build_py import build_py
 from setuptools.command.sdist import sdist

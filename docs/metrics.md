@@ -4,15 +4,6 @@ This document provides comprehensive information about all quality metrics used 
 
 **Note**: All metrics are backed by academic sources to ensure objectivity and scientific rigor.
 
-### Code Data Quality Metrics
-
-| Metric | Description | Source | Documentation / Example |
-|--------|-------------|--------|-------------------------|
-| `LLMCodeQualityV1` | Four issue dimensions: effectiveness (including LLM low code content classification), completeness, repetition and security; automatic rule review, restricted code checks and all-label Executor output. | Internal implementation, adapted from LLMTextQualityV6 | [Rubric](code_quality/code_quality_v1.md) / [Executor](../examples/code_quality/evaluate_code_executor.py) |
-| `LLMCodeClassificationV1` | Precision-first 0–5 relevance scoring and independent code presence. | Calibrated classification Prompt v5 (adapted) | [Rubric](code_quality/code_quality_v1.md) / [Executor](../examples/code_quality/evaluate_code_executor.py) |
-| `LLMCodeQualityPipeline` | Full code QC: quality/safety review with `bailian/deepseek-v4.1-flash`; classification with `glm-5.3-flash` + `bailian/deepseek-v4.1-flash`. Low code content requires both classifiers to succeed and their unrounded mean score to be ≤2; a classifier failure leaves the classification conclusion unknown and is recorded as an execution error. Deduplicated native Executor output. | Internal implementation | [Rubric](code_quality/code_quality_v1.md) / [Executor](../examples/code_quality/evaluate_code_executor.py) |
-| `LLMRepositoryCodeQualityPipeline` | Repository code QC covering record-field schema validation, deterministic parser-backed code truncation, input/content hard gates, advertisement, rule-first sensitive data, prohibited/political content, and intra/cross-record repetition. Sensitive values are detected and reported without mutating source content. | Internal implementation | [Rubric](repository_code_quality.md) |
-
 ### RAG Evaluation Metrics
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
@@ -28,34 +19,25 @@ This document provides comprehensive information about all quality metrics used 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
 | `LLMCodeCompare` | LLMCodeCompare | Compares the effectiveness of two tools in extracting code blocks from HTML to Markdown format by evaluating recognit... | Internal Implementation | N/A | N/A |
+| `LLMCodeQualityPipeline` | LLMCodeQualityPipeline | Code quality, DeepSeek/GLM dual classification and LLM safety review. | Internal Implementation | N/A | [📝 View Example](../examples/code_quality/evaluate_code_executor.py) |
+| `LLMCodeQualityV1` | LLMCodeQualityV1 | Effectiveness (including low code content), completeness, repetition and security with contextual rule review and res... | Internal Implementation | [📊 See Results](code_quality/code_quality_v1.md) | [📝 View Example](../examples/code_quality/evaluate_code_executor.py) |
 | `LLMDatamanAssessment` | LLMDatamanAssessment | Evaluates pre-training data quality using the DataMan methodology (14 standards, 15 domains). Assigns a score (0/1), ... | [DataMan: Data Manager for Pre-training Large Language Models](https://arxiv.org/abs/2502.19363) (Peng et al., 2025) | N/A | N/A |
 | `LLMHtmlExtractCompareV2` | LLMHtmlExtractCompareV2 | Compares two HTML main-content extraction tools by computing text diffs and using LLM to judge which preserves more c... | Internal Implementation | N/A | N/A |
 | `LLMHtmlExtractCompareV3` | LLMHtmlExtractCompareV3 | Compares two HTML extraction tools using LLM pretraining quality dimensions (completeness, effectiveness, similarity,... | Internal Implementation | N/A | N/A |
 | `LLMMathCompare` | LLMMathCompare | Compares the effectiveness of two tools in extracting mathematical formulas from HTML to Markdown format by evaluatin... | Internal Implementation | N/A | N/A |
+| `LLMRepositoryCodeQualityPipeline` | LLMRepositoryCodeQualityPipeline | Repository record-field schema, code truncation, content validity, advertisement, sensitive data, prohibited/politica... | Internal Implementation | N/A | [📝 View Example](../examples/repository_code_quality/evaluate_repository_executor.py) |
 | `LLMSecurityPolitics` | LLMSecurityPolitics | Evaluates whether the text contains politics-related content | Internal Implementation | N/A | N/A |
 | `LLMTableCompare` | LLMTableCompare | Compares the effectiveness of two tools in extracting tables from HTML to Markdown format by evaluating recognition r... | Internal Implementation | N/A | N/A |
+| `LLMTextAdvertisement` | LLMTextAdvertisement | Flags only severe hard-sell ads and traffic diversion. Soft product mentions and hashtag-heavy notes pass. | Internal Implementation | N/A | [📝 View Example](../examples/ugc/eval_ad_and_media_url.py) |
 | `LLMTextEquation` | LLMTextEquation | Impact-driven text quality evaluation for LLM pretraining, focusing on structural completeness, readability, diversit... | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) (Yu et al., 2025) | [📊 See Results](eval/prompt/redpajama_data_evaluated_by_prompt.md) | [📝 View Example](../examples/llm_and_rule/llm_local.py) |
 | `LLMTextQualityV2` | LLMTextQualityV2 | Checks validity, relevance, completeness, clarity, fluency, duplication, and safety. It consolidates prior checks. | Internal Implementation | N/A | N/A |
 | `LLMTextQualityV3` | LLMTextQualityV3 | Checks structure, readability, duplication, and safety. Unlike V2, it groups sublabels into four dimensions. | Internal Implementation | N/A | N/A |
 | `LLMTextQualityV4` | LLMTextQualityV4 | Checks formula, table, code, readability, duplication, and safety. Unlike V3, it separates structural defect types. | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) (Yu et al., 2025) | [📊 See Results](eval/prompt/redpajama_data_evaluated_by_prompt.md) | N/A |
 | `LLMTextQualityV5` | LLMTextQualityV5 | Checks material structural, readability, duplication, and safety defects. Unlike V4, it adds thresholds and examples. | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) (Yu et al., 2025) | [📊 See Results](eval/prompt/redpajama_data_evaluated_by_prompt.md) | [📝 View Example](../examples/llm_and_rule/llm_local.py) |
 | `LLMTextQualityV6` | LLMTextQualityV6 | Checks the same areas with evidence and content-aware exclusions. Unlike V5, it returns only the dominant defect. | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) (Yu et al., 2025) | [📊 See Results](eval/prompt/redpajama_data_evaluated_by_prompt.md) | [📝 View Example](../examples/llm_and_rule/llm_local.py) |
-| `LLMTextQualityV7` | LLMTextQualityV7 | Checks formula, table, code, readability, duplication, and safety in detail. Unlike V6, it supports multiple findings and counts formula, table, and code structures. | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) (Yu et al., 2025) | [📊 See Results](eval/prompt/redpajama_data_evaluated_by_prompt.md) | [📝 View Example](../examples/llm_and_rule/llm_local.py) |
-| `LLMTextQualityV8` | LLMTextQualityV8 | Checks formula, table, code, readability, duplication, and safety in detail. Unlike V7, it tightens garbled-character detection with explicit coverage calculations and exclusions. | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) (Yu et al., 2025) | [📊 See Results](eval/prompt/redpajama_data_evaluated_by_prompt.md) | [📝 View Example](../examples/llm_and_rule/llm_local.py) |
-| `LLMTextAdvertisement` | LLMTextAdvertisement | Flags only severe hard-sell ads and traffic diversion under `Effectiveness.Advertisement`. Soft product mentions and hashtag-heavy notes pass. | Internal Implementation | N/A | [📝 View Example](../examples/repository_code_quality/evaluate_repository_executor.py) |
+| `LLMTextQualityV7` | LLMTextQualityV7 | Checks formula, table, code, readability, duplication, and safety in detail. Unlike V6, it supports multiple findings... | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) (Yu et al., 2025) | [📊 See Results](eval/prompt/redpajama_data_evaluated_by_prompt.md) | [📝 View Example](../examples/llm_and_rule/llm_local.py) |
+| `LLMTextQualityV8` | LLMTextQualityV8 | Checks formula, table, code, readability, duplication, and safety in detail. Unlike V7, it tightens garbled-character... | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) (Yu et al., 2025) | [📊 See Results](eval/prompt/redpajama_data_evaluated_by_prompt.md) | [📝 View Example](../examples/llm_and_rule/llm_local.py) |
 | `LLMTextTable` | LLMTextTable | Impact-driven text quality evaluation for LLM pretraining, focusing on structural completeness, readability, diversit... | [WanJuanSiLu: A High-Quality Open-Source Webtext Dataset for Low-Resource Languages](https://arxiv.org/abs/2501.14506) (Yu et al., 2025) | [📊 See Results](eval/prompt/redpajama_data_evaluated_by_prompt.md) | [📝 View Example](../examples/llm_and_rule/llm_local.py) |
-
-### National Standard LLM Assessment Metrics
-
-| Type | Metric | Description | Source | Evaluation Results | Examples |
-|------|--------|-------------|--------|-------------------|----------|
-| `LLM_TC609_0101_DocBasicInfoCompleteness` | LLM_TC609_0101_DocBasicInfoCompleteness | Uses an LLM to assess dataset scale, format, file structure, access channel, and technical support in dataset documentation. | TC609 | N/A | [📝 View Example](../examples/guobiao/example_doc3.py) |
-| `LLM_TC609_0102_DocContentFeatureCompleteness` | LLM_TC609_0102_DocContentFeatureCompleteness | Uses an LLM to assess modality, distribution, label statistics, sample examples, and limitations. | TC609 | N/A | [📝 View Example](../examples/guobiao/example_doc3.py) |
-| `LLM_TC609_0103_DocConstructionProcessCompleteness` | LLM_TC609_0103_DocConstructionProcessCompleteness | Uses an LLM to assess source, collection, processing, annotation, and version control. | TC609 | N/A | [📝 View Example](../examples/guobiao/example_doc3.py) |
-| `LLM_TC609_0104_DocApplicationCompleteness` | LLM_TC609_0104_DocApplicationCompleteness | Uses an LLM to assess license, target scenarios, evaluation method, benchmark results, and typical cases. | TC609 | N/A | [📝 View Example](../examples/guobiao/example_doc3.py) |
-| `LLM_TC609_0202_SafetyCompliance` | LLM_TC609_0202_SafetyCompliance | Uses an LLM to assess safety compliance across all modules in `data_content`. | TC609 | N/A | [📝 View Example](../examples/guobiao/llm_0202_SafetyCompliance.py) |
-| `LLM_TC609_0206_ContentConsistency` | LLM_TC609_0206_ContentConsistency | Uses an LLM to assess semantic and factual consistency among text items in `data_content`. | TC609 | N/A | [📝 View Example](../examples/guobiao/llm_0206_ContentConsistency.py) |
-| `LLM_TC609_0207_DataTypeConsistency` | LLM_TC609_0207_DataTypeConsistency | Uses an LLM to assess whether text items in `data_content` match the configured TC609 dataset type. | TC609 | N/A | [📝 View Example](../examples/guobiao/llm_0207_DataTypeConsistency.py) |
 
 ### SFT Data Assessment Metrics
 
@@ -75,6 +57,7 @@ This document provides comprehensive information about all quality metrics used 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
 | `LLMClassifyTopic` | LLMClassifyTopic | Classifies text into categories like language processing, writing, code, mathematics, role-play, or knowledge Q&A. Ba... | [BERTopic](https://maartengr.github.io/BERTopic/index.html#quick-start) & [INSTAG](https://arxiv.org/pdf/2308.07074) (Grootendorst, 2022; Wei et al., 2023) | [📊 See Results](eval/prompt/text_data_classified_by_topic.md) | N/A |
+| `LLMCodeClassificationV1` | LLMCodeClassificationV1 | Precision-first code-training relevance (0-5) and independent code presence, adapted from calibrated Prompt v5. | Internal Implementation | N/A | [📝 View Example](../examples/code_quality/evaluate_code_executor.py) |
 
 ### Multimodality Assessment Metrics
 
@@ -87,23 +70,13 @@ This document provides comprehensive information about all quality metrics used 
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
-| `QUALITY_BAD_COMPLETENESS` | RuleLineEndWithEllipsis, RuleLineEndWithTerminal, RuleSentenceNumber, RuleWordNumber | Checks whether the ratio of lines ending with ellipsis is below threshold; Checks whether the ratio of lines ending w... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
-| `QUALITY_BAD_EFFECTIVENESS` | RuleAbnormalChar, RuleAbnormalHtml, RuleAlphaWords, RuleAudioDataFormat, RuleCharNumber, RuleColonEnd, RuleContentNull, RuleContentShort, RuleContentShortMultiLan, RuleEnterAndSpace, RuleEnterMore, RuleEnterRatioMore, RuleHtmlEntity, RuleHtmlTag, RuleInvisibleChar, RuleImageDataFormat, RuleLatexSpecialChar, RuleLineJavascriptCount, RuleLoremIpsum, RuleMeanWordLength, RuleNlpDataFormat, RuleSftDataFormat, RuleSpaceMore, RuleSpecialCharacter, RuleStopWord, RuleSymbolWordRatio, RuleVedioDataFormat, RuleOnlyUrl, RuleDictConsistency, RuleDoi, RuleIsbn | Detects garbled text and anti-crawling characters by combining special character and invisible character detection; D... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
+| `QUALITY_BAD_COMPLETENESS` | RuleLineEndWithEllipsis, RuleLineEndWithTerminal, RuleSentenceNumber, RuleWordNumber, RuleThinkTagIntegrity | Checks whether the ratio of lines ending with ellipsis is below threshold; Checks whether the ratio of lines ending w... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleAgentTextToolCallValidity, RuleAbnormalChar, RuleAbnormalHtml, RuleAlphaWords, RuleAudioDataFormat, RuleCharNumber, RuleColonEnd, RuleContentNull, RuleContentShort, RuleContentShortMultiLan, RuleEnterAndSpace, RuleEnterMore, RuleEnterRatioMore, RuleHtmlEntity, RuleHtmlTag, RuleInvisibleChar, RuleImageDataFormat, RuleLatexSpecialChar, RuleLineJavascriptCount, RuleLoremIpsum, RuleMeanWordLength, RuleNlpDataFormat, RuleSftDataFormat, RuleSpaceMore, RuleSpecialCharacter, RuleStopWord, RuleSymbolWordRatio, RuleVedioDataFormat, RuleOnlyUrl, RuleDictConsistency, RuleRLTestCaseValidity, RuleDoi, RuleIsbn | Checks text-encoded tool calls (<function=...> / <tool_call>) in agent trajectories against the tool definitions: und... | Internal Implementation | N/A | N/A |
 | `QUALITY_BAD_FLUENCY` | RuleAbnormalNumber, RuleCharSplit, RuleNoPunc, RuleWordSplit, RuleWordStuck | Checks PDF content for abnormal book page or index numbers that disrupt text flow; Checks PDF content for abnormal ch... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
 | `QUALITY_BAD_RELEVANCE` | RuleHeadWordAr, RuleHeadWordCs, RuleHeadWordHu, RuleHeadWordKo, RuleHeadWordRu, RuleHeadWordSr, RuleHeadWordTh, RuleHeadWordVi, RulePatternSearch, RuleWatermark | Checks whether Arabic content contains irrelevant tail source information; Checks whether Czech content contains irre... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
 | `QUALITY_BAD_SECURITY` | RuleIDCard, RuleUnsafeWords, RulePIIDetection | Checks whether content contains ID card information; Checks whether content contains unsafe words; Detects Personal I... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
 | `QUALITY_BAD_SIMILARITY` | RuleDocRepeat, RuleDocFormulaRepeat | Evaluates text for consecutive repeated content and multiple occurrences of special characters; Evaluates text for co... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
 | `QUALITY_BAD_UNDERSTANDABILITY` | RuleCapitalWords, RuleCurlyBracket, RuleLineStartWithBulletpoint, RuleUniqueWords | Checks whether the ratio of capital words is above threshold, indicating poor readability; Checks whether the ratio o... | [RedPajama: an Open Dataset for Training Large Language Models](https://github.com/togethercomputer/RedPajama-Data) (Together Computer, 2023) | [📊 See Results](eval/rule/slimpajama_data_evaluated_by_rule.md) | N/A |
-
-### Rule-Based Structured Training Data Metrics
-
-Deterministic structural checks for reasoning, RL and agent-trajectory training data. Map the structured field to `content` (see [ncp stage1 survey](ncp_stage1_dataset_survey.md)).
-
-| Type | Metric | Description | Input (`content`) | Group |
-|------|--------|-------------|-------------------|-------|
-| `QUALITY_BAD_COMPLETENESS` | RuleThinkTagIntegrity | Checks that `<think>` blocks are closed, not stray or repeated, and followed by a non-empty final answer (`threshold`: min answer chars, default 20) | Model response | `reasoning` |
-| `QUALITY_BAD_EFFECTIVENESS` | RuleRLTestCaseValidity | Checks that an RL `ground_truth` JSON has non-empty, equal-length `inputs`/`outputs`, no empty expected outputs and no duplicated cases (`threshold`: min cases, default 1) | `ground_truth` JSON string | `rl` |
-| `QUALITY_BAD_EFFECTIVENESS` | RuleAgentTextToolCallValidity | Checks text-encoded tool calls (`<function=...>` / `<tool_call>`) against the trajectory's tool definitions: undefined tools, unknown or missing required arguments, malformed call blocks | `{"messages": [...], "tools": [...]}` JSON string | `agent_trace_text` |
 
 ### Rule-Based IMG Quality Metrics
 
@@ -144,6 +117,18 @@ Deterministic structural checks for reasoning, RL and agent-trajectory training 
 | `LLMMetaRaterReadability` | LLMMetaRaterReadability | Evaluates the clarity and coherence of text using appropriate vocabulary and sentence structures on a 5-point scale | [Meta-rater: A Multi-dimensional Data Selection Method for Pre-training Language Models](https://arxiv.org/pdf/2504.14194) (Zhuang et al., 2025) | N/A | N/A |
 | `LLMMetaRaterReasoning` | LLMMetaRaterReasoning | Evaluates the reasoning complexity and logical depth of text content, from simple logical judgments to complex multid... | [Meta-rater: A Multi-dimensional Data Selection Method for Pre-training Language Models](https://arxiv.org/pdf/2504.14194) (Zhuang et al., 2025) | N/A | N/A |
 
+### National Standard LLM Assessment Metrics
+
+| Type | Metric | Description | Paper Source | Evaluation Results | Examples |
+|------|--------|-------------|--------------|-------------------|----------|
+| `LLM_TC609_0101_DocBasicInfoCompleteness` | LLM_TC609_0101_DocBasicInfoCompleteness | Uses an LLM to assess dataset scale, format, file structure, access channel, and technical support in dataset documen... | Internal Implementation | N/A | N/A |
+| `LLM_TC609_0102_DocContentFeatureCompleteness` | LLM_TC609_0102_DocContentFeatureCompleteness | Uses an LLM to assess modality, distribution, label statistics, sample examples, and limitations in dataset documenta... | Internal Implementation | N/A | N/A |
+| `LLM_TC609_0103_DocConstructionProcessCompleteness` | LLM_TC609_0103_DocConstructionProcessCompleteness | Uses an LLM to assess source, collection, processing, annotation, and version control in dataset documentation. | Internal Implementation | N/A | N/A |
+| `LLM_TC609_0104_DocApplicationCompleteness` | LLM_TC609_0104_DocApplicationCompleteness | Uses an LLM to assess license, target scenarios, evaluation method, benchmark results, and typical cases. | Internal Implementation | N/A | N/A |
+| `LLM_TC609_0202_SafetyCompliance` | LLM_TC609_0202_SafetyCompliance | Uses an LLM to assess dataset content safety compliance. | Internal Implementation | N/A | [📝 View Example](../examples/guobiao/llm_0202_SafetyCompliance.py) |
+| `LLM_TC609_0206_ContentConsistency` | LLM_TC609_0206_ContentConsistency | Uses an LLM to assess semantic and factual consistency among text items in data_content. | Internal Implementation | N/A | [📝 View Example](../examples/guobiao/llm_0206_ContentConsistency.py) |
+| `LLM_TC609_0207_DataTypeConsistency` | LLM_TC609_0207_DataTypeConsistency | Uses an LLM to assess whether text content matches the configured TC609 dataset type. | Internal Implementation | N/A | [📝 View Example](../examples/guobiao/llm_0207_DataTypeConsistency.py) |
+
 ### OCR Eval Metric
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
@@ -169,7 +154,14 @@ Deterministic structural checks for reasoning, RL and agent-trajectory training 
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
-| `QUALITY_BAD_EFFECTIVENESS` | RuleMetadataSimilarity, RuleAuthorFieldValidation, RulePatentFieldValidation, RuleQuanliangFieldValidation, RuleSourceFieldValidation | 检查元数据字段与基准数据的相似度匹配，阈值默认为0.6; Validate OpenAlex author fields and report invalid fields; Validate patent metadata fields and report invalid fields; Validate Quanliang metadata f... | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleMetadataSimilarity, RuleQuanliangFieldValidation, RulePatentFieldValidation, RuleAuthorFieldValidation, RuleSourceFieldValidation | 检查元数据字段与基准数据的相似度匹配，阈值默认为0.6; Validate Quanliang metadata fields and report invalid fields; Validate patent metadata f... | Internal Implementation | N/A | N/A |
+
+### Rule-Based Quality Metrics
+
+| Type | Metric | Description | Paper Source | Evaluation Results | Examples |
+|------|--------|-------------|--------------|-------------------|----------|
+| `AGENT_TRACE_QUALITY` | RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget, RuleAgentTraceLatencyAnomaly, RuleAgentTraceLossMask, RuleAgentTraceEmptySupervision, RuleMsSwiftSchema | Detects an agent stuck repeating itself: the same subsequence of tool calls, compared by name and arguments, recurrin... | Internal Implementation | N/A | N/A |
+| `AGENT_TRACE_SAFETY` | RuleAgentTraceDestructiveAction, RuleAgentTraceSensitiveAccess, RuleAgentTraceSecretExposure, RuleAgentTraceGatewayBypass, RuleAgentTraceIntegrity, RuleAgentTraceSandboxExplicitlyDisabled | Flags irreversible actions in tool arguments: forced recursive deletes, schema destruction, unscoped row deletion, hi... | Internal Implementation | N/A | N/A |
 
 ### Rule-Based RESUME Quality Metrics
 
@@ -185,15 +177,12 @@ Deterministic structural checks for reasoning, RL and agent-trajectory training 
 
 ### SAC/TC609 High-quality Dataset Metrics
 
-Only the following six TC609 rule metrics are currently registered. The 0206 and 0207 rule implementations remain in the source code for compatibility and offline comparison, but their registration decorators are commented out. Their registered LLM replacements are listed under National Standard LLM Assessment Metrics.
-
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
-| `QUALITY_BAD_TC609_0201` | Rule_TC609_0201_FormatCompliance | Checks required fields and types against `field_schema`. Extra fields are allowed by default and can be rejected with `allow_extra=false`. Supports `str`, `int`, `float`, `bool`, `list`, `dict`, and nullable `Optional[...]` variants. | Internal Implementation | N/A | N/A |
-| `QUALITY_BAD_TC609_0202` | Rule_TC609_0202_SafetyCompliance | Combines unsafe-word, PII, and identity-card detection for text items in `data_content`. | Internal Implementation | N/A | N/A |
-| `QUALITY_BAD_TC609_0203` | Rule_TC609_0203_AnnotationCompliance | Checks TC609 annotation metadata fields, types, and enumerated values. | Internal Implementation | N/A | N/A |
-| `QUALITY_BAD_TC609_0204` | Rule_TC609_0204_StructuralCompleteness | Checks fields configured in `key_list` for missing values. `allow_none` and `allow_empty` control whether `None` and empty strings/lists/dicts are accepted. | Internal Implementation | N/A | N/A |
-| `QUALITY_BAD_TC609_0205` | Rule_TC609_0205_ContentAuthenticity | Requires `source` and `source_details`; validates non-empty traceability information and HTTP/HTTPS URL syntax when applicable. | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_TC609_0201` | Rule_TC609_0201_FormatCompliance | Checks required fields and their types against a user-provided schema. | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_TC609_0203` | Rule_TC609_0203_AnnotationCompliance | Checks annotation metadata fields, types, and enumerated values. | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_TC609_0204` | Rule_TC609_0204_StructuralCompleteness | Checks configured fields for missing, None, and empty values. | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_TC609_0205` | Rule_TC609_0205_ContentAuthenticity | Checks source and source_details, including URL format when applicable. | Internal Implementation | N/A | N/A |
 | `QUALITY_BAD_TC609_0208` | Rule_TC609_0208_ContentCleanliness | Combines available text cleanliness checks; modality coverage is partial. | Internal Implementation | N/A | N/A |
 
 ### SFT Data Assessment Metrics - Agent-Enhanced
@@ -201,12 +190,6 @@ Only the following six TC609 rule metrics are currently registered. The 0206 and
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
 | `AgentHallucination` | AgentHallucination | Agent-based hallucination detection with automatic web search for missing context | Internal Implementation | N/A | N/A |
-
-### Agent Trace Schema Metrics
-
-| Type | Metric | Description | Paper Source | Evaluation Results | Examples |
-|------|--------|-------------|--------------|-------------------|----------|
-| `AGENT_TRACE_QUALITY` | RuleMsSwiftSchema | Checks a raw ms-swift record for required fields, field types, nested message and tool-call structure, and declared-count consistency. It reads the complete record directly and requires no converter-derived field. | Internal Implementation | N/A | N/A |
 
 ### Text Generation
 
@@ -220,7 +203,12 @@ Only the following six TC609 rule metrics are currently registered. The 0206 and
 |------|--------|-------------|--------------|-------------------|----------|
 | `AgentFactCheck` | AgentFactCheck | Agent-based hallucination detection with autonomous web search | Internal Implementation | N/A | N/A |
 | `ArticleFactChecker` | ArticleFactChecker | Article-level fact checking with autonomous claims extraction and verification | Internal Implementation | N/A | N/A |
+| `LLMAgentArgumentCorrectness` | LLMAgentArgumentCorrectness | Uses a referenceless LLM judge to assess whether every tool call supplies complete, well-typed, and contextually appr... | Internal Implementation | N/A | N/A |
+| `LLMAgentErrorRecovery` | LLMAgentErrorRecovery | Uses an LLM judge to assess whether the agent detected execution errors, chose appropriate recovery actions, and reco... | Internal Implementation | N/A | N/A |
+| `LLMAgentPlanAdherence` | LLMAgentPlanAdherence | Compares the agent's original plan with its actual execution and distinguishes justified adaptations from skipped, un... | Internal Implementation | N/A | N/A |
+| `LLMAgentPlanQuality` | LLMAgentPlanQuality | Uses an LLM judge to score the agent's reasoning plan for coherence, completeness, and feasibility; a trace with no p... | Internal Implementation | N/A | N/A |
+| `LLMAgentStepEfficiency` | LLMAgentStepEfficiency | Scores how efficiently the agent executed the task by identifying necessary steps, redundant or wasted operations, an... | Internal Implementation | N/A | N/A |
+| `LLMAgentTaskCompletion` | LLMAgentTaskCompletion | Uses recorded execution evidence to score whether the agent achieved the task goal accurately and completely, while s... | Internal Implementation | N/A | N/A |
+| `LLMAgentToolCorrectness` | LLMAgentToolCorrectness | Uses a referenceless LLM judge to assess whether every selected tool was appropriate and necessary for the task and i... | Internal Implementation | N/A | N/A |
 | `LLMCustomMetric` | LLMCustomMetric | Unified metric for user customization | Internal Implementation | N/A | N/A |
 
-
-代码质检 `LLMCodeQualityPipeline` 新增 `Effectiveness.HTML_Markup`（HTML 标记残留），复用 `RuleHtmlEntity` / `RuleHtmlTag` 并由 LLM 复核；规则边界见 [代码质检说明](code_quality/code_quality_v1.md)。

@@ -7,6 +7,7 @@ from dingo.model.llm.text_quality.llm_text_quality_v4 import LLMTextQualityV4
 from dingo.model.llm.text_quality.llm_text_quality_v5 import LLMTextQualityV5
 from dingo.model.llm.text_quality.llm_text_quality_v6 import LLMTextQualityV6
 from dingo.model.llm.text_quality.llm_text_quality_v7 import LLMTextQualityV7
+from dingo.model.llm.text_quality.llm_text_quality_v8 import LLMTextQualityV8
 
 
 def test_every_retained_text_quality_version_has_concise_metric_info():
@@ -17,6 +18,7 @@ def test_every_retained_text_quality_version_has_concise_metric_info():
         LLMTextQualityV5,
         LLMTextQualityV6,
         LLMTextQualityV7,
+        LLMTextQualityV8,
     ]
 
     for version in versions:
@@ -25,10 +27,10 @@ def test_every_retained_text_quality_version_has_concise_metric_info():
         assert info["description"].count(".") == 2
 
 
-def test_v8_is_no_longer_available():
+def test_v8_is_available():
     Model.load_model()
 
-    assert "LLMTextQualityV8" not in Model.get_llm_name_map()
+    assert Model.get_llm_name_map()["LLMTextQualityV8"] is LLMTextQualityV8
     assert importlib.util.find_spec(
         "dingo.model.llm.text_quality.llm_text_quality_v8"
-    ) is None
+    ) is not None

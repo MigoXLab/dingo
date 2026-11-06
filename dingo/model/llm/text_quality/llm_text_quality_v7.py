@@ -291,16 +291,27 @@ Evaluate whether this text is suitable for LLM pretraining. Flag only clear, mat
 **Impact**: Noise prevents models from learning meaningful semantic patterns.
 
 **Check for**:
-- **Garbled_Characters**: Encoding corruption, replacement characters, or anti-crawler character artifacts
-  - Example (BAD): "â€™" (broken UTF-8), "□□□" (placeholder chars), "ï»¿" (BOM)
-  - Threshold: >1% of characters are garbled
-  - Impact: Corrupts token distributions
+- **Garbled_Characters**: Objective character-level corruption caused by broken encoding, lost/replaced characters, systematic OCR damage, or character-based anti-crawler obfuscation. This is not a catch-all label for awkward, noisy, or low-quality web text.
+  - Clear evidence includes mojibake such as `â€™` or `â€œ`, leaked BOM text such as `ï»¿`, Unicode replacement characters such as `�`, placeholder runs such as `□□□`, or repeated OCR damage that visibly deletes, substitutes, inserts, or splits characters inside words.
+  - OCR segmentation such as `orn in 1971`, `na ture`, or `de velopment` qualifies only when the intended character boundary is evident from the local text and such damage is repeated or collectively material. Ordinary spelling uncertainty is not evidence.
+  - Character-based anti-crawler artifacts qualify only when they visibly replace or obfuscate source characters. Spam phrases, IDs, phone numbers, URLs, UI text, or unrelated inserted words are content noise, not character corruption.
+  - Hard threshold: the confirmed garbled-character coverage must be strictly greater than 1% of the input's non-whitespace characters and must materially reduce readability or token integrity.
+  - Estimate `garbled_character_rate = non-overlapping visible characters in confirmed garbled strings / total non-whitespace characters`.
+  - Count the full visible length of each confirmed garbled string, not the number of occurrences or the minimum edits needed to repair it. For example, `â€™`, `ï»¿`, and `□□□` each contribute 3 corrupted characters. If the same artifact appears at ten separate positions, include the visible length of all ten instances.
+  - When a complete word or token is objectively corrupted by OCR, count the full visible non-whitespace length of that corrupted token. Merge overlapping evidence and count each visible character position only once.
+  - Do not include speculative corrections, ordinary typos, or unrelated web noise in the corrupted-string length. If the numerator or denominator cannot be supported from visible evidence, do not assign the label.
+  - Before assigning this label, the reason must quote exact corrupted spans, identify their character-level mechanism, and state an approximate numerator, denominator, and percentage. If the reason can only say that wording is odd, mistranslated, irrelevant, repeated, or probably meant something else, do not use this label.
 
   ⚠️ **DO NOT flag**:
-  - Valid Unicode or a language written in an unfamiliar script (e.g., Cyrillic, Arabic, Greek, CJK)
-  - Accented letters, mathematical symbols, bullets, checkboxes, or normal document glyphs used meaningfully
-  - A few OCR spelling errors when the text remains readable
-  - Mixed-language text by itself; require objective character corruption
+  - Valid Unicode or a language written in an unfamiliar script (e.g., Cyrillic, Arabic, Greek, CJK), including creative mixed-language writing
+  - Accented letters, mathematical symbols, bullets, checkboxes, horizontal rules (`---`), tildes in headings (`Chapter 16 ~ Hero's Journey`), plus signs, ratio colons, or other normal document glyphs used meaningfully
+  - Ordinary spaces, non-breaking spaces (`U+00A0`), or their appearance in appended word-frequency/metadata summaries, unless they visibly and systematically corrupt word boundaries in the actual prose
+  - Isolated typos, misspellings, grammar errors, or a few missing letters when the text remains readable
+  - Machine-translation phrasing, literal word choices, semantic incoherence, or valid words used unexpectedly. For example, `sensible house`, `robotically`, and the book title `An Egg Is Quiet` are not character corruption merely because a different wording seems more likely
+  - Repeated webpage labels such as `View details`, cookie banners, navigation, contact-form placeholders, or other UI/extraction noise. Use `Duplication` only if its own repetition threshold is met; otherwise do not force an available label
+  - Phone numbers, hexadecimal IDs, URLs, email addresses, HTML fragments, or random inserted words. They may be scraping noise, but their characters are intact
+  - Missing spaces between words when `Words_Stuck` applies, or exact/near-exact repetition when `Duplication` applies; do not relabel those defects as garbled characters
+  - A low-quality sample for which no available label fits. Return Good rather than using `Garbled_Characters` as a fallback quality label
 
 - **Words_Stuck**: Missing spaces break tokenization
   - Example (BAD): "Thequickbrownfoxjumpsoverthelazydog"
@@ -521,6 +532,14 @@ Output: [{"score": 1, "type": "Good", "name": "None", "reason": "The Python code
 Input: "The culture was maintained at $3 7 ^ { \circ } \mathrm { C }$. The measured value was $1 1 . 8 \times 1 0 ^ { 3 }$, and the simulation used $2 0 4 8 ^ { 2 }$ grid points."
 Output: [{"score": 1, "type": "Good", "name": "None", "reason": "Ordinary spaces inside these LaTeX math expressions are ignored by the renderer, so 37°C, 11.8 × 10³, and 2048² remain intact"}]
 
+**Example 1.12 (Good - Awkward Wording Is Not Garbled)**:
+Input: "The sensible house can robotically switch the lights. An Egg Is Quiet is listed as a recommended picture book."
+Output: [{"score": 1, "type": "Good", "name": "None", "reason": "The wording is awkward but every character and word is intact; translation style and a real book title are not character corruption"}]
+
+**Example 1.13 (Good - Intact Web Extraction Noise)**:
+Input: "Chapter 16 ~ Hero's Journey\n---\nView details\nView details\nContact: 513-321-4242\nRecord: e7ddf99334cc7567e5fab7b30c69ad11"
+Output: [{"score": 1, "type": "Good", "name": "None", "reason": "The punctuation, repeated UI label, phone number, and hexadecimal ID are intact characters; the UI label repeats fewer than six times and does not meet the Duplication threshold"}]
+
 **Example 2 (Bad - Entire Formula Missing)**:
 Input: "The compound has the following structure: [Chemical Formula 1]. In Formula 1, R is hydrogen and n is an integer from 1 to 6."
 Output: [{"score": 0, "type": "Completeness", "name": "Formula_Missing", "reason": "Only the placeholder '[Chemical Formula 1]' remains, while the following sentence defines variables from the absent structure"}]
@@ -631,7 +650,7 @@ Output: [{"score": 0, "type": "Completeness", "name": "Code_Extra_Content", "rea
 
 **Example 3 (Bad - Garbled Characters)**:
 Input: "The exported text contains broken symbols â€™ â€œ □□□ ï»¿ throughout the paragraph."
-Output: [{"score": 0, "type": "Effectiveness", "name": "Garbled_Characters", "reason": "Repeated mojibake, placeholder squares, and a leaked BOM exceed the character-corruption threshold"}]
+Output: [{"score": 0, "type": "Effectiveness", "name": "Garbled_Characters", "reason": "The confirmed garbled strings 'â€™', 'â€œ', '□□□', and 'ï»¿' cover 12 of about 71 non-whitespace characters (about 17%), exceeding the 1% threshold"}]
 
 **Example 3.1 (Bad - Words Stuck)**:
 Input: "The extraction removed spaces in many places: theexperimentwascompleted and theresultswererecorded before thesampleswerediscarded."

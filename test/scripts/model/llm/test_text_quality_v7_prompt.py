@@ -55,6 +55,40 @@ def test_v7_prompt_treats_render_equivalent_formula_spacing_as_good():
     assert "Examples include `1.18` becoming `1 1 8`" not in prompt
 
 
+def test_v7_prompt_requires_objective_material_character_corruption():
+    prompt = LLMTextQualityV7.prompt
+
+    assert "not a catch-all label for awkward, noisy, or low-quality web text" in prompt
+    assert "quote exact corrupted spans" in prompt
+    assert "identify their character-level mechanism" in prompt
+    assert "strictly greater than 1% of the input's non-whitespace characters" in prompt
+    assert "garbled_character_rate = non-overlapping visible characters in confirmed garbled strings / total non-whitespace characters" in prompt
+    assert "Count the full visible length of each confirmed garbled string" in prompt
+    assert "`â€™`, `ï»¿`, and `□□□` each contribute 3 corrupted characters" in prompt
+    assert "count the full visible non-whitespace length of that corrupted token" in prompt
+    assert "count each visible character position only once" in prompt
+    assert "state an approximate numerator, denominator, and percentage" in prompt
+    assert "Do not include speculative corrections, ordinary typos, or unrelated web noise in the corrupted-string length" in prompt
+    assert "A low-quality sample for which no available label fits" in prompt
+
+
+def test_v7_prompt_excludes_observed_garbled_character_false_positives():
+    prompt = LLMTextQualityV7.prompt
+
+    for expected_exclusion in (
+        "non-breaking spaces (`U+00A0`)",
+        "Chapter 16 ~ Hero's Journey",
+        "An Egg Is Quiet",
+        "Repeated webpage labels such as `View details`",
+        "Phone numbers, hexadecimal IDs, URLs, email addresses",
+        "Missing spaces between words when `Words_Stuck` applies",
+    ):
+        assert expected_exclusion in prompt
+
+    assert "Good - Awkward Wording Is Not Garbled" in prompt
+    assert "Good - Intact Web Extraction Noise" in prompt
+
+
 def test_v7_prompt_uses_detailed_table_labels_in_expected_order():
     table_labels = [
         "Table_Missing",

@@ -50,11 +50,25 @@ class LocalExecutor(ExecProto):
         log.setLevel(self.input_args.log_level)
         create_time = time.strftime("%Y%m%d_%H%M%S", time.localtime())
         input_path = self.input_args.input_path
-        output_path = os.path.join(
-            self.input_args.output_path, create_time + "_" + str(uuid.uuid1())[:8]
-        )
+        configured_fields = getattr(self.input_args, "model_fields_set", None)
+        if configured_fields is None:
+            configured_fields = getattr(self.input_args, "__fields_set__", set())
+
+        if "output_path" in configured_fields:
+            output_path = self.input_args.output_path
+        else:
+            output_path = os.path.join(
+                self.input_args.output_path, create_time + "_" + str(uuid.uuid1())[:8]
+            )
+
         if self.input_args.executor.result_save.bad:
-            if not os.path.exists(output_path):
+            if os.path.exists(output_path):
+                if not os.path.isdir(output_path):
+                    raise ValueError(f"output_path is not a directory: {output_path}")
+                with os.scandir(output_path) as entries:
+                    if next(entries, None) is not None:
+                        raise ValueError(f"output_path is not empty: {output_path}")
+            else:
                 os.makedirs(output_path)
 
         self.summary = SummaryModel(

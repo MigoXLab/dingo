@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from test.scripts.ms_swift_test_utils import standard_ms_swift_record
 
 import pytest
@@ -11,6 +12,57 @@ from dingo.model import Model
 
 
 class TestLocal:
+    def test_explicit_output_path_is_used_without_run_subdirectory(self, tmp_path):
+        input_path = tmp_path / "input.jsonl"
+        input_path.write_text('{"content": "test"}\n', encoding="utf-8")
+        output_path = tmp_path / "explicit-output"
+        input_args = InputArgs(
+            input_path=str(input_path),
+            output_path=str(output_path),
+            dataset={"source": "local", "format": "jsonl"},
+            evaluator=[],
+        )
+
+        summary = LocalExecutor(input_args).execute()
+
+        assert summary.output_path == str(output_path)
+        assert (output_path / "summary.json").is_file()
+
+    def test_explicit_non_empty_output_path_is_rejected(self, tmp_path):
+        input_path = tmp_path / "input.jsonl"
+        input_path.write_text('{"content": "test"}\n', encoding="utf-8")
+        output_path = tmp_path / "existing-output"
+        output_path.mkdir()
+        (output_path / "existing.jsonl").write_text("old result\n", encoding="utf-8")
+        input_args = InputArgs(
+            input_path=str(input_path),
+            output_path=str(output_path),
+            dataset={"source": "local", "format": "jsonl"},
+            evaluator=[],
+        )
+
+        with pytest.raises(ValueError, match="output_path is not empty"):
+            LocalExecutor(input_args).execute()
+
+    def test_omitted_output_path_keeps_generated_run_subdirectory(
+        self, tmp_path, monkeypatch,
+    ):
+        monkeypatch.chdir(tmp_path)
+        input_path = tmp_path / "input.jsonl"
+        input_path.write_text('{"content": "test"}\n', encoding="utf-8")
+        input_args = InputArgs(
+            input_path=str(input_path),
+            dataset={"source": "local", "format": "jsonl"},
+            evaluator=[],
+        )
+
+        summary = LocalExecutor(input_args).execute()
+
+        generated_path = Path(summary.output_path)
+        assert generated_path.parent == Path("outputs")
+        assert generated_path.name
+        assert (generated_path / "summary.json").is_file()
+
     @pytest.mark.parametrize("raw", [False, True])
     @pytest.mark.parametrize("merge", [False, True])
     def test_ms_swift_evaluates_derived_fields_and_cleans_saved_records(

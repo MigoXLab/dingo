@@ -39,6 +39,13 @@ class TestS3DataSource(unittest.TestCase):
         """清理测试环境"""
         pass
 
+    def set_list_pages(self, pages):
+        """配置 list_objects_v2 分页器返回的页面。"""
+        paginator = MagicMock()
+        paginator.paginate.return_value = iter(pages)
+        self.mock_s3_client.get_paginator.return_value = paginator
+        return paginator
+
     def test_init_with_valid_config(self):
         """测试使用有效配置初始化"""
         with patch('dingo.data.datasource.s3.boto3.client', return_value=self.mock_s3_client):
@@ -135,7 +142,7 @@ class TestS3DataSource(unittest.TestCase):
                 {"Key": "test/data/metadata.json"},
             ]
         }
-        self.mock_s3_client.list_objects.return_value = mock_list_response
+        paginator = self.set_list_pages([mock_list_response])
 
         # Mock get_object 响应
         def mock_get_object(Bucket, Key):
@@ -169,7 +176,10 @@ class TestS3DataSource(unittest.TestCase):
             )
 
             # 验证 S3 调用
-            self.mock_s3_client.list_objects.assert_called_once_with(
+            self.mock_s3_client.get_paginator.assert_called_once_with(
+                "list_objects_v2"
+            )
+            paginator.paginate.assert_called_once_with(
                 Bucket="test-bucket",
                 Prefix="test/data/"
             )
@@ -179,12 +189,12 @@ class TestS3DataSource(unittest.TestCase):
         config = json.loads(json.dumps(self.base_config))
         config["input_path"] = "s3://test-bucket/test/traces/"
         config["dataset"]["format"] = "ms_swift"
-        self.mock_s3_client.list_objects.return_value = {
+        self.set_list_pages([{
             "Contents": [
                 {"Key": "test/traces/trace.jsonl"},
                 {"Key": "test/traces/readme.txt"},
             ]
-        }
+        }])
         mock_body = MagicMock()
         mock_body.iter_lines.return_value = [
             b'{"messages": [], "trajectory_id": "trace-001"}'
@@ -203,6 +213,67 @@ class TestS3DataSource(unittest.TestCase):
             Bucket="test-bucket",
             Key="test/traces/trace.jsonl",
         )
+
+    def test_load_directory_reads_all_pages_lazily(self):
+        """前缀读取遍历全部页面，并且一次只打开一个对象。"""
+        config = json.loads(json.dumps(self.base_config))
+        config["input_path"] = "s3://test-bucket/test/data/"
+        self.set_list_pages([
+            {"Contents": [{"Key": "test/data/file1.jsonl"}]},
+            {"Contents": [{"Key": "test/data/file2.jsonl"}]},
+        ])
+
+        bodies = []
+
+        def mock_get_object(Bucket, Key):
+            body = MagicMock()
+            body.iter_lines.return_value = [Key.encode("utf-8")]
+            bodies.append(body)
+            return {"Body": body}
+
+        self.mock_s3_client.get_object.side_effect = mock_get_object
+
+        with patch('dingo.data.datasource.s3.boto3.client', return_value=self.mock_s3_client):
+            datasource = S3DataSource(input_args=InputArgs(**config))
+            result = datasource.load()
+
+            self.assertEqual(next(result), "test/data/file1.jsonl")
+            self.assertEqual(self.mock_s3_client.get_object.call_count, 1)
+            self.assertFalse(bodies[0].close.called)
+
+            self.assertEqual(next(result), "test/data/file2.jsonl")
+            self.assertEqual(self.mock_s3_client.get_object.call_count, 2)
+            bodies[0].close.assert_called_once_with()
+
+            with self.assertRaises(StopIteration):
+                next(result)
+            bodies[1].close.assert_called_once_with()
+
+    def test_load_empty_directory(self):
+        """空前缀正常返回空结果。"""
+        config = json.loads(json.dumps(self.base_config))
+        config["input_path"] = "s3://test-bucket/test/empty/"
+        self.set_list_pages([{}])
+
+        with patch('dingo.data.datasource.s3.boto3.client', return_value=self.mock_s3_client):
+            datasource = S3DataSource(input_args=InputArgs(**config))
+            self.assertEqual(list(datasource.load()), [])
+
+        self.mock_s3_client.get_object.assert_not_called()
+
+    def test_load_closes_body_when_consumer_stops(self):
+        """调用方提前关闭生成器时释放当前 StreamingBody。"""
+        mock_body = MagicMock()
+        mock_body.iter_lines.return_value = iter([b"first", b"second"])
+        self.mock_s3_client.get_object.return_value = {"Body": mock_body}
+
+        with patch('dingo.data.datasource.s3.boto3.client', return_value=self.mock_s3_client):
+            datasource = S3DataSource(input_args=InputArgs(**self.base_config))
+            result = datasource.load()
+            self.assertEqual(next(result), "first")
+            result.close()
+
+        mock_body.close.assert_called_once_with()
 
     def test_load_empty_file(self):
         """测试加载空文件"""

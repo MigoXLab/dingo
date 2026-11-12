@@ -27,7 +27,9 @@ def test_paper_reuses_checks_with_independent_mapping_and_config():
     for module in (rule_paper, rule_quanliang):
         for name, check in vars(module).items():
             if name.startswith("check_"):
-                if module is rule_paper and name in {"check_access_is_oa", "check_access_oa_status"}:
+                if module is rule_paper and name in {
+                    "check_access_is_oa", "check_access_oa_status", "check_locations",
+                }:
                     assert check is not getattr(base_check_paper, name)
                     assert check.__module__ == rule_paper.__name__
                     continue
@@ -140,6 +142,79 @@ def test_paper_access_oa_status_consistency(status, oa_flag):
     assert rule_quanliang.RuleQuanliangFieldValidation.field_validators["access_oa_status"](
         {"access_oa_status": status, "access_is_oa": oa_flag}
     ) == (False, [], [])
+
+
+PAPER_LOCATION_KEYS = (
+    "license", "is_oa", "pdf_url", "landing_page_url", "is_published",
+    "is_accepted", "source_url", "origin_url", "source", "version", "meta_db_name",
+)
+
+
+@pytest.mark.parametrize(
+    "record, expected_label",
+    [
+        ({}, "missing_field"),
+        ({"locations": None}, "null"),
+        ({"locations": ""}, "wrong_type"),
+        ({"locations": {}}, "wrong_type"),
+        ({"locations": ()}, "wrong_type"),
+        ({"locations": False}, "wrong_type"),
+        ({"locations": [None]}, "wrong_type"),
+        ({"locations": [""]}, "wrong_type"),
+        ({"locations": [[]]}, "wrong_type"),
+        ({"locations": [{}]}, "empty"),
+        ({"locations": [{"locations.license": ""}]}, "missing_key"),
+    ],
+)
+def test_paper_locations_basic_validation(record, expected_label):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["locations"]
+    result = model.eval(Data(**record))
+    assert result.status is True
+    assert result.label == [f"locations.{expected_label}"]
+    assert len(result.reason) == 1
+
+
+@pytest.mark.parametrize("missing_key", PAPER_LOCATION_KEYS)
+def test_paper_locations_requires_each_key(missing_key):
+    location = dict.fromkeys(PAPER_LOCATION_KEYS)
+    incomplete = dict(location)
+    del incomplete[missing_key]
+    assert rule_paper.check_locations([location, incomplete]) == (
+        True, ["missing_key"], [f"item[1] missing key '{missing_key}'"],
+    )
+
+
+@pytest.mark.parametrize("bad_item, expected_label", [(None, "wrong_type"), ({}, "empty")])
+def test_paper_locations_checks_later_items(bad_item, expected_label):
+    result = rule_paper.check_locations([dict.fromkeys(PAPER_LOCATION_KEYS), bad_item])
+    assert result[0] is True
+    assert result[1] == [expected_label]
+    assert "item[1]" in result[2][0]
+
+
+@pytest.mark.parametrize("locations", [[], [dict.fromkeys(PAPER_LOCATION_KEYS)],
+    [dict.fromkeys(PAPER_LOCATION_KEYS, "")],
+    [{**dict.fromkeys(PAPER_LOCATION_KEYS), "extra": "allowed"}],
+])
+def test_paper_locations_valid_structure(locations):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["locations"]
+    for value in (locations, json.dumps(locations)):
+        result = model.eval(Data(locations=value))
+        assert result.status is False
+        assert result.label == ["QUALITY_GOOD"]
+
+
+def test_paper_locations_and_quanliang_locations_are_independent():
+    quanliang_location = {"type": "download", "url": "https://example.com/a.pdf",
+        "license": "cc-by", "is_oa": "true"}
+    assert rule_quanliang.check_locations([quanliang_location]) == (False, [], [])
+    assert rule_paper.check_locations([quanliang_location])[1] == ["missing_key"]
+    assert rule_paper.check_locations([dict.fromkeys(PAPER_LOCATION_KEYS)]) == (False, [], [])
+    assert rule_quanliang.check_locations([dict.fromkeys(PAPER_LOCATION_KEYS)])[1] == ["missing_key"]
 
 
 def test_paper_check_can_be_replaced_independently(monkeypatch):

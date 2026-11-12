@@ -25,7 +25,7 @@
 | `language` | 4 |
 | `author` | 10 |
 | `contributors` | 4 |
-| `locations` | 6 |
+| `locations` | 5 |
 | `access_is_oa` | 5 |
 | `access_oa_status` | 5 |
 | `access_oa_url` | 4 |
@@ -50,7 +50,7 @@
 | `access_xinghe_repository_model_version` | 5 |
 | `primary_location` | 4 |
 | `best_oa_location` | 4 |
-| **合计** | **282** |
+| **合计** | **281** |
 
 ## metadata_type
 
@@ -220,11 +220,10 @@
 | Label 名 | 中文名称 | 标签含义 |
 |---|---|---|
 | `missing_field` | 字段缺失 | 检查输入对象中是否存在 `locations` 字段。 |
-| `wrong_type` | 字段类型错误 | 检查值是否为列表，并逐项检查列表项类型。 |
-| `null` | 值为 null | 检查字段值是否为 `null`。 |
-| `missing_key` | key 缺失 | 若位置对象缺少必需字段，则标记。 |
-| `invalid_value` | 值不合法 | 逐项检查位置对象：`type` 共 4 个限定值，`license` 共 27 个限定值，`is_oa` 共 3 个限定值；例如 `type=download`、`license=cc-by`、`is_oa=true`。 |
-| `invalid_url` | URL 不合法 | 若URL 格式错误，则标记。 |
+| `wrong_type` | 字段类型错误 | 值不是对象列表时标记；空列表 `[]` 允许通过，空字符串、空对象或非对象列表项均不符合要求。 |
+| `null` | 值为 null | 字段值为 `null` 时标记。 |
+| `empty` | 列表项为空 | 列表中存在空对象 `{}` 时标记。 |
+| `missing_key` | key 缺失 | 列表对象缺少以下任一 key 时标记：`license`、`is_oa`、`pdf_url`、`landing_page_url`、`is_published`、`is_accepted`、`source_url`、`origin_url`、`source`、`version`、`meta_db_name`。key 不带 `locations.` 前缀；允许额外 key，仅检查必需 key 是否存在。 |
 
 ## access_is_oa
 

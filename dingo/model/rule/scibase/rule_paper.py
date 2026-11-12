@@ -23,7 +23,6 @@ from dingo.model.rule.scibase.base_check_paper import (
     check_isbn13,
     check_isbns,
     check_language,
-    check_locations,
     check_metadata_type,
     check_primary_location,
     check_publication_pages,
@@ -39,6 +38,29 @@ from dingo.model.rule.scibase.base_check_paper import (
     check_supplementary_material,
     check_title,
 )
+
+
+PAPER_LOCATION_REQUIRED_KEYS = (
+    "license", "is_oa", "pdf_url", "landing_page_url", "is_published",
+    "is_accepted", "source_url", "origin_url", "source", "version", "meta_db_name",
+)
+
+
+def check_locations(locations: Any) -> ValidationResult:
+    """Validate paper location objects; missing fields are handled by eval()."""
+    if locations is None:
+        return BaseFieldValidation._fail("null", "value is null")
+    if not isinstance(locations, list):
+        return BaseFieldValidation._fail("wrong_type", "value must be a list of objects")
+    for idx, item in enumerate(locations):
+        if not isinstance(item, dict):
+            return BaseFieldValidation._fail("wrong_type", f"item[{idx}] must be an object")
+        if not item:
+            return BaseFieldValidation._fail("empty", f"item[{idx}] cannot be an empty object")
+        for key in PAPER_LOCATION_REQUIRED_KEYS:
+            if key not in item:
+                return BaseFieldValidation._fail("missing_key", f"item[{idx}] missing key '{key}'")
+    return BaseFieldValidation._ok()
 
 
 def check_access_is_oa(access_is_oa: Any) -> ValidationResult:

@@ -6,7 +6,7 @@ The specific rules for each quality metric are as follows:
 | RuleAbnormalHtml | EFFECTIVENESS | Check whether content contains abnormal HTML. | |
 | RuleAbnormalNumber | FLUENCY | Check PDF content for abnormal page or index numbers. | |
 | RuleAgentTraceLatencyAnomaly | AGENT_TRACE_QUALITY | Detect abnormally slow agent steps using statistical outlier analysis. | |
-| RuleAgentTraceLoopDetection | AGENT_TRACE_QUALITY | Detect repetitive tool-call patterns that indicate loops. | |
+| RuleAgentTraceLoopDetection | AGENT_TRACE_QUALITY | Detect consecutive repeated interactions: exact tool/arguments and result-body similarity; supports AAA and multi-tool patterns. Does not judge usefulness. | |
 | RuleAgentTraceTokenBudget | AGENT_TRACE_QUALITY | Check whether agent token usage exceeds the configured budget. | |
 | RuleAlphaWords | EFFECTIVENESS     | check whether the ratio of words that contain at least one alphabetic character > 0.6 | [Redpajama](https://www.together.ai/blog/redpajama-data-v2) [MAP-en](https://arxiv.org/abs/2405.19327) [Gopher](https://arxiv.org/abs/2112.11446) [Dolma](https://arxiv.org/abs/2402.00159)                         |
 | RuleAudioDataFormat | EFFECTIVENESS | Check whether audio data has the expected format. | |

@@ -437,12 +437,17 @@ class LocalExecutor(ExecProto):
 
     def _build_output_json(self, input_args: InputArgs, result_info: ResultInfo) -> str:
         field_list = self._resolve_field_list(input_args)
-        if input_args.dataset.format == "ms_swift":
+        preserve_strings = input_args.dataset.format == "ms_swift"
+        if preserve_strings:
             result_info = result_info.without_derived_fields()
         if input_args.executor.result_save.raw:
-            output_data = result_info.to_raw_dict(field_list=field_list)
+            output_data = result_info.to_raw_dict(
+                field_list=field_list, preserve_string_values=preserve_strings,
+            )
         else:
-            output_data = result_info.to_dict(field_list=field_list)
+            output_data = result_info.to_dict(
+                field_list=field_list, preserve_string_values=preserve_strings,
+            )
         return self._json_dumps(output_data)
 
     def write_summary(self, path: str, input_args: InputArgs, summary: SummaryModel):

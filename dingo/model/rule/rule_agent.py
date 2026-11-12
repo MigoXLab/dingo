@@ -5,7 +5,6 @@ These rules run without LLM calls, checking structural properties
 of agent execution traces (loops, token budget, latency anomalies).
 """
 
-import hashlib
 import json
 import re
 import statistics
@@ -16,6 +15,9 @@ from dingo.io.input import Data, RequiredField
 from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
 from dingo.model.rule.base import BaseRule
+from dingo.model.rule.utils.agent_trace_similarity import (
+    DEFAULT_SETTINGS, LoopSettings, extract_calls, find_repetition,
+)
 
 _MS_SWIFT_DESCRIPTION_SUFFIX = (
     ' Requires the ms-swift dataset format (dataset.format: "ms_swift") so '
@@ -85,162 +87,87 @@ def _empty_derived_input_result(cls: type, input_data: Data) -> Optional[EvalDet
 
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
 class RuleAgentTraceLoopDetection(BaseRule):
-    """Detect repetitive tool call patterns indicating infinite loops.
+    """Detect repeated tool interactions, not whether repetition is useful."""
 
-    Input: content = JSON array of tool call objects with 'tool_name' field.
-    Detection: n-gram analysis on tool call signatures.
-    A loop is detected when the same subsequence of 2+ calls repeats 3 or more
-    consecutive times.
-
-    A signature combines the tool name with a fingerprint of its arguments, so
-    a fan-out over one tool with different arguments (eight distinct search
-    queries) is not mistaken for a stuck loop, while the same call issued over
-    and over still is. Calls carrying no arguments compare by name alone.
-    """
-
-    # Surfaced on the metrics page: without it a reader sees a bare
-    # class name with no description, and cannot tell a safety rule from
-    # a quality one.
     _metric_info = {
         "metric_name": "RuleAgentTraceLoopDetection",
         "metric_group": "AGENT_TRACE_QUALITY",
         "description": _ms_swift_description(
-            "Detects an agent stuck repeating itself: the same subsequence of tool "
-            "calls, compared by name and arguments, recurring three or more times. "
-            "Comparing arguments too keeps a search fan-out from reading as a loop."
+            "Detects consecutive repeated tool interactions using exact tool/argument "
+            "matching and result-body similarity. Supports single-call and multi-tool "
+            "patterns; headers are excluded and normal polling can match."
         ),
     }
-
-    # Trace-level evaluator: declares input_data_type / eval_layer so agent
-    # orchestrators (e.g. dingo-saas) feed it the whole tool-call sequence as
-    # JSON rather than running it per-span on plain text.
     eval_layer = "trajectory"
     input_data_type = "agent_trace_json"
-
-    _ARGUMENT_KEYS = ("args", "arguments", "tool_input", "input")
-
     _required_fields = [RequiredField.CONTENT]
+    dynamic_config = EvaluatorRuleArgs(**DEFAULT_SETTINGS)
+
+    def __init__(self):
+        # Executors configure an instance. Keep its config independent while the
+        # historical Class.eval(Data(...)) entry point remains available below.
+        self.dynamic_config = EvaluatorRuleArgs(**DEFAULT_SETTINGS)
+        self.eval = self._eval_instance
+
+    def _eval_instance(self, input_data: Data) -> EvalDetail:
+        return type(self)._evaluate(input_data, self.dynamic_config)
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        return cls._evaluate(input_data, cls.dynamic_config)
+
+    @classmethod
+    def _evaluate(cls, input_data: Data, config: EvaluatorRuleArgs) -> EvalDetail:
+        settings = LoopSettings.from_config(config)
         empty_result = _empty_derived_input_result(cls, input_data)
         if empty_result is not None:
             return empty_result
         result = EvalDetail(metric=cls.__name__)
-
         calls = cls._extract_calls(input_data.content)
-        if len(calls) < 6:
-            # Not a pass: the test never ran. Saying so in the reason was not
-            # enough — a reader sees the label, and a consumer reads `status`,
-            # and both said "checked, clean" for a trace nobody could analyse.
-            result.applicable = False
-            # Structural: the question does not arise for a run of this
-            # shape. The test is not whether a rule or a judge is asking — a
-            # rule can meet a genuine gap in the record too — but whether the
-            # thing being checked could have happened and the record is silent
-            # (a gap in the run) or could not have happened at all. Six calls
-            # are needed before repetition is a meaningful question.
-            result.not_applicable_kind = "structural"
-            result.not_applicable_code = "too_few_tool_calls"
-            result.reason = [
-                f"{len(calls)} tool calls — too few to analyse for repetition "
-                "(needs 6)"
-            ]
-            return result
-
-        loop_info = cls._detect_loops([signature for _, signature in calls])
-        if loop_info is None:
-            loop_info = cls._detect_repeated_identical_calls(calls)
-        if loop_info:
-            start = loop_info["position"]
-            pattern = [name for name, _ in calls[start : start + len(loop_info["pattern"])]]
+        comparable = sum(call.comparable for call in calls)
+        missing = sum(call.result is None for call in calls)
+        hit, candidates = find_repetition(calls, settings)
+        details = {
+            "checked_calls": len(calls),
+            "comparable_calls": comparable,
+            "missing_result_calls": missing,
+            "action_candidates": candidates,
+            "threshold": settings.threshold,
+            "result_match_mode": settings.result_match_mode,
+            "result_ngram_size": settings.result_ngram_size,
+            "min_repeats": settings.min_repeats,
+        }
+        if hit:
+            details.update(hit)
             result.status = True
             result.label = [f"{cls.metric_type}.{cls.__name__}"]
-            result.reason = [
-                f"Loop detected: pattern {pattern} "
-                f"repeats {loop_info['count']} times at position {start}"
-            ]
+            message = (
+                f"Repeated tool interaction detected: pattern {hit['pattern']} "
+                f"occurs {hit['repeat_count']} consecutive times at calls "
+                f"{hit['start_call_index'] + 1}-{hit['end_call_index'] + 1}; "
+                f"minimum result similarity {hit['min_result_similarity']:.4f} "
+                f"meets threshold {settings.threshold:.4f}."
+            )
         else:
             result.label = [QualityLabel.QUALITY_GOOD]
-            result.reason = [
-                f"{len(calls)} tool calls checked, no repeating pattern found"
-            ]
-
+            message = (
+                f"{len(calls)} tool calls checked ({comparable} comparable, "
+                f"{missing} missing or invalid results); "
+            )
+            if len(calls) < settings.min_repeats:
+                message += f"too few to analyse repetition (needs {settings.min_repeats})."
+            elif comparable == 0:
+                message += "no complete tool/argument/result evidence to compare."
+            elif candidates:
+                message += "repeated actions found, but result comparisons did not meet the threshold."
+            else:
+                message += "no repeating action pattern found."
+        result.reason = [message, json.dumps(details, ensure_ascii=False)]
         return result
 
     @classmethod
-    def _extract_calls(cls, content: str) -> List[tuple]:
-        """Return ``(tool_name, signature)`` per call, in trace order."""
-        calls = []
-        for item in _load_trace_items(content, "tool_calls", "steps"):
-            if not isinstance(item, dict):
-                continue
-            name = item.get("tool_name") or item.get("name")
-            if not name:
-                continue
-            calls.append((name, f"{name}|{cls._argument_fingerprint(item)}"))
-        return calls
-
-    @classmethod
-    def _argument_fingerprint(cls, item: dict) -> str:
-        """Stable fingerprint of a call's arguments; empty when it has none."""
-        for key in cls._ARGUMENT_KEYS:
-            value = item.get(key)
-            if value in (None, "", {}, []):
-                continue
-            try:
-                normalized = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
-            except (TypeError, ValueError):
-                normalized = str(value)
-            return hashlib.sha256(normalized.encode()).hexdigest()[:12]
-        return ""
-
-    @classmethod
-    def _detect_repeated_identical_calls(
-        cls, calls: List[tuple], min_repeats: int = 3
-    ) -> Optional[dict]:
-        """Catch one call repeated verbatim, which ``_detect_loops`` cannot see.
-
-        Loop detection starts at two-call patterns, so a tool invoked three
-        times in a row with byte-identical arguments — a research agent asking
-        the same calculation three times — is not a "pattern" and goes
-        unreported, even though it is the plainest loop there is.
-
-        Only signatures carrying a real argument fingerprint qualify. Without
-        arguments, three consecutive calls to one tool are as likely to be three
-        different files as one repeat, and flagging those would make every
-        source that omits arguments look broken. Those are masked to unique
-        values so they cannot match each other, which lets the existing pattern
-        search do the work at length one instead of a second hand-rolled scan.
-        """
-        masked = [
-            signature if signature.split("|", 1)[-1] else f"{signature}#{index}"
-            for index, (_name, signature) in enumerate(calls)
-        ]
-        return cls._detect_loops(masked, min_pattern_len=1, min_repeats=min_repeats)
-
-    @classmethod
-    def _detect_loops(
-        cls, names: List[str], min_pattern_len: int = 2, min_repeats: int = 3
-    ) -> Optional[dict]:
-        for pattern_len in range(min_pattern_len, len(names) // min_repeats + 1):
-            for start in range(len(names) - pattern_len * min_repeats + 1):
-                pattern = names[start : start + pattern_len]
-                count = 1
-                pos = start + pattern_len
-                while pos + pattern_len <= len(names):
-                    if names[pos : pos + pattern_len] == pattern:
-                        count += 1
-                        pos += pattern_len
-                    else:
-                        break
-                if count >= min_repeats:
-                    return {
-                        "pattern": pattern,
-                        "count": count,
-                        "position": start,
-                    }
-        return None
+    def _extract_calls(cls, content: str):
+        return extract_calls(_load_trace_items(content, "tool_calls", "steps"))
 
 
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])

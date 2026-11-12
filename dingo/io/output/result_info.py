@@ -82,9 +82,9 @@ class ResultInfo(BaseModel):
         return value
 
     @classmethod
-    def _normalize_value(cls, value: Any) -> Any:
+    def _normalize_value(cls, value: Any, preserve_string_values: bool = False) -> Any:
         if isinstance(value, (str, int, float, bool)) or value is None:
-            if isinstance(value, str):
+            if isinstance(value, str) and not preserve_string_values:
                 return cls._parse_container_string(value)
             return value
         if isinstance(value, Decimal):
@@ -92,12 +92,12 @@ class ResultInfo(BaseModel):
         if isinstance(value, (datetime, date)):
             return value.isoformat()
         if isinstance(value, Mapping):
-            return {str(k): cls._normalize_value(v) for k, v in value.items()}
+            return {str(k): cls._normalize_value(v, preserve_string_values) for k, v in value.items()}
         if isinstance(value, (list, tuple, set)):
-            return [cls._normalize_value(item) for item in value]
+            return [cls._normalize_value(item, preserve_string_values) for item in value]
         return value
 
-    def to_dict(self, field_list: Optional[List[str]] = None):
+    def to_dict(self, field_list: Optional[List[str]] = None, *, preserve_string_values: bool = False):
         """将ResultInfo转换为字典格式
 
         Returns:
@@ -105,7 +105,7 @@ class ResultInfo(BaseModel):
         """
         output_data = {
             'dingo_id': self.dingo_id,
-            'raw_data': self._normalize_value(self.raw_data),
+            'raw_data': self._normalize_value(self.raw_data, preserve_string_values),
             'eval_status': self.eval_status,
             'eval_details': {
                 k: [self._eval_detail_to_dict(model_res) for model_res in v]
@@ -114,13 +114,13 @@ class ResultInfo(BaseModel):
         }
         return self._apply_field_filter(output_data, field_list)
 
-    def to_raw_dict(self, field_list: Optional[List[str]] = None):
+    def to_raw_dict(self, field_list: Optional[List[str]] = None, *, preserve_string_values: bool = False):
         """将ResultInfo合并到raw_data中
 
         Returns:
             包含原始数据和dingo_result的字典
         """
-        merged_raw_data = self._normalize_value(self.raw_data)
+        merged_raw_data = self._normalize_value(self.raw_data, preserve_string_values)
 
         def move_conflict_field(field_name: str):
             if field_name not in merged_raw_data:

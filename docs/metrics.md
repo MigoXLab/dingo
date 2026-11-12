@@ -160,7 +160,7 @@ This document provides comprehensive information about all quality metrics used 
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
-| `AGENT_TRACE_QUALITY` | RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget, RuleAgentTraceLatencyAnomaly, RuleAgentTraceLossMask, RuleAgentTraceEmptySupervision, RuleMsSwiftSchema | Detects an agent stuck repeating itself: the same subsequence of tool calls, compared by name and arguments, recurrin... | Internal Implementation | N/A | N/A |
+| `AGENT_TRACE_QUALITY` | RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget, RuleAgentTraceLatencyAnomaly, RuleAgentTraceLossMask, RuleAgentTraceEmptySupervision, RuleMsSwiftSchema | Detects consecutive repeated tool interactions using exact tool/arguments and result-body similarity; supports single-call and multi-tool patterns without judging usefulness. | Internal Implementation | N/A | N/A |
 | `AGENT_TRACE_SAFETY` | RuleAgentTraceDestructiveAction, RuleAgentTraceSensitiveAccess, RuleAgentTraceSecretExposure, RuleAgentTraceGatewayBypass, RuleAgentTraceIntegrity, RuleAgentTraceSandboxExplicitlyDisabled | Flags irreversible actions in tool arguments: forced recursive deletes, schema destruction, unscoped row deletion, hi... | Internal Implementation | N/A | N/A |
 
 ### Rule-Based RESUME Quality Metrics

@@ -10,6 +10,7 @@ import json
 from typing import Any, Callable, Dict, Union
 
 from dingo.config import InputArgs
+from dingo.data.converter.agent_trace_utils import split_tool_result
 from dingo.data.converter.base import BaseConverter
 from dingo.io import Data
 
@@ -97,19 +98,60 @@ def prepare_rule_agent_trace_empty_supervision(record: Dict[str, Any]) -> Dict[s
 
 
 def prepare_rule_agent_trace_loop_detection(record: Dict[str, Any]) -> Dict[str, str]:
-    """Prepare ordered names and arguments for loop detection."""
+    """Pair calls/results by ID and preserve headers separately from the body."""
+    messages = _messages(record)
+    observations = {}
+    for index, message in enumerate(messages):
+        if message["role"] != "tool":
+            continue
+        call_id = message.get("tool_call_id")
+        if not isinstance(call_id, str) or not call_id:
+            raise ValueError(f"ms_swift messages[{index}] has no valid tool_call_id")
+        if call_id in observations:
+            raise ValueError(f"ms_swift messages[{index}] has duplicate tool_call_id {call_id!r}")
+        if not isinstance(message.get("content"), str):
+            raise TypeError(f"ms_swift messages[{index}].content must be a string")
+        observations[call_id] = (index, message["content"])
+
     calls = []
-    for message_index, message in enumerate(_messages(record)):
-        if message.get("role") != "assistant":
+    seen_ids = set()
+    segment_id = 0
+    for message_index, message in enumerate(messages):
+        if message["role"] == "user":
+            segment_id += 1
+        if message["role"] != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
         if tool_calls is None:
             tool_calls = []
         if not isinstance(tool_calls, list):
             raise ValueError(f"ms_swift messages[{message_index}].tool_calls must be a list")
-        for call in tool_calls:
+        for call_index, call in enumerate(tool_calls):
             name, arguments = _tool_call_name_and_arguments(call)
-            item = {"tool_name": name, "args": arguments}
+            call_id = call.get("id")
+            if not isinstance(call_id, str) or not call_id:
+                raise ValueError(f"ms_swift messages[{message_index}] has no valid call id")
+            if call_id in seen_ids:
+                raise ValueError(f"ms_swift messages[{message_index}] has duplicate call id {call_id!r}")
+            seen_ids.add(call_id)
+            item = {
+                "call_index": len(calls),
+                "call_id": call_id,
+                "tool_name": name,
+                "args": arguments,
+                "message_index": message_index,
+                "call_index_in_message": call_index,
+                "segment_id": segment_id,
+                "result_present": call_id in observations,
+                "result_message_index": None,
+                "result_headers": "",
+                "result": "",
+            }
+            if call_id in observations:
+                result_index, content = observations[call_id]
+                headers, body = split_tool_result(content)
+                item.update(result_message_index=result_index,
+                            result_headers=headers, result=body)
             calls.append(item)
     return {
         "RuleAgentTraceLoopDetection_content": json.dumps(

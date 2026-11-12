@@ -308,9 +308,9 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 工具返回顺序为 `b`、`a`，输出仍按 `a`、`b`、`save` 排列。没有调用时输出 `{"steps": []}`。重复有效 ID 会报错。耗时有效性及异常阈值由规则判断；某个分组至少有 3 个有效正耗时才参与检测。规则优先读取 `duration` 和 `group`，缺少对应键时再读取 `duration_seconds` 和 `type`。
 
-### 5. RuleAgentTraceLoopDetection（重复调用循环）
+### 5. RuleAgentTraceLoopDetection（重复工具交互）
 
-保留完整的工具名、参数及调用顺序，供规则比较重复调用序列。
+检测连续出现的相同或近重复交互，不判断重复是否有意义。状态轮询也可能命中。全程纯规则，不调用 LLM，不按工具名称设置豁免。
 
 **fields 配置**
 
@@ -320,55 +320,100 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 }
 ```
 
-生成 `RuleAgentTraceLoopDetection_content`，类型为 JSON 字符串。
+辅助字段仍为 JSON 字符串，顶层为 `{"tool_calls": [...]}`，不包含 `schema_version`。
 
 **读取与映射**
 
 | 源字段或统计方式 | 转换后的路径 | 处理方式 |
 |---|---|---|
-| `assistant.tool_calls[].function.name` | `tool_calls[].tool_name` | 原样复制 |
-| `assistant.tool_calls[].function.arguments` | `tool_calls[].args` | 解析为对象，保留全部参数 |
+| assistant 调用顺序 | `call_index` | 当前节点的 0 基调用索引 |
+| `assistant.tool_calls[].id` | `call_id` | 用于配对与定位，不参与相似度 |
+| `function.name` / `function.arguments` | `tool_name` / `args` | 保留名称及全部参数；沿用旧 JSON 字符串参数兼容解析 |
+| 调用所在消息及数组位置 | `message_index` / `call_index_in_message` | 0 基索引 |
+| user 消息边界 | `segment_id` | 初始 0，遇到 user 加 1，模式不跨段 |
+| 按 call ID 匹配到的 tool 消息 | `result_present` / `result_message_index` | 缺失为 false/null，不能借用无关返回 |
+| tool 的 `content` | `result_headers` / `result` | 识别已知包装后无损分离前缀和正文 |
 
-**转换步骤**
+**转换步骤与输入示例**
 
-1. 按消息顺序扫描 `assistant` 消息，再按每条消息内的数组顺序扫描工具调用。
-2. 将名称和解析后的参数组装成 `{"tool_name": ..., "args": ...}`。参数缺失时使用 `{}`。
-3. 跨消息拼接所有调用，不排序、不去重、不只保留工具名称。相同工具名但参数不同的调用仍然不同。
-4. 输出 `{"tool_calls": [...]}`。不关联工具结果，也不输出调用 ID、状态或耗时；重复 ID 不影响这个转换。
-
-**输入示例**
+先建立 tool 返回索引，再按原调用顺序用 `id == tool_call_id` 关联。重复调用/返回 ID 会使本指标辅助字段置空，不影响其他 preparer。缺少返回则保留调用，标记 `result_present=false`。
 
 ```json
 {
   "messages": [
     {
       "role": "assistant",
+      "content": "",
+      "reasoning_content": "",
       "tool_calls": [
-        {"id":"a","function":{"name":"search","arguments":"{\"query\":\"Dingo\"}"}},
-        {"id":"b","function":{"name":"read","arguments":{"path":"notes.txt"}}}
+        {"id":"a","type":"function","function":{"name":"example","arguments":{"task_id":"t1"}}}
       ]
     },
-    {"role":"tool","tool_call_id":"b","content":"document"},
-    {"role":"assistant","tool_calls":[{"id":"a","function":{"name":"search","arguments":{"query":"Dingo"}}}]}
+    {
+      "role": "tool",
+      "name": "example",
+      "tool_call_id": "a",
+      "content": "Chunk ID: c1\nWall time: 1.0 seconds\nOutput:\nrunning\n"
+    }
   ]
 }
 ```
 
-**转换结果**（`content` 解析后）
+转换结果（辅助 content 解析后）：
 
 ```json
 {
   "tool_calls": [
-    {"tool_name":"search","args":{"query":"Dingo"}},
-    {"tool_name":"read","args":{"path":"notes.txt"}},
-    {"tool_name":"search","args":{"query":"Dingo"}}
+    {
+      "call_index": 0,
+      "call_id": "a",
+      "tool_name": "example",
+      "args": {"task_id":"t1"},
+      "message_index": 0,
+      "call_index_in_message": 0,
+      "segment_id": 0,
+      "result_present": true,
+      "result_message_index": 1,
+      "result_headers": "Chunk ID: c1\nWall time: 1.0 seconds\nOutput:\n",
+      "result": "running\n"
+    }
   ]
 }
 ```
 
-**缺失情况与使用边界**
+`result_headers` 包含 `Output:` 行及其换行，确保 `result_headers + result == 原始 content`。换行、缩进、Chunk ID、耗时和 Token 头信息原样保存，不转为其他字段。已知包装从开头的 Chunk ID/Wall time 等头行识别，不依据工具名称。普通文本、JSON 字符串、未知或不完整包装均作为完整 result，headers 为空；不会对正文中任意一个 Output 字样直接切割。
 
-没有调用时输出 `{"tool_calls": []}`。转换不预先判定循环；现有规则少于 6 个有效调用时返回 N/A，因此本例仅展示如何保留序列。
+原始 `messages[].content` 不变。result 仍是字符串，即使正文看起来像 JSON 也不变成对象。辅助字段按原有机制在 Local 结果写出时清理，headers 不自动作为独立新字段落盘。
+
+**重复条件与配置**
+
+工具名精确匹配，参数经 JSON 键排序后精确匹配；result 正文默认采用字符 5-gram 计数 Jaccard。headers、call ID 和定位字段不参与相似度。比较副本只统一 CRLF 为 LF，不删除数字、百分比或业务时间戳。
+
+| 配置项 | 默认值 | 范围/含义 |
+|---|---|---|
+| `threshold` | 0.95 | 有限数，0 < 值 <= 1，包含阈值边界 |
+| `min_repeats` | 3 | 整数 >= 2，包含第一次出现 |
+| `result_ngram_size` | 5 | 整数 >= 1 |
+| `result_match_mode` | `ngram` | `ngram` 或 `exact` |
+
+exact 比较归一化正文是否相等；ngram 得到 1 只保证片段计数相同，不保证全文顺序完全相同。默认阈值是初始工程配置，不是已完成全量数据校准的标准。
+
+模式长度从 1 开始：AAA、AAAA、ABABAB 都可检测，取消固定的 6 次调用门槛。对每个对应位置的所有轮次两两比较，最低相似度达到阈值才命中；候选失败后继续查找后续起点。空正文相同可命中；结果缺失或参数缺失会中断比较窗口，不删除后拼接。
+
+合法输入只输出 status=True/False，score 不设置，不增加 warning 或正常 N/A。False 表示未检出，不保证数据充分或任务质量良好，reason 会报告可比较调用和缺失结果数量。空派生字段仍走原有 ContentNull 输入问题分支。
+
+```json
+{
+  "fields": {"content":"RuleAgentTraceLoopDetection_content"},
+  "evals": [{
+    "name":"RuleAgentTraceLoopDetection",
+    "config":{"threshold":0.95,"min_repeats":3,"result_ngram_size":5,"result_match_mode":"ngram"}
+  }]
+}
+```
+
+可运行示例：`python examples/agent/loop_detection.py C:/path/to/traces.jsonl`。旧的仅 name/args 直接输入缺少结果证据，需重跑 ms_swift 转换；不会回退为仅按工具名/参数命中。
+
 
 ### 6. RuleAgentTraceSandboxExplicitlyDisabled（显式关闭沙箱）
 

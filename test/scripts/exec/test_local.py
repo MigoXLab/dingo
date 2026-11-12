@@ -84,6 +84,11 @@ class TestLocal:
                             }}} for call in range(6)
                     ]}],
             )
+            record["messages"].extend([
+                {"role": "tool", "tool_call_id": call["id"],
+                 "name": call["function"]["name"], "content": "same result"}
+                for call in record["messages"][0]["tool_calls"]
+            ])
             record["metadata"][field] = "nested source value"
             records.append(record)
         input_path = tmp_path / "traces.jsonl"
@@ -739,3 +744,48 @@ class TestLocal:
         assert result.metrics_score_stats["field1"]["TestMetric1"]["score_average"] == 8.5
         assert result.metrics_score_stats["field1"]["TestMetric2"]["score_average"] == 6.5
         assert result.get_metrics_score_overall_average("field1") == 7.5
+
+
+
+@pytest.mark.parametrize("raw", [False, True])
+def test_ms_swift_preserves_json_string_results_through_output(raw):
+    from dingo.data.converter import converters
+    source = standard_ms_swift_record(messages=[
+        {"role": "assistant", "content": "", "reasoning_content": "",
+         "tool_calls": [{"id": "c", "type": "function", "function": {
+             "name": "read", "arguments": {"path": "data.json"},
+         }}]},
+        {"role": "tool", "name": "read", "tool_call_id": "c",
+         "content": '  {"ok":true,"items":[1,2]}  '},
+    ])
+    args = InputArgs(dataset={"source": "local", "format": "ms_swift"},
+                     executor={"result_save": {"raw": raw}},
+                     evaluator=[{"evals": [{"name": "RuleAgentTraceLoopDetection"}]}])
+    data = converters["ms_swift"].convertor(args)(source)
+    result = ResultInfo(raw_data=data.to_dict(), derived_fields=data._derived_fields)
+    output = json.loads(LocalExecutor(args)._build_output_json(args, result))
+    restored = output if raw else output["raw_data"]
+    assert restored["messages"] == source["messages"]
+    assert isinstance(restored["messages"][1]["content"], str)
+    again = converters["ms_swift"].convertor(args)(restored)
+    assert json.loads(again.RuleAgentTraceLoopDetection_content)["tool_calls"][0]["result"] == (
+        source["messages"][1]["content"]
+    )
+
+
+def test_loop_configuration_is_isolated_through_executor():
+    executor = LocalExecutor(InputArgs(executor={"result_save": {"all_labels": True}}))
+    payload = json.dumps({"tool_calls": [
+        {"name": "a", "args": {}, "result": text} for text in ("ab", "ba", "ab")
+    ]})
+    for config, expected in (
+        ({"result_ngram_size": 1, "threshold": 1}, True),
+        (None, False),
+        ({"result_ngram_size": 1, "result_match_mode": "exact"}, False),
+    ):
+        evaluator = InputArgs(evaluator=[{"evals": [
+            {"name": "RuleAgentTraceLoopDetection", "config": config},
+        ]}]).evaluator[0].evals
+        result = executor.evaluate_single_data("1", {"content": "input"}, "rule",
+                                               {"content": payload}, evaluator)
+        assert result.eval_status is expected

@@ -1804,77 +1804,6 @@ def normalize_record(record: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
-FIELD_VALIDATORS = {
-    "metadata_type": lambda record: check_metadata_type(record.get("metadata_type")),
-    "doi": lambda record: check_doi(record.get("doi"), record.get("metadata_type")),
-    "isbns": lambda record: check_isbns(record.get("isbns"), record.get("metadata_type")),
-    "isbn13": lambda record: check_isbn13(record.get("isbn13"), record.get("metadata_type")),
-    "title": lambda record: check_title(record.get("title")),
-    "abstract": lambda record: check_abstract(record.get("abstract"), record.get("title")),
-    "language": lambda record: check_language(record.get("language")),
-    "author": lambda record: check_author(record.get("author")),
-    "contributors": lambda record: check_contributors(record.get("contributors")),
-    "locations": lambda record: check_locations(record.get("locations")),
-    "access_is_oa": lambda record: check_access_is_oa(
-        record.get("access_is_oa"),
-        record.get("metadata_type"),
-        record.get("access_oa_status"),
-        record.get("access_oa_url"),
-        record.get("access_license"),
-    ),
-    "access_oa_status": lambda record: check_access_oa_status(record.get("access_oa_status")),
-    "access_oa_url": lambda record: check_access_oa_url(record.get("access_oa_url")),
-    "access_license": lambda record: check_access_license(record.get("access_license")),
-    "publication_published_date": lambda record: check_publication_published_date(
-        record.get("publication_published_date")
-    ),
-    "publication_published_year": lambda record: check_publication_published_year(
-        record.get("publication_published_year")
-    ),
-    "publication_venue_issn": lambda record: check_publication_venue_issn(record.get("publication_venue_issn")),
-    "publication_venue_biblio_volume": lambda record: check_publication_venue_biblio_volume(
-        record.get("publication_venue_biblio_volume")
-    ),
-    "publication_venue_biblio_issue": lambda record: check_publication_venue_biblio_issue(
-        record.get("publication_venue_biblio_issue")
-    ),
-    "publication_venue_biblio_pages": lambda record: check_publication_venue_biblio_pages(
-        record.get("publication_venue_biblio_pages")
-    ),
-    "publication_pages": lambda record: check_publication_pages(record.get("publication_pages")),
-    "publication_venue_name_unified": lambda record: check_publication_venue_name_unified(
-        record.get("publication_venue_name_unified"),
-        record.get("publication_venue_name"),
-    ),
-    "grade_class": lambda record: check_grade_class(record.get("grade_class")),
-    "grade": lambda record: check_grade(record.get("grade"), record.get("grade_class")),
-    "references": lambda record: check_references(record.get("references")),
-    "related_works": lambda record: check_related_works(record.get("related_works")),
-    "citations": lambda record: check_citations(record.get("citations")),
-    "supplementary_material": lambda record: check_supplementary_material(
-        record.get("supplementary_material")
-    ),
-    "cited_by_api_url": lambda record: check_cited_by_api_url(record.get("cited_by_api_url")),
-    "access_xinghe_repository_sha256": lambda record: check_access_xinghe_repository_sha256(
-        record.get("access_xinghe_repository_sha256"),
-        record.get("access_xinghe_repository_has_fulltext"),
-    ),
-    "access_xinghe_repository_origin_path": lambda record: check_access_xinghe_repository_origin_path(
-        record.get("access_xinghe_repository_origin_path"),
-        record.get("access_xinghe_repository_has_fulltext"),
-    ),
-    "access_xinghe_repository_model_name": lambda record: check_access_xinghe_repository_model_name(
-        record.get("access_xinghe_repository_model_name"),
-        record.get("access_xinghe_repository_process_status"),
-    ),
-    "access_xinghe_repository_model_version": lambda record: check_access_xinghe_repository_model_version(
-        record.get("access_xinghe_repository_model_version"),
-        record.get("access_xinghe_repository_model_name"),
-        record.get("access_xinghe_repository_process_status"),
-    ),
-}
-
-
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["xinghe", "quanliang"])
 class RuleQuanliangFieldValidation(BaseRule):
     _metric_info = {
@@ -1888,8 +1817,78 @@ class RuleQuanliangFieldValidation(BaseRule):
         "evaluation_results": "",
     }
 
+    field_validators = {
+        "metadata_type": lambda record: check_metadata_type(record.get("metadata_type")),
+        "doi": lambda record: check_doi(record.get("doi"), record.get("metadata_type")),
+        "isbns": lambda record: check_isbns(record.get("isbns"), record.get("metadata_type")),
+        "isbn13": lambda record: check_isbn13(record.get("isbn13"), record.get("metadata_type")),
+        "title": lambda record: check_title(record.get("title")),
+        "abstract": lambda record: check_abstract(record.get("abstract"), record.get("title")),
+        "language": lambda record: check_language(record.get("language")),
+        "author": lambda record: check_author(record.get("author")),
+        "contributors": lambda record: check_contributors(record.get("contributors")),
+        "locations": lambda record: check_locations(record.get("locations")),
+        "access_is_oa": lambda record: check_access_is_oa(
+            record.get("access_is_oa"),
+            record.get("metadata_type"),
+            record.get("access_oa_status"),
+            record.get("access_oa_url"),
+            record.get("access_license"),
+        ),
+        "access_oa_status": lambda record: check_access_oa_status(record.get("access_oa_status")),
+        "access_oa_url": lambda record: check_access_oa_url(record.get("access_oa_url")),
+        "access_license": lambda record: check_access_license(record.get("access_license")),
+        "publication_published_date": lambda record: check_publication_published_date(
+            record.get("publication_published_date")
+        ),
+        "publication_published_year": lambda record: check_publication_published_year(
+            record.get("publication_published_year")
+        ),
+        "publication_venue_issn": lambda record: check_publication_venue_issn(record.get("publication_venue_issn")),
+        "publication_venue_biblio_volume": lambda record: check_publication_venue_biblio_volume(
+            record.get("publication_venue_biblio_volume")
+        ),
+        "publication_venue_biblio_issue": lambda record: check_publication_venue_biblio_issue(
+            record.get("publication_venue_biblio_issue")
+        ),
+        "publication_venue_biblio_pages": lambda record: check_publication_venue_biblio_pages(
+            record.get("publication_venue_biblio_pages")
+        ),
+        "publication_pages": lambda record: check_publication_pages(record.get("publication_pages")),
+        "publication_venue_name_unified": lambda record: check_publication_venue_name_unified(
+            record.get("publication_venue_name_unified"),
+            record.get("publication_venue_name"),
+        ),
+        "grade_class": lambda record: check_grade_class(record.get("grade_class")),
+        "grade": lambda record: check_grade(record.get("grade"), record.get("grade_class")),
+        "references": lambda record: check_references(record.get("references")),
+        "related_works": lambda record: check_related_works(record.get("related_works")),
+        "citations": lambda record: check_citations(record.get("citations")),
+        "supplementary_material": lambda record: check_supplementary_material(
+            record.get("supplementary_material")
+        ),
+        "cited_by_api_url": lambda record: check_cited_by_api_url(record.get("cited_by_api_url")),
+        "access_xinghe_repository_sha256": lambda record: check_access_xinghe_repository_sha256(
+            record.get("access_xinghe_repository_sha256"),
+            record.get("access_xinghe_repository_has_fulltext"),
+        ),
+        "access_xinghe_repository_origin_path": lambda record: check_access_xinghe_repository_origin_path(
+            record.get("access_xinghe_repository_origin_path"),
+            record.get("access_xinghe_repository_has_fulltext"),
+        ),
+        "access_xinghe_repository_model_name": lambda record: check_access_xinghe_repository_model_name(
+            record.get("access_xinghe_repository_model_name"),
+            record.get("access_xinghe_repository_process_status"),
+        ),
+        "access_xinghe_repository_model_version": lambda record: check_access_xinghe_repository_model_version(
+            record.get("access_xinghe_repository_model_version"),
+            record.get("access_xinghe_repository_model_name"),
+            record.get("access_xinghe_repository_process_status"),
+        ),
+    }
+
     _required_fields = []
-    dynamic_config = EvaluatorRuleArgs(key_list=list(FIELD_VALIDATORS.keys()))
+    dynamic_config = EvaluatorRuleArgs(key_list=list(field_validators))
 
     def eval(self, input_data: Data) -> EvalDetail:
         res = EvalDetail(metric=self.__class__.__name__)
@@ -1898,7 +1897,7 @@ class RuleQuanliangFieldValidation(BaseRule):
         bad_fields: List[str] = []
         reasons: List[str] = []
         for field in selected_fields:
-            if field not in FIELD_VALIDATORS:
+            if field not in self.field_validators:
                 bad_fields.append(f"{field}.unsupported_field")
                 reasons.append(f"{field}: unsupported field")
                 continue
@@ -1906,7 +1905,7 @@ class RuleQuanliangFieldValidation(BaseRule):
                 bad_fields.append(f"{field}.missing_field")
                 reasons.append(f"{field}: missing field")
                 continue
-            invalid, error_labels, detail_reasons = FIELD_VALIDATORS[field](normalized)
+            invalid, error_labels, detail_reasons = self.field_validators[field](normalized)
             if invalid:
                 bad_fields.extend(f"{field}.{error_label}" for error_label in error_labels)
                 reasons.extend(f"{field}: {reason}" for reason in detail_reasons)

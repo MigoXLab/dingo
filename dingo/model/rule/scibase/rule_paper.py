@@ -13,6 +13,7 @@ from dingo.model.rule.scibase.rule_quanliang import (
     check_access_xinghe_repository_origin_path,
     check_access_xinghe_repository_sha256,
     check_author,
+    check_best_oa_location,
     check_citations,
     check_cited_by_api_url,
     check_contributors,
@@ -24,6 +25,7 @@ from dingo.model.rule.scibase.rule_quanliang import (
     check_language,
     check_locations,
     check_metadata_type,
+    check_primary_location,
     check_publication_pages,
     check_publication_published_date,
     check_publication_published_year,
@@ -120,6 +122,8 @@ class RulePaperFieldValidation(RuleQuanliangFieldValidation):
             record.get("access_xinghe_repository_model_name"),
             record.get("access_xinghe_repository_process_status"),
         ),
+        "primary_location": lambda record: check_primary_location(record.get("primary_location")),
+        "best_oa_location": lambda record: check_best_oa_location(record.get("best_oa_location")),
     }
 
     _required_fields = []

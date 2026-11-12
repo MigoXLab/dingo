@@ -444,6 +444,17 @@ JSON_LIST_FIELDS = {
     "citations",
     "supplementary_material",
 }
+JSON_OBJECT_FIELDS = {"primary_location", "best_oa_location"}
+LOCATION_REQUIRED_KEYS = (
+    "id", "source", "landing_page_url", "pdf_url", "is_oa",
+    "is_published", "raw_source_name", "raw_type", "provenance",
+    "license", "license_id", "version", "is_accepted",
+)
+PRIMARY_LOCATION_SOURCE_REQUIRED_KEYS = (
+    "id", "display_name", "issn_l", "issn", "is_oa", "is_in_doaj",
+    "is_core", "host_organization", "host_organization_name",
+    "host_organization_lineage", "host_organization_lineage_names", "type",
+)
 LICENSE_VALUES = {
     "cc-by",
     "cc-by-nc",
@@ -1340,6 +1351,37 @@ def check_locations(locations: Any) -> ValidationResult:
     return _ok()
 
 
+def _check_location_keys(location: Any) -> ValidationResult:
+    if location is None:
+        return _fail("null", "value is null")
+    if not isinstance(location, dict):
+        return _fail("wrong_type", "value must be an object")
+    # OpenAlex location fields default to an empty object.
+    if not location:
+        return _ok()
+    for key in LOCATION_REQUIRED_KEYS:
+        if key not in location:
+            return _fail("missing_key", f"missing key '{key}'")
+    return _ok()
+
+
+def check_primary_location(primary_location: Any) -> ValidationResult:
+    result = _check_location_keys(primary_location)
+    if result[0] or not primary_location:
+        return result
+    source = primary_location["source"]
+    if not isinstance(source, dict):
+        return _fail("wrong_type", "source must be an object")
+    for key in PRIMARY_LOCATION_SOURCE_REQUIRED_KEYS:
+        if key not in source:
+            return _fail("missing_key", f"source missing key '{key}'")
+    return _ok()
+
+
+def check_best_oa_location(best_oa_location: Any) -> ValidationResult:
+    return _check_location_keys(best_oa_location)
+
+
 def check_access_is_oa(
     access_is_oa: Any,
     metadata_type: Any,
@@ -1795,7 +1837,7 @@ def _normalize_bool_field(value: Any) -> Any:
 
 def normalize_record(record: Dict[str, Any]) -> Dict[str, Any]:
     normalized = dict(record)
-    for field in JSON_LIST_FIELDS:
+    for field in JSON_LIST_FIELDS | JSON_OBJECT_FIELDS:
         if field in normalized:
             normalized[field] = _normalize_json_like_field(normalized.get(field))
     normalized["access_xinghe_repository_has_fulltext"] = _normalize_bool_field(

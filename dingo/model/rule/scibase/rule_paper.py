@@ -3,7 +3,7 @@
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.model.model import Model
 from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation
-from dingo.model.rule.scibase.rule_quanliang import (
+from dingo.model.rule.scibase.base_check_paper import (
     check_abstract,
     check_access_is_oa,
     check_access_oa_status,
@@ -47,7 +47,7 @@ class RulePaperFieldValidation(BaseFieldValidation):
         "category": "Rule-Based Metadata Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
         "metric_name": "RulePaperFieldValidation",
-        "description": "Validate paper metadata fields using imported Quanliang checks",
+        "description": "Validate paper metadata fields using shared paper checks",
         "paper_title": "",
         "paper_url": "",
         "paper_authors": "",

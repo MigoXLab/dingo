@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dingo.io.input import Data
 from dingo.model.model import Model
-from dingo.model.rule.scibase import rule_paper, rule_quanliang
+from dingo.model.rule.scibase import base_check_paper, rule_paper, rule_quanliang
 from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation
 
 
@@ -22,6 +22,11 @@ def test_paper_reuses_checks_with_independent_mapping_and_config():
     assert paper.dynamic_config.key_list is not quanliang.dynamic_config.key_list
     assert paper.dynamic_config.key_list == list(paper.field_validators)
     assert quanliang.dynamic_config.key_list == list(quanliang.field_validators)
+    for module in (rule_paper, rule_quanliang):
+        for name, check in vars(module).items():
+            if name.startswith("check_"):
+                assert check is getattr(base_check_paper, name)
+                assert check.__module__ == base_check_paper.__name__
 
     data_path = Path(__file__).parents[3] / "data/scibase/rule_quanliang_cases.jsonl"
     for line in data_path.read_text(encoding="utf-8").splitlines():

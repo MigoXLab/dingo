@@ -73,7 +73,6 @@ class RulePaperFieldValidation(RuleQuanliangFieldValidation):
         ),
         "access_oa_status": lambda record: check_access_oa_status(record.get("access_oa_status")),
         "access_oa_url": lambda record: check_access_oa_url(record.get("access_oa_url")),
-        "access_license": lambda record: check_access_license(record.get("access_license")),
         "publication_published_date": lambda record: check_publication_published_date(
             record.get("publication_published_date")
         ),

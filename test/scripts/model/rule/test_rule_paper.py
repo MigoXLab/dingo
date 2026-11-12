@@ -27,8 +27,8 @@ def test_paper_reuses_checks_with_independent_mapping_and_config():
     for module in (rule_paper, rule_quanliang):
         for name, check in vars(module).items():
             if name.startswith("check_"):
-                if module is rule_paper and name == "check_access_is_oa":
-                    assert check is not base_check_paper.check_access_is_oa
+                if module is rule_paper and name in {"check_access_is_oa", "check_access_oa_status"}:
+                    assert check is not getattr(base_check_paper, name)
                     assert check.__module__ == rule_paper.__name__
                     continue
                 assert check is getattr(base_check_paper, name)
@@ -97,6 +97,49 @@ def test_paper_access_is_oa_is_independent_of_related_fields(oa_flag):
     }
     assert rule_paper.RulePaperFieldValidation.field_validators["access_is_oa"](record) == (False, [], [])
     assert rule_quanliang.RuleQuanliangFieldValidation.field_validators["access_is_oa"](record)[0] is True
+
+
+@pytest.mark.parametrize(
+    "record, expected_label",
+    [
+        ({}, "missing_field"),
+        ({"access_oa_status": None}, "null"),
+        ({"access_oa_status": True}, "wrong_type"),
+        ({"access_oa_status": 1}, "wrong_type"),
+        ({"access_oa_status": []}, "wrong_type"),
+        ({"access_oa_status": {}}, "wrong_type"),
+        ({"access_oa_status": "Gold"}, "unsupported_value"),
+        ({"access_oa_status": " gold "}, "unsupported_value"),
+        ({"access_oa_status": " "}, "unsupported_value"),
+        ({"access_oa_status": "unknown"}, "unsupported_value"),
+    ],
+)
+def test_paper_access_oa_status_basic_validation(record, expected_label):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["access_oa_status"]
+    result = model.eval(Data(access_is_oa="false", **record))
+    assert result.status is True
+    assert result.label == [f"access_oa_status.{expected_label}"]
+    assert len(result.reason) == 1
+
+
+@pytest.mark.parametrize("status", ["diamond", "gold", "green", "hybrid", "bronze", "closed", ""])
+@pytest.mark.parametrize("oa_flag", ["true", "false", "unknown", None, True, False, "invalid", []])
+def test_paper_access_oa_status_consistency(status, oa_flag):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["access_oa_status"]
+    result = model.eval(Data(access_oa_status=status, access_is_oa=oa_flag))
+    mismatch = (oa_flag == "false" and status != "closed") or (oa_flag == "true" and status == "closed")
+    assert result.status is mismatch
+    assert result.label == (
+        ["access_oa_status.oa_status_mismatch"] if mismatch else ["QUALITY_GOOD"]
+    )
+    # Quanliang retains its independent basic status validator.
+    assert rule_quanliang.RuleQuanliangFieldValidation.field_validators["access_oa_status"](
+        {"access_oa_status": status, "access_is_oa": oa_flag}
+    ) == (False, [], [])
 
 
 def test_paper_check_can_be_replaced_independently(monkeypatch):

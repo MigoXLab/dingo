@@ -7,7 +7,6 @@ from dingo.model.model import Model
 from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation, ValidationResult
 from dingo.model.rule.scibase.base_check_paper import (
     check_abstract,
-    check_access_oa_status,
     check_access_oa_url,
     check_access_xinghe_repository_model_name,
     check_access_xinghe_repository_model_version,
@@ -57,6 +56,32 @@ def check_access_is_oa(access_is_oa: Any) -> ValidationResult:
     return BaseFieldValidation._ok()
 
 
+def check_access_oa_status(
+    access_oa_status: Any, access_is_oa: Any = None
+) -> ValidationResult:
+    """Validate the paper OA status and its relationship to the OA flag."""
+    if access_oa_status is None:
+        return BaseFieldValidation._fail("null", "value is null")
+    if not isinstance(access_oa_status, str):
+        return BaseFieldValidation._fail("wrong_type", "value must be a string")
+    # Empty status is allowed, but still subject to the OA flag constraint.
+    if access_oa_status not in {"diamond", "gold", "green", "hybrid", "bronze", "closed", ""}:
+        return BaseFieldValidation._fail(
+            "unsupported_value", f"unsupported value '{access_oa_status}'"
+        )
+    if access_is_oa == "false" and access_oa_status != "closed":
+        return BaseFieldValidation._fail(
+            "oa_status_mismatch",
+            "value must be 'closed' when access_is_oa='false'",
+        )
+    if access_is_oa == "true" and access_oa_status == "closed":
+        return BaseFieldValidation._fail(
+            "oa_status_mismatch",
+            "value must not be 'closed' when access_is_oa='true'",
+        )
+    return BaseFieldValidation._ok()
+
+
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["xinghe", "quanliang"])
 class RulePaperFieldValidation(BaseFieldValidation):
     _metric_info = {
@@ -84,7 +109,9 @@ class RulePaperFieldValidation(BaseFieldValidation):
         "access_is_oa": lambda record: check_access_is_oa(
             record.get("access_is_oa"),
         ),
-        "access_oa_status": lambda record: check_access_oa_status(record.get("access_oa_status")),
+        "access_oa_status": lambda record: check_access_oa_status(
+            record.get("access_oa_status"), record.get("access_is_oa"),
+        ),
         "access_oa_url": lambda record: check_access_oa_url(record.get("access_oa_url")),
         "publication_published_date": lambda record: check_publication_published_date(
             record.get("publication_published_date")

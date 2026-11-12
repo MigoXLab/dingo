@@ -154,7 +154,7 @@ This document provides comprehensive information about all quality metrics used 
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
-| `QUALITY_BAD_EFFECTIVENESS` | RuleMetadataSimilarity, RuleQuanliangFieldValidation, RulePaperFieldValidation, RulePatentFieldValidation, RuleAuthorFieldValidation, RuleSourceFieldValidation | 检查元数据字段与基准数据的相似度匹配，阈值默认为0.6; Validate Quanliang metadata fields and report invalid fields; Paper validation imports Quanliang checks through its own field_validators; Validate patent metadata f... | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleMetadataSimilarity, RuleQuanliangFieldValidation, RulePaperFieldValidation, RulePatentFieldValidation, RuleAuthorFieldValidation, RuleSourceFieldValidation | 检查元数据字段与基准数据的相似度匹配，阈值默认为0.6; Validate Quanliang metadata fields and report invalid fields; Validate paper metadata fields with independently configurable checks; Validate patent metadata f... | Internal Implementation | N/A | N/A |
 
 ### Rule-Based Quality Metrics
 

@@ -1,11 +1,12 @@
 """Paper metadata validation with independently configurable field checks."""
 
+from typing import Any
+
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.model.model import Model
-from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation
+from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation, ValidationResult
 from dingo.model.rule.scibase.base_check_paper import (
     check_abstract,
-    check_access_is_oa,
     check_access_oa_status,
     check_access_oa_url,
     check_access_xinghe_repository_model_name,
@@ -41,6 +42,21 @@ from dingo.model.rule.scibase.base_check_paper import (
 )
 
 
+def check_access_is_oa(access_is_oa: Any) -> ValidationResult:
+    """Validate the paper OA flag; missing fields are handled by eval()."""
+    if access_is_oa is None:
+        return BaseFieldValidation._fail("null", "value is null")
+    if not isinstance(access_is_oa, str):
+        return BaseFieldValidation._fail("wrong_type", "value must be a string")
+    if access_is_oa == "":
+        return BaseFieldValidation._fail("empty", "value cannot be empty string")
+    if access_is_oa not in {"true", "false", "unknown"}:
+        return BaseFieldValidation._fail(
+            "unsupported_value", f"unsupported value '{access_is_oa}'"
+        )
+    return BaseFieldValidation._ok()
+
+
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["xinghe", "quanliang"])
 class RulePaperFieldValidation(BaseFieldValidation):
     _metric_info = {
@@ -67,10 +83,6 @@ class RulePaperFieldValidation(BaseFieldValidation):
         "locations": lambda record: check_locations(record.get("locations")),
         "access_is_oa": lambda record: check_access_is_oa(
             record.get("access_is_oa"),
-            record.get("metadata_type"),
-            record.get("access_oa_status"),
-            record.get("access_oa_url"),
-            record.get("access_license"),
         ),
         "access_oa_status": lambda record: check_access_oa_status(record.get("access_oa_status")),
         "access_oa_url": lambda record: check_access_oa_url(record.get("access_oa_url")),

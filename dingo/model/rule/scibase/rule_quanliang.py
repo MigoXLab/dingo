@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from dingo.config.input_args import EvaluatorRuleArgs
-from dingo.io.input import Data
-from dingo.io.output.eval_detail import EvalDetail, QualityLabel
 from dingo.model.model import Model
-from dingo.model.rule.base import BaseRule
+from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation, ValidationResult
+
+_ok = BaseFieldValidation._ok
+_fail = BaseFieldValidation._fail
 
 URL_RE = re.compile(r"^[Hh][Tt][Tt][Pp][Ss]?://[^/$.?#][\s\S]*$")
 DOI_RE = re.compile(r"^10\.\d{4,9}/[^\s|]+$", re.IGNORECASE)
@@ -432,19 +433,6 @@ METADATA_TYPE_VALUES = {"paper", "ebook"}
 OA_STATUS_VALUES = {"diamond", "gold", "green", "hybrid", "bronze", "closed", ""}
 OPEN_OA_STATUS_VALUES = {"diamond", "gold", "green", "hybrid", "bronze"}
 LOC_TYPE_VALUES = {"download", "reader", "display", ""}
-JSON_LIST_FIELDS = {
-    "isbns",
-    "author",
-    "contributors",
-    "locations",
-    "access_oa_url",
-    "publication_venue_issn",
-    "references",
-    "related_works",
-    "citations",
-    "supplementary_material",
-}
-JSON_OBJECT_FIELDS = {"primary_location", "best_oa_location"}
 LOCATION_REQUIRED_KEYS = (
     "id", "source", "landing_page_url", "pdf_url", "is_oa",
     "is_published", "raw_source_name", "raw_type", "provenance",
@@ -617,17 +605,6 @@ def _detect_multiple_name_signals(name: str) -> list[str]:
         evidence.append("cjk_whitespace_names")
 
     return list(dict.fromkeys(evidence))
-
-
-ValidationResult = tuple[bool, list[str], list[str]]
-
-
-def _ok() -> ValidationResult:
-    return False, [], []
-
-
-def _fail(error_label: str, reason: str) -> ValidationResult:
-    return True, [error_label], [reason]
 
 
 def check_metadata_type(metadata_type: Any) -> ValidationResult:
@@ -1794,60 +1771,8 @@ def check_access_xinghe_repository_model_version(
     return _ok()
 
 
-def _normalize_json_like_field(value: Any) -> Any:
-    if not isinstance(value, str):
-        return value
-    stripped = value.strip()
-    if not stripped:
-        return value
-    if stripped[0] not in ("[", "{"):
-        return value
-    try:
-        return json.loads(stripped)
-    except (TypeError, ValueError, json.JSONDecodeError):
-        cleaned = stripped.replace("\r", " ").replace("\n", " ").replace("\t", " ")
-        cleaned = "".join(ch if ord(ch) >= 32 else " " for ch in cleaned)
-        invalid_escape_re = re.compile(r'\\(?!["\\/bfnrtu])')
-        for _ in range(10):
-            next_cleaned = invalid_escape_re.sub(r"\\\\", cleaned)
-            if next_cleaned == cleaned:
-                break
-            cleaned = next_cleaned
-        try:
-            return json.loads(cleaned)
-        except (TypeError, ValueError, json.JSONDecodeError):
-            return value
-
-
-def _normalize_bool_field(value: Any) -> Any:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, int):
-        if value in (0, 1):
-            return bool(value)
-        return value
-    if isinstance(value, str):
-        lowered = value.strip().lower()
-        if lowered in ("1", "true"):
-            return True
-        if lowered in ("0", "false"):
-            return False
-    return value
-
-
-def normalize_record(record: Dict[str, Any]) -> Dict[str, Any]:
-    normalized = dict(record)
-    for field in JSON_LIST_FIELDS | JSON_OBJECT_FIELDS:
-        if field in normalized:
-            normalized[field] = _normalize_json_like_field(normalized.get(field))
-    normalized["access_xinghe_repository_has_fulltext"] = _normalize_bool_field(
-        normalized.get("access_xinghe_repository_has_fulltext")
-    )
-    return normalized
-
-
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["xinghe", "quanliang"])
-class RuleQuanliangFieldValidation(BaseRule):
+class RuleQuanliangFieldValidation(BaseFieldValidation):
     _metric_info = {
         "category": "Rule-Based Metadata Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",
@@ -1931,31 +1856,3 @@ class RuleQuanliangFieldValidation(BaseRule):
 
     _required_fields = []
     dynamic_config = EvaluatorRuleArgs(key_list=list(field_validators))
-
-    def eval(self, input_data: Data) -> EvalDetail:
-        res = EvalDetail(metric=self.__class__.__name__)
-        normalized = normalize_record(input_data.to_dict())
-        selected_fields = self.dynamic_config.key_list or []
-        bad_fields: List[str] = []
-        reasons: List[str] = []
-        for field in selected_fields:
-            if field not in self.field_validators:
-                bad_fields.append(f"{field}.unsupported_field")
-                reasons.append(f"{field}: unsupported field")
-                continue
-            if field not in normalized:
-                bad_fields.append(f"{field}.missing_field")
-                reasons.append(f"{field}: missing field")
-                continue
-            invalid, error_labels, detail_reasons = self.field_validators[field](normalized)
-            if invalid:
-                bad_fields.extend(f"{field}.{error_label}" for error_label in error_labels)
-                reasons.extend(f"{field}: {reason}" for reason in detail_reasons)
-
-        if bad_fields:
-            res.status = True
-            res.label = bad_fields
-            res.reason = reasons
-        else:
-            res.label = [QualityLabel.QUALITY_GOOD]
-        return res

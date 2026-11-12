@@ -49,6 +49,8 @@ dingo/
 │   │   ├── model.py         ← Model registry (rule_register, llm_register)
 │   │   ├── rule/            ← Rule-based evaluators (80+ built-in)
 │   │   │   ├── base.py      ← BaseRule
+│   │   │   ├── scibase/      ← Scientific metadata field validators
+│   │   │   │   └── base_field_validation.py ← Shared base for Paper and Quanliang field validation
 │   │   │   ├── rule_common.py ← Common rules (text quality, format, PII, etc.)
 │   │   │   ├── agent_trace/
 │   │   │   │   └── rule_ms_swift.py ← ms-swift standardized-delivery validation

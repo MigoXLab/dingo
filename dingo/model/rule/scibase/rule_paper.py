@@ -2,10 +2,10 @@
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.model.model import Model
+from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation
 from dingo.model.rule.scibase.rule_quanliang import (
     check_abstract,
     check_access_is_oa,
-    check_access_license,
     check_access_oa_status,
     check_access_oa_url,
     check_access_xinghe_repository_model_name,
@@ -38,12 +38,11 @@ from dingo.model.rule.scibase.rule_quanliang import (
     check_related_works,
     check_supplementary_material,
     check_title,
-    RuleQuanliangFieldValidation,
 )
 
 
 @Model.rule_register("QUALITY_BAD_EFFECTIVENESS", ["xinghe", "quanliang"])
-class RulePaperFieldValidation(RuleQuanliangFieldValidation):
+class RulePaperFieldValidation(BaseFieldValidation):
     _metric_info = {
         "category": "Rule-Based Metadata Quality Metrics",
         "quality_dimension": "EFFECTIVENESS",

@@ -4,13 +4,19 @@ from pathlib import Path
 from dingo.io.input import Data
 from dingo.model.model import Model
 from dingo.model.rule.scibase import rule_paper, rule_quanliang
+from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation
 
 
 def test_paper_reuses_checks_with_independent_mapping_and_config():
     paper = rule_paper.RulePaperFieldValidation
     quanliang = rule_quanliang.RuleQuanliangFieldValidation
     assert Model.get_rule_by_name(paper.__name__) is paper
+    assert paper.__bases__ == (BaseFieldValidation,)
+    assert quanliang.__bases__ == (BaseFieldValidation,)
     assert paper.eval is quanliang.eval
+    assert paper.eval is BaseFieldValidation.eval
+    assert paper.normalize_record.__func__ is BaseFieldValidation.normalize_record.__func__
+    assert quanliang.normalize_record.__func__ is BaseFieldValidation.normalize_record.__func__
     assert paper.field_validators is not quanliang.field_validators
     assert paper.dynamic_config is not quanliang.dynamic_config
     assert paper.dynamic_config.key_list is not quanliang.dynamic_config.key_list

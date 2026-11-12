@@ -150,6 +150,19 @@ PAPER_LOCATION_KEYS = (
 )
 
 
+PAPER_SOURCE_KEYS = (
+    "id", "display_name", "issn_l", "issn", "is_oa", "is_in_doaj", "is_core",
+    "listed_in", "type", "host_organization", "host_organization_name",
+    "host_organization_lineage", "host_organization_lineage_names",
+)
+
+
+def _paper_location():
+    return {**dict.fromkeys(PAPER_LOCATION_KEYS), "license": "", "is_oa": "unknown",
+        "source": dict.fromkeys(PAPER_SOURCE_KEYS), "version": "publishedVersion",
+        "is_published": True, "is_accepted": True}
+
+
 @pytest.mark.parametrize(
     "record, expected_label",
     [
@@ -163,7 +176,6 @@ PAPER_LOCATION_KEYS = (
         ({"locations": [""]}, "wrong_type"),
         ({"locations": [[]]}, "wrong_type"),
         ({"locations": [{}]}, "empty"),
-        ({"locations": [{"locations.license": ""}]}, "missing_key"),
     ],
 )
 def test_paper_locations_basic_validation(record, expected_label):
@@ -178,7 +190,7 @@ def test_paper_locations_basic_validation(record, expected_label):
 
 @pytest.mark.parametrize("missing_key", PAPER_LOCATION_KEYS)
 def test_paper_locations_requires_each_key(missing_key):
-    location = dict.fromkeys(PAPER_LOCATION_KEYS)
+    location = {**_paper_location(), "license": "", "is_oa": "unknown"}
     incomplete = dict(location)
     del incomplete[missing_key]
     assert rule_paper.check_locations([location, incomplete]) == (
@@ -188,15 +200,17 @@ def test_paper_locations_requires_each_key(missing_key):
 
 @pytest.mark.parametrize("bad_item, expected_label", [(None, "wrong_type"), ({}, "empty")])
 def test_paper_locations_checks_later_items(bad_item, expected_label):
-    result = rule_paper.check_locations([dict.fromkeys(PAPER_LOCATION_KEYS), bad_item])
+    location = {**_paper_location(), "license": "", "is_oa": "unknown"}
+    result = rule_paper.check_locations([location, bad_item])
     assert result[0] is True
     assert result[1] == [expected_label]
     assert "item[1]" in result[2][0]
 
 
-@pytest.mark.parametrize("locations", [[], [dict.fromkeys(PAPER_LOCATION_KEYS)],
-    [dict.fromkeys(PAPER_LOCATION_KEYS, "")],
-    [{**dict.fromkeys(PAPER_LOCATION_KEYS), "extra": "allowed"}],
+@pytest.mark.parametrize("locations", [[],
+    [{**_paper_location(), "license": "", "is_oa": "true"}],
+    [{**_paper_location(), "is_oa": "false"}],
+    [{**_paper_location(), "license": "", "is_oa": "unknown", "extra": "allowed"}],
 ])
 def test_paper_locations_valid_structure(locations):
     model = rule_paper.RulePaperFieldValidation()
@@ -212,9 +226,245 @@ def test_paper_locations_and_quanliang_locations_are_independent():
     quanliang_location = {"type": "download", "url": "https://example.com/a.pdf",
         "license": "cc-by", "is_oa": "true"}
     assert rule_quanliang.check_locations([quanliang_location]) == (False, [], [])
-    assert rule_paper.check_locations([quanliang_location])[1] == ["missing_key"]
-    assert rule_paper.check_locations([dict.fromkeys(PAPER_LOCATION_KEYS)]) == (False, [], [])
+    assert rule_paper.check_locations([quanliang_location])[1] == ["missing_key"] * 9
+    assert rule_paper.check_locations(
+        [{**_paper_location(), "license": "", "is_oa": "true"}]
+    ) == (False, [], [])
     assert rule_quanliang.check_locations([dict.fromkeys(PAPER_LOCATION_KEYS)])[1] == ["missing_key"]
+
+
+@pytest.mark.parametrize("is_oa", [None, "", "True", " true ", "invalid", True, False, 1, [], {}])
+def test_paper_locations_is_oa_rejects_invalid_values(is_oa):
+    valid = {**_paper_location(), "license": "", "is_oa": "true"}
+    invalid = {**valid, "is_oa": is_oa}
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["locations"]
+    result = model.eval(Data(locations=[valid, invalid]))
+    assert result.status is True
+    assert result.label == ["locations.is_oa.unsupported_value"]
+    assert result.reason == [
+        "locations: item[1].is_oa must be one of 'true', 'false' or 'unknown'",
+    ]
+
+
+def test_paper_locations_collects_errors_across_items_and_keys():
+    valid = {**_paper_location(), "license": "", "is_oa": "true"}
+    incomplete = {**valid, "is_oa": "invalid"}
+    del incomplete["license"]
+    del incomplete["pdf_url"]
+    missing_is_oa = dict(valid)
+    del missing_is_oa["is_oa"]
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["locations"]
+    result = model.eval(Data(locations=[{}, incomplete, None, missing_is_oa, valid]))
+    assert result.status is True
+    assert result.label == [
+        "locations.empty", "locations.missing_key", "locations.is_oa.unsupported_value",
+        "locations.missing_key", "locations.wrong_type", "locations.missing_key",
+    ]
+    assert result.reason == [
+        "locations: item[0] cannot be an empty object",
+        "locations: item[1] missing key 'license'",
+        "locations: item[1].is_oa must be one of 'true', 'false' or 'unknown'",
+        "locations: item[1] missing key 'pdf_url'",
+        "locations: item[2] must be an object",
+        "locations: item[3] missing key 'is_oa'",
+    ]
+
+
+def test_paper_locations_reports_all_missing_keys_without_checking_absent_values():
+    result = rule_paper.check_locations([{"locations.license": ""}])
+    assert result == (
+        True, ["missing_key"] * len(PAPER_LOCATION_KEYS),
+        [f"item[0] missing key '{key}'" for key in PAPER_LOCATION_KEYS],
+    )
+
+
+@pytest.mark.parametrize("license_value", [
+    "cc-by", "cc-by-nc", "cc-by-sa", "cc-by-nd", "cc-by-nc-sa", "cc-by-nc-nd",
+    "other-oa", "cc0", "", "public-domain", "publisher-specific-oa", "publisher-specific",
+    "wiley-specific", "elsevier-specific", "oup-specific", "acs-specific", "rsc-specific",
+    "iop-specific", "unspecified-oa", "implied-oa", "nonexclusive-distrib", "gpl-v1",
+    "gpl-v2", "gpl-v3", "mit", "apache-2-0", "isc", "ogl-c", "pd",
+])
+def test_paper_locations_license_accepts_supported_values(license_value):
+    location = {**_paper_location(), "license": license_value, "is_oa": "unknown"}
+    assert rule_paper.check_locations([location]) == (False, [], [])
+
+
+@pytest.mark.parametrize("license_value", [None, True, 1, [], {}, "CC-BY", "cc-by ", "apache-2-0 ", "invalid"])
+def test_paper_locations_license_errors_accumulate_with_other_errors(license_value):
+    location = {**_paper_location(), "license": license_value, "is_oa": "invalid"}
+    del location["pdf_url"]
+    result = rule_paper.check_locations([location, location])
+    assert result == (
+        True, ["license.unsupported_value", "is_oa.unsupported_value", "missing_key"] * 2,
+        [reason for idx in (0, 1) for reason in (
+            f"item[{idx}].license must be a supported license string",
+            f"item[{idx}].is_oa must be one of 'true', 'false' or 'unknown'",
+            f"item[{idx}] missing key 'pdf_url'",
+        )],
+    )
+
+
+@pytest.mark.parametrize("source", [None, "", [], True, 1, "{}"])
+def test_paper_locations_source_requires_object(source):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["locations"]
+    result = model.eval(Data(locations=[{**_paper_location(), "source": source}]))
+    assert result.label == ["locations.source.wrong_type"]
+    assert result.reason == ["locations: item[0].source must be an object"]
+
+
+@pytest.mark.parametrize("missing_key", PAPER_SOURCE_KEYS)
+def test_paper_locations_source_requires_each_key(missing_key):
+    location = _paper_location()
+    del location["source"][missing_key]
+    assert rule_paper.check_locations([location]) == (
+        True, ["source.missing_key"], [f"item[0].source missing key '{missing_key}'"],
+    )
+
+
+def test_paper_locations_source_empty_and_type_errors_accumulate():
+    location = {**_paper_location(), "source": {}, "license": "invalid"}
+    labels = ["license.unsupported_value", "source.empty"]
+    reasons = [
+        "item[0].license must be a supported license string",
+        "item[0].source cannot be an empty object",
+    ]
+    assert rule_paper.check_locations([location, {**_paper_location(), "source": None}]) == (
+        True, labels + ["source.wrong_type"], reasons + ["item[1].source must be an object"],
+    )
+
+
+def test_paper_locations_source_collects_missing_keys_in_nonempty_object():
+    location = {**_paper_location(), "source": {"extra": "allowed"}}
+    assert rule_paper.check_locations([location]) == (
+        True, ["source.missing_key"] * len(PAPER_SOURCE_KEYS),
+        [f"item[0].source missing key '{key}'" for key in PAPER_SOURCE_KEYS],
+    )
+
+
+def test_paper_locations_source_allows_extra_keys_without_value_constraints():
+    location = _paper_location()
+    location["source"]["extra"] = "allowed"
+    assert rule_paper.check_locations([location]) == (False, [], [])
+
+
+@pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion"])
+def test_paper_locations_version_accepts_supported_values(version):
+    assert rule_paper.check_locations([{**_paper_location(), "version": version}]) == (False, [], [])
+
+
+@pytest.mark.parametrize("version", [
+    None, "", True, 1, [], {}, "publishedversion", "PublishedVersion", "publishedVersion ", "invalid",
+])
+def test_paper_locations_version_errors_accumulate(version):
+    location = {**_paper_location(), "source": {}, "version": version}
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["locations"]
+    result = model.eval(Data(locations=[location, location]))
+    assert result.status is True
+    assert result.label == ["locations.source.empty", "locations.version.unsupported_value"] * 2
+    assert result.reason == [reason for idx in (0, 1) for reason in (
+        f"locations: item[{idx}].source cannot be an empty object",
+        f"locations: item[{idx}].version must be one of 'publishedVersion', 'acceptedVersion' or 'submittedVersion'",
+    )]
+
+
+@pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion"])
+@pytest.mark.parametrize("is_published", [True, False])
+def test_paper_locations_is_published_version_consistency(version, is_published):
+    result = rule_paper.check_locations([
+        {**_paper_location(), "version": version, "is_published": is_published},
+    ])
+    if version == "publishedVersion" and not is_published:
+        assert result == (
+            True, ["is_published.version_mismatch"],
+            ["item[0].is_published must be true when version='publishedVersion'"],
+        )
+    else:
+        assert result == (False, [], [])
+
+
+@pytest.mark.parametrize("is_published", [None, 0, 1, "true", "false", "", [], {}])
+def test_paper_locations_is_published_requires_boolean(is_published):
+    result = rule_paper.check_locations([{**_paper_location(), "is_published": is_published}])
+    assert result == (
+        True, ["is_published.wrong_type"], ["item[0].is_published must be a boolean"],
+    )
+
+
+def test_paper_locations_is_published_errors_accumulate_and_missing_version_is_safe():
+    missing_version = {**_paper_location(), "is_published": False}
+    del missing_version["version"]
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["locations"]
+    result = model.eval(Data(locations=[
+        {**_paper_location(), "is_published": False, "source": {}},
+        {**_paper_location(), "is_published": "true"},
+        missing_version,
+    ]))
+    assert result.label == [
+        "locations.is_published.version_mismatch", "locations.source.empty",
+        "locations.is_published.wrong_type", "locations.missing_key",
+    ]
+    assert result.reason == [
+        "locations: item[0].is_published must be true when version='publishedVersion'",
+        "locations: item[0].source cannot be an empty object",
+        "locations: item[1].is_published must be a boolean",
+        "locations: item[2] missing key 'version'",
+    ]
+
+
+@pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion"])
+@pytest.mark.parametrize("is_accepted", [True, False])
+def test_paper_locations_is_accepted_version_consistency(version, is_accepted):
+    result = rule_paper.check_locations([
+        {**_paper_location(), "version": version, "is_accepted": is_accepted},
+    ])
+    if version in ("publishedVersion", "acceptedVersion") and not is_accepted:
+        assert result == (
+            True, ["is_accepted.version_mismatch"],
+            ["item[0].is_accepted must be true when version is 'publishedVersion' or 'acceptedVersion'"],
+        )
+    else:
+        assert result == (False, [], [])
+
+
+@pytest.mark.parametrize("is_accepted", [None, 0, 1, "true", "false", "", [], {}])
+def test_paper_locations_is_accepted_requires_boolean(is_accepted):
+    assert rule_paper.check_locations([{**_paper_location(), "is_accepted": is_accepted}]) == (
+        True, ["is_accepted.wrong_type"], ["item[0].is_accepted must be a boolean"],
+    )
+
+
+def test_paper_locations_is_accepted_errors_accumulate_and_missing_version_is_safe():
+    missing_version = {**_paper_location(), "is_accepted": False}
+    del missing_version["version"]
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["locations"]
+    result = model.eval(Data(locations=[
+        {**_paper_location(), "is_published": False, "is_accepted": False},
+        {**_paper_location(), "is_accepted": "true"},
+        missing_version,
+    ]))
+    assert result.label == [
+        "locations.is_published.version_mismatch", "locations.is_accepted.version_mismatch",
+        "locations.is_accepted.wrong_type", "locations.missing_key",
+    ]
+    assert result.reason == [
+        "locations: item[0].is_published must be true when version='publishedVersion'",
+        "locations: item[0].is_accepted must be true when version is 'publishedVersion' or 'acceptedVersion'",
+        "locations: item[1].is_accepted must be a boolean",
+        "locations: item[2] missing key 'version'",
+    ]
 
 
 def test_paper_check_can_be_replaced_independently(monkeypatch):

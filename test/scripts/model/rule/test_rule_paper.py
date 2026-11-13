@@ -242,9 +242,12 @@ def test_paper_locations_is_oa_rejects_invalid_values(is_oa):
     model.dynamic_config.key_list = ["locations"]
     result = model.eval(Data(locations=[valid, invalid]))
     assert result.status is True
-    assert result.label == ["locations.is_oa.unsupported_value"]
+    error = "unsupported_value" if isinstance(is_oa, str) else "wrong_type"
+    reason = ("is_oa must be one of 'true', 'false' or 'unknown'"
+        if isinstance(is_oa, str) else "is_oa must be a string")
+    assert result.label == [f"locations.is_oa.{error}"]
     assert result.reason == [
-        "locations: item[1].is_oa must be one of 'true', 'false' or 'unknown'",
+        f"locations: item[1].{reason}",
     ]
 
 
@@ -299,10 +302,13 @@ def test_paper_locations_license_errors_accumulate_with_other_errors(license_val
     location = {**_paper_location(), "license": license_value, "is_oa": "invalid"}
     del location["pdf_url"]
     result = rule_paper.check_locations([location, location])
+    error = "unsupported_value" if isinstance(license_value, str) else "wrong_type"
+    reason = ("license must be a supported license string"
+        if isinstance(license_value, str) else "license must be a string")
     assert result == (
-        True, ["license.unsupported_value", "is_oa.unsupported_value", "missing_key"] * 2,
-        [reason for idx in (0, 1) for reason in (
-            f"item[{idx}].license must be a supported license string",
+        True, [f"license.{error}", "is_oa.unsupported_value", "missing_key"] * 2,
+        [detail for idx in (0, 1) for detail in (
+            f"item[{idx}].{reason}",
             f"item[{idx}].is_oa must be one of 'true', 'false' or 'unknown'",
             f"item[{idx}] missing key 'pdf_url'",
         )],
@@ -369,10 +375,13 @@ def test_paper_locations_version_errors_accumulate(version):
     model.dynamic_config.key_list = ["locations"]
     result = model.eval(Data(locations=[location, location]))
     assert result.status is True
-    assert result.label == ["locations.source.empty", "locations.version.unsupported_value"] * 2
-    assert result.reason == [reason for idx in (0, 1) for reason in (
+    error = "unsupported_value" if isinstance(version, str) else "wrong_type"
+    reason = ("version must be one of 'publishedVersion', 'acceptedVersion' or 'submittedVersion'"
+        if isinstance(version, str) else "version must be a string")
+    assert result.label == ["locations.source.empty", f"locations.version.{error}"] * 2
+    assert result.reason == [detail for idx in (0, 1) for detail in (
         f"locations: item[{idx}].source cannot be an empty object",
-        f"locations: item[{idx}].version must be one of 'publishedVersion', 'acceptedVersion' or 'submittedVersion'",
+        f"locations: item[{idx}].{reason}",
     )]
 
 
@@ -465,6 +474,22 @@ def test_paper_locations_is_accepted_errors_accumulate_and_missing_version_is_sa
         "locations: item[1].is_accepted must be a boolean",
         "locations: item[2] missing key 'version'",
     ]
+
+
+def test_paper_locations_reports_independent_type_labels_for_all_value_checks():
+    location = {**_paper_location(), "license": [], "is_oa": True, "source": None,
+        "version": {}, "is_published": 1, "is_accepted": "true"}
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["locations"]
+    result = model.eval(Data(locations=[location]))
+    assert result.status is True
+    assert result.label == [
+        "locations.license.wrong_type", "locations.is_oa.wrong_type",
+        "locations.is_published.wrong_type", "locations.is_accepted.wrong_type",
+        "locations.source.wrong_type", "locations.version.wrong_type",
+    ]
+    assert len(result.reason) == len(result.label)
 
 
 def test_paper_check_can_be_replaced_independently(monkeypatch):

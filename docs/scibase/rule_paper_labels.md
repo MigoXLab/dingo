@@ -25,7 +25,7 @@
 | `language` | 4 |
 | `author` | 10 |
 | `contributors` | 4 |
-| `locations` | 15 |
+| `locations` | 18 |
 | `access_is_oa` | 5 |
 | `access_oa_status` | 5 |
 | `access_oa_url` | 4 |
@@ -50,7 +50,7 @@
 | `access_xinghe_repository_model_version` | 5 |
 | `primary_location` | 4 |
 | `best_oa_location` | 4 |
-| **合计** | **291** |
+| **合计** | **294** |
 
 ## metadata_type
 
@@ -224,12 +224,15 @@
 | `null` | 值为 null | 字段值为 `null` 时标记。 |
 | `empty` | 列表项为空 | 列表中存在空对象 `{}` 时标记，并继续检查下一个对象。 |
 | `missing_key` | key 缺失 | 列表对象缺少以下任一 key 时标记：`license`、`is_oa`、`pdf_url`、`landing_page_url`、`is_published`、`is_accepted`、`source_url`、`origin_url`、`source`、`version`、`meta_db_name`。key 不带 `locations.` 前缀；允许额外 key，仅检查必需 key 是否存在。 |
-| `is_oa.unsupported_value` | OA 标记不合法 | 列表对象的 `is_oa` 仅允许字符串 `"true"`、`"false"`、`"unknown"`；null、空字符串、布尔值及其他值均不合法。 |
+| `is_oa.wrong_type` | OA 标记类型错误 | `is_oa` 不是字符串时标记，包括 null、布尔值、数字、列表和对象。 |
+| `is_oa.unsupported_value` | OA 标记不合法 | 字符串 `is_oa` 仅允许 `"true"`、`"false"`、`"unknown"`；空字符串及其他字符串均不合法。 |
+| `license.wrong_type` | 许可证类型错误 | `license` 不是字符串时标记，包括 null、布尔值、数字、列表和对象。 |
 | `license.unsupported_value` | 许可证不合法 | `license` 仅允许字符串：`cc-by`、`cc-by-nc`、`cc-by-sa`、`cc-by-nd`、`cc-by-nc-sa`、`cc-by-nc-nd`、`other-oa`、`cc0`、`""`、`public-domain`、`publisher-specific-oa`、`publisher-specific`、`wiley-specific`、`elsevier-specific`、`oup-specific`、`acs-specific`、`rsc-specific`、`iop-specific`、`unspecified-oa`、`implied-oa`、`nonexclusive-distrib`、`gpl-v1`、`gpl-v2`、`gpl-v3`、`mit`、`apache-2-0`、`isc`、`ogl-c`、`pd`。 |
 | `source.wrong_type` | 来源类型错误 | `source` 不是对象时标记，包括 null、字符串和列表。 |
 | `source.empty` | 来源为空 | `source` 是空对象 `{}` 时标记，跳过其内部检查，继续检查后续对象。 |
 | `source.missing_key` | 来源 key 缺失 | 非空 `source` 缺少以下任一 key 时逐项标记：`id`、`display_name`、`issn_l`、`issn`、`is_oa`、`is_in_doaj`、`is_core`、`listed_in`、`type`、`host_organization`、`host_organization_name`、`host_organization_lineage`、`host_organization_lineage_names`。允许额外 key。 |
-| `version.unsupported_value` | 版本不合法 | `version` 仅允许字符串 `publishedVersion`、`acceptedVersion`、`submittedVersion`；区分大小写，null、空字符串及其他值均不合法。 |
+| `version.wrong_type` | 版本类型错误 | `version` 不是字符串时标记，包括 null、布尔值、数字、列表和对象。 |
+| `version.unsupported_value` | 版本不合法 | 字符串 `version` 仅允许 `publishedVersion`、`acceptedVersion`、`submittedVersion`；区分大小写，空字符串及其他字符串均不合法。 |
 | `is_published.wrong_type` | 发布标记类型错误 | `is_published` 不是布尔值时标记；字符串和整数 0/1 均不符合要求。 |
 | `is_published.version_mismatch` | 发布标记与版本不一致 | 同一对象的 `version` 为 `publishedVersion` 时，布尔值 `is_published` 必须为 true。 |
 | `is_accepted.wrong_type` | 接收标记类型错误 | `is_accepted` 不是布尔值时标记；字符串和整数 0/1 均不符合要求。 |

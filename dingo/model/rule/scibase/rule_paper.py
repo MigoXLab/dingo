@@ -49,6 +49,8 @@ PAPER_LOCATION_REQUIRED_KEYS = (
 def check_locations(locations: Any) -> ValidationResult:
     """Validate paper location objects; missing fields are handled by eval()."""
     def _check_license(license_value: Any) -> ValidationResult:
+        if not isinstance(license_value, str):
+            return BaseFieldValidation._fail("license.wrong_type", "license must be a string")
         allowed = {
             "cc-by", "cc-by-nc", "cc-by-sa", "cc-by-nd", "cc-by-nc-sa", "cc-by-nc-nd",
             "other-oa", "cc0", "", "public-domain", "publisher-specific-oa",
@@ -57,7 +59,7 @@ def check_locations(locations: Any) -> ValidationResult:
             "nonexclusive-distrib", "gpl-v1", "gpl-v2", "gpl-v3", "mit", "apache-2-0",
             "isc", "ogl-c", "pd",
         }
-        if not isinstance(license_value, str) or license_value not in allowed:
+        if license_value not in allowed:
             return BaseFieldValidation._fail(
                 "license.unsupported_value", "license must be a supported license string",
             )
@@ -65,7 +67,9 @@ def check_locations(locations: Any) -> ValidationResult:
 
     def _check_is_oa(is_oa: Any) -> ValidationResult:
         """Validate the string enum used by locations[].is_oa."""
-        if not isinstance(is_oa, str) or is_oa not in {"true", "false", "unknown"}:
+        if not isinstance(is_oa, str):
+            return BaseFieldValidation._fail("is_oa.wrong_type", "is_oa must be a string")
+        if is_oa not in {"true", "false", "unknown"}:
             return BaseFieldValidation._fail(
                 "is_oa.unsupported_value", "is_oa must be one of 'true', 'false' or 'unknown'",
             )
@@ -88,7 +92,9 @@ def check_locations(locations: Any) -> ValidationResult:
         )
 
     def _check_version(version: Any) -> ValidationResult:
-        if not isinstance(version, str) or version not in {
+        if not isinstance(version, str):
+            return BaseFieldValidation._fail("version.wrong_type", "version must be a string")
+        if version not in {
             "publishedVersion", "acceptedVersion", "submittedVersion",
         }:
             return BaseFieldValidation._fail(
@@ -121,10 +127,6 @@ def check_locations(locations: Any) -> ValidationResult:
             )
         return BaseFieldValidation._ok()
 
-    value_checks = {
-        "license": _check_license, "is_oa": _check_is_oa,
-        "source": _check_source, "version": _check_version,
-    }
     if locations is None:
         return BaseFieldValidation._fail("null", "value is null")
     if not isinstance(locations, list):
@@ -149,8 +151,14 @@ def check_locations(locations: Any) -> ValidationResult:
                 invalid, labels, detail_reasons = _check_is_published(item[key], item.get("version"))
             elif key == "is_accepted":
                 invalid, labels, detail_reasons = _check_is_accepted(item[key], item.get("version"))
-            elif key in value_checks:
-                invalid, labels, detail_reasons = value_checks[key](item[key])
+            elif key == "license":
+                invalid, labels, detail_reasons = _check_license(item[key])
+            elif key == "is_oa":
+                invalid, labels, detail_reasons = _check_is_oa(item[key])
+            elif key == "source":
+                invalid, labels, detail_reasons = _check_source(item[key])
+            elif key == "version":
+                invalid, labels, detail_reasons = _check_version(item[key])
             else:
                 continue
             if invalid:

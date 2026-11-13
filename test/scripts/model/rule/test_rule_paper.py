@@ -193,6 +193,8 @@ def test_paper_locations_requires_each_key(missing_key):
     location = {**_paper_location(), "license": "", "is_oa": "unknown"}
     incomplete = dict(location)
     del incomplete[missing_key]
+    if missing_key == "version":
+        incomplete.update(is_published=False, is_accepted=False)
     assert rule_paper.check_locations([location, incomplete]) == (
         True, ["missing_key"], [f"item[1] missing key '{missing_key}'"],
     )
@@ -362,14 +364,16 @@ def test_paper_locations_source_allows_extra_keys_without_value_constraints():
 
 @pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion"])
 def test_paper_locations_version_accepts_supported_values(version):
-    assert rule_paper.check_locations([{**_paper_location(), "version": version}]) == (False, [], [])
+    location = {**_paper_location(), "version": version,
+        "is_published": version == "publishedVersion", "is_accepted": version != "submittedVersion"}
+    assert rule_paper.check_locations([location]) == (False, [], [])
 
 
 @pytest.mark.parametrize("version", [
     None, "", True, 1, [], {}, "publishedversion", "PublishedVersion", "publishedVersion ", "invalid",
 ])
 def test_paper_locations_version_errors_accumulate(version):
-    location = {**_paper_location(), "source": {}, "version": version}
+    location = {**_paper_location(), "source": {}, "version": version, "is_published": False, "is_accepted": False}
     model = rule_paper.RulePaperFieldValidation()
     model.dynamic_config = model.dynamic_config.model_copy(deep=True)
     model.dynamic_config.key_list = ["locations"]
@@ -389,12 +393,18 @@ def test_paper_locations_version_errors_accumulate(version):
 @pytest.mark.parametrize("is_published", [True, False])
 def test_paper_locations_is_published_version_consistency(version, is_published):
     result = rule_paper.check_locations([
-        {**_paper_location(), "version": version, "is_published": is_published},
+        {**_paper_location(), "version": version, "is_published": is_published,
+            "is_accepted": version != "submittedVersion"},
     ])
     if version == "publishedVersion" and not is_published:
         assert result == (
             True, ["is_published.version_mismatch"],
             ["item[0].is_published must be true when version='publishedVersion'"],
+        )
+    elif version != "publishedVersion" and is_published:
+        assert result == (
+            True, ["is_published.version_mismatch"],
+            ["item[0].is_published must be false when version != 'publishedVersion'"],
         )
     else:
         assert result == (False, [], [])
@@ -409,7 +419,7 @@ def test_paper_locations_is_published_requires_boolean(is_published):
 
 
 def test_paper_locations_is_published_errors_accumulate_and_missing_version_is_safe():
-    missing_version = {**_paper_location(), "is_published": False}
+    missing_version = {**_paper_location(), "is_published": False, "is_accepted": False}
     del missing_version["version"]
     model = rule_paper.RulePaperFieldValidation()
     model.dynamic_config = model.dynamic_config.model_copy(deep=True)
@@ -435,12 +445,18 @@ def test_paper_locations_is_published_errors_accumulate_and_missing_version_is_s
 @pytest.mark.parametrize("is_accepted", [True, False])
 def test_paper_locations_is_accepted_version_consistency(version, is_accepted):
     result = rule_paper.check_locations([
-        {**_paper_location(), "version": version, "is_accepted": is_accepted},
+        {**_paper_location(), "version": version, "is_accepted": is_accepted,
+            "is_published": version == "publishedVersion"},
     ])
     if version in ("publishedVersion", "acceptedVersion") and not is_accepted:
         assert result == (
             True, ["is_accepted.version_mismatch"],
             ["item[0].is_accepted must be true when version is 'publishedVersion' or 'acceptedVersion'"],
+        )
+    elif version == "submittedVersion" and is_accepted:
+        assert result == (
+            True, ["is_accepted.version_mismatch"],
+            ["item[0].is_accepted must be false when version is neither 'publishedVersion' nor 'acceptedVersion'"],
         )
     else:
         assert result == (False, [], [])
@@ -454,7 +470,7 @@ def test_paper_locations_is_accepted_requires_boolean(is_accepted):
 
 
 def test_paper_locations_is_accepted_errors_accumulate_and_missing_version_is_safe():
-    missing_version = {**_paper_location(), "is_accepted": False}
+    missing_version = {**_paper_location(), "is_published": False, "is_accepted": False}
     del missing_version["version"]
     model = rule_paper.RulePaperFieldValidation()
     model.dynamic_config = model.dynamic_config.model_copy(deep=True)
@@ -490,6 +506,25 @@ def test_paper_locations_reports_independent_type_labels_for_all_value_checks():
         "locations.source.wrong_type", "locations.version.wrong_type",
     ]
     assert len(result.reason) == len(result.label)
+
+
+@pytest.mark.parametrize("version_data", [{}, {"version": None}, {"version": []}, {"version": "futureVersion"}])
+@pytest.mark.parametrize("flag", [True, False])
+def test_paper_locations_flags_use_else_branch_for_missing_or_invalid_version(version_data, flag):
+    location = {**_paper_location(), "is_published": flag, "is_accepted": flag}
+    del location["version"]
+    location.update(version_data)
+    result = rule_paper.check_locations([location])
+    expected = ["is_published.version_mismatch", "is_accepted.version_mismatch"] if flag else []
+    if "version" not in version_data:
+        expected.append("missing_key")
+    elif not isinstance(version_data["version"], str):
+        expected.append("version.wrong_type")
+    else:
+        expected.append("version.unsupported_value")
+    assert result[0] is True
+    assert result[1] == expected
+    assert len(result[2]) == len(expected)
 
 
 def test_paper_check_can_be_replaced_independently(monkeypatch):

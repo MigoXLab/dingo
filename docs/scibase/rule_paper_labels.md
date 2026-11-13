@@ -234,9 +234,9 @@
 | `version.wrong_type` | 版本类型错误 | `version` 不是字符串时标记，包括 null、布尔值、数字、列表和对象。 |
 | `version.unsupported_value` | 版本不合法 | 字符串 `version` 仅允许 `publishedVersion`、`acceptedVersion`、`submittedVersion`；区分大小写，空字符串及其他字符串均不合法。 |
 | `is_published.wrong_type` | 发布标记类型错误 | `is_published` 不是布尔值时标记；字符串和整数 0/1 均不符合要求。 |
-| `is_published.version_mismatch` | 发布标记与版本不一致 | 同一对象的 `version` 为 `publishedVersion` 时，布尔值 `is_published` 必须为 true。 |
+| `is_published.version_mismatch` | 发布标记与版本不一致 | `version` 为 `publishedVersion` 时，`is_published` 必须为 true；其他情况必须为 false，包括版本缺失或非法。 |
 | `is_accepted.wrong_type` | 接收标记类型错误 | `is_accepted` 不是布尔值时标记；字符串和整数 0/1 均不符合要求。 |
-| `is_accepted.version_mismatch` | 接收标记与版本不一致 | 同一对象的 `version` 为 `publishedVersion` 或 `acceptedVersion` 时，布尔值 `is_accepted` 必须为 true。 |
+| `is_accepted.version_mismatch` | 接收标记与版本不一致 | `version` 为 `publishedVersion` 或 `acceptedVersion` 时，`is_accepted` 必须为 true；其他情况必须为 false，包括版本缺失或非法。 |
 
 逐项累积错误；缺失 key 时跳过该 key 的值检查，继续检查其他 key 和后续对象。标签与原因逐条对应，同类错误可出现多次，原因中包含对象索引和 key。
 

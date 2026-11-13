@@ -108,11 +108,18 @@ def check_locations(locations: Any) -> ValidationResult:
             return BaseFieldValidation._fail(
                 "is_published.wrong_type", "is_published must be a boolean",
             )
-        if version == "publishedVersion" and not is_published:
-            return BaseFieldValidation._fail(
-                "is_published.version_mismatch",
-                "is_published must be true when version='publishedVersion'",
-            )
+        if version == "publishedVersion":
+            if not is_published:
+                return BaseFieldValidation._fail(
+                    "is_published.version_mismatch",
+                    "is_published must be true when version='publishedVersion'",
+                )
+        else:
+            if is_published:
+                return BaseFieldValidation._fail(
+                    "is_published.version_mismatch",
+                    "is_published must be false when version != 'publishedVersion'",
+                )
         return BaseFieldValidation._ok()
 
     def _check_is_accepted(is_accepted: Any, version: Any) -> ValidationResult:
@@ -120,11 +127,18 @@ def check_locations(locations: Any) -> ValidationResult:
             return BaseFieldValidation._fail(
                 "is_accepted.wrong_type", "is_accepted must be a boolean",
             )
-        if version in ("publishedVersion", "acceptedVersion") and not is_accepted:
-            return BaseFieldValidation._fail(
-                "is_accepted.version_mismatch",
-                "is_accepted must be true when version is 'publishedVersion' or 'acceptedVersion'",
-            )
+        if version in ("publishedVersion", "acceptedVersion"):
+            if not is_accepted:
+                return BaseFieldValidation._fail(
+                    "is_accepted.version_mismatch",
+                    "is_accepted must be true when version is 'publishedVersion' or 'acceptedVersion'",
+                )
+        else:
+            if is_accepted:
+                return BaseFieldValidation._fail(
+                    "is_accepted.version_mismatch",
+                    "is_accepted must be false when version is neither 'publishedVersion' nor 'acceptedVersion'",
+                )
         return BaseFieldValidation._ok()
 
     if locations is None:

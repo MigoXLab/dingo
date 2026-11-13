@@ -84,6 +84,11 @@ class TestLocal:
                             }}} for call in range(6)
                     ]}],
             )
+            record["messages"].extend([
+                {"role": "tool", "tool_call_id": call["id"],
+                 "name": call["function"]["name"], "content": "same result"}
+                for call in record["messages"][0]["tool_calls"]
+            ])
             record["metadata"][field] = "nested source value"
             records.append(record)
         input_path = tmp_path / "traces.jsonl"

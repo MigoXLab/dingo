@@ -5,11 +5,13 @@ These rules run without LLM calls, checking structural properties
 of agent execution traces (loops, token budget, latency anomalies).
 """
 
-import hashlib
 import json
+import math
 import re
 import statistics
-from typing import Any, List, Optional
+from collections import Counter
+from itertools import groupby
+from typing import Any, Callable, List, Optional
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io.input import Data, RequiredField
@@ -85,17 +87,28 @@ def _empty_derived_input_result(cls: type, input_data: Data) -> Optional[EvalDet
 
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
 class RuleAgentTraceLoopDetection(BaseRule):
-    """Detect repetitive tool call patterns indicating infinite loops.
+    """Detect an agent repeating the same tool interaction.
 
-    Input: content = JSON array of tool call objects with 'tool_name' field.
-    Detection: n-gram analysis on tool call signatures.
-    A loop is detected when the same subsequence of 2+ calls repeats 3 or more
-    consecutive times.
+    Input: content = JSON with a 'tool_calls' (or 'steps') array whose items
+    carry 'tool_name', the call's arguments and, when recorded, its 'result'.
+    Detection: the same call, or subsequence of calls, recurring
+    ``min_repeats`` (default 3) or more consecutive times. Within a repetition
+    the tool names and arguments must match exactly, and at every position of
+    the pattern each pair of results must reach ``threshold`` (default 0.95)
+    character 5-gram Jaccard similarity.
 
-    A signature combines the tool name with a fingerprint of its arguments, so
-    a fan-out over one tool with different arguments (eight distinct search
-    queries) is not mistaken for a stuck loop, while the same call issued over
-    and over still is. Calls carrying no arguments compare by name alone.
+    Comparing arguments keeps a fan-out over one tool (eight distinct search
+    queries) from reading as a loop. Comparing results keeps polling that is
+    making progress — a download whose percentage keeps rising — from reading
+    as one: the action is identical each time, but the agent is being told
+    something new. A missing result compares as an empty one, so input that
+    records no results is judged by name and arguments alone, and the reason
+    says so. A call with no arguments breaks the comparison: without them,
+    three calls to one tool are as likely to be three different files as one
+    repeat.
+
+    This checks repetition, not whether it was useful: waiting on a job whose
+    status line never changes still matches.
     """
 
     # Surfaced on the metrics page: without it a reader sees a bare
@@ -105,9 +118,10 @@ class RuleAgentTraceLoopDetection(BaseRule):
         "metric_name": "RuleAgentTraceLoopDetection",
         "metric_group": "AGENT_TRACE_QUALITY",
         "description": _ms_swift_description(
-            "Detects an agent stuck repeating itself: the same subsequence of tool "
-            "calls, compared by name and arguments, recurring three or more times. "
-            "Comparing arguments too keeps a search fan-out from reading as a loop."
+            "Detects an agent stuck repeating itself: the same tool call, or "
+            "subsequence of calls, recurring three or more times with identical "
+            "arguments and near-identical results. Comparing results keeps polling "
+            "that is making progress from reading as a loop."
         ),
     }
 
@@ -118,18 +132,26 @@ class RuleAgentTraceLoopDetection(BaseRule):
     input_data_type = "agent_trace_json"
 
     _ARGUMENT_KEYS = ("args", "arguments", "tool_input", "input")
+    _RESULT_NGRAM_SIZE = 5
+    _DEFAULT_THRESHOLD = 0.95
+    _DEFAULT_MIN_REPEATS = 3
 
     _required_fields = [RequiredField.CONTENT]
+    dynamic_config = EvaluatorRuleArgs(
+        threshold=_DEFAULT_THRESHOLD, min_repeats=_DEFAULT_MIN_REPEATS,
+    )
 
     @classmethod
     def eval(cls, input_data: Data) -> EvalDetail:
+        threshold, min_repeats = cls._settings()
         empty_result = _empty_derived_input_result(cls, input_data)
         if empty_result is not None:
             return empty_result
         result = EvalDetail(metric=cls.__name__)
 
         calls = cls._extract_calls(input_data.content)
-        if len(calls) < 6:
+        checked = sum(1 for call in calls if call["name"])
+        if checked < min_repeats:
             # Not a pass: the test never ran. Saying so in the reason was not
             # enough — a reader sees the label, and a consumer reads `status`,
             # and both said "checked, clean" for a trace nobody could analyse.
@@ -138,109 +160,204 @@ class RuleAgentTraceLoopDetection(BaseRule):
             # shape. The test is not whether a rule or a judge is asking — a
             # rule can meet a genuine gap in the record too — but whether the
             # thing being checked could have happened and the record is silent
-            # (a gap in the run) or could not have happened at all. Six calls
-            # are needed before repetition is a meaningful question.
+            # (a gap in the run) or could not have happened at all. A repetition
+            # needs at least ``min_repeats`` calls before it is a meaningful
+            # question.
             result.not_applicable_kind = "structural"
             result.not_applicable_code = "too_few_tool_calls"
             result.reason = [
-                f"{len(calls)} tool calls — too few to analyse for repetition "
-                "(needs 6)"
+                f"{checked} tool calls — too few to analyse for repetition "
+                f"(needs {min_repeats})"
             ]
             return result
 
-        loop_info = cls._detect_loops([signature for _, signature in calls])
-        if loop_info is None:
-            loop_info = cls._detect_repeated_identical_calls(calls)
+        loop_info = cls._detect_loops(calls, threshold, min_repeats)
         if loop_info:
-            start = loop_info["position"]
-            pattern = [name for name, _ in calls[start : start + len(loop_info["pattern"])]]
             result.status = True
             result.label = [f"{cls.metric_type}.{cls.__name__}"]
-            result.reason = [
-                f"Loop detected: pattern {pattern} "
-                f"repeats {loop_info['count']} times at position {start}"
-            ]
+            reason = (
+                f"Loop detected: pattern {loop_info['pattern']} "
+                f"repeats {loop_info['count']} times at position {loop_info['position']}; "
+                f"lowest result similarity {loop_info['similarity']:.4f} "
+                f"(threshold {threshold})"
+            )
+            if loop_info["missing"]:
+                reason += (
+                    f"; {loop_info['missing']} of {loop_info['matched']} matched calls "
+                    "have no tool result, so they matched on name and arguments only"
+                )
+            result.reason = [reason]
         else:
             result.label = [QualityLabel.QUALITY_GOOD]
-            result.reason = [
-                f"{len(calls)} tool calls checked, no repeating pattern found"
-            ]
+            missing = sum(1 for call in calls if call["name"] and not call["present"])
+            reason = f"{checked} tool calls checked, no repeating pattern found"
+            if missing:
+                reason += f" ({missing} without a tool result)"
+            result.reason = [reason]
 
         return result
 
     @classmethod
-    def _extract_calls(cls, content: str) -> List[tuple]:
-        """Return ``(tool_name, signature)`` per call, in trace order."""
+    def _settings(cls) -> tuple:
+        """Return validated ``(threshold, min_repeats)``.
+
+        A bad value is a configuration error, not a property of the trace, so
+        it raises instead of becoming a verdict.
+        """
+        threshold = getattr(cls.dynamic_config, "threshold", None)
+        if threshold is None:
+            threshold = cls._DEFAULT_THRESHOLD
+        min_repeats = getattr(cls.dynamic_config, "min_repeats", None)
+        if min_repeats is None:
+            min_repeats = cls._DEFAULT_MIN_REPEATS
+        if (isinstance(threshold, bool) or not isinstance(threshold, (int, float))
+                or not math.isfinite(threshold) or not 0 < threshold <= 1):
+            raise ValueError(f"{cls.__name__} dynamic_config.threshold must be in (0, 1]")
+        if isinstance(min_repeats, bool) or not isinstance(min_repeats, int) or min_repeats < 2:
+            raise ValueError(f"{cls.__name__} dynamic_config.min_repeats must be an integer >= 2")
+        return threshold, min_repeats
+
+    @classmethod
+    def _extract_calls(cls, content: str) -> List[dict]:
+        """Return one entry per item, in trace order.
+
+        Unusable items are kept rather than dropped, with no action, so that a
+        repetition cannot be stitched together across them.
+        """
         calls = []
-        for item in _load_trace_items(content, "tool_calls", "steps"):
-            if not isinstance(item, dict):
-                continue
+        for position, item in enumerate(_load_trace_items(content, "tool_calls", "steps")):
+            item = item if isinstance(item, dict) else {}
             name = item.get("tool_name") or item.get("name")
-            if not name:
-                continue
-            calls.append((name, f"{name}|{cls._argument_fingerprint(item)}"))
+            name = name if isinstance(name, str) else ""
+            result = item.get("result")
+            present = result is not None and item.get("result_present") is not False
+            if not present:
+                result = ""
+            elif not isinstance(result, str):
+                result = json.dumps(result, ensure_ascii=False, sort_keys=True, default=str)
+            calls.append({
+                "name": name,
+                "action": cls._action_key(name, item),
+                "result": result.replace("\r\n", "\n"),
+                "present": present,
+                "segment": item.get("segment_id", 0),
+                "position": item.get("call_index", position),
+            })
         return calls
 
     @classmethod
-    def _argument_fingerprint(cls, item: dict) -> str:
-        """Stable fingerprint of a call's arguments; empty when it has none."""
+    def _action_key(cls, name: str, item: dict) -> Optional[tuple]:
+        """Name plus key-order independent arguments; None when either is absent."""
+        if not name:
+            return None
         for key in cls._ARGUMENT_KEYS:
-            value = item.get(key)
-            if value in (None, "", {}, []):
-                continue
-            try:
-                normalized = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
-            except (TypeError, ValueError):
-                normalized = str(value)
-            return hashlib.sha256(normalized.encode()).hexdigest()[:12]
-        return ""
-
-    @classmethod
-    def _detect_repeated_identical_calls(
-        cls, calls: List[tuple], min_repeats: int = 3
-    ) -> Optional[dict]:
-        """Catch one call repeated verbatim, which ``_detect_loops`` cannot see.
-
-        Loop detection starts at two-call patterns, so a tool invoked three
-        times in a row with byte-identical arguments — a research agent asking
-        the same calculation three times — is not a "pattern" and goes
-        unreported, even though it is the plainest loop there is.
-
-        Only signatures carrying a real argument fingerprint qualify. Without
-        arguments, three consecutive calls to one tool are as likely to be three
-        different files as one repeat, and flagging those would make every
-        source that omits arguments look broken. Those are masked to unique
-        values so they cannot match each other, which lets the existing pattern
-        search do the work at length one instead of a second hand-rolled scan.
-        """
-        masked = [
-            signature if signature.split("|", 1)[-1] else f"{signature}#{index}"
-            for index, (_name, signature) in enumerate(calls)
-        ]
-        return cls._detect_loops(masked, min_pattern_len=1, min_repeats=min_repeats)
+            if key in item:
+                try:
+                    arguments = json.dumps(
+                        item[key], ensure_ascii=False, sort_keys=True,
+                        separators=(",", ":"), allow_nan=False,
+                    )
+                except (TypeError, ValueError):
+                    return None
+                return name, arguments
+        return None
 
     @classmethod
     def _detect_loops(
-        cls, names: List[str], min_pattern_len: int = 2, min_repeats: int = 3
+        cls, calls: List[dict], threshold: float, min_repeats: int
     ) -> Optional[dict]:
-        for pattern_len in range(min_pattern_len, len(names) // min_repeats + 1):
-            for start in range(len(names) - pattern_len * min_repeats + 1):
-                pattern = names[start : start + pattern_len]
-                count = 1
-                pos = start + pattern_len
-                while pos + pattern_len <= len(names):
-                    if names[pos : pos + pattern_len] == pattern:
+        """Return the earliest repetition, or None.
+
+        A pattern never spans a user turn (``segment``) or an unusable call.
+        Each new round is compared with every distinct result already accepted
+        at the same pattern position, not only its neighbour, so slow drift
+        (A close to B, B close to C, A far from C) cannot chain into a match.
+        """
+        similarity = cls._similarity_scorer()
+        for _, group in groupby(calls, key=lambda call: call["segment"]):
+            segment = list(group)
+            n = len(segment)
+            for start in range(n - min_repeats + 1):
+                for period in range(1, (n - start) // min_repeats + 1):
+                    pattern = segment[start:start + period]
+                    if any(call["action"] is None for call in pattern):
+                        continue
+                    if any(segment[start + k]["action"] != pattern[k % period]["action"]
+                           for k in range(period, period * min_repeats)):
+                        continue
+                    accepted = [{call["result"]} for call in pattern]
+                    count, lowest = 1, 1.0
+                    while start + (count + 1) * period <= n:
+                        repeat = segment[start + count * period:start + (count + 1) * period]
+                        round_lowest = cls._round_similarity(
+                            repeat, pattern, accepted, threshold, similarity,
+                        )
+                        if round_lowest is None:
+                            break
+                        for offset, call in enumerate(repeat):
+                            accepted[offset].add(call["result"])
                         count += 1
-                        pos += pattern_len
-                    else:
-                        break
-                if count >= min_repeats:
-                    return {
-                        "pattern": pattern,
-                        "count": count,
-                        "position": start,
-                    }
+                        lowest = min(lowest, round_lowest)
+                    if count >= min_repeats:
+                        matched = segment[start:start + count * period]
+                        return {
+                            "pattern": [call["name"] for call in pattern],
+                            "count": count,
+                            "position": pattern[0]["position"],
+                            "similarity": lowest,
+                            "matched": len(matched),
+                            "missing": sum(1 for call in matched if not call["present"]),
+                        }
         return None
+
+    @staticmethod
+    def _round_similarity(
+        repeat: List[dict], pattern: List[dict], accepted: List[set],
+        threshold: float, similarity: Callable[[str, str], float],
+    ) -> Optional[float]:
+        """Lowest score of one round against the accepted results; None on a miss."""
+        lowest = 1.0
+        for offset, call in enumerate(repeat):
+            if call["action"] != pattern[offset]["action"]:
+                return None
+            for previous in accepted[offset]:
+                score = similarity(previous, call["result"])
+                if score < threshold:
+                    return None
+                lowest = min(lowest, score)
+        return lowest
+
+    @classmethod
+    def _similarity_scorer(cls) -> Callable[[str, str], float]:
+        """Return a per-record scorer: character n-gram Jaccard over counts.
+
+        Counts rather than sets, so "aaaa…" ten times and fifteen times differ.
+        N-gram counts and pair scores are cached for the record, since long
+        polling runs compare the same outputs over and over.
+        """
+        from dingo.model.rule.utils.util import form_ngrams
+
+        size = cls._RESULT_NGRAM_SIZE
+        grams, scores = {}, {}
+
+        def counts(text: str) -> tuple:
+            if text not in grams:
+                ngrams = Counter(form_ngrams(iter(text), size))
+                grams[text] = (ngrams, sum(ngrams.values()))
+            return grams[text]
+
+        def score(a: str, b: str) -> float:
+            if a == b:
+                return 1.0
+            if min(len(a), len(b)) < size:
+                return 0.0
+            if (a, b) not in scores:
+                (count_a, total_a), (count_b, total_b) = counts(a), counts(b)
+                shared = sum((count_a & count_b).values())
+                scores[(a, b)] = shared / (total_a + total_b - shared)
+            return scores[(a, b)]
+
+        return score
 
 
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])

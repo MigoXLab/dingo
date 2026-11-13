@@ -81,7 +81,7 @@
 | `parquet` | Parquet 文件 | 使用 `parquet_config` 控制批大小和读取列 |
 | `mineru` | MinerU `content_list.json` | 顶层 block 数组 |
 | `mineru_v2` | MinerU `content_list_v2.json` | 页面数组，每页包含 block 数组 |
-| `ms_swift` | Agent 轨迹 JSONL | 按所选 Agent 指标生成派生字段 |
+| `ms_swift` | Agent 轨迹 JSONL | 按所选指标派生字段；Loop 按 ID 关联返回并无损拆分 headers/正文 |
 | `multi_turn_dialog` | 多轮对话 JSON/JSONL | 配合 `executor.multi_turn_mode` 解析多轮内容 |
 | `image` | 含图像字段的 JSON/JSONL | 用于图像类评估器 |
 | `repository_code_jsonl` | 仓库代码 JSONL | 支持跨记录重复标注 |
@@ -174,7 +174,7 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 读取 Agent 轨迹 JSONL，每行一个包含 `messages` 数组的对象。保留原始字段，
 只为 `evaluator[].evals` 中选中的已支持指标生成 `<指标名>_<字段名>` 字段。
 每个指标使用独立的 `fields` 映射配置块。当前支持 9 个确定性规则和 7 个 LLM 指标，
-映射及配置示例见 [ms-swift converter 用户说明](agent_trace/ms_swift.md)。
+映射及配置示例见 [ms-swift converter 用户说明](agent_trace/ms_swift.md)。`RuleAgentTraceLoopDetection` 的 config 见 [规则配置](agent_trace/rule_config.md)。
 
 ### Executor 配置 (executor)
 

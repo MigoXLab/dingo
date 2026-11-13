@@ -95,11 +95,15 @@ def test_independent_fields_and_source_preservation(record, as_json):
             {"role": "tool", "content": "资料正文"},
             {"role": "assistant", "content": "已完成"},
         ]
-    for name in ("RuleAgentTraceLoopDetection", "RuleAgentTraceDestructiveAction"):
-        assert json.loads(converted[f"{name}_content"]) == {"tool_calls": [
-            {"tool_name": "search", "args": {"query": "资料"}},
-            {"tool_name": "read", "args": {"path": "notes.txt"}},
-        ]}
+    assert json.loads(converted["RuleAgentTraceDestructiveAction_content"]) == {"tool_calls": [
+        {"tool_name": "search", "args": {"query": "资料"}},
+        {"tool_name": "read", "args": {"path": "notes.txt"}},
+    ]}
+    loop = json.loads(converted["RuleAgentTraceLoopDetection_content"])["tool_calls"]
+    assert [(c["tool_name"], c["args"], c["result"]) for c in loop] == [
+        ("search", {"query": "资料"}, "找到了"),
+        ("read", {"path": "notes.txt"}, "资料正文"),
+    ]
 
 
 @pytest.mark.parametrize("name", ALL_PREPARER_NAMES)
@@ -235,31 +239,34 @@ def test_rejects_derived_field_collision_without_overwriting_source(record):
 
 
 def test_converted_sequence_can_detect_loops(record):
-    calls = record["messages"][2]["tool_calls"]
-    record["messages"] = record["messages"][:3]
-    record["messages"][2]["tool_calls"] = [
+    original_calls = record["messages"][2]["tool_calls"]
+    repeated = [
         dict(copy.deepcopy(call), id=f"loop-{repeat}-{index}")
-        for repeat in range(3)
-        for index, call in enumerate(calls)
+        for repeat in range(3) for index, call in enumerate(original_calls)
     ]
-    refresh_ms_swift_statistics(record)
-    converted = converters["ms_swift"].convertor(make_args(("RuleAgentTraceLoopDetection",)))(record)
-    result = RuleAgentTraceLoopDetection.eval(Data(content=converted.RuleAgentTraceLoopDetection_content))
-    assert result.applicable
-    assert result.status
-    assert "Loop detected" in result.reason[0]
-    # Six calls with different arguments must not turn into a name-only loop.
-    record["messages"][2]["tool_calls"] = [
-        {"type": "function", "id": f"search-{index}", "function": {
+    for calls, expected in [
+        (repeated, True),
+        ([{"type": "function", "id": f"search-{index}", "function": {
             "name": "search", "arguments": {"query": str(index)},
-        }}
-        for index in range(6)
-    ]
-    refresh_ms_swift_statistics(record)
-    converted = converters["ms_swift"].convertor(make_args(("RuleAgentTraceLoopDetection",)))(record)
-    result = RuleAgentTraceLoopDetection.eval(Data(content=converted.RuleAgentTraceLoopDetection_content))
-    assert result.applicable
-    assert not result.status
+        }} for index in range(6)], False),
+    ]:
+        record["messages"] = record["messages"][:3]
+        record["messages"][2]["tool_calls"] = calls
+        record["messages"].extend([
+            {"role": "tool", "tool_call_id": call["id"],
+             "name": call["function"]["name"], "content": "same result"}
+            for call in calls
+        ])
+        refresh_ms_swift_statistics(record)
+        converted = converters["ms_swift"].convertor(
+            make_args(("RuleAgentTraceLoopDetection",))
+        )(record)
+        result = RuleAgentTraceLoopDetection.eval(
+            Data(content=converted.RuleAgentTraceLoopDetection_content)
+        )
+        assert result.applicable
+        assert result.status is expected
+        assert "no tool result" not in result.reason[0]
 
 
 def test_destructive_rule_input_and_unchanged_cmd(record):

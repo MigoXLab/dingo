@@ -7,11 +7,22 @@ self-contained so their input handling can evolve independently.
 """
 
 import json
+import re
 from typing import Any, Callable, Dict, Union
 
 from dingo.config import InputArgs
 from dingo.data.converter.base import BaseConverter
 from dingo.io import Data
+
+_RESULT_CHUNK = re.compile(r"Chunk ID:[ \t]+\S+[ \t]*")
+_RESULT_WALL = re.compile(r"Wall time:[ \t]+[0-9]+(?:\.[0-9]+)?[ \t]+seconds[ \t]*")
+_RESULT_HEADER = re.compile(
+    r"(?:Process running with session ID[ \t]+\S+"
+    r"|Process exited with code[ \t]+-?[0-9]+"
+    r"|Original token count:[ \t]+[0-9]+"
+    r"|Warning: truncated output[^\r\n]*)[ \t]*"
+)
+_RESULT_OUTPUT = re.compile(r"Output:[ \t]*")
 
 
 def _messages(record: Dict[str, Any]) -> list:
@@ -47,6 +58,29 @@ def _tool_call_name_and_arguments(call: Dict[str, Any]):
             # A string is itself a valid JSON value under the standard.
             pass
     return function["name"], arguments
+
+
+def _split_tool_result(content: str) -> tuple[str, str]:
+    """Keep the Output line in headers; headers + body always equals content.
+
+    Ordinary text/JSON and unknown wrappers are kept as a complete body.
+    Recognition is based on envelope syntax, never on the tool's name.
+    """
+    lines = content.splitlines(keepends=True)
+    if not lines or not _RESULT_CHUNK.fullmatch(lines[0].rstrip("\r\n")):
+        return "", content
+    offset = len(lines[0])
+    wall_seen = False
+    for line in lines[1:]:
+        view = line.rstrip("\r\n")
+        offset += len(line)
+        if _RESULT_OUTPUT.fullmatch(view):
+            return (content[:offset], content[offset:]) if wall_seen else ("", content)
+        if _RESULT_WALL.fullmatch(view):
+            wall_seen = True
+        elif view.strip() and not _RESULT_HEADER.fullmatch(view):
+            return "", content
+    return "", content
 
 
 def prepare_llm_agent_task_completion(record: Dict[str, Any]) -> Dict[str, str]:
@@ -97,20 +131,63 @@ def prepare_rule_agent_trace_empty_supervision(record: Dict[str, Any]) -> Dict[s
 
 
 def prepare_rule_agent_trace_loop_detection(record: Dict[str, Any]) -> Dict[str, str]:
-    """Prepare ordered names and arguments for loop detection."""
+    """Pair each call with its result by ID, splitting execution headers from the body.
+
+    Only this node's messages are read: sub-agent trajectories and server tool
+    calls are not its actions. Each user message starts a new segment, so a
+    repetition is never joined across user turns. A missing ID or non-string
+    result leaves the call unpaired (the schema rule reports the violation);
+    only an ambiguous duplicate ID empties this field.
+    """
+    messages = _messages(record)
+    observations = {}
+    for index, message in enumerate(messages):
+        call_id = message.get("tool_call_id")
+        if message["role"] == "tool" and isinstance(call_id, str) and call_id:
+            if call_id in observations:
+                raise ValueError(f"ms_swift messages[{index}] has duplicate tool_call_id {call_id!r}")
+            observations[call_id] = index
+
     calls = []
-    for message_index, message in enumerate(_messages(record)):
-        if message.get("role") != "assistant":
+    seen_ids = set()
+    segment_id = 0
+    for message_index, message in enumerate(messages):
+        if message["role"] == "user":
+            segment_id += 1
+        if message["role"] != "assistant":
             continue
         tool_calls = message.get("tool_calls", [])
         if tool_calls is None:
             tool_calls = []
         if not isinstance(tool_calls, list):
             raise ValueError(f"ms_swift messages[{message_index}].tool_calls must be a list")
-        for call in tool_calls:
+        for call_index, call in enumerate(tool_calls):
+            path = f"ms_swift messages[{message_index}].tool_calls[{call_index}].function"
             name, arguments = _tool_call_name_and_arguments(call)
-            item = {"tool_name": name, "args": arguments}
-            calls.append(item)
+            call_id = call.get("id")
+            result_index = None
+            if isinstance(call_id, str) and call_id:
+                if call_id in seen_ids:
+                    raise ValueError(f"ms_swift {path} has duplicate call id {call_id!r}")
+                seen_ids.add(call_id)
+                result_index = observations.get(call_id)
+            content = messages[result_index].get("content") if result_index is not None else None
+            if not isinstance(content, str):
+                result_index = None
+            headers, body = _split_tool_result(content) if result_index is not None else ("", "")
+            calls.append({
+                "call_index": len(calls),
+                "call_id": call_id,
+                "tool_name": name,
+                "args": arguments,
+                "message_index": message_index,
+                "call_index_in_message": call_index,
+                "segment_id": segment_id,
+                "result_present": result_index is not None,
+                "result_message_index": result_index,
+                "result_headers": headers,
+                "result": body,
+            })
     return {
         "RuleAgentTraceLoopDetection_content": json.dumps(
             {"tool_calls": calls}, ensure_ascii=False,

@@ -249,6 +249,7 @@ def test_rule_preparers_accept_non_object_arguments_allowed_by_standard(record, 
 @pytest.mark.parametrize("name", (
     "RuleAgentTraceGatewayBypass", "RuleAgentTraceIntegrity",
     "RuleAgentTraceLatencyAnomaly", "RuleAgentTraceSecretExposure",
+    "RuleAgentTraceLoopDetection",
 ))
 @pytest.mark.parametrize("duplicate_call", [False, True])
 def test_ambiguous_call_ids_produce_empty_metric_input(record, name, duplicate_call):

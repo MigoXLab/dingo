@@ -154,13 +154,13 @@ This document provides comprehensive information about all quality metrics used 
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
-| `QUALITY_BAD_EFFECTIVENESS` | RuleMetadataSimilarity, RuleQuanliangFieldValidation, RulePaperFieldValidation, RulePatentFieldValidation, RuleAuthorFieldValidation, RuleSourceFieldValidation | 检查元数据字段与基准数据的相似度匹配，阈值默认为0.6; Validate Quanliang metadata fields and report invalid fields; Validate paper metadata fields with independently configurable checks; Validate patent metadata f... | Internal Implementation | N/A | N/A |
+| `QUALITY_BAD_EFFECTIVENESS` | RuleMetadataSimilarity, RulePaperFieldValidation, RuleQuanliangFieldValidation, RulePatentFieldValidation, RuleAuthorFieldValidation, RuleSourceFieldValidation | 检查元数据字段与基准数据的相似度匹配，阈值默认为0.6; Validate paper metadata fields using shared paper checks; Validate Quanliang metadata fi... | Internal Implementation | N/A | N/A |
 
 ### Rule-Based Quality Metrics
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
-| `AGENT_TRACE_QUALITY` | RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget, RuleAgentTraceLatencyAnomaly, RuleAgentTraceLossMask, RuleAgentTraceEmptySupervision, RuleMsSwiftSchema | Detects an agent stuck repeating itself: the same subsequence of tool calls, compared by name and arguments, recurrin... | Internal Implementation | N/A | N/A |
+| `AGENT_TRACE_QUALITY` | RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget, RuleAgentTraceLatencyAnomaly, RuleAgentTraceLossMask, RuleAgentTraceEmptySupervision, RuleMsSwiftSchema | Detects an agent stuck repeating itself: the same tool call, or subsequence of calls, recurring three or more times w... | Internal Implementation | N/A | N/A |
 | `AGENT_TRACE_SAFETY` | RuleAgentTraceDestructiveAction, RuleAgentTraceSensitiveAccess, RuleAgentTraceSecretExposure, RuleAgentTraceGatewayBypass, RuleAgentTraceIntegrity, RuleAgentTraceSandboxExplicitlyDisabled | Flags irreversible actions in tool arguments: forced recursive deletes, schema destruction, unscoped row deletion, hi... | Internal Implementation | N/A | N/A |
 
 ### Rule-Based RESUME Quality Metrics

@@ -24,133 +24,190 @@ def _data(content: str) -> Data:
 
 
 class TestRuleAgentTraceLoopDetection:
-    """Loop detection via n-gram repetition on the tool-name sequence."""
+    """Single- and multi-tool interaction repetition compared on results."""
 
-    def test_repeating_pattern_is_flagged(self):
-        # [search, click] repeated 4 times → pattern len 2 repeats ≥ 3.
-        content = json.dumps([{"tool_name": "search"}, {"tool_name": "click"}] * 4)
-        res = RuleAgentTraceLoopDetection.eval(_data(content))
-        assert res.status is True
-        assert res.label == ["AGENT_TRACE_QUALITY.RuleAgentTraceLoopDetection"]
-        assert res.reason is not None and "Loop detected" in res.reason[0]
+    @staticmethod
+    def call(name="a", result="observed", **extra):
+        return {"tool_name": name, "args": {"target": name}, "result": result, **extra}
 
-    def test_dict_form_with_tool_calls_key(self):
-        content = json.dumps(
-            {"tool_calls": [{"tool_name": "a"}, {"tool_name": "b"}, {"tool_name": "c"}] * 3}
-        )
-        res = RuleAgentTraceLoopDetection.eval(_data(content))
-        assert res.status is True
+    @staticmethod
+    def evaluate(calls, **config):
+        original = RuleAgentTraceLoopDetection.dynamic_config
+        try:
+            Model.set_config_rule(RuleAgentTraceLoopDetection, EvaluatorRuleArgs(**config))
+            return RuleAgentTraceLoopDetection.eval(_data(json.dumps({"tool_calls": calls})))
+        finally:
+            RuleAgentTraceLoopDetection.dynamic_config = original
 
-    def test_distinct_sequence_passes(self):
-        content = json.dumps([{"tool_name": f"tool_{i}"} for i in range(8)])
-        res = RuleAgentTraceLoopDetection.eval(_data(content))
-        assert res.status is False
-        assert res.label == [QualityLabel.QUALITY_GOOD]
+    @pytest.mark.parametrize("sequence,expected,period,count", [
+        ("AAA", True, 1, 3), ("AAAA", True, 1, 4), ("AAAAAA", True, 1, 6),
+        ("ABAB", False, None, None), ("ABABAB", True, 2, 3),
+        ("ABCABCABC", True, 3, 3),
+    ])
+    def test_pattern_lengths(self, sequence, expected, period, count):
+        res = self.evaluate([self.call(name) for name in sequence])
+        assert res.status is expected
+        assert res.applicable is True
+        assert res.score is None
+        if expected:
+            assert res.label == ["AGENT_TRACE_QUALITY.RuleAgentTraceLoopDetection"]
+            assert f"pattern {list(sequence[:period])} repeats {count} times" in res.reason[0]
+        else:
+            assert res.label == [QualityLabel.QUALITY_GOOD]
 
-    def test_same_tool_with_distinct_arguments_is_not_a_loop(self):
-        # A research fan-out: one tool, eight different queries. Comparing tool
-        # names alone reads this as ['WebSearch','WebSearch'] repeating 4 times.
-        content = json.dumps(
-            {
-                "tool_calls": [
-                    {"tool_name": "WebSearch", "args": {"query": f"topic {i}"}}
-                    for i in range(8)
-                ]
-            }
-        )
-        res = RuleAgentTraceLoopDetection.eval(_data(content))
-        assert res.status is False
-        assert res.label == [QualityLabel.QUALITY_GOOD]
-
-    def test_same_tool_with_identical_arguments_is_flagged(self):
-        # Same tool, same arguments, over and over — a real stuck loop.
-        content = json.dumps(
-            {
-                "tool_calls": [
-                    {"tool_name": "WebSearch", "args": {"query": "same question"}}
-                    for _ in range(6)
-                ]
-            }
-        )
-        res = RuleAgentTraceLoopDetection.eval(_data(content))
-        assert res.status is True
-        assert res.reason is not None and "Loop detected" in res.reason[0]
-
-    def test_three_identical_calls_are_a_loop(self):
-        # Pattern search starts at length 2, so one call repeated verbatim was
-        # never a "pattern" and went unreported — the plainest loop there is.
-        # Observed live: a research agent asked the same calculation 3 times.
-        content = json.dumps(
-            {
-                "tool_calls": [
-                    {"tool_name": "mathematics", "args": {"expr": "hc/610nm"}}
-                    for _ in range(3)
-                ]
-                + [
-                    {"tool_name": "browse_tools", "args": {"q": str(i)}}
-                    for i in range(5)
-                ]
-            }
-        )
-        res = RuleAgentTraceLoopDetection.eval(_data(content))
-        assert res.status is True
-        assert "mathematics" in res.reason[0]
-
-    def test_three_repeats_without_arguments_are_not_claimed_as_a_loop(self):
-        # With no arguments recorded, three consecutive calls to one tool are as
-        # likely three different files as one repeat. The single-call branch
-        # must stay silent; only the pre-existing pattern search may speak.
-        content = json.dumps(
-            {
-                "tool_calls": [{"tool_name": "read_file"} for _ in range(3)]
-                + [{"tool_name": f"other_{i}", "args": {"i": i}} for i in range(5)]
-            }
-        )
-        res = RuleAgentTraceLoopDetection.eval(_data(content))
-        assert res.status is False
-
-    def test_loop_reason_names_the_repeated_tool_not_its_signature(self):
-        content = json.dumps(
-            {
-                "tool_calls": [
-                    {"tool_name": "read_file", "args": {"path": "a.md"}}
-                    for _ in range(6)
-                ]
-            }
-        )
-        res = RuleAgentTraceLoopDetection.eval(_data(content))
-        assert res.status is True
-        # The reported pattern stays human-readable: tool names, not the
-        # internal argument fingerprint used for comparison.
-        assert "read_file" in res.reason[0]
-        assert "path" not in res.reason[0]
-
-    def test_short_sequence_is_unanalysable_not_clean(self):
-        # Fewer than 6 tool names → the test never ran. Reporting that as a
-        # pass told a reader the trace had been checked for repetition.
-        content = json.dumps([{"tool_name": "a"}, {"tool_name": "b"}])
-        res = RuleAgentTraceLoopDetection.eval(_data(content))
+    @pytest.mark.parametrize("sequence", ["", "A", "AA"])
+    def test_fewer_calls_than_min_repeats_is_not_applicable(self, sequence):
+        res = self.evaluate([self.call(name) for name in sequence])
         assert res.status is False
         assert res.applicable is False
-        assert res.label != [QualityLabel.QUALITY_GOOD]
+        assert res.not_applicable_kind == "structural"
+        assert res.not_applicable_code == "too_few_tool_calls"
+        assert "needs 3" in res.reason[0]
 
-    def test_null_tool_calls_does_not_crash(self):
-        # JSON null for a present key previously broke iteration (TypeError).
-        res = RuleAgentTraceLoopDetection.eval(_data('{"tool_calls": null}'))
-        assert res.status is False
+    def test_distinct_arguments_do_not_match(self):
+        calls = [self.call("search", args={"query": f"topic {i}"}) for i in range(6)]
+        assert self.evaluate(calls).status is False
+
+    def test_argument_order_is_canonical_but_array_order_and_types_are_not(self):
+        calls = [self.call(args=args) for args in (
+            {"a": 1, "b": 2}, {"b": 2, "a": 1}, {"a": 1, "b": 2},
+        )]
+        assert self.evaluate(calls).status
+        for args in ([1, 2], [2, 1], True, 1, None, {}, []):
+            mixed = [self.call(args=args), self.call(args="different"), self.call(args=args)]
+            assert not self.evaluate(mixed).status
+
+    def test_missing_arguments_break_the_comparison(self):
+        calls = [self.call() for _ in range(3)]
+        calls[1].pop("args")
+        assert not self.evaluate(calls).status
+        assert self.evaluate([self.call(args={}) for _ in range(3)]).status
+
+    def test_changing_results_prevent_a_match(self):
+        assert not self.evaluate([self.call(result=str(i) * 8) for i in range(6)]).status
+
+    def test_progressing_poll_is_not_a_loop(self):
+        calls = [self.call("write_stdin", f"Downloading {mb}.95MB/238.8MB\n")
+                 for mb in (12, 37, 61, 88, 120)]
+        assert not self.evaluate(calls).status
+
+    def test_failed_first_candidate_does_not_hide_later_repetition(self):
+        calls = [self.call(result="first")] + [self.call(result="second") for _ in range(4)]
+        res = self.evaluate(calls)
+        assert res.status
+        assert "repeats 4 times at position 1" in res.reason[0]
+
+    def test_later_multitool_pattern_is_checked(self):
+        calls = [self.call("A", "old"), self.call("B", "old")]
+        calls += [self.call(name, "new") for name in "ABABAB"]
+        res = self.evaluate(calls)
+        assert res.status
+        assert "pattern ['A', 'B'] repeats 3 times at position 2" in res.reason[0]
+
+    def test_all_round_pairs_must_match_not_just_neighbours_or_first(self):
+        base = "0123456789abcdefghij"
+        changed_end = base[:-1] + "#"
+        # Neighbours similar but first and last far apart: drift must not chain.
+        drift = [base, changed_end, "#" + changed_end[1:]]
+        # Each similar to the first but not to each other.
+        fan = [base, changed_end, "#" + base[1:]]
+        for texts in (drift, fan):
+            assert not self.evaluate([self.call(result=t) for t in texts], threshold=0.85).status
+        assert self.evaluate([self.call(result=t) for t in (base, changed_end, base)],
+                             threshold=0.85).status
+
+    def test_one_different_pattern_position_cannot_be_averaged_away(self):
+        calls = [self.call(name, result) for name, result in (
+            ("A", "same"), ("B", "one"), ("A", "same"),
+            ("B", "two"), ("A", "same"), ("B", "three"),
+        )]
+        assert not self.evaluate(calls).status
+
+    def test_missing_results_compare_as_empty_and_the_reason_says_so(self):
+        calls = [{"tool_name": "read", "args": {"path": "a.txt"}} for _ in range(4)]
+        res = self.evaluate(calls)
+        assert res.status
+        assert "4 of 4 matched calls have no tool result" in res.reason[0]
+        recorded_empty = [self.call(result="") for _ in range(3)]
+        res = self.evaluate(recorded_empty)
+        assert res.status
+        assert "no tool result" not in res.reason[0]
+        flagged_absent = [self.call(result="body", result_present=False) for _ in range(3)]
+        assert "3 of 3 matched calls" in self.evaluate(flagged_absent).reason[0]
+
+    def test_missing_result_does_not_match_a_real_one(self):
+        calls = [self.call(result="running job 42"), self.call(result="running job 42"),
+                 self.call(result=None)]
+        res = self.evaluate(calls)
+        assert not res.status
+        assert "(1 without a tool result)" in res.reason[0]
+
+    def test_structured_results_are_compared_canonically(self):
+        calls = [self.call(result=result) for result in (
+            {"ok": True, "n": 1}, {"n": 1, "ok": True}, {"ok": True, "n": 1},
+        )]
+        assert self.evaluate(calls).status
+
+    def test_invalid_items_are_barriers_not_removed(self):
+        calls = [self.call(), self.call(), None, self.call()]
+        assert not self.evaluate(calls).status
+
+    def test_user_segments_are_not_joined(self):
+        calls = [self.call(segment_id=segment) for segment in (0, 0, 1)]
+        assert not self.evaluate(calls).status
+
+    def test_headers_and_call_ids_do_not_affect_similarity(self):
+        calls = [self.call(call_id=str(i), result_headers=f"Wall time: {i}\n")
+                 for i in range(3)]
+        assert self.evaluate(calls).status
+
+    def test_similarity_threshold_includes_equality(self):
+        calls = [self.call(result=t) for t in ("abcdef", "abcdeg")]
+        assert self.evaluate(calls, min_repeats=2, threshold=1 / 3).status
+        assert not self.evaluate(calls, min_repeats=2, threshold=1 / 3 + 1e-6).status
+
+    def test_ngram_counts_not_just_presence(self):
+        score = RuleAgentTraceLoopDetection._similarity_scorer()
+        assert score("a" * 10, "a" * 15) == pytest.approx(6 / 11)
+        assert score("abcd", "abce") == 0
+        assert score("", "") == 1
+
+    def test_min_repeats_is_configurable(self):
+        calls = [self.call() for _ in range(4)]
+        assert self.evaluate(calls).status
+        assert not self.evaluate(calls + [self.call(result="other")], min_repeats=5).status
+        assert self.evaluate(calls + [self.call()], min_repeats=5).status
+        assert self.evaluate(calls, min_repeats=5).applicable is False
+
+    def test_results_after_completed_repetition_do_not_cancel_the_hit(self):
+        calls = [self.call() for _ in range(3)] + [self.call(result="changed")]
+        assert "repeats 3 times" in self.evaluate(calls).reason[0]
+
+    @pytest.mark.parametrize("content", [
+        '{"tool_calls": null}', '["a", null, {"name":"x"}]', "free text",
+        '{"tool_calls": [], "steps": [{"name":"x"}]}',
+    ])
+    def test_malformed_or_empty_containers_are_not_applicable(self, content):
+        res = RuleAgentTraceLoopDetection.eval(_data(content))
+        assert not res.status
         assert res.applicable is False
 
-    def test_non_dict_items_do_not_crash(self):
-        # Operator-precedence bug previously raised AttributeError on "a"/null.
-        res = RuleAgentTraceLoopDetection.eval(_data('["a", null, {"name": "x"}]'))
-        assert res.status is False
-        assert res.applicable is False
+    @pytest.mark.parametrize("config", [
+        {"threshold": 0}, {"threshold": 1.1}, {"threshold": float("nan")},
+        {"min_repeats": True}, {"min_repeats": 1}, {"min_repeats": 3.5},
+    ])
+    def test_invalid_config_raises_instead_of_returning_a_quality_result(self, config):
+        with pytest.raises(ValueError):
+            self.evaluate([self.call()] * 3, **config)
 
-    def test_non_json_text_passes(self):
-        # Plain text content (not JSON) must be tolerated, not raise.
-        res = RuleAgentTraceLoopDetection.eval(_data("just some free text"))
-        assert res.status is False
-        assert res.applicable is False
+    def test_configuration_is_restored_for_the_class_sdk(self):
+        calls = [self.call(result=t) for t in ("abcdef", "abcdeg", "abcdef")]
+        assert self.evaluate(calls, threshold=0.3).status
+        assert RuleAgentTraceLoopDetection.dynamic_config.threshold == 0.95
+        assert RuleAgentTraceLoopDetection.dynamic_config.min_repeats == 3
+        assert not RuleAgentTraceLoopDetection.eval(
+            _data(json.dumps({"tool_calls": calls}))
+        ).status
 
 
 class TestRuleAgentTraceTokenBudget:

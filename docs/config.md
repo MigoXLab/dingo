@@ -152,21 +152,6 @@ S3 的 Bucket 从完整 `input_path` URI 中解析，不存在单独的 `s3_buck
 
 完整说明见 [Parquet 数据集读取功能说明](dataset/parquet.md)。
 
-#### Loop 重复交互规则配置
-
-`RuleAgentTraceLoopDetection` 在对应的 `evaluator[].evals[].config` 中读取：
-
-| Parameter | Type | Default | Required | Description |
-|---|---|---|---|---|
-| threshold | float | 0.95 | No | 结果正文相似度阈值，必须是有限数且在 (0,1] |
-| min_repeats | int | 3 | No | 最少连续出现次数，>=2；不接受 bool |
-
-`min_repeats` 是该 Rule 的扩展参数，经 `EvaluatorRuleArgs` 的扩展字段传入，不改变其他规则的默认值；`InputArgs.to_dict()` 的白名单只保留 `threshold`。结果相似度固定为字符 5-gram 计数 Jaccard，不可配置。非法配置在评估入口报错，不伪装成质量判定。无需 API key；不请求模型服务，配置中也不需要凭证。
-
-字段映射仍为 `{"content":"RuleAgentTraceLoopDetection_content"}`。工具名/参数精确匹配，结果正文近似匹配；headers 不参与比较。门槛由固定 6 次调用改为 `min_repeats`，AAA 等单调用重复也可判定；调用数少于 `min_repeats` 时返回 N/A（`too_few_tool_calls`）。缺失结果按空字符串参与比较，命中时 reason 会写明有多少调用缺少结果、仅按名称和参数匹配；缺少参数的调用会中断比较。
-
-辅助字段仍按原有机制在结果写出时清理，原始返回不由 converter 修改。完整结构及边界见 [ms-swift 指标说明](agent_trace/ms_swift.md)，可运行示例见 [loop_detection.py](../examples/agent/loop_detection.py)。
-
 #### DatasetMinerUConfig 配置 (dataset.mineru_config)
 
 MinerU 格式特定配置，用于过滤 block 类型：
@@ -189,7 +174,7 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 读取 Agent 轨迹 JSONL，每行一个包含 `messages` 数组的对象。保留原始字段，
 只为 `evaluator[].evals` 中选中的已支持指标生成 `<指标名>_<字段名>` 字段。
 每个指标使用独立的 `fields` 映射配置块。当前支持 9 个确定性规则和 7 个 LLM 指标，
-映射及配置示例见 [ms-swift converter 用户说明](agent_trace/ms_swift.md)。
+映射及配置示例见 [ms-swift converter 用户说明](agent_trace/ms_swift.md)。`RuleAgentTraceLoopDetection` 的 config 见 [规则配置](agent_trace/rule_config.md)。
 
 ### Executor 配置 (executor)
 

@@ -8,12 +8,9 @@ import pytest
 
 from dingo.config import InputArgs
 from dingo.data.converter import converters
-from dingo.data.converter.agent_trace_utils import split_tool_result
+from dingo.data.converter.ms_swift import _split_tool_result as split_tool_result
 from dingo.io import Data
 from dingo.model.rule.rule_agent import RuleAgentTraceLoopDetection
-from dingo.model.rule.utils.agent_trace_similarity import (
-    LoopSettings, ResultSimilarity, canonical_args, extract_calls,
-)
 
 
 def envelope(body, newline="\n", chunk="c1"):
@@ -146,29 +143,30 @@ def test_segments_and_current_node_scope():
     ).status
 
 
-def test_counter_jaccard_known_value_and_cache_eviction():
-    items = [{"tool_name": "a", "args": {}, "result": text}
-             for text in ("abcdef", "abcdeg", "zzzzzz", "", "")]
-    calls = extract_calls(items)
-    settings = LoopSettings()
-    for size in (0, 1, 4096):
-        sim = ResultSimilarity(settings, cache_size=size)
-        assert sim(calls[0], calls[1]) == pytest.approx(1 / 3)
-        assert sim(calls[1], calls[0]) == pytest.approx(1 / 3)
-        assert sim(calls[0], calls[2]) == 0
-        assert sim(calls[3], calls[4]) == 1
-        assert sim(calls[0], calls[1]) == pytest.approx(1 / 3)
-        assert len(sim.pairs) <= size
+def test_missing_ids_leave_calls_unpaired_instead_of_emptying_the_field():
+    record = record_for(["same", "same", "same"])
+    del record["messages"][1]["tool_call_id"]
+    del record["messages"][2]["tool_calls"][0]["id"]
+    data, payload = convert(record)
+    calls = payload["tool_calls"]
+    assert [c["result_present"] for c in calls] == [False, False, True]
+    assert calls[1]["call_id"] is None
+    assert not RuleAgentTraceLoopDetection.eval(
+        Data(content=data.RuleAgentTraceLoopDetection_content)
+    ).status
 
 
-def test_ngrams_count_frequency_not_just_presence():
-    calls = extract_calls([{"name": "a", "args": {}, "result": t}
-                           for t in ("aaaaaaaaaa", "aaaaaaaaaaaaaaa")])
-    assert ResultSimilarity(LoopSettings())(*calls) == pytest.approx(6 / 11)
+def test_non_string_tool_content_is_treated_as_missing():
+    record = record_for(["same", "same", "same"])
+    record["messages"][1]["content"] = {"not": "a string"}
+    _, payload = convert(record)
+    first = payload["tool_calls"][0]
+    assert (first["result_present"], first["result_message_index"], first["result"]) == (False, None, "")
 
 
-def test_canonical_arguments_preserve_types_and_array_order():
-    assert canonical_args({"a": 1, "b": 2}) == canonical_args({"b": 2, "a": 1})
-    assert canonical_args(True) != canonical_args(1)
-    assert canonical_args([1, 2]) != canonical_args([2, 1])
-    assert canonical_args(None) != canonical_args({})
+def test_trailing_unanswered_call_does_not_extend_a_real_result():
+    data, payload = convert(record_for(["running", "running", None]))
+    assert payload["tool_calls"][2]["result_present"] is False
+    res = RuleAgentTraceLoopDetection.eval(Data(content=data.RuleAgentTraceLoopDetection_content))
+    assert not res.status
+    assert "(1 without a tool result)" in res.reason[0]

@@ -293,9 +293,6 @@ class InputArgs(BaseModel):
                             "name": ...,
                             "config": {
                                 "threshold": ...,
-                                "min_repeats": ...,
-                                "result_ngram_size": ...,
-                                "result_match_mode": ...,
                                 "pattern": ...,
                                 "key_list": ...,
                                 "refer_path": ...,

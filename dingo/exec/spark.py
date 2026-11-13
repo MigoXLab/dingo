@@ -279,9 +279,7 @@ class SparkExecutor(ExecProto):
                     else:
                         result_info.statistics_details[k].extend(v)
 
-        result = result_info.to_dict(
-            preserve_string_values=self.input_args.dataset.format == "ms_swift",
-        )
+        result = result_info.to_dict()
         result['_statistics_details'] = {
             field_key: [
                 {"metric": item.metric, "statistics": item.statistics}

@@ -160,14 +160,12 @@ S3 的 Bucket 从完整 `input_path` URI 中解析，不存在单独的 `s3_buck
 |---|---|---|---|---|
 | threshold | float | 0.95 | No | 结果正文相似度阈值，必须是有限数且在 (0,1] |
 | min_repeats | int | 3 | No | 最少连续出现次数，>=2；不接受 bool |
-| result_ngram_size | int | 5 | No | 字符片段长度，>=1；不接受 bool |
-| result_match_mode | str | `ngram` | No | `ngram` 使用计数 Jaccard；`exact` 使用正文精确比较 |
 
-这些是该 Rule 的扩展参数，不改变其他规则的 threshold 默认值。非法配置在评估入口报错，不伪装成质量判定。无需 API key；不请求模型服务，配置中也不需要凭证。`InputArgs.to_dict()` 的安全白名单保留这四个参数，便于从报告复现配置；未知扩展字段与凭证仍不会被序列化。
+`min_repeats` 是该 Rule 的扩展参数，经 `EvaluatorRuleArgs` 的扩展字段传入，不改变其他规则的默认值；`InputArgs.to_dict()` 的白名单只保留 `threshold`。结果相似度固定为字符 5-gram 计数 Jaccard，不可配置。非法配置在评估入口报错，不伪装成质量判定。无需 API key；不请求模型服务，配置中也不需要凭证。
 
-字段映射仍为 `{"content":"RuleAgentTraceLoopDetection_content"}`。工具名/参数精确匹配，结果正文近似匹配；headers 不参与比较。AAA/AAAA 等短轨迹可判定，不再要求至少 6 次调用。正常输出仅 status=True/False，无 warning 或 N/A；缺失结果不能当作空结果，已存在的空结果可重复。
+字段映射仍为 `{"content":"RuleAgentTraceLoopDetection_content"}`。工具名/参数精确匹配，结果正文近似匹配；headers 不参与比较。门槛由固定 6 次调用改为 `min_repeats`，AAA 等单调用重复也可判定；调用数少于 `min_repeats` 时返回 N/A（`too_few_tool_calls`）。缺失结果按空字符串参与比较，命中时 reason 会写明有多少调用缺少结果、仅按名称和参数匹配；缺少参数的调用会中断比较。
 
-ms_swift 结果写出保留原始字符串类型，特别是 `messages[].content` 中的 JSON 字符串。辅助字段仍清理，原始返回不由 converter 修改。完整结构及边界见 [ms-swift 指标说明](agent_trace/ms_swift.md)，可运行示例见 [loop_detection.py](../examples/agent/loop_detection.py)。
+辅助字段仍按原有机制在结果写出时清理，原始返回不由 converter 修改。完整结构及边界见 [ms-swift 指标说明](agent_trace/ms_swift.md)，可运行示例见 [loop_detection.py](../examples/agent/loop_detection.py)。
 
 #### DatasetMinerUConfig 配置 (dataset.mineru_config)
 

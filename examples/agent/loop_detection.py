@@ -18,8 +18,6 @@ def main():
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--threshold", type=float, default=0.95)
     parser.add_argument("--min-repeats", type=int, default=3)
-    parser.add_argument("--ngram-size", type=int, default=5)
-    parser.add_argument("--match-mode", choices=("ngram", "exact"), default="ngram")
     args = parser.parse_args()
     options = {
         "input_path": str(args.input_path),
@@ -29,7 +27,6 @@ def main():
             "fields": {"content": "RuleAgentTraceLoopDetection_content"},
             "evals": [{"name": "RuleAgentTraceLoopDetection", "config": {
                 "threshold": args.threshold, "min_repeats": args.min_repeats,
-                "result_ngram_size": args.ngram_size, "result_match_mode": args.match_mode,
             }}],
         }],
     }

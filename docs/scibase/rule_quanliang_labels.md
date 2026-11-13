@@ -2,7 +2,8 @@
 
 ## 实现位置
 
-[`rule_quanliang.py`](../../dingo/model/rule/scibase/rule_quanliang.py)
+规则注册和字段映射位于 [`rule_quanliang.py`](../../dingo/model/rule/scibase/rule_quanliang.py)，
+共享字段检查函数及其标签定义位于 [`base_check_paper.py`](../../dingo/model/rule/scibase/base_check_paper.py)。
 
 ## 标签数量统计
 

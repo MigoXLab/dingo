@@ -4,41 +4,13 @@ from typing import Any
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.model.model import Model
+from dingo.model.rule.scibase.base_check_paper import (check_abstract, check_access_oa_url, check_access_xinghe_repository_model_name, check_access_xinghe_repository_model_version,
+                                                       check_access_xinghe_repository_origin_path, check_access_xinghe_repository_sha256, check_author, check_best_oa_location, check_citations,
+                                                       check_cited_by_api_url, check_contributors, check_doi, check_grade, check_grade_class, check_isbn13, check_isbns, check_language,
+                                                       check_metadata_type, check_primary_location, check_publication_pages, check_publication_published_date, check_publication_published_year,
+                                                       check_publication_venue_biblio_issue, check_publication_venue_biblio_pages, check_publication_venue_biblio_volume, check_publication_venue_issn,
+                                                       check_publication_venue_name_unified, check_references, check_related_works, check_supplementary_material, check_title)
 from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation, ValidationResult
-from dingo.model.rule.scibase.base_check_paper import (
-    check_abstract,
-    check_access_oa_url,
-    check_access_xinghe_repository_model_name,
-    check_access_xinghe_repository_model_version,
-    check_access_xinghe_repository_origin_path,
-    check_access_xinghe_repository_sha256,
-    check_author,
-    check_best_oa_location,
-    check_citations,
-    check_cited_by_api_url,
-    check_contributors,
-    check_doi,
-    check_grade,
-    check_grade_class,
-    check_isbn13,
-    check_isbns,
-    check_language,
-    check_metadata_type,
-    check_primary_location,
-    check_publication_pages,
-    check_publication_published_date,
-    check_publication_published_year,
-    check_publication_venue_biblio_issue,
-    check_publication_venue_biblio_pages,
-    check_publication_venue_biblio_volume,
-    check_publication_venue_issn,
-    check_publication_venue_name_unified,
-    check_references,
-    check_related_works,
-    check_supplementary_material,
-    check_title,
-)
-
 
 PAPER_LOCATION_REQUIRED_KEYS = (
     "license", "is_oa", "pdf_url", "landing_page_url", "source_url",

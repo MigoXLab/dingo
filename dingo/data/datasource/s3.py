@@ -1,4 +1,4 @@
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator, Iterator, Optional
 from urllib.parse import unquote, urlsplit
 
 import boto3
@@ -80,26 +80,32 @@ class S3DataSource(DataSource):
 
     def _load(self) -> Generator[str, None, None]:
         if self.path and not self.path.endswith("/"):
-            obj = self.client.get_object(
-                Bucket=self.bucket, Key=self.path
-            )
-            obj_list = [obj]
+            keys = iter((self.path,))
         else:
-            contents = self.client.list_objects(
-                Bucket=self.bucket, Prefix=self.path
-            )["Contents"]
-            if self.input_args.dataset.format in ("jsonl", "ms_swift"):
-                contents = [
-                    obj for obj in contents
-                    if obj["Key"].lower().endswith(".jsonl")
-                ]
-            obj_list = [
-                self.client.get_object(Bucket=self.bucket, Key=obj["Key"])
-                for obj in contents
-            ]
-        for obj in obj_list:
-            for line in obj["Body"].iter_lines():
-                yield line.decode("utf-8")
+            keys = self._iter_object_keys()
+
+        for key in keys:
+            obj = self.client.get_object(Bucket=self.bucket, Key=key)
+            body = obj["Body"]
+            try:
+                for line in body.iter_lines():
+                    yield line.decode("utf-8")
+            finally:
+                body.close()
+
+    def _iter_object_keys(self) -> Iterator[str]:
+        """Yield every matching object key under the configured prefix."""
+        paginator = self.client.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=self.bucket, Prefix=self.path)
+        for page in pages:
+            for obj in page.get("Contents", []):
+                key = obj["Key"]
+                if (
+                    self.input_args.dataset.format in ("jsonl", "ms_swift")
+                    and not key.lower().endswith(".jsonl")
+                ):
+                    continue
+                yield key
 
     def to_dict(self) -> Dict[str, Any]:
         return {

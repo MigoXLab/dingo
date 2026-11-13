@@ -41,8 +41,8 @@ from dingo.model.rule.scibase.base_check_paper import (
 
 
 PAPER_LOCATION_REQUIRED_KEYS = (
-    "license", "is_oa", "pdf_url", "landing_page_url", "is_published",
-    "is_accepted", "source_url", "origin_url", "source", "version", "meta_db_name",
+    "license", "is_oa", "pdf_url", "landing_page_url", "source_url",
+    "origin_url", "source", "version", "is_published", "is_accepted", "meta_db_name",
 )
 
 
@@ -161,11 +161,7 @@ def check_locations(locations: Any) -> ValidationResult:
                 error_labels.append("missing_key")
                 reasons.append(f"item[{idx}] missing key '{key}'")
                 continue
-            if key == "is_published":
-                invalid, labels, detail_reasons = _check_is_published(item[key], item.get("version"))
-            elif key == "is_accepted":
-                invalid, labels, detail_reasons = _check_is_accepted(item[key], item.get("version"))
-            elif key == "license":
+            if key == "license":
                 invalid, labels, detail_reasons = _check_license(item[key])
             elif key == "is_oa":
                 invalid, labels, detail_reasons = _check_is_oa(item[key])
@@ -173,6 +169,10 @@ def check_locations(locations: Any) -> ValidationResult:
                 invalid, labels, detail_reasons = _check_source(item[key])
             elif key == "version":
                 invalid, labels, detail_reasons = _check_version(item[key])
+            elif key == "is_published":
+                invalid, labels, detail_reasons = _check_is_published(item[key], item.get("version"))
+            elif key == "is_accepted":
+                invalid, labels, detail_reasons = _check_is_accepted(item[key], item.get("version"))
             else:
                 continue
             if invalid:

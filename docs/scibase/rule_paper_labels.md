@@ -223,7 +223,7 @@
 | `wrong_type` | 字段类型错误 | 值不是对象列表时标记；空列表 `[]` 允许通过，空字符串、空对象或非对象列表项均不符合要求。 |
 | `null` | 值为 null | 字段值为 `null` 时标记。 |
 | `empty` | 列表项为空 | 列表中存在空对象 `{}` 时标记，并继续检查下一个对象。 |
-| `missing_key` | key 缺失 | 列表对象缺少以下任一 key 时标记：`license`、`is_oa`、`pdf_url`、`landing_page_url`、`is_published`、`is_accepted`、`source_url`、`origin_url`、`source`、`version`、`meta_db_name`。key 不带 `locations.` 前缀；允许额外 key，仅检查必需 key 是否存在。 |
+| `missing_key` | key 缺失 | 列表对象缺少以下任一 key 时标记：`license`、`is_oa`、`pdf_url`、`landing_page_url`、`source_url`、`origin_url`、`source`、`version`、`is_published`、`is_accepted`、`meta_db_name`。key 不带 `locations.` 前缀；允许额外 key，仅检查必需 key 是否存在。 |
 | `is_oa.wrong_type` | OA 标记类型错误 | `is_oa` 不是字符串时标记，包括 null、布尔值、数字、列表和对象。 |
 | `is_oa.unsupported_value` | OA 标记不合法 | 字符串 `is_oa` 仅允许 `"true"`、`"false"`、`"unknown"`；空字符串及其他字符串均不合法。 |
 | `license.wrong_type` | 许可证类型错误 | `license` 不是字符串时标记，包括 null、布尔值、数字、列表和对象。 |

@@ -145,8 +145,8 @@ def test_paper_access_oa_status_consistency(status, oa_flag):
 
 
 PAPER_LOCATION_KEYS = (
-    "license", "is_oa", "pdf_url", "landing_page_url", "is_published",
-    "is_accepted", "source_url", "origin_url", "source", "version", "meta_db_name",
+    "license", "is_oa", "pdf_url", "landing_page_url", "source_url",
+    "origin_url", "source", "version", "is_published", "is_accepted", "meta_db_name",
 )
 
 
@@ -430,12 +430,12 @@ def test_paper_locations_is_published_errors_accumulate_and_missing_version_is_s
         missing_version,
     ]))
     assert result.label == [
-        "locations.is_published.version_mismatch", "locations.source.empty",
+        "locations.source.empty", "locations.is_published.version_mismatch",
         "locations.is_published.wrong_type", "locations.missing_key",
     ]
     assert result.reason == [
-        "locations: item[0].is_published must be true when version='publishedVersion'",
         "locations: item[0].source cannot be an empty object",
+        "locations: item[0].is_published must be true when version='publishedVersion'",
         "locations: item[1].is_published must be a boolean",
         "locations: item[2] missing key 'version'",
     ]
@@ -502,8 +502,8 @@ def test_paper_locations_reports_independent_type_labels_for_all_value_checks():
     assert result.status is True
     assert result.label == [
         "locations.license.wrong_type", "locations.is_oa.wrong_type",
-        "locations.is_published.wrong_type", "locations.is_accepted.wrong_type",
         "locations.source.wrong_type", "locations.version.wrong_type",
+        "locations.is_published.wrong_type", "locations.is_accepted.wrong_type",
     ]
     assert len(result.reason) == len(result.label)
 
@@ -515,13 +515,15 @@ def test_paper_locations_flags_use_else_branch_for_missing_or_invalid_version(ve
     del location["version"]
     location.update(version_data)
     result = rule_paper.check_locations([location])
-    expected = ["is_published.version_mismatch", "is_accepted.version_mismatch"] if flag else []
+    expected = []
     if "version" not in version_data:
         expected.append("missing_key")
     elif not isinstance(version_data["version"], str):
         expected.append("version.wrong_type")
     else:
         expected.append("version.unsupported_value")
+    if flag:
+        expected.extend(["is_published.version_mismatch", "is_accepted.version_mismatch"])
     assert result[0] is True
     assert result[1] == expected
     assert len(result[2]) == len(expected)

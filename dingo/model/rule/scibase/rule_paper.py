@@ -12,6 +12,7 @@ from dingo.model.rule.scibase.base_check_paper import (URL_RE, check_abstract, c
                                                        check_publication_venue_name_unified, check_references, check_related_works, check_supplementary_material, check_title)
 from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation, ValidationResult
 
+
 def check_metadata_quality_tag(
     metadata_quality_tag: Any, title: Any = None, author: Any = None,
     abstract: Any = None,

@@ -29,7 +29,7 @@ def test_paper_reuses_checks_with_independent_mapping_and_config():
             if name.startswith("check_"):
                 if module is rule_paper and name in {
                     "check_access_is_oa", "check_access_oa_status", "check_locations",
-                    "check_metadata_quality_tag",
+                    "check_metadata_quality_tag", "check_resources",
                 }:
                     assert check is not getattr(base_check_paper, name, None)
                     assert check.__module__ == rule_paper.__name__
@@ -216,6 +216,235 @@ def test_paper_access_oa_status_consistency(status, oa_flag):
     assert rule_quanliang.RuleQuanliangFieldValidation.field_validators["access_oa_status"](
         {"access_oa_status": status, "access_is_oa": oa_flag}
     ) == (False, [], [])
+
+
+PAPER_RESOURCE_KEYS = (
+    "resource_url", "resource_name", "resource_path", "resource_type",
+    "resource_download_status",
+)
+
+
+def _paper_resource():
+    return {
+        "resource_url": "https://example.com/resource",
+        "resource_name": "Resource",
+        "resource_path": "",
+        "resource_type": ["other"],
+        "resource_download_status": "pending",
+    }
+
+
+@pytest.mark.parametrize(
+    "record, expected_label",
+    [
+        ({}, "missing_field"),
+        ({"resources": None}, "null"),
+        ({"resources": "[]"}, "wrong_type"),
+        ({"resources": {}}, "wrong_type"),
+        ({"resources": ()}, "wrong_type"),
+        ({"resources": False}, "wrong_type"),
+        ({"resources": 1}, "wrong_type"),
+        ({"resources": [None]}, "wrong_type"),
+        ({"resources": [""]}, "wrong_type"),
+        ({"resources": [[]]}, "wrong_type"),
+    ],
+)
+def test_paper_resources_basic_validation(record, expected_label):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["resources"]
+    result = model.eval(Data(**record))
+    assert result.status is True
+    assert result.label == [f"resources.{expected_label}"]
+    assert len(result.reason) == 1
+
+
+@pytest.mark.parametrize("missing_key", PAPER_RESOURCE_KEYS)
+def test_paper_resources_requires_each_key(missing_key):
+    incomplete = _paper_resource()
+    del incomplete[missing_key]
+    assert rule_paper.check_resources([_paper_resource(), incomplete]) == (
+        True, ["missing_key"], [f"item[1] missing key '{missing_key}'"],
+    )
+
+
+@pytest.mark.parametrize("key", [key for key in PAPER_RESOURCE_KEYS if key != "resource_type"])
+@pytest.mark.parametrize("value", [None, True, 1, [], {}])
+def test_paper_resources_string_field_types(key, value):
+    resource = {**_paper_resource(), key: value}
+    assert rule_paper.check_resources([resource]) == (
+        True, [f"{key}.wrong_type"], [f"item[0].{key} must be a string"],
+    )
+
+
+@pytest.mark.parametrize("value", [None, "code", True, 1, {}, (), [None], [1], [True], [{}], [[]], ["code", 1]])
+def test_paper_resources_resource_type_requires_list_of_strings(value):
+    resource = {**_paper_resource(), "resource_type": value}
+    assert rule_paper.check_resources([resource]) == (
+        True, ["resource_type.wrong_type"], ["item[0].resource_type must be a list of strings"],
+    )
+
+
+@pytest.mark.parametrize("value, expected_labels", [
+    ([], ["empty"]),
+    ([""], ["unsupported_value"]),
+    (["data"], ["unsupported_value"]),
+    ([" code "], ["unsupported_value"]),
+    (["CODE"], ["not_lowercase", "unsupported_value"]),
+    (["Dataset"], ["not_lowercase", "unsupported_value"]),
+    (["code", "code"], ["duplicate"]),
+    (["other", "other"], ["duplicate"]),
+    (["other", "code"], ["other_conflict"]),
+    (["dataset", "other"], ["other_conflict"]),
+    (["supplementary_material", "other"], ["other_conflict"]),
+    (["code", "dataset", "other"], ["other_conflict"]),
+    (["CODE", "other", "code", "code"], ["not_lowercase", "unsupported_value", "duplicate", "other_conflict"]),
+])
+def test_paper_resources_resource_type_rejects_invalid_values(value, expected_labels):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["resources"]
+    result = model.eval(Data(resources=[_paper_resource(), {**_paper_resource(), "resource_type": value}]))
+    assert result.status is True
+    assert result.label == [f"resources.resource_type.{label}" for label in expected_labels]
+    assert len(result.reason) == len(expected_labels)
+    assert all(reason.startswith("resources: item[1].resource_type") for reason in result.reason)
+
+
+@pytest.mark.parametrize("value", [
+    ["code"], ["dataset"], ["supplementary_material"], ["other"],
+    ["code", "dataset"], ["code", "supplementary_material"], ["dataset", "supplementary_material"],
+    ["code", "dataset", "supplementary_material"], ["supplementary_material", "dataset", "code"],
+])
+def test_paper_resources_resource_type_allows_explicit_cross_types(value):
+    assert rule_paper.check_resources([{**_paper_resource(), "resource_type": value}]) == (False, [], [])
+
+
+@pytest.mark.parametrize("resources", [
+    [],
+    [_paper_resource()],
+    [{**_paper_resource(), "extra": "allowed"}],
+    [{**_paper_resource(), "resource_path": "/data/resource", "resource_download_status": "downloaded"}],
+    [{**_paper_resource(), "resource_path": "/data/resource", "resource_download_status": "partial"}],
+    [{**_paper_resource(), "resource_download_status": "failed"}],
+    [_paper_resource(), {**_paper_resource(), "resource_type": ["code", "dataset"]}],
+])
+def test_paper_resources_valid_values(resources):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["resources"]
+    result = model.eval(Data(resources=resources))
+    assert result.status is False
+    assert result.label == ["QUALITY_GOOD"]
+
+
+@pytest.mark.parametrize("key", ["resource_url", "resource_name", "resource_download_status"])
+@pytest.mark.parametrize("value", ["", " ", "\t\n", "\u00a0"])
+def test_paper_resources_required_strings_reject_empty_and_whitespace(key, value):
+    result = rule_paper.check_resources([{**_paper_resource(), key: value}])
+    assert result[0] is True
+    assert result[1] == [f"{key}.empty"]
+
+
+@pytest.mark.parametrize("value", [
+    "https://example.com/resource?x=1&y=2#part", "http://localhost:8080/resource", "HTTPS://example.com",
+    "https://[::1]:8080/resource", "https://example.com/a%20b", "ftp://example.com/file",
+    "file:///data/resource", "mailto:alice@example.com",
+])
+def test_paper_resources_resource_url_accepts_absolute_urls(value):
+    assert rule_paper.check_resources([{**_paper_resource(), "resource_url": value}]) == (False, [], [])
+
+
+@pytest.mark.parametrize("value", [
+    "resource/file", "/resource/file", "//example.com/resource", "example.com", "https:/example.com",
+    "https://", "https://:8080/file", "https://example.com:abc", "https://example.com:70000",
+    "https://[invalid]/file", "https://[::1]garbage/file", "https://example.com/a b", " https://example.com",
+    "https://example.com\n", "https://example.com\\file", "https://example.com/%zz", "https://example.com/%",
+    "https://example.com/<file>", "file:relative/file",
+])
+def test_paper_resources_resource_url_rejects_invalid_urls(value):
+    assert rule_paper.check_resources([{**_paper_resource(), "resource_url": value}]) == (
+        True, ["resource_url.invalid_url"], ["item[0].resource_url must be a valid absolute URL"],
+    )
+
+
+@pytest.mark.parametrize("value", ["Resource", " Resource ", "资源名称"])
+def test_paper_resources_resource_name_accepts_non_whitespace(value):
+    assert rule_paper.check_resources([{**_paper_resource(), "resource_name": value}]) == (False, [], [])
+
+
+@pytest.mark.parametrize("status", ["pending", "downloaded", "partial", "failed"])
+@pytest.mark.parametrize("path", ["", " ", "\t\n", "/data/resource"])
+def test_paper_resources_status_path_consistency(status, path):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["resources"]
+    result = model.eval(Data(resources=[{**_paper_resource(), "resource_download_status": status, "resource_path": path}]))
+    labels = []
+    if status in ("downloaded", "partial") and not path.strip():
+        labels.append("resources.resource_path.required")
+        if status == "downloaded":
+            labels.append("resources.resource_download_status.path_required")
+    elif status in ("pending", "failed") and path != "":
+        labels.append("resources.resource_path.must_be_empty")
+    assert result.status is bool(labels)
+    assert result.label == (labels or ["QUALITY_GOOD"])
+
+
+@pytest.mark.parametrize("value, expected_labels", [
+    ("Downloaded", ["not_lowercase", "unsupported_value"]),
+    ("PENDING", ["not_lowercase", "unsupported_value"]),
+    (" downloaded ", ["unsupported_value"]),
+    ("complete", ["unsupported_value"]),
+])
+def test_paper_resources_resource_download_status_enum(value, expected_labels):
+    result = rule_paper.check_resources([{**_paper_resource(), "resource_download_status": value}])
+    assert result[0] is True
+    assert result[1] == [f"resource_download_status.{label}" for label in expected_labels]
+
+
+@pytest.mark.parametrize("path", [None, 1, False, [], {}])
+def test_paper_resources_downloaded_requires_string_path(path):
+    result = rule_paper.check_resources([{**_paper_resource(), "resource_path": path, "resource_download_status": "downloaded"}])
+    assert result[1] == ["resource_path.wrong_type", "resource_download_status.path_required"]
+
+
+def test_paper_resources_downloaded_reports_missing_path_and_checks_same_object():
+    resource = {**_paper_resource(), "resource_download_status": "downloaded"}
+    del resource["resource_path"]
+    result = rule_paper.check_resources([
+        {**_paper_resource(), "resource_download_status": "downloaded", "resource_path": "/data/resource"}, resource,
+    ])
+    assert result[1] == ["missing_key", "resource_download_status.path_required"]
+    assert all(reason.startswith("item[1]") for reason in result[2])
+
+
+def test_paper_resources_collects_errors_across_items_and_fields():
+    resource = {**_paper_resource(), "resource_name": None, "resource_type": [1]}
+    del resource["resource_path"]
+    assert rule_paper.check_resources([_paper_resource(), resource, None]) == (
+        True, ["resource_name.wrong_type", "missing_key", "resource_type.wrong_type", "wrong_type"],
+        [
+            "item[1].resource_name must be a string",
+            "item[1] missing key 'resource_path'",
+            "item[1].resource_type must be a list of strings",
+            "item[2] must be an object",
+        ],
+    )
+    assert rule_paper.check_resources([{}]) == (
+        True, ["missing_key"] * len(PAPER_RESOURCE_KEYS),
+        [f"item[0] missing key '{key}'" for key in PAPER_RESOURCE_KEYS],
+    )
+
+
+def test_paper_resources_only_runs_when_selected():
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["access_is_oa"]
+    result = model.eval(Data(access_is_oa="true", resources=None))
+    assert result.status is False
+    assert "resources" in rule_paper.RulePaperFieldValidation.dynamic_config.key_list
+    assert "resources" not in rule_quanliang.RuleQuanliangFieldValidation.field_validators
 
 
 PAPER_LOCATION_KEYS = (

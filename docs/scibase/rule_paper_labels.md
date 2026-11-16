@@ -2,7 +2,7 @@
 
 ## 实现位置
 
-规则注册、字段映射和 Paper 专用的质量等级、OA 及 locations 检查函数位于 [rule_paper.py](../../dingo/model/rule/scibase/rule_paper.py)，其余共享字段检查函数及标签定义位于 [base_check_paper.py](../../dingo/model/rule/scibase/base_check_paper.py)。
+规则注册、字段映射和 Paper 专用的质量等级、资源、OA 及 locations 检查函数位于 [rule_paper.py](../../dingo/model/rule/scibase/rule_paper.py)，其余共享字段检查函数及标签定义位于 [base_check_paper.py](../../dingo/model/rule/scibase/base_check_paper.py)。
 
 ## 标签约定
 
@@ -26,6 +26,7 @@
 | `language` | 4 |
 | `author` | 10 |
 | `contributors` | 4 |
+| `resources` | 23 |
 | `locations` | 18 |
 | `access_is_oa` | 5 |
 | `access_oa_status` | 5 |
@@ -51,7 +52,7 @@
 | `access_xinghe_repository_model_version` | 5 |
 | `primary_location` | 4 |
 | `best_oa_location` | 4 |
-| **合计** | **300** |
+| **合计** | **323** |
 
 ## metadata_type
 
@@ -234,6 +235,55 @@
 | `wrong_type` | 字段类型错误 | 值不是字符串列表时标记。 |
 | `null` | 值为 null | 检查字段值是否为 `null`。 |
 | `invalid_separator` | 包含非法分隔符 | 若姓名包含非法分隔符，则标记。 |
+
+## resources
+
+`List[Object]` 字段，默认空值 `[]` 允许通过；输入中缺少字段仍按统一框架报告 `missing_field`。已接入默认字段列表，可通过 `key_list: ["resources"]` 单独检查。每个元素必须包含以下五个 key，允许额外 key：
+
+| Key | 类型 |
+|---|---|
+| `resource_url` | `String` |
+| `resource_name` | `String` |
+| `resource_path` | `String` |
+| `resource_type` | `List[String]` |
+| `resource_download_status` | `String` |
+
+`resource_type` 必须为非空字符串列表，元素仅允许小写 `code`、`dataset`、`supplementary_material`、`other`，不得重复。明确类型可组合，如 `["code", "dataset"]`；`other` 只能单独使用。大小写和首尾空白不自动修正，大小写错误也会命中不支持的枚举值标签。
+
+其余四个字段通过独立内部函数校验：
+
+- `resource_url` 必须为非空字符串和合法绝对 URL。支持 HTTP(S)、FTP、文件等绝对 URL；HTTP(S) 等网络 URL 必须有主机，拒绝相对地址、空白或控制字符、反斜杠、非法百分号编码和非法端口。只检查格式，不请求 URL。
+- `resource_name` 必须为非空字符串，不得仅含空白字符。
+- `resource_path` 必须为字符串。状态为 `downloaded` 或 `partial` 时，去除首尾空白后必须非空；为 `pending` 或 `failed` 时必须严格等于 `""`。
+- `resource_download_status` 必须为非空字符串，精确取值仅允许小写 `pending`、`downloaded`、`partial`、`failed`。为 `downloaded` 时另行检查同一对象的 `resource_path` 是否为非空字符串；路径缺失、类型错误或为空时返回 `resource_download_status.path_required`。
+
+字符串化的 JSON 列表不自动解析。本检查收集所有元素及字段的错误，原因中标明元素下标；单个字段可同时报告多个标签。`downloaded` 的空字符串路径同时产生路径必填及下载状态路径关联标签；大小写错误也产生不支持的枚举值标签。路径规则仅在对应状态值有效时应用。
+
+| Label 名 | 中文名称 | 标签含义 |
+|---|---|---|
+| `missing_field` | 字段缺失 | 输入对象中没有 `resources` 字段。 |
+| `null` | 值为 null | `resources` 为 `null`。 |
+| `wrong_type` | 结构类型错误 | `resources` 不是列表，或列表元素不是对象。 |
+| `missing_key` | 对象键缺失 | 元素中缺少五个必需 key 之一。 |
+| `resource_url.wrong_type` | URL 类型错误 | 值不是字符串。 |
+| `resource_url.empty` | URL 为空 | 值为空字符串或仅含空白字符。 |
+| `resource_url.invalid_url` | URL 格式错误 | 值不是合法绝对 URL。 |
+| `resource_name.wrong_type` | 名称类型错误 | 值不是字符串。 |
+| `resource_name.empty` | 名称为空 | 值为空字符串或仅含空白字符。 |
+| `resource_path.wrong_type` | 路径类型错误 | 值不是字符串。 |
+| `resource_path.required` | 路径必填 | 状态为 `downloaded` 或 `partial` 时，字符串路径为空或仅含空白字符。 |
+| `resource_path.must_be_empty` | 路径应为空 | 状态为 `pending` 或 `failed` 时，路径不严格等于空字符串。 |
+| `resource_type.wrong_type` | 资源类型字段类型错误 | 值不是字符串列表，或含有非字符串元素。 |
+| `resource_type.empty` | 资源类型为空 | 列表为空。 |
+| `resource_type.not_lowercase` | 资源类型非小写 | 至少一个字符串包含大写字母。 |
+| `resource_type.unsupported_value` | 资源类型不在限定范围内 | 至少一个元素不是 `code`、`dataset`、`supplementary_material`、`other` 之一，包括空字符串。 |
+| `resource_type.duplicate` | 资源类型重复 | 列表中存在重复字符串。 |
+| `resource_type.other_conflict` | 资源类型互斥冲突 | `other` 与任一明确类型同时出现。 |
+| `resource_download_status.wrong_type` | 下载状态类型错误 | 值不是字符串。 |
+| `resource_download_status.empty` | 下载状态为空 | 值为空字符串或仅含空白字符。 |
+| `resource_download_status.not_lowercase` | 下载状态非小写 | 字符串包含大写字母。 |
+| `resource_download_status.unsupported_value` | 下载状态不在限定范围内 | 值不是 `pending`、`downloaded`、`partial`、`failed` 之一。 |
+| `resource_download_status.path_required` | 已下载状态缺少路径 | 状态为 `downloaded` 时，同一对象的路径缺失、类型错误、为空或仅含空白字符。 |
 
 ## locations
 

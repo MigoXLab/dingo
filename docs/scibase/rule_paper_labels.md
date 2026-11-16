@@ -2,7 +2,7 @@
 
 ## 实现位置
 
-规则注册、字段映射和 Paper 专用的 OA 检查函数位于 [rule_paper.py](../../dingo/model/rule/scibase/rule_paper.py)，其余共享字段检查函数及标签定义位于 [base_check_paper.py](../../dingo/model/rule/scibase/base_check_paper.py)。
+规则注册、字段映射和 Paper 专用的质量等级、OA 及 locations 检查函数位于 [rule_paper.py](../../dingo/model/rule/scibase/rule_paper.py)，其余共享字段检查函数及标签定义位于 [base_check_paper.py](../../dingo/model/rule/scibase/base_check_paper.py)。
 
 ## 标签约定
 
@@ -17,6 +17,7 @@
 | 字段 | 标签数量 |
 |---|---:|
 | `metadata_type` | 5 |
+| `metadata_quality_tag` | 6 |
 | `doi` | 6 |
 | `isbns` | 4 |
 | `isbn13` | 4 |
@@ -50,7 +51,7 @@
 | `access_xinghe_repository_model_version` | 5 |
 | `primary_location` | 4 |
 | `best_oa_location` | 4 |
-| **合计** | **294** |
+| **合计** | **300** |
 
 ## metadata_type
 
@@ -61,6 +62,25 @@
 | `null` | 值为 null | 检查字段值是否为 `null`。 |
 | `empty` | 值为空 | 若值为空，则标记。 |
 | `unsupported_value` | 值不在限定范围内 | 值须属于 2 个限定值之一：`paper`、`ebook`。 |
+
+## metadata_quality_tag
+
+字符串字段，仅允许精确取值 `high`、`medium`、`low`。已接入默认字段列表，也可通过 `key_list: ["metadata_quality_tag"]` 单独检查；依赖字段 `title`、`author`、`abstract` 不必同时加入 `key_list`。
+
+- `title`、`author` 任一为空时，必须为 `low`，优先于摘要判断。
+- `title`、`author` 均非空，`abstract` 为空字符串时，必须为 `medium`。
+- `title`、`author`、`abstract` 均非空时，必须为 `high`。
+
+空值包含字段缺失、`null`、空字符串、纯空白字符串和空容器；摘要缺失或为 `null` 时也按空值处理。作者的 JSON 字符串先按现有框架归一化，例如 `"[]"` 作为空列表处理。本检查只判断完整性，各依赖字段的格式仍由对应字段检查函数校验。
+
+| Label 名 | 中文名称 | 标签含义 |
+|---|---|---|
+| `missing_field` | 字段缺失 | 输入对象中没有 `metadata_quality_tag` 字段。 |
+| `null` | 值为 null | 字段值为 `null`。 |
+| `wrong_type` | 字段类型错误 | 字段值不是字符串。 |
+| `empty` | 值为空 | 字段值为空字符串。 |
+| `unsupported_value` | 值不在限定范围内 | 值不是 `high`、`medium`、`low` 之一，大小写或首尾空白不自动修正。 |
+| `quality_tag_mismatch` | 质量等级不匹配 | 值与标题、作者、摘要完整性要求的等级不一致；原因中返回应有等级。 |
 
 ## doi
 

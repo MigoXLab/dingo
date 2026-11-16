@@ -18,6 +18,39 @@ PAPER_LOCATION_REQUIRED_KEYS = (
 )
 
 
+def check_metadata_quality_tag(
+    metadata_quality_tag: Any, title: Any = None, author: Any = None,
+    abstract: Any = None,
+) -> ValidationResult:
+    """Validate the quality tag against title, author and abstract completeness."""
+    if metadata_quality_tag is None:
+        return BaseFieldValidation._fail("null", "value is null")
+    if not isinstance(metadata_quality_tag, str):
+        return BaseFieldValidation._fail("wrong_type", "value must be a string")
+    if metadata_quality_tag == "":
+        return BaseFieldValidation._fail("empty", "value cannot be empty string")
+    if metadata_quality_tag not in {"high", "medium", "low"}:
+        return BaseFieldValidation._fail(
+            "unsupported_value", f"unsupported value '{metadata_quality_tag}'",
+        )
+
+    def _is_empty(value: Any) -> bool:
+        return not value.strip() if isinstance(value, str) else not value
+
+    if _is_empty(title) or _is_empty(author):
+        expected_tag = "low"
+    elif _is_empty(abstract):
+        expected_tag = "medium"
+    else:
+        expected_tag = "high"
+    if metadata_quality_tag != expected_tag:
+        return BaseFieldValidation._fail(
+            "quality_tag_mismatch",
+            f"value must be '{expected_tag}' based on title, author and abstract completeness",
+        )
+    return BaseFieldValidation._ok()
+
+
 def check_locations(locations: Any) -> ValidationResult:
     """Validate paper location objects; missing fields are handled by eval()."""
     def _check_license(license_value: Any) -> ValidationResult:
@@ -209,6 +242,10 @@ class RulePaperFieldValidation(BaseFieldValidation):
 
     field_validators = {
         "metadata_type": lambda record: check_metadata_type(record.get("metadata_type")),
+        "metadata_quality_tag": lambda record: check_metadata_quality_tag(
+            record.get("metadata_quality_tag"), record.get("title"),
+            record.get("author"), record.get("abstract"),
+        ),
         "doi": lambda record: check_doi(record.get("doi"), record.get("metadata_type")),
         "isbns": lambda record: check_isbns(record.get("isbns"), record.get("metadata_type")),
         "isbn13": lambda record: check_isbn13(record.get("isbn13"), record.get("metadata_type")),

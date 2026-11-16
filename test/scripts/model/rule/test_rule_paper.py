@@ -29,8 +29,9 @@ def test_paper_reuses_checks_with_independent_mapping_and_config():
             if name.startswith("check_"):
                 if module is rule_paper and name in {
                     "check_access_is_oa", "check_access_oa_status", "check_locations",
+                    "check_metadata_quality_tag",
                 }:
-                    assert check is not getattr(base_check_paper, name)
+                    assert check is not getattr(base_check_paper, name, None)
                     assert check.__module__ == rule_paper.__name__
                     continue
                 assert check is getattr(base_check_paper, name)
@@ -49,6 +50,79 @@ def test_paper_reuses_checks_with_independent_mapping_and_config():
         assert result.status is row["expected_status"], row["case"]
         assert result.label == row["expected_labels"], row["case"]
         assert (result.reason or []) == row["expected_reasons"], row["case"]
+
+
+@pytest.mark.parametrize(
+    "record, expected_label",
+    [
+        ({}, "missing_field"),
+        ({"metadata_quality_tag": None}, "null"),
+        ({"metadata_quality_tag": True}, "wrong_type"),
+        ({"metadata_quality_tag": 1}, "wrong_type"),
+        ({"metadata_quality_tag": []}, "wrong_type"),
+        ({"metadata_quality_tag": {}}, "wrong_type"),
+        ({"metadata_quality_tag": ""}, "empty"),
+        ({"metadata_quality_tag": "High"}, "unsupported_value"),
+        ({"metadata_quality_tag": " high "}, "unsupported_value"),
+        ({"metadata_quality_tag": " "}, "unsupported_value"),
+        ({"metadata_quality_tag": "invalid"}, "unsupported_value"),
+    ],
+)
+def test_paper_metadata_quality_tag_basic_validation(record, expected_label):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["metadata_quality_tag"]
+    result = model.eval(Data(**record))
+    assert result.status is True
+    assert result.label == [f"metadata_quality_tag.{expected_label}"]
+    assert len(result.reason) == 1
+
+
+@pytest.mark.parametrize("tag", ["low", "medium", "high"])
+@pytest.mark.parametrize(
+    "record, expected_tag",
+    [
+        ({}, "low"),
+        ({"title": None, "author": [{"name": "Alice", "orcid": ""}], "abstract": "Text"}, "low"),
+        ({"title": "", "author": [{"name": "Alice", "orcid": ""}], "abstract": ""}, "low"),
+        ({"title": " \t\n", "author": [{"name": "Alice", "orcid": ""}], "abstract": "Text"}, "low"),
+        ({"title": "Title", "author": None, "abstract": "Text"}, "low"),
+        ({"title": "Title", "author": "", "abstract": "Text"}, "low"),
+        ({"title": "Title", "author": [], "abstract": "Text"}, "low"),
+        ({"title": "Title", "author": "[]", "abstract": "Text"}, "low"),
+        ({"title": "Title", "author": [{"name": "Alice", "orcid": ""}], "abstract": ""}, "medium"),
+        ({"title": "Title", "author": [{"name": "Alice", "orcid": ""}], "abstract": None}, "medium"),
+        ({"title": "Title", "author": [{"name": "Alice", "orcid": ""}]}, "medium"),
+        ({"title": "Title", "author": [{"name": "Alice", "orcid": ""}], "abstract": " \t\n"}, "medium"),
+        ({"title": "Title", "author": [{"name": "Alice", "orcid": ""}], "abstract": "Text"}, "high"),
+        ({"title": "Title", "author": '[{"name": "Alice", "orcid": ""}]', "abstract": "Text"}, "high"),
+    ],
+)
+def test_paper_metadata_quality_tag_completeness(record, expected_tag, tag):
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["metadata_quality_tag"]
+    result = model.eval(Data(metadata_quality_tag=tag, **record))
+    mismatch = tag != expected_tag
+    assert result.status is mismatch
+    assert result.label == (
+        ["metadata_quality_tag.quality_tag_mismatch"] if mismatch else ["QUALITY_GOOD"]
+    )
+    if mismatch:
+        assert result.reason == [
+            f"metadata_quality_tag: value must be '{expected_tag}' based on title, author and abstract completeness",
+        ]
+
+
+def test_paper_metadata_quality_tag_only_runs_when_selected():
+    model = rule_paper.RulePaperFieldValidation()
+    model.dynamic_config = model.dynamic_config.model_copy(deep=True)
+    model.dynamic_config.key_list = ["access_is_oa"]
+    result = model.eval(Data(access_is_oa="true", metadata_quality_tag="invalid"))
+    assert result.status is False
+    assert "metadata_quality_tag" in rule_paper.RulePaperFieldValidation.dynamic_config.key_list
+    assert "metadata_quality_tag" not in rule_quanliang.RuleQuanliangFieldValidation.field_validators
+    assert rule_paper.check_metadata_quality_tag("low") == (False, [], [])
 
 
 @pytest.mark.parametrize(

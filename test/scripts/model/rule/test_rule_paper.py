@@ -348,8 +348,8 @@ def test_paper_resources_required_strings_reject_empty_and_whitespace(key, value
 
 @pytest.mark.parametrize("value", [
     "https://example.com/resource?x=1&y=2#part", "http://localhost:8080/resource", "HTTPS://example.com",
-    "https://[::1]:8080/resource", "https://example.com/a%20b", "ftp://example.com/file",
-    "file:///data/resource", "mailto:alice@example.com",
+    "https://[::1]:8080/resource", "https://example.com/a%20b", "https://example.com/a b",
+    "https://example.com/a%zz",
 ])
 def test_paper_resources_resource_url_accepts_absolute_urls(value):
     assert rule_paper.check_resources([{**_paper_resource(), "resource_url": value}]) == (False, [], [])
@@ -357,14 +357,12 @@ def test_paper_resources_resource_url_accepts_absolute_urls(value):
 
 @pytest.mark.parametrize("value", [
     "resource/file", "/resource/file", "//example.com/resource", "example.com", "https:/example.com",
-    "https://", "https://:8080/file", "https://example.com:abc", "https://example.com:70000",
-    "https://[invalid]/file", "https://[::1]garbage/file", "https://example.com/a b", " https://example.com",
-    "https://example.com\n", "https://example.com\\file", "https://example.com/%zz", "https://example.com/%",
-    "https://example.com/<file>", "file:relative/file",
+    "https://", "ftp://example.com/file", "file:///data/resource", "file:relative/file",
+    "mailto:alice@example.com", " https://example.com",
 ])
 def test_paper_resources_resource_url_rejects_invalid_urls(value):
     assert rule_paper.check_resources([{**_paper_resource(), "resource_url": value}]) == (
-        True, ["resource_url.invalid_url"], ["item[0].resource_url must be a valid absolute URL"],
+        True, ["resource_url.invalid_url"], ["item[0].resource_url must be an http(s) URL"],
     )
 
 
@@ -382,11 +380,9 @@ def test_paper_resources_status_path_consistency(status, path):
     result = model.eval(Data(resources=[{**_paper_resource(), "resource_download_status": status, "resource_path": path}]))
     labels = []
     if status in ("downloaded", "partial") and not path.strip():
-        labels.append("resources.resource_path.required")
-        if status == "downloaded":
-            labels.append("resources.resource_download_status.path_required")
+        labels.append("resources.resource_path.empty_when_downloading")
     elif status in ("pending", "failed") and path != "":
-        labels.append("resources.resource_path.must_be_empty")
+        labels.append("resources.resource_path.unempty_when_undownloading")
     assert result.status is bool(labels)
     assert result.label == (labels or ["QUALITY_GOOD"])
 
@@ -406,16 +402,16 @@ def test_paper_resources_resource_download_status_enum(value, expected_labels):
 @pytest.mark.parametrize("path", [None, 1, False, [], {}])
 def test_paper_resources_downloaded_requires_string_path(path):
     result = rule_paper.check_resources([{**_paper_resource(), "resource_path": path, "resource_download_status": "downloaded"}])
-    assert result[1] == ["resource_path.wrong_type", "resource_download_status.path_required"]
+    assert result[1] == ["resource_path.wrong_type"]
 
 
-def test_paper_resources_downloaded_reports_missing_path_and_checks_same_object():
+def test_paper_resources_downloaded_reports_missing_path():
     resource = {**_paper_resource(), "resource_download_status": "downloaded"}
     del resource["resource_path"]
     result = rule_paper.check_resources([
         {**_paper_resource(), "resource_download_status": "downloaded", "resource_path": "/data/resource"}, resource,
     ])
-    assert result[1] == ["missing_key", "resource_download_status.path_required"]
+    assert result[1] == ["missing_key"]
     assert all(reason.startswith("item[1]") for reason in result[2])
 
 

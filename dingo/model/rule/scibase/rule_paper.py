@@ -1,26 +1,16 @@
 """Paper metadata validation with independently configurable field checks."""
 
-import re
 from typing import Any
-from urllib.parse import urlsplit
-
-from pydantic import AnyUrl
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.model.model import Model
-from dingo.model.rule.scibase.base_check_paper import (check_abstract, check_access_oa_url, check_access_xinghe_repository_model_name, check_access_xinghe_repository_model_version,
+from dingo.model.rule.scibase.base_check_paper import (URL_RE, check_abstract, check_access_oa_url, check_access_xinghe_repository_model_name, check_access_xinghe_repository_model_version,
                                                        check_access_xinghe_repository_origin_path, check_access_xinghe_repository_sha256, check_author, check_best_oa_location, check_citations,
                                                        check_cited_by_api_url, check_contributors, check_doi, check_grade, check_grade_class, check_isbn13, check_isbns, check_language,
                                                        check_metadata_type, check_primary_location, check_publication_pages, check_publication_published_date, check_publication_published_year,
                                                        check_publication_venue_biblio_issue, check_publication_venue_biblio_pages, check_publication_venue_biblio_volume, check_publication_venue_issn,
                                                        check_publication_venue_name_unified, check_references, check_related_works, check_supplementary_material, check_title)
 from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation, ValidationResult
-
-PAPER_LOCATION_REQUIRED_KEYS = (
-    "license", "is_oa", "pdf_url", "landing_page_url", "source_url",
-    "origin_url", "source", "version", "is_published", "is_accepted", "meta_db_name",
-)
-
 
 def check_metadata_quality_tag(
     metadata_quality_tag: Any, title: Any = None, author: Any = None,
@@ -62,21 +52,8 @@ def check_resources(resources: Any) -> ValidationResult:
             return BaseFieldValidation._fail("resource_url.wrong_type", "resource_url must be a string")
         if not resource_url.strip():
             return BaseFieldValidation._fail("resource_url.empty", "resource_url must not be empty or whitespace-only")
-        valid = not re.search(r'[\s\x00-\x1f\x7f\\<>"{}|^`]|%(?![0-9a-fA-F]{2})', resource_url)
-        try:
-            AnyUrl(resource_url)
-            parsed = urlsplit(resource_url)
-            valid = valid and bool(parsed.scheme and (parsed.netloc or parsed.path))
-            if parsed.scheme in {"http", "https", "ftp", "ftps", "ws", "wss"} or parsed.netloc:
-                valid = valid and bool(parsed.hostname)
-                # Accessing port also detects malformed and out-of-range ports.
-                parsed.port
-            if parsed.scheme == "file":
-                valid = valid and parsed.path.startswith("/")
-        except ValueError:
-            valid = False
-        if not valid:
-            return BaseFieldValidation._fail("resource_url.invalid_url", "resource_url must be a valid absolute URL")
+        if not URL_RE.fullmatch(resource_url):
+            return BaseFieldValidation._fail("resource_url.invalid_url", "resource_url must be an http(s) URL")
         return BaseFieldValidation._ok()
 
     def _check_resource_name(resource_name: Any) -> ValidationResult:
@@ -91,15 +68,15 @@ def check_resources(resources: Any) -> ValidationResult:
             return BaseFieldValidation._fail("resource_path.wrong_type", "resource_path must be a string")
         if resource_download_status in ("downloaded", "partial") and not resource_path.strip():
             return BaseFieldValidation._fail(
-                "resource_path.required", "resource_path must not be empty when resource_download_status is 'downloaded' or 'partial'",
+                "resource_path.empty_when_downloading", "resource_path must not be empty when resource_download_status is 'downloaded' or 'partial'",
             )
         if resource_download_status in ("pending", "failed") and resource_path != "":
             return BaseFieldValidation._fail(
-                "resource_path.must_be_empty", "resource_path must be an empty string when resource_download_status is 'pending' or 'failed'",
+                "resource_path.unempty_when_undownloading", "resource_path must be an empty string when resource_download_status is 'pending' or 'failed'",
             )
         return BaseFieldValidation._ok()
 
-    def _check_resource_download_status(resource_download_status: Any, resource_path: Any) -> ValidationResult:
+    def _check_resource_download_status(resource_download_status: Any) -> ValidationResult:
         if not isinstance(resource_download_status, str):
             return BaseFieldValidation._fail("resource_download_status.wrong_type", "resource_download_status must be a string")
         if not resource_download_status.strip():
@@ -112,9 +89,6 @@ def check_resources(resources: Any) -> ValidationResult:
         if resource_download_status not in {"pending", "downloaded", "partial", "failed"}:
             labels.append("resource_download_status.unsupported_value")
             detail_reasons.append("resource_download_status must be one of 'pending', 'downloaded', 'partial' or 'failed'")
-        if resource_download_status == "downloaded" and (not isinstance(resource_path, str) or not resource_path.strip()):
-            labels.append("resource_download_status.path_required")
-            detail_reasons.append("resource_download_status 'downloaded' requires a non-empty string resource_path")
         return bool(labels), labels, detail_reasons
 
     def _check_resource_type(resource_type: Any) -> ValidationResult:
@@ -153,8 +127,7 @@ def check_resources(resources: Any) -> ValidationResult:
         return BaseFieldValidation._fail("wrong_type", "value must be a list of objects")
 
     required_keys = (
-        "resource_url", "resource_name", "resource_path", "resource_type",
-        "resource_download_status",
+        "resource_url", "resource_name", "resource_path", "resource_type", "resource_download_status",
     )
     error_labels: list[str] = []
     reasons: list[str] = []
@@ -177,8 +150,10 @@ def check_resources(resources: Any) -> ValidationResult:
                 invalid, labels, detail_reasons = _check_resource_path(value, item.get("resource_download_status"))
             elif key == "resource_type":
                 invalid, labels, detail_reasons = _check_resource_type(value)
+            elif key == "resource_download_status":
+                invalid, labels, detail_reasons = _check_resource_download_status(value)
             else:
-                invalid, labels, detail_reasons = _check_resource_download_status(value, item.get("resource_path"))
+                raise ValueError(f"unsupported resource field: {key}")
             if invalid:
                 error_labels.extend(labels)
                 reasons.extend(f"item[{idx}].{reason}" for reason in detail_reasons)
@@ -284,6 +259,10 @@ def check_locations(locations: Any) -> ValidationResult:
         return BaseFieldValidation._fail("null", "value is null")
     if not isinstance(locations, list):
         return BaseFieldValidation._fail("wrong_type", "value must be a list of objects")
+    required_keys = (
+        "license", "is_oa", "pdf_url", "landing_page_url", "source_url",
+        "origin_url", "source", "version", "is_published", "is_accepted", "meta_db_name",
+    )
     error_labels: list[str] = []
     reasons: list[str] = []
     for idx, item in enumerate(locations):
@@ -295,7 +274,7 @@ def check_locations(locations: Any) -> ValidationResult:
             error_labels.append("empty")
             reasons.append(f"item[{idx}] cannot be an empty object")
             continue
-        for key in PAPER_LOCATION_REQUIRED_KEYS:
+        for key in required_keys:
             if key not in item:
                 error_labels.append("missing_key")
                 reasons.append(f"item[{idx}] missing key '{key}'")

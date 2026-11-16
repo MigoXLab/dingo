@@ -2,7 +2,7 @@
 
 ## 实现位置
 
-规则注册、字段映射和 Paper 专用的 OA 检查函数位于 [rule_paper.py](../../dingo/model/rule/scibase/rule_paper.py)，其余共享字段检查函数及标签定义位于 [base_check_paper.py](../../dingo/model/rule/scibase/base_check_paper.py)。
+规则注册、字段映射和 Paper 专用的质量等级、资源、OA 及 locations 检查函数位于 [rule_paper.py](../../dingo/model/rule/scibase/rule_paper.py)，其余共享字段检查函数及标签定义位于 [base_check_paper.py](../../dingo/model/rule/scibase/base_check_paper.py)。
 
 ## 标签约定
 
@@ -17,6 +17,7 @@
 | 字段 | 标签数量 |
 |---|---:|
 | `metadata_type` | 5 |
+| `metadata_quality_tag` | 6 |
 | `doi` | 6 |
 | `isbns` | 4 |
 | `isbn13` | 4 |
@@ -25,6 +26,7 @@
 | `language` | 4 |
 | `author` | 10 |
 | `contributors` | 4 |
+| `resources` | 23 |
 | `locations` | 18 |
 | `access_is_oa` | 5 |
 | `access_oa_status` | 5 |
@@ -50,7 +52,7 @@
 | `access_xinghe_repository_model_version` | 5 |
 | `primary_location` | 4 |
 | `best_oa_location` | 4 |
-| **合计** | **294** |
+| **合计** | **323** |
 
 ## metadata_type
 
@@ -61,6 +63,25 @@
 | `null` | 值为 null | 检查字段值是否为 `null`。 |
 | `empty` | 值为空 | 若值为空，则标记。 |
 | `unsupported_value` | 值不在限定范围内 | 值须属于 2 个限定值之一：`paper`、`ebook`。 |
+
+## metadata_quality_tag
+
+字符串字段，仅允许精确取值 `high`、`medium`、`low`。已接入默认字段列表，也可通过 `key_list: ["metadata_quality_tag"]` 单独检查；依赖字段 `title`、`author`、`abstract` 不必同时加入 `key_list`。
+
+- `title`、`author` 任一为空时，必须为 `low`，优先于摘要判断。
+- `title`、`author` 均非空，`abstract` 为空字符串时，必须为 `medium`。
+- `title`、`author`、`abstract` 均非空时，必须为 `high`。
+
+空值包含字段缺失、`null`、空字符串、纯空白字符串和空容器；摘要缺失或为 `null` 时也按空值处理。作者的 JSON 字符串先按现有框架归一化，例如 `"[]"` 作为空列表处理。本检查只判断完整性，各依赖字段的格式仍由对应字段检查函数校验。
+
+| Label 名 | 中文名称 | 标签含义 |
+|---|---|---|
+| `missing_field` | 字段缺失 | 输入对象中没有 `metadata_quality_tag` 字段。 |
+| `null` | 值为 null | 字段值为 `null`。 |
+| `wrong_type` | 字段类型错误 | 字段值不是字符串。 |
+| `empty` | 值为空 | 字段值为空字符串。 |
+| `unsupported_value` | 值不在限定范围内 | 值不是 `high`、`medium`、`low` 之一，大小写或首尾空白不自动修正。 |
+| `quality_tag_mismatch` | 质量等级不匹配 | 值与标题、作者、摘要完整性要求的等级不一致；原因中返回应有等级。 |
 
 ## doi
 
@@ -214,6 +235,33 @@
 | `wrong_type` | 字段类型错误 | 值不是字符串列表时标记。 |
 | `null` | 值为 null | 检查字段值是否为 `null`。 |
 | `invalid_separator` | 包含非法分隔符 | 若姓名包含非法分隔符，则标记。 |
+
+## resources
+
+| Label 名 | 中文名称 | 标签含义 |
+|---|---|---|
+| `missing_field` | 字段缺失 | 输入对象中没有 `resources` 字段。 |
+| `null` | 值为 null | `resources` 为 `null`。 |
+| `wrong_type` | 结构类型错误 | `resources` 不是列表，或列表元素不是对象。 |
+| `missing_key` | 对象键缺失 | 元素中缺少五个必需 key 之一。 |
+| `resource_url.wrong_type` | URL 类型错误 | 值不是字符串。 |
+| `resource_url.empty` | URL 为空 | 值为空字符串或仅含空白字符。 |
+| `resource_url.invalid_url` | URL 格式错误 | 值不是匹配 HTTP(S) URL 正则的字符串。 |
+| `resource_name.wrong_type` | 名称类型错误 | 值不是字符串。 |
+| `resource_name.empty` | 名称为空 | 值为空字符串或仅含空白字符。 |
+| `resource_path.wrong_type` | 路径类型错误 | 值不是字符串。 |
+| `resource_path.empty_when_downloading` | 下载中路径为空 | 状态为 `downloaded` 或 `partial` 时，字符串路径为空或仅含空白字符。 |
+| `resource_path.unempty_when_undownloading` | 未下载路径非空 | 状态为 `pending` 或 `failed` 时，路径不严格等于空字符串。 |
+| `resource_type.wrong_type` | 资源类型字段类型错误 | 值不是字符串列表，或含有非字符串元素。 |
+| `resource_type.empty` | 资源类型为空 | 列表为空。 |
+| `resource_type.not_lowercase` | 资源类型非小写 | 至少一个字符串包含大写字母。 |
+| `resource_type.unsupported_value` | 资源类型不在限定范围内 | 至少一个元素不是 `code`、`dataset`、`supplementary_material`、`other` 之一，包括空字符串。 |
+| `resource_type.duplicate` | 资源类型重复 | 列表中存在重复字符串。 |
+| `resource_type.other_conflict` | 资源类型互斥冲突 | `other` 与任一明确类型同时出现。 |
+| `resource_download_status.wrong_type` | 下载状态类型错误 | 值不是字符串。 |
+| `resource_download_status.empty` | 下载状态为空 | 值为空字符串或仅含空白字符。 |
+| `resource_download_status.not_lowercase` | 下载状态非小写 | 字符串包含大写字母。 |
+| `resource_download_status.unsupported_value` | 下载状态不在限定范围内 | 值不是 `pending`、`downloaded`、`partial`、`failed` 之一。 |
 
 ## locations
 

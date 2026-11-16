@@ -4,7 +4,7 @@ from typing import Any
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.model.model import Model
-from dingo.model.rule.scibase.base_check_paper import (check_abstract, check_access_oa_url, check_access_xinghe_repository_model_name, check_access_xinghe_repository_model_version,
+from dingo.model.rule.scibase.base_check_paper import (URL_RE, check_abstract, check_access_oa_url, check_access_xinghe_repository_model_name, check_access_xinghe_repository_model_version,
                                                        check_access_xinghe_repository_origin_path, check_access_xinghe_repository_sha256, check_author, check_best_oa_location, check_citations,
                                                        check_cited_by_api_url, check_contributors, check_doi, check_grade, check_grade_class, check_isbn13, check_isbns, check_language,
                                                        check_metadata_type, check_primary_location, check_publication_pages, check_publication_published_date, check_publication_published_year,
@@ -12,10 +12,153 @@ from dingo.model.rule.scibase.base_check_paper import (check_abstract, check_acc
                                                        check_publication_venue_name_unified, check_references, check_related_works, check_supplementary_material, check_title)
 from dingo.model.rule.scibase.base_field_validation import BaseFieldValidation, ValidationResult
 
-PAPER_LOCATION_REQUIRED_KEYS = (
-    "license", "is_oa", "pdf_url", "landing_page_url", "source_url",
-    "origin_url", "source", "version", "is_published", "is_accepted", "meta_db_name",
-)
+
+def check_metadata_quality_tag(
+    metadata_quality_tag: Any, title: Any = None, author: Any = None,
+    abstract: Any = None,
+) -> ValidationResult:
+    """Validate the quality tag against title, author and abstract completeness."""
+    if metadata_quality_tag is None:
+        return BaseFieldValidation._fail("null", "value is null")
+    if not isinstance(metadata_quality_tag, str):
+        return BaseFieldValidation._fail("wrong_type", "value must be a string")
+    if metadata_quality_tag == "":
+        return BaseFieldValidation._fail("empty", "value cannot be empty string")
+    if metadata_quality_tag not in {"high", "medium", "low"}:
+        return BaseFieldValidation._fail(
+            "unsupported_value", f"unsupported value '{metadata_quality_tag}'",
+        )
+
+    def _is_empty(value: Any) -> bool:
+        return not value.strip() if isinstance(value, str) else not value
+
+    if _is_empty(title) or _is_empty(author):
+        expected_tag = "low"
+    elif _is_empty(abstract):
+        expected_tag = "medium"
+    else:
+        expected_tag = "high"
+    if metadata_quality_tag != expected_tag:
+        return BaseFieldValidation._fail(
+            "quality_tag_mismatch",
+            f"value must be '{expected_tag}' based on title, author and abstract completeness",
+        )
+    return BaseFieldValidation._ok()
+
+
+def check_resources(resources: Any) -> ValidationResult:
+    """Validate resource objects and their required fields and relationships."""
+    def _check_resource_url(resource_url: Any) -> ValidationResult:
+        if not isinstance(resource_url, str):
+            return BaseFieldValidation._fail("resource_url.wrong_type", "resource_url must be a string")
+        if not resource_url.strip():
+            return BaseFieldValidation._fail("resource_url.empty", "resource_url must not be empty or whitespace-only")
+        if not URL_RE.fullmatch(resource_url):
+            return BaseFieldValidation._fail("resource_url.invalid_url", "resource_url must be an http(s) URL")
+        return BaseFieldValidation._ok()
+
+    def _check_resource_name(resource_name: Any) -> ValidationResult:
+        if not isinstance(resource_name, str):
+            return BaseFieldValidation._fail("resource_name.wrong_type", "resource_name must be a string")
+        if not resource_name.strip():
+            return BaseFieldValidation._fail("resource_name.empty", "resource_name must not be empty or whitespace-only")
+        return BaseFieldValidation._ok()
+
+    def _check_resource_path(resource_path: Any, resource_download_status: Any) -> ValidationResult:
+        if not isinstance(resource_path, str):
+            return BaseFieldValidation._fail("resource_path.wrong_type", "resource_path must be a string")
+        if resource_download_status in ("downloaded", "partial") and not resource_path.strip():
+            return BaseFieldValidation._fail(
+                "resource_path.empty_when_downloading", "resource_path must not be empty when resource_download_status is 'downloaded' or 'partial'",
+            )
+        if resource_download_status in ("pending", "failed") and resource_path != "":
+            return BaseFieldValidation._fail(
+                "resource_path.unempty_when_undownloading", "resource_path must be an empty string when resource_download_status is 'pending' or 'failed'",
+            )
+        return BaseFieldValidation._ok()
+
+    def _check_resource_download_status(resource_download_status: Any) -> ValidationResult:
+        if not isinstance(resource_download_status, str):
+            return BaseFieldValidation._fail("resource_download_status.wrong_type", "resource_download_status must be a string")
+        if not resource_download_status.strip():
+            return BaseFieldValidation._fail("resource_download_status.empty", "resource_download_status must not be empty or whitespace-only")
+        labels: list[str] = []
+        detail_reasons: list[str] = []
+        if resource_download_status != resource_download_status.lower():
+            labels.append("resource_download_status.not_lowercase")
+            detail_reasons.append("resource_download_status must be lowercase")
+        if resource_download_status not in {"pending", "downloaded", "partial", "failed"}:
+            labels.append("resource_download_status.unsupported_value")
+            detail_reasons.append("resource_download_status must be one of 'pending', 'downloaded', 'partial' or 'failed'")
+        return bool(labels), labels, detail_reasons
+
+    def _check_resource_type(resource_type: Any) -> ValidationResult:
+        if not isinstance(resource_type, list) or not all(isinstance(entry, str) for entry in resource_type):
+            return BaseFieldValidation._fail(
+                "resource_type.wrong_type", "resource_type must be a list of strings",
+            )
+        if not resource_type:
+            return BaseFieldValidation._fail(
+                "resource_type.empty", "resource_type must not be empty",
+            )
+
+        allowed = {"code", "dataset", "supplementary_material", "other"}
+        labels: list[str] = []
+        detail_reasons: list[str] = []
+        if any(entry != entry.lower() for entry in resource_type):
+            labels.append("resource_type.not_lowercase")
+            detail_reasons.append("resource_type elements must be lowercase")
+        if any(entry not in allowed for entry in resource_type):
+            labels.append("resource_type.unsupported_value")
+            detail_reasons.append(
+                "resource_type elements must be one of 'code', 'dataset', 'supplementary_material' or 'other'",
+            )
+        values = set(resource_type)
+        if len(values) != len(resource_type):
+            labels.append("resource_type.duplicate")
+            detail_reasons.append("resource_type elements must not contain duplicates")
+        if "other" in values and values & (allowed - {"other"}):
+            labels.append("resource_type.other_conflict")
+            detail_reasons.append("resource_type 'other' must not be combined with explicit resource types")
+        return bool(labels), labels, detail_reasons
+
+    if resources is None:
+        return BaseFieldValidation._fail("null", "value is null")
+    if not isinstance(resources, list):
+        return BaseFieldValidation._fail("wrong_type", "value must be a list of objects")
+
+    required_keys = (
+        "resource_url", "resource_name", "resource_path", "resource_type", "resource_download_status",
+    )
+    error_labels: list[str] = []
+    reasons: list[str] = []
+    for idx, item in enumerate(resources):
+        if not isinstance(item, dict):
+            error_labels.append("wrong_type")
+            reasons.append(f"item[{idx}] must be an object")
+            continue
+        for key in required_keys:
+            if key not in item:
+                error_labels.append("missing_key")
+                reasons.append(f"item[{idx}] missing key '{key}'")
+                continue
+            value = item[key]
+            if key == "resource_url":
+                invalid, labels, detail_reasons = _check_resource_url(value)
+            elif key == "resource_name":
+                invalid, labels, detail_reasons = _check_resource_name(value)
+            elif key == "resource_path":
+                invalid, labels, detail_reasons = _check_resource_path(value, item.get("resource_download_status"))
+            elif key == "resource_type":
+                invalid, labels, detail_reasons = _check_resource_type(value)
+            elif key == "resource_download_status":
+                invalid, labels, detail_reasons = _check_resource_download_status(value)
+            else:
+                raise ValueError(f"unsupported resource field: {key}")
+            if invalid:
+                error_labels.extend(labels)
+                reasons.extend(f"item[{idx}].{reason}" for reason in detail_reasons)
+    return bool(error_labels), error_labels, reasons
 
 
 def check_locations(locations: Any) -> ValidationResult:
@@ -117,6 +260,10 @@ def check_locations(locations: Any) -> ValidationResult:
         return BaseFieldValidation._fail("null", "value is null")
     if not isinstance(locations, list):
         return BaseFieldValidation._fail("wrong_type", "value must be a list of objects")
+    required_keys = (
+        "license", "is_oa", "pdf_url", "landing_page_url", "source_url",
+        "origin_url", "source", "version", "is_published", "is_accepted", "meta_db_name",
+    )
     error_labels: list[str] = []
     reasons: list[str] = []
     for idx, item in enumerate(locations):
@@ -128,7 +275,7 @@ def check_locations(locations: Any) -> ValidationResult:
             error_labels.append("empty")
             reasons.append(f"item[{idx}] cannot be an empty object")
             continue
-        for key in PAPER_LOCATION_REQUIRED_KEYS:
+        for key in required_keys:
             if key not in item:
                 error_labels.append("missing_key")
                 reasons.append(f"item[{idx}] missing key '{key}'")
@@ -209,6 +356,10 @@ class RulePaperFieldValidation(BaseFieldValidation):
 
     field_validators = {
         "metadata_type": lambda record: check_metadata_type(record.get("metadata_type")),
+        "metadata_quality_tag": lambda record: check_metadata_quality_tag(
+            record.get("metadata_quality_tag"), record.get("title"),
+            record.get("author"), record.get("abstract"),
+        ),
         "doi": lambda record: check_doi(record.get("doi"), record.get("metadata_type")),
         "isbns": lambda record: check_isbns(record.get("isbns"), record.get("metadata_type")),
         "isbn13": lambda record: check_isbn13(record.get("isbn13"), record.get("metadata_type")),
@@ -217,6 +368,7 @@ class RulePaperFieldValidation(BaseFieldValidation):
         "language": lambda record: check_language(record.get("language")),
         "author": lambda record: check_author(record.get("author")),
         "contributors": lambda record: check_contributors(record.get("contributors")),
+        "resources": lambda record: check_resources(record.get("resources")),
         "locations": lambda record: check_locations(record.get("locations")),
         "access_is_oa": lambda record: check_access_is_oa(
             record.get("access_is_oa"),

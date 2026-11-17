@@ -91,7 +91,7 @@ dingo/
 │       └── cli.py           ← CLI entry point (subcommands: eval, eval-retrieval, info, serve)
 │
 ├── examples/                ← Usage examples (SDK, CLI, various scenarios)
-│   └── Milvus_benchmark/    ← Milvus benchmark loading, import, and query examples
+│   └── Milvus_benchmark/    ← Milvus benchmark loading, import, query, and offline evaluation examples
 ├── test/                    ← Test suite
 │   ├── data/                ← Test data files
 │   ├── env/                 ← Test environment configs

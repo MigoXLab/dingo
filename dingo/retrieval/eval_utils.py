@@ -15,8 +15,10 @@ import math
 import os
 import re
 import unicodedata
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
 from difflib import SequenceMatcher
+from numbers import Real
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -128,6 +130,89 @@ def compute_query_metrics(
         "recall_at_1000": round(recall1000, 5),
         "precision_at_10": round(rel_in_10 / 10, 5),
         "map_at_10": round(map10, 5),
+    }
+
+
+def summarize_latencies(elapsed_ms: Iterable[float]) -> dict[str, int | float | None]:
+    """Summarize finite nonnegative milliseconds with nearest-rank percentiles"""
+    latencies = list(elapsed_ms)
+    if any(isinstance(value, bool) or not isinstance(value, Real)
+           or not math.isfinite(value) or value < 0 for value in latencies):
+        raise ValueError("Latencies must be finite nonnegative numbers")
+    latencies.sort()
+    count = len(latencies)
+    return {
+        "count": count,
+        "mean_ms": math.fsum(latencies) / count if count else None,
+        "p50_ms": latencies[math.ceil(0.50 * count) - 1] if count else None,
+        "p95_ms": latencies[math.ceil(0.95 * count) - 1] if count else None,
+        "p99_ms": latencies[math.ceil(0.99 * count) - 1] if count else None,
+    }
+
+
+def compute_ann_result_quality(
+    hits: Sequence[Mapping[str, Any]], *, base_count: int, top_k: int,
+) -> dict[str, int | bool]:
+    """Count valid and duplicate raw slots across the entire ANN response"""
+    if type(base_count) is not int or base_count < 0 or type(top_k) is not int or top_k <= 0:
+        raise ValueError("base_count must be nonnegative and top_k must be positive integers")
+    seen: set[tuple[type, int | str]] = set()
+    valid_count = duplicate_count = 0
+    for hit in hits:
+        identifier, distance = hit.get("id"), hit.get("distance")
+        key = (type(identifier), identifier)
+        duplicate_count += key in seen
+        seen.add(key)
+        valid_count += (
+            type(identifier) is int and 0 <= identifier < base_count
+            and isinstance(distance, Real) and not isinstance(distance, bool)
+            and math.isfinite(distance)
+        )
+    return {
+        "returned_count": len(hits),
+        "valid_count": valid_count,
+        "duplicate_count": duplicate_count,
+        "top_k_adherent": len(hits) == top_k,
+    }
+
+
+def summarize_ann_metrics(attempts: Iterable[Mapping[str, Any]]) -> dict[str, int | float | None]:
+    """Aggregate independent attempts with fractional rates and successful latency in ms
+
+    Success includes ok and empty responses; has_results_rate uses successes
+    Hit rates pool successful slots, recall and top-k adherence use all attempts
+    Undefined rates, recall, and latency are None
+    """
+    records = list(attempts)
+    successful = [record for record in records if record["status"] in {"ok", "empty"}]
+    count, success_count = len(records), len(successful)
+    ok_count = sum(record["status"] == "ok" for record in records)
+    timeout_count = sum(record["status"] == "timeout" for record in records)
+    qualities = [record["quality"] for record in successful]
+    returned_count = sum(quality["returned_count"] for quality in qualities)
+    latency = summarize_latencies(record["elapsed_ms"] for record in successful)
+    return {
+        "attempt_count": count,
+        "success_count": success_count,
+        "timeout_count": timeout_count,
+        "ok_count": ok_count,
+        "recall_at_10": math.fsum(record["recall_at_10"] for record in records) / count if count else None,
+        "success_rate": success_count / count if count else None,
+        "timeout_rate": timeout_count / count if count else None,
+        "has_results_rate": ok_count / success_count if success_count else None,
+        "valid_hit_rate": (
+            sum(quality["valid_count"] for quality in qualities) / returned_count if returned_count else None
+        ),
+        "duplicate_rate": (
+            sum(quality["duplicate_count"] for quality in qualities) / returned_count if returned_count else None
+        ),
+        "top_k_adherence_rate": (
+            sum(record["quality"]["top_k_adherent"] for record in records) / count if count else None
+        ),
+        "mean_latency_ms": latency["mean_ms"],
+        "p50_latency_ms": latency["p50_ms"],
+        "p95_latency_ms": latency["p95_ms"],
+        "p99_latency_ms": latency["p99_ms"],
     }
 
 

@@ -8,16 +8,9 @@ from dingo.io.output.eval_detail import EvalDetail
 from dingo.model import Model
 from dingo.model.llm.code_quality.base_code_quality import BaseCodeEvaluation, configured_evaluator, execution_error
 from dingo.model.llm.llm_text_advertisement import LLMTextAdvertisement
-from dingo.model.llm.repository_code_quality.common.llm_repository_license_review import LLMRepositoryLicenseReview
-from dingo.model.llm.repository_code_quality.common.llm_repository_malware_review import LLMRepositoryReverseShellReview
 from dingo.model.llm.repository_code_quality.common.llm_repository_security_review import LLMRepositorySecurityPolitics, LLMRepositorySecurityProhibition
 from dingo.model.llm.repository_code_quality.common.llm_repository_sensitive_review import LLMRepositorySensitiveReview
-from dingo.model.llm.repository_code_quality.common.rules_artifact import artifact_findings
-from dingo.model.llm.repository_code_quality.common.rules_input_content import input_content_findings, input_content_review_findings
-from dingo.model.llm.repository_code_quality.common.rules_language_consistency import language_consistency_findings, language_consistency_review_findings
-from dingo.model.llm.repository_code_quality.common.rules_license import license_candidates, license_review_findings, license_rule_finding
-from dingo.model.llm.repository_code_quality.common.rules_malware import clamav_findings, reverse_shell_candidates, reverse_shell_rule_findings
-from dingo.model.llm.repository_code_quality.common.rules_placeholder_implementation import placeholder_implementation_findings, placeholder_implementation_review_findings
+from dingo.model.llm.repository_code_quality.common.rules_input_content import input_content_findings
 from dingo.model.llm.repository_code_quality.common.rules_schema import REQUIRED_FIELDS, schema_findings
 from dingo.model.llm.repository_code_quality.common.rules_sensitive import confirmed_security_findings, contextual_security_candidates, security_candidates, security_evidence
 from dingo.model.llm.repository_code_quality.common.rules_similarity import intra_document_repetition
@@ -34,21 +27,18 @@ class LLMRepositoryCodeQualityPipeline(BaseCodeEvaluation):
     # record fail Effectiveness.Missing_Required before any LLM stage ran.
     _required_fields = [RequiredField(name) for name in REQUIRED_FIELDS]
     prompt = "\n".join((
-        "Repository code quality pipeline v3 with schema, content, contextual-character, and code-truncation hard gates.",
+        "Repository code quality pipeline v3 with schema, content, and code-truncation hard gates.",
         LLMTextAdvertisement.prompt,
         LLMRepositorySensitiveReview.prompt,
         LLMRepositorySecurityProhibition.prompt,
         LLMRepositorySecurityPolitics.prompt,
-        LLMRepositoryLicenseReview.prompt,
-        LLMRepositoryReverseShellReview.prompt,
     ))
     _metric_info = {
         "category": "Pretrain Text Quality Assessment Metrics",
         "metric_name": "LLMRepositoryCodeQualityPipeline",
         "description": (
-            "Repository record-field schema, code truncation, content validity, contextual character anomalies, advertisement, "
-            "sensitive data, prohibited/political content, repetition, model-confirmed license declaration, "
-            "language consistency, artifact, placeholder implementation, and malware checks."
+            "Repository record-field schema, code truncation, content validity, advertisement, "
+            "sensitive data, prohibited/political content, and repetition checks."
         ),
         "examples": "examples/repository_code_quality/evaluate_repository_executor.py",
     }
@@ -84,8 +74,6 @@ class LLMRepositoryCodeQualityPipeline(BaseCodeEvaluation):
         candidates = security_candidates(input_data.content)
         contextual_candidates = contextual_security_candidates(candidates)
         review_input = input_data.model_copy(update={"repository_security_candidates": contextual_candidates})
-        license_hits = license_candidates(input_data)
-        shell_hits = reverse_shell_candidates(input_data)
         stages = [
             ("advertisement", LLMTextAdvertisement, input_data),
             ("prohibition", LLMRepositorySecurityProhibition, input_data),
@@ -93,19 +81,6 @@ class LLMRepositoryCodeQualityPipeline(BaseCodeEvaluation):
         ]
         if contextual_candidates:
             stages.insert(1, ("sensitive", LLMRepositorySensitiveReview, review_input))
-        # Candidate-then-confirm stages: the rule bounds the prompt, the model decides.
-        if license_hits:
-            stages.append((
-                "license",
-                LLMRepositoryLicenseReview,
-                input_data.model_copy(update={"repository_license_candidates": license_hits}),
-            ))
-        if shell_hits:
-            stages.append((
-                "reverse_shell",
-                LLMRepositoryReverseShellReview,
-                input_data.model_copy(update={"repository_reverse_shell_candidates": shell_hits}),
-            ))
 
         stage_results = []
         for name, evaluator, data in stages:
@@ -114,23 +89,11 @@ class LLMRepositoryCodeQualityPipeline(BaseCodeEvaluation):
             except Exception as exc:
                 stage_results.append((name, execution_error(evaluator.__name__, type(exc).__name__)))
 
-        findings = artifact_findings(input_data)
-        findings.extend(placeholder_implementation_findings(input_data))
-        findings.extend(language_consistency_findings(input_data))
-        findings.extend(clamav_findings(input_data))
-        findings.extend(input_content_review_findings(input_data))
-        findings.extend(language_consistency_review_findings(input_data))
-        findings.extend(placeholder_implementation_review_findings(input_data))
-        findings.extend(license_review_findings(input_data))
-        findings.extend(list(getattr(input_data, "repository_duplicate_findings", []) or []))
+        findings = list(getattr(input_data, "repository_duplicate_findings", []) or [])
         findings.extend(confirmed_security_findings(candidates))
         repeated = intra_document_repetition(input_data.content)
         if repeated:
             findings.append(repeated)
-        candidate_evidence = {
-            "license": [candidate["summary"] for candidate in license_hits[:3]],
-            "reverse_shell": [candidate["summary"] for candidate in shell_hits[:3]],
-        }
         errors = []
         for name, result in stage_results:
             if not result.applicable:
@@ -158,17 +121,7 @@ class LLMRepositoryCodeQualityPipeline(BaseCodeEvaluation):
                     evidence = security_evidence(candidates, category) if category else ""
                     if evidence:
                         reason = f"{reason} Matched evidence: {evidence}."
-                signature_evidence = "; ".join(candidate_evidence.get(name, []))
-                if signature_evidence:
-                    reason = f"{reason} Rule evidence: {signature_evidence}."
                 findings.append({"label": label, "reason": str(reason)})
-
-        # Fail open to the deterministic verdict so an LLM outage never hides a hit.
-        failed_stages = {name for name, _, _ in errors}
-        if "license" in failed_stages and license_hits:
-            findings.append(license_rule_finding(license_hits[0]))
-        if "reverse_shell" in failed_stages and shell_hits:
-            findings.extend(reverse_shell_rule_findings(shell_hits))
 
         deduplicated = []
         labels_seen = set()

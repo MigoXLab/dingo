@@ -482,15 +482,6 @@ def input_content_findings(data: Any) -> list[dict[str, str]]:
             f"Found {len(illegal_positions)} unexplained C0/C1 control character(s): {evidence}.",
         ))
 
-    language = _record_value(data, "language")
-    paths = _path_values(data)
-    anomaly = _contextual_character_anomaly_reason(content, language, paths)
-    if anomaly:
-        findings.append(_finding(
-            "Contextual_Character_Anomaly",
-            f"Unexpected zero-width format, private-use, or unassigned code point(s): {anomaly}.",
-        ))
-
     length = len(content)
     line_lengths = [len(line) for line in content.splitlines()] or [length]
     max_line = max(line_lengths)
@@ -519,6 +510,26 @@ def input_content_findings(data: Any) -> list[dict[str, str]]:
                 f"Declared content SHA-256 does not match: declared={declared_sha256}, actual={actual_sha256}.",
             ))
     return findings
+
+
+def contextual_character_findings(data: Any) -> list[dict[str, str]]:
+    """Hard findings for unexpected zero-width, private-use, or unassigned code points.
+
+    Composed by ``LLMRepositoryCodeQualityPipelineV2``; the V1 pipeline keeps the
+    original hard-rule set only.
+    """
+    content = getattr(data, "content", None)
+    if not isinstance(content, str):
+        return []
+    reason = _contextual_character_anomaly_reason(
+        content, _record_value(data, "language"), _path_values(data)
+    )
+    if not reason:
+        return []
+    return [_finding(
+        "Contextual_Character_Anomaly",
+        f"Unexpected zero-width format, private-use, or unassigned code point(s): {reason}.",
+    )]
 
 
 def input_content_review_findings(data: Any) -> list[dict[str, str]]:

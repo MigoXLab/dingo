@@ -57,6 +57,10 @@ class DatasetMinerUArgs(BaseModel):
     include_types: Optional[List[str]] = None  # 只保留指定的 block 类型，None 表示全部保留
 
 
+class DatasetANNBenchmarksArgs(BaseModel):
+    cache_dir: str = "~/.cache/dingo/ann_benchmarks"
+
+
 class DatasetArgs(BaseModel):
     source: str = 'hugging_face'
     format: str = 'json'
@@ -69,6 +73,7 @@ class DatasetArgs(BaseModel):
     csv_config: DatasetCsvArgs = DatasetCsvArgs()
     parquet_config: DatasetParquetArgs = DatasetParquetArgs()
     mineru_config: DatasetMinerUArgs = DatasetMinerUArgs()
+    ann_benchmarks_config: DatasetANNBenchmarksArgs = DatasetANNBenchmarksArgs()
 
 
 class ExecutorResultSaveArgs(BaseModel):
@@ -235,6 +240,7 @@ class InputArgs(BaseModel):
                 },
                 "parquet_config": {"batch_size", "columns"},
                 "mineru_config": {"include_types"},
+                "ann_benchmarks_config": {"cache_dir"},
             },
             "executor": {
                 "start_index": ...,

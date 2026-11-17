@@ -34,7 +34,7 @@
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
-| source | str | `"hugging_face"` | Yes | 数据源，可选 `local`、`hugging_face`、`s3`、`sql` |
+| source | str | `"hugging_face"` | Yes | 数据源，可选 `local`、`hugging_face`、`s3`、`sql`、`ann_benchmarks` |
 | format | str | `"json"` | Yes | 数据转换格式，完整列表见下文 |
 | hf_config | object | `{}` | Depends | Hugging Face 数据源配置，仅 `source="hugging_face"` 使用 |
 | s3_config | object | `{}` | Depends | S3/Ceph/MinIO 连接配置，仅 `source="s3"` 使用 |
@@ -43,6 +43,7 @@
 | csv_config | object | `{}` | Depends | CSV 读取配置，仅 `format="csv"` 使用 |
 | parquet_config | object | `{}` | Depends | Parquet 读取配置，仅 `format="parquet"` 使用 |
 | mineru_config | object | `{}` | Depends | MinerU block 过滤配置，仅 `mineru` / `mineru_v2` 使用 |
+| ann_benchmarks_config | object | `{}` | No | ANN-Benchmarks 缓存配置，仅 `source="ann_benchmarks"` 使用 |
 
 `dataset` 中没有 `field` 字段。评估字段映射应配置在 `evaluator[].fields` 中，例如：
 
@@ -66,6 +67,7 @@
 | `hugging_face` | Hugging Face Hub 数据集名称 | `tatsu-lab/alpaca` | `hf_config` |
 | `s3` | 包含 Bucket 的完整 S3 URI | `s3://bucket/path/train.jsonl` | `s3_config` |
 | `sql` | 要执行的 SQL 查询 | `SELECT id, content FROM samples` | `sql_config` |
+| `ann_benchmarks` | 支持的 ANN-Benchmarks 数据集名称 | `sift-128-euclidean` | `ann_benchmarks_config` |
 
 #### 支持的数据格式
 
@@ -85,6 +87,7 @@
 | `multi_turn_dialog` | 多轮对话 JSON/JSONL | 配合 `executor.multi_turn_mode` 解析多轮内容 |
 | `image` | 含图像字段的 JSON/JSONL | 用于图像类评估器 |
 | `repository_code_jsonl` | 仓库代码 JSONL | 支持跨记录重复标注 |
+| `ann_benchmarks` | ANN-Benchmarks HDF5 数据集包 | 仅搭配同名数据源，返回可切片数组和元数据 |
 
 数据源还会施加额外限制：S3 当前支持 `jsonl`、`ms_swift` 和 `plaintext`；当 S3 `input_path` 是以 `/` 结尾的对象前缀时，`jsonl` 和 `ms_swift` 只读取扩展名为 `.jsonl`（大小写不敏感）的对象。SQL 推荐使用 `jsonl`；CSV、Excel、Parquet、Markdown、MinerU 和仓库代码格式由本地数据源读取。
 
@@ -168,6 +171,21 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 - `mineru_v2`：对应 MinerU 的 `content_list_v2.json`，顶层为页面数组，每页包含 block 数组
 
 每个 block 会被转换为一条 `Data` 记录。block 的 `type`、`bbox`、`page_idx` 等原始字段会通过 Pydantic `extra="allow"` 保留在 Data 对象上。
+
+#### DatasetANNBenchmarksArgs 配置 (dataset.ann_benchmarks_config)
+
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| cache_dir | str | `"~/.cache/dingo/ann_benchmarks"` | No | HDF5 下载缓存目录；支持 `~`，相对路径以启动目录为基准 |
+
+初期仅支持 SIFT1M Euclidean：`input_path="sift-128-euclidean"`，并同时设置
+`source="ann_benchmarks"`、`format="ann_benchmarks"`
+这是数据集结构加载接口，
+返回包含 `base`、`queries`、`ground_truth`、`distances` 和 `metadata` 的一个数据集包
+数组为可切片的 HDF5 对象，应在 Dataset 的 `with`
+上下文内读取；退出时关闭文件，需要保留的数据应在上下文内切片复制
+`InputArgs.to_dict()` 的安全白名单包含 `ann_benchmarks_config.cache_dir`，用于配置快照
+安装依赖和完整示例见 [ANN-Benchmarks 数据集指南](dataset/ann_benchmarks.md)
 
 #### ms-swift 格式 (dataset.format = "ms_swift")
 

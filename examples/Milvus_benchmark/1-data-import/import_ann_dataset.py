@@ -1,13 +1,17 @@
-"""Preview ANN-Benchmarks base-vector import batches"""
+"""Preview ANN-Benchmarks batches or write them to an existing Milvus collection"""
 
 from __future__ import annotations
 import argparse
+import os
 import sys
 from collections.abc import Iterator, Sequence
+from math import isfinite
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pymilvus import MilvusClient
+
     from dingo.io import Data
     from dingo.retrieval.import_client import ImportRecord
 
@@ -44,15 +48,52 @@ def iter_import_batches(
         ]
 
 
-def main() -> None:
+def positive_timeout(value: str) -> float:
+    """Parse a positive finite timeout in seconds"""
+    try:
+        timeout = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("Timeout must be a positive finite number") from None
+    if not isfinite(timeout) or timeout <= 0:
+        raise argparse.ArgumentTypeError("Timeout must be a positive finite number")
+    return timeout
+
+
+def create_milvus_client(options: argparse.Namespace) -> MilvusClient:
+    """Create the optional SDK client for an explicit write"""
+    try:
+        from pymilvus import MilvusClient
+    except ImportError:
+        raise SystemExit("Milvus writes require pymilvus; install it with: pip install pymilvus") from None
+    return MilvusClient(
+        uri=options.milvus_uri, db_name=options.milvus_db_name,
+        token=os.environ.get("MILVUS_TOKEN", ""), timeout=options.timeout,
+    )
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dataset", nargs="?", default=DATASET_NAME, choices=[DATASET_NAME])
     parser.add_argument("--cache-dir", default=DEFAULT_CACHE_DIR,
                         help="HDF5 cache directory (default: %(default)s)")
     parser.add_argument("--start-row", type=int, default=0, help="Zero-based starting base row (default: 0)")
-    parser.add_argument("--count", type=int, default=5, help="Number of base rows to preview (default: 5)")
+    parser.add_argument("--count", type=int, default=5, help="Number of base rows to process (default: 5)")
     parser.add_argument("--batch-size", type=int, default=2, help="Maximum rows per batch (default: 2)")
-    options = parser.parse_args()
+    parser.add_argument("--write-milvus", action="store_true", help="Write batches to an existing collection")
+    parser.add_argument("--milvus-uri", help="Milvus URI (required for writes)")
+    parser.add_argument("--milvus-db-name", help="Existing Milvus database (required for writes)")
+    parser.add_argument("--milvus-collection", help="Existing Milvus collection (required for writes)")
+    parser.add_argument("--milvus-id-field", default="id")
+    parser.add_argument("--milvus-vector-field", default="vector")
+    parser.add_argument("--timeout", type=positive_timeout, default=30.0, help="SDK timeout in seconds (default: 30)")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    parser = build_parser()
+    options = parser.parse_args(argv)
+    if options.write_milvus and not all((options.milvus_uri, options.milvus_db_name, options.milvus_collection)):
+        parser.error("Writes require --milvus-uri, --milvus-db-name, and --milvus-collection")
     if options.start_row < 0:
         parser.error("Start row must be nonnegative")
     if options.count <= 0 or options.batch_size <= 0:
@@ -74,22 +115,45 @@ def main() -> None:
     print(f"Dataset: {options.dataset}", flush=True)
     print(f"Cache: {options.cache_dir}", flush=True)
     total_records = total_batches = 0
-    with dataset_map["ann_benchmarks"](source=source) as dataset:
-        data = next(dataset.get_data())
-        try:
+    sdk_client = None
+    try:
+        with dataset_map["ann_benchmarks"](source=source) as dataset:
+            data = next(dataset.get_data())
             for index, batch in enumerate(iter_import_batches(
                 data, options.start_row, options.count, options.batch_size,
             ), 1):
-                first_id = batch[0].source_id
-                last_id = batch[-1].source_id
-                print(
-                    f"Batch {index}: size={len(batch)}, source_ids={first_id}..{last_id}, "
-                    f"dimension={len(batch[0].vector)}, first_vector_sample={batch[0].vector[:5]}"
-                )
+                if options.write_milvus and sdk_client is None:
+                    from dingo.retrieval.backends.importers.milvus import MilvusImportClient
+
+                    sdk_client = create_milvus_client(options)
+                    importer = MilvusImportClient(
+                        sdk_client, collection_name=options.milvus_collection,
+                        id_field=options.milvus_id_field, vector_field=options.milvus_vector_field,
+                        timeout=options.timeout,
+                    )
+                if options.write_milvus:
+                    result = importer.write_batch(batch)
+                    print(
+                        f"Batch {index}: submitted={result.submitted}, accepted={result.accepted}, "
+                        f"rejected={result.rejected}, unknown={result.unknown}", flush=True,
+                    )
+                    if result.accepted != result.submitted or result.error:
+                        raise SystemExit("Milvus batch was not fully acknowledged; stopped without retrying")
+                else:
+                    first_id = batch[0].source_id
+                    last_id = batch[-1].source_id
+                    print(
+                        f"Batch {index}: size={len(batch)}, source_ids={first_id}..{last_id}, "
+                        f"dimension={len(batch[0].vector)}, first_vector_sample={batch[0].vector[:5]}"
+                    )
                 total_records += len(batch)
                 total_batches += 1
-        except ValueError as exc:
-            parser.error(str(exc))
+    except ValueError as exc:
+        parser.error(str(exc))
+    finally:
+        if sdk_client is not None:
+            sdk_client.close()
+
     print(f"Total: records={total_records}, batches={total_batches}")
 
 

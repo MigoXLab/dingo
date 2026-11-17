@@ -3,6 +3,7 @@
 import importlib.util
 import io
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -126,13 +127,6 @@ def test_invalid_dimensions_do_not_call_client(runner, data):
         execute(runner, data, FakeClient([]))
 
 
-def test_placeholder_uses_generic_root_and_remains_unimplemented(runner, data):
-    assert isinstance(MilvusSearchClient(), SearchClient)
-    with pytest.raises(NotImplementedError, match="Milvus"):
-        execute(runner, data, MilvusSearchClient())
-    assert "sciverse_mcp" in list_backends()
-
-
 def test_cli_never_overwrites_existing_output(runner, tmp_path, monkeypatch):
     from dingo.data.datasource.ann_benchmarks import ANNBenchmarksDataSource
 
@@ -143,7 +137,254 @@ def test_cli_never_overwrites_existing_output(runner, tmp_path, monkeypatch):
     monkeypatch.setattr(ANNBenchmarksDataSource, "load", forbidden_load)
     output = tmp_path / "existing.jsonl"
     output.write_text("keep original\n")
-    monkeypatch.setattr("sys.argv", ["run_queries.py", "--output", str(output)])
+    monkeypatch.setattr("sys.argv", ["run_queries.py"] + milvus_args(output))
     with pytest.raises(SystemExit):
         runner.main()
     assert output.read_text() == "keep original\n"
+
+
+class FakeSDK:
+    def __init__(self, reply=None, error=None):
+        self.reply = reply
+        self.error = error
+        self.calls = []
+        self.closed = False
+
+    def search(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.error is not None:
+            raise self.error
+        return self.reply
+
+    def close(self):
+        self.closed = True
+
+
+def searcher(sdk, **kwargs):
+    options = dict(collection_name="fixture_vectors", id_field="source_key", vector_field="embedding", timeout=2.5)
+    options.update(kwargs)
+    return MilvusSearchClient(sdk, **options)
+
+
+def test_sdk_search_arguments_and_ordered_extra_duplicate_hits():
+    sdk = FakeSDK([[{"id": 19, "distance": 8}, {"id": "source-7", "distance": 1.5},
+                    {"id": 19, "distance": 8}]])
+    client = searcher(sdk, search_params={"metric_type": "L2", "params": {"nprobe": 7}})
+    assert isinstance(client, SearchClient)
+    assert client.search([1, 2, 3], limit=2) == [VectorHit(19, 8.0), VectorHit("source-7", 1.5), VectorHit(19, 8.0)]
+    assert sdk.calls == [{"collection_name": "fixture_vectors", "data": [[1.0, 2.0, 3.0]],
+                          "anns_field": "embedding", "limit": 2, "timeout": 2.5,
+                          "search_params": {"metric_type": "L2", "params": {"nprobe": 7}}}]
+    assert "sciverse_mcp" in list_backends()
+
+
+def test_sdk_empty_hits():
+    assert searcher(FakeSDK([[]])).search([1, 2], limit=1) == []
+
+
+@pytest.mark.parametrize("reply", [
+    None, [], {}, [[], []], [[None]], [[{"id": 1}]], [[{"distance": 0.0}]],
+    [[{"id": True, "distance": 0.0}]], [[{"id": " ", "distance": 0.0}]],
+    [[{"id": 1.5, "distance": 0.0}]], [[{"id": 1, "distance": True}]],
+    [[{"id": 1, "distance": "0.1"}]], [[{"id": 1, "distance": float("nan")}]],
+    [[{"id": 1, "distance": float("inf")}]],
+    [[{"id": 2, "distance": 0.2}, {"id": None, "distance": 0.3}]],
+])
+def test_malformed_sdk_reply_fails_whole_attempt(runner, data, reply):
+    sdk = FakeSDK(reply)
+    row = execute(runner, data, searcher(sdk))[0]
+    assert row["status"] == "error"
+    assert row["hits"] == []
+    assert row["error"]
+    assert len(sdk.calls) == 1
+
+
+@pytest.mark.parametrize("query,limit", [
+    ([], 1), ([True, 1], 1), (["1", 2], 1), ([float("nan"), 1], 1),
+    ([float("inf"), 1], 1), ([[1], [2]], 1), ([1, 2], 0), ([1, 2], -1),
+    ([1, 2], True), ([1, 2], 1.5),
+])
+def test_invalid_search_arguments_do_not_call_sdk(query, limit):
+    sdk = FakeSDK([[]])
+    with pytest.raises((ValueError, TypeError)):
+        searcher(sdk).search(query, limit=limit)
+    assert sdk.calls == []
+
+
+@pytest.mark.parametrize("options", [
+    {"collection_name": ""}, {"id_field": ""}, {"vector_field": " "},
+    {"id_field": "embedding"}, {"timeout": 0}, {"timeout": -1},
+    {"timeout": True}, {"timeout": float("nan")}, {"timeout": float("inf")},
+    {"search_params": []},
+])
+def test_invalid_search_configuration(options):
+    with pytest.raises((ValueError, TypeError)):
+        searcher(FakeSDK(), **options)
+
+
+def test_sdk_timeout_and_service_error_are_distinct(runner, data):
+    for error, status in [(TimeoutError("deadline"), "timeout"), (RuntimeError("service failed"), "error")]:
+        sdk = FakeSDK(error=error)
+        row = execute(runner, data, searcher(sdk))[0]
+        assert row["status"] == status
+        assert row["hits"] == []
+        assert len(sdk.calls) == 1
+
+
+@pytest.fixture
+def fake_dataset(monkeypatch, data):
+    from dingo.data import dataset_map, datasource_map
+
+    class Dataset:
+        def __init__(self, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def get_data(self):
+            yield data
+
+    monkeypatch.setitem(datasource_map, "ann_benchmarks", lambda **kwargs: object())
+    monkeypatch.setitem(dataset_map, "ann_benchmarks", Dataset)
+
+
+def milvus_args(output):
+    return ["--milvus-uri", "http://example.invalid:19530", "--milvus-db-name", "fixture_db",
+            "--milvus-collection", "fixture_vectors", "--milvus-id-field", "source_key",
+            "--milvus-vector-field", "embedding", "--timeout", "2.5", "--output", str(output),
+            "--cache-dir", "/tmp/fixture-ann-cache"]
+
+
+def test_query_cli_forwards_configuration_writes_format_and_closes(runner, fake_dataset, tmp_path, monkeypatch):
+    sdk = FakeSDK([[{"source_key": 19, "distance": 0.5}]])
+    constructors = []
+
+    def constructor(**kwargs):
+        constructors.append(kwargs)
+        return sdk
+
+    monkeypatch.setitem(sys.modules, "pymilvus", SimpleNamespace(MilvusClient=constructor))
+    monkeypatch.setenv("MILVUS_TOKEN", "fixture-token")
+    output = tmp_path / "queries.jsonl"
+    runner.main(milvus_args(output) + [
+        "--start-row", "2", "--count", "1", "--top-k", "3",
+        "--search-params", '{"metric_type":"L2","params":{"nprobe":7}}',
+    ])
+    assert constructors == [{"uri": "http://example.invalid:19530", "db_name": "fixture_db",
+                             "token": "fixture-token", "timeout": 2.5}]
+    assert sdk.calls == [{"collection_name": "fixture_vectors", "data": [[6.0, 7.0, 8.0]],
+                          "anns_field": "embedding", "limit": 3, "timeout": 2.5,
+                          "search_params": {"metric_type": "L2", "params": {"nprobe": 7}}}]
+    row = json.loads(output.read_text())
+    assert set(row) == {"dataset", "query_id", "backend", "top_k", "hits", "elapsed_ms", "status", "error"}
+    assert row["query_id"] == 2 and row["status"] == "ok"
+    assert row["hits"] == [{"id": 19, "rank": 1, "distance": 0.5}]
+    assert sdk.closed
+
+
+@pytest.mark.parametrize("extra", [["--count", "0"], ["--start-row", "8", "--count", "1"],
+                                   ["--search-params", "[]"], ["--search-params", "invalid"],
+                                   ["--timeout", "nan"], ["--timeout", "0"]])
+def test_invalid_query_cli_never_connects_or_creates_output(runner, fake_dataset, tmp_path, monkeypatch, extra):
+    def forbidden(*args, **kwargs):
+        pytest.fail("Invalid configuration or range must be rejected before SDK construction")
+
+    monkeypatch.setattr(runner, "create_milvus_client", forbidden)
+    output = tmp_path / "queries.jsonl"
+    with pytest.raises(SystemExit):
+        runner.main(milvus_args(output) + extra)
+    assert not output.exists()
+
+
+def test_query_connection_failure_does_not_create_output(runner, fake_dataset, tmp_path, monkeypatch):
+    def failing(**kwargs):
+        raise RuntimeError("fixture connection failure")
+
+    monkeypatch.setitem(sys.modules, "pymilvus", SimpleNamespace(MilvusClient=failing))
+    output = tmp_path / "queries.jsonl"
+    with pytest.raises(RuntimeError, match="fixture connection failure"):
+        runner.main(milvus_args(output))
+    assert not output.exists()
+
+
+def test_query_missing_configuration_never_connects(runner, tmp_path, monkeypatch):
+    def forbidden(*args, **kwargs):
+        pytest.fail("Missing configuration must be rejected before SDK construction")
+
+    monkeypatch.setattr(runner, "create_milvus_client", forbidden)
+    with pytest.raises(SystemExit):
+        runner.main(["--output", str(tmp_path / "queries.jsonl")])
+
+
+def test_query_dangling_output_symlink_is_rejected_before_load(runner, tmp_path, monkeypatch):
+    from dingo.data import datasource_map
+
+    def forbidden(**kwargs):
+        pytest.fail("An existing output path must be rejected before loading or connecting")
+
+    monkeypatch.setitem(datasource_map, "ann_benchmarks", forbidden)
+    output = tmp_path / "queries.jsonl"
+    output.symlink_to(tmp_path / "missing.jsonl")
+    with pytest.raises(SystemExit):
+        runner.main(milvus_args(output))
+    assert output.is_symlink()
+
+
+@pytest.mark.parametrize("kind,status", [
+    ("future", "timeout"), ("deadline", "timeout"), ("wrapped", "timeout"),
+    ("retry", "timeout"), ("milvus_deadline", "timeout"), ("unavailable", "error"),
+    ("unrelated_timeout_text", "error"),
+])
+def test_sdk_and_rpc_timeout_normalization(runner, data, monkeypatch, kind, status):
+    class RpcError(Exception):
+        def __init__(self, code):
+            self.status = code
+
+        def code(self):
+            return self.status
+
+    class FutureTimeoutError(Exception):
+        pass
+
+    codes = SimpleNamespace(DEADLINE_EXCEEDED=object(), UNAVAILABLE=object())
+    monkeypatch.setitem(sys.modules, "grpc", SimpleNamespace(
+        RpcError=RpcError, FutureTimeoutError=FutureTimeoutError, StatusCode=codes,
+    ))
+
+    class MilvusException(Exception):
+        def __init__(self, message, code=1):
+            super().__init__(message)
+            self.message = message
+            self.code = code
+
+    MilvusException.__module__ = "pymilvus.exceptions"
+    errors = {
+        "future": FutureTimeoutError(),
+        "deadline": RpcError(codes.DEADLINE_EXCEEDED),
+        "retry": MilvusException("[search] Retry timeout: timeout=2.5"),
+        "milvus_deadline": MilvusException("Deadline Exceeded", codes.DEADLINE_EXCEEDED),
+        "unavailable": RpcError(codes.UNAVAILABLE),
+        "unrelated_timeout_text": MilvusException("collection timeout_config does not exist"),
+    }
+    wrapped = RuntimeError("wrapped deadline")
+    wrapped.__cause__ = errors["deadline"]
+    errors["wrapped"] = wrapped
+    sdk = FakeSDK(error=errors[kind])
+    row = execute(runner, data, searcher(sdk))[0]
+    assert row["status"] == status
+    assert row["error"]
+    assert row["hits"] == []
+    assert len(sdk.calls) == 1
+
+
+def test_query_output_open_failure_closes_constructed_sdk(runner, fake_dataset, tmp_path, monkeypatch):
+    sdk = FakeSDK([[]])
+    monkeypatch.setitem(sys.modules, "pymilvus", SimpleNamespace(MilvusClient=lambda **kwargs: sdk))
+    with pytest.raises(FileNotFoundError):
+        runner.main(milvus_args(tmp_path / "missing" / "queries.jsonl"))
+    assert sdk.closed
+    assert sdk.calls == []

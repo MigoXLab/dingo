@@ -83,7 +83,7 @@ dingo/
 │   │   ├── tasks/           ← Bundled retrieval datasets (JSON)
 │   │   ├── backends/
 │   │   │   ├── agentic.py   ← AgenticSearchClient (local + public mode)
-│   │   │   ├── milvus.py    ← Vector query interface placeholder
+│   │   │   ├── milvus.py    ← SDK-backed vector query adapter
 │   │   │   └── importers/   ← Import backend adapters
 │   │   ├── mteb_adapter.py  ← SearchClientModel (MTEB SearchProtocol adapter)
 │   │   └── eval_utils.py    ← normalize_title, resolve_hit, save_json
@@ -92,6 +92,7 @@ dingo/
 │
 ├── examples/                ← Usage examples (SDK, CLI, various scenarios)
 │   └── Milvus_benchmark/    ← Milvus benchmark loading, import, query, and offline evaluation examples
+│       └── 4-vector-db-import/ ← Real-service import and readback verification example
 ├── test/                    ← Test suite
 │   ├── data/                ← Test data files
 │   ├── env/                 ← Test environment configs

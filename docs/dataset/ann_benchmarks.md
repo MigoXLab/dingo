@@ -53,14 +53,14 @@ with dataset_map[args.dataset.source](source=source) as dataset:
 
 ### 1.2.2 可运行示例
 
-Sciverse 数据加载示例入口为
-[load_ann_dataset.py](../../examples/sciverse_benchmark/0-data-loading/load_ann_dataset.py)
+Milvus Benchmark 数据加载示例入口为
+[load_ann_dataset.py](../../examples/Milvus_benchmark/0-data-loading/load_ann_dataset.py)
 从仓库根目录运行：
 
 ```bash
-python examples/sciverse_benchmark/0-data-loading/load_ann_dataset.py --help
-python examples/sciverse_benchmark/0-data-loading/load_ann_dataset.py
-python examples/sciverse_benchmark/0-data-loading/load_ann_dataset.py \
+python examples/Milvus_benchmark/0-data-loading/load_ann_dataset.py --help
+python examples/Milvus_benchmark/0-data-loading/load_ann_dataset.py
+python examples/Milvus_benchmark/0-data-loading/load_ann_dataset.py \
     sift-128-euclidean --cache-dir ./ann-cache
 ```
 

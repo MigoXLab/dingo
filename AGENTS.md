@@ -79,16 +79,19 @@ dingo/
 │   ├── retrieval/            ← Retrieval evaluation module
 │   │   ├── sciverse_quality.py ← Agentic source verification and authority metadata enrichment
 │   │   ├── search_client.py ← SearchClient ABC + registry + PaperResult/SearchResponse
+│   │   ├── import_client.py ← Import records, receipts, and client contract
 │   │   ├── tasks/           ← Bundled retrieval datasets (JSON)
 │   │   ├── backends/
-│   │   │   └── agentic.py   ← AgenticSearchClient (local + public mode)
+│   │   │   ├── agentic.py   ← AgenticSearchClient (local + public mode)
+│   │   │   ├── milvus.py    ← Vector query interface placeholder
+│   │   │   └── importers/   ← Import backend adapters
 │   │   ├── mteb_adapter.py  ← SearchClientModel (MTEB SearchProtocol adapter)
 │   │   └── eval_utils.py    ← normalize_title, resolve_hit, save_json
 │   └── run/
 │       └── cli.py           ← CLI entry point (subcommands: eval, eval-retrieval, info, serve)
 │
 ├── examples/                ← Usage examples (SDK, CLI, various scenarios)
-│   └── sciverse_benchmark/0-data-loading/ ← Sciverse dataset loading examples
+│   └── Milvus_benchmark/    ← Milvus benchmark loading, import, and query examples
 ├── test/                    ← Test suite
 │   ├── data/                ← Test data files
 │   ├── env/                 ← Test environment configs

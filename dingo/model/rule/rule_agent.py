@@ -115,7 +115,7 @@ class RuleAgentTraceReasoningSparsity(BaseRule):
         if (isinstance(threshold, bool) or not isinstance(threshold, (int, float))
                 or not math.isfinite(threshold) or not 0 <= threshold <= 1):
             raise ValueError(f"{type(self).__name__} dynamic_config.threshold must be in [0, 1]")
-        minimum = self.dynamic_config.min_assistant_messages
+        minimum = getattr(self.dynamic_config, "min_assistant_messages", 0)
         if minimum is None:
             minimum = 0
         if isinstance(minimum, bool) or not isinstance(minimum, int) or minimum < 0:

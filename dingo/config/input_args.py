@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class DatasetHFConfigArgs(BaseModel):
@@ -137,7 +137,6 @@ class EvaluatorRuleArgs(BaseModel):
     model_config = {"extra": "allow"}
 
     threshold: Optional[float] = None
-    min_assistant_messages: Optional[int] = Field(default=None, ge=0, strict=True)
     pattern: Optional[str] = None
     key_list: Optional[List[str]] = None
     refer_path: Optional[List[str]] = None

@@ -269,15 +269,17 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
 | threshold | float | null | No | 规则决策阈值 |
-| min_assistant_messages | int | null | No | 严格非负整数，不接受 bool、浮点数或字符串。null 表示不覆盖规则默认值；ReasoningSparsity 的规则默认值为 0，表示不设置 assistant 数量下限 |
 | pattern | str | null | No | 匹配模式字符串 |
 | key_list | list | null | No | 匹配关键词列表 |
 | refer_path | list | null | No | 参考文件路径或小模型路径 |
-| *其他字段* | any | - | No | 规则自定义扩展字段（如 `ignore_order`） |
+| *其他字段* | any | - | No | 规则自定义扩展字段（如 `ignore_order`、`min_assistant_messages`），由使用该参数的规则负责校验 |
 
-`min_assistant_messages` 可通过 SDK 或配置文件的 `evaluator[].evals[].config` 输入，
-已加入 `InputArgs.to_dict()` 的配置快照白名单，0 和正整数都会原样保留；
-现有序列化白名单和敏感字段排除方式保持不变。该参数仅由使用它的规则执行数量判断。
+`RuleAgentTraceReasoningSparsity` 的 `min_assistant_messages` 通过现有 `extra="allow"`
+机制从 `evaluator[].evals[].config` 输入，不在 `EvaluatorRuleArgs` 中声明正式字段。
+未填写时规则默认使用 0；规则入口要求非负整数，不接受 bool、浮点数或字符串。
+示例脚本的 config 显式填写 `"min_assistant_messages": 0`。该 extra 参数已加入
+`InputArgs.to_dict()` 的配置快照白名单，0 和正整数都会原样保留；现有序列化白名单和
+敏感字段排除方式保持不变。其他规则不会自动执行这个数量判断。
 
 #### EvaluatorLLMArgs 配置 (evaluator.llm_config.[llm_name])
 

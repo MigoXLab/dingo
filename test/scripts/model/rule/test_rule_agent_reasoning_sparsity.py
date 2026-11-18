@@ -5,7 +5,6 @@ from pathlib import Path
 from test.scripts.ms_swift_test_utils import standard_ms_swift_record
 
 import pytest
-from pydantic import ValidationError
 
 from dingo.config import InputArgs
 from dingo.config.input_args import EvaluatorRuleArgs
@@ -110,23 +109,28 @@ def test_minimum_defaults_and_config_updates_are_instance_local():
     Model.set_config_rule(filtered, EvaluatorRuleArgs(threshold=0.8))
     assert filtered.dynamic_config.min_assistant_messages == 2
     assert RuleAgentTraceReasoningSparsity.dynamic_config.min_assistant_messages == 0
-    assert EvaluatorRuleArgs().min_assistant_messages is None
+    assert "min_assistant_messages" not in EvaluatorRuleArgs.model_fields
+    assert getattr(EvaluatorRuleArgs(), "min_assistant_messages", None) is None
+
+
+def test_missing_extra_parameter_defaults_to_zero_inside_rule():
+    rule = RuleAgentTraceReasoningSparsity()
+    rule.dynamic_config = EvaluatorRuleArgs(threshold=0.7)
+    assert rule.eval(Data(messages=[_assistant()])).status is True
 
 
 @pytest.mark.parametrize("minimum", [-1, True, 2.0, 2.5, "2"])
 def test_minimum_rejects_non_integer_or_negative_values(minimum):
-    with pytest.raises(ValidationError):
-        EvaluatorRuleArgs(min_assistant_messages=minimum)
-
-    # InputArgs has a rule/LLM config union; if its permissive LLM branch accepts
-    # an extra value, the rule must still reject it rather than silently use it.
-    with pytest.raises(ValueError):
-        args = InputArgs(evaluator=[{"evals": [{
-            "name": "RuleAgentTraceReasoningSparsity",
-            "config": {"min_assistant_messages": minimum},
-        }]}])
-        rule = RuleAgentTraceReasoningSparsity()
-        Model.set_config_rule(rule, args.evaluator[0].evals[0].config)
+    # Extra parameters pass through config parsing; the owning rule validates them.
+    args = InputArgs(evaluator=[{"evals": [{
+        "name": "RuleAgentTraceReasoningSparsity",
+        "config": {"min_assistant_messages": minimum},
+    }]}])
+    config = args.evaluator[0].evals[0].config
+    assert config.model_extra["min_assistant_messages"] == minimum
+    rule = RuleAgentTraceReasoningSparsity()
+    Model.set_config_rule(rule, config)
+    with pytest.raises(ValueError, match="min_assistant_messages must be a non-negative integer"):
         rule.eval(Data(messages=[_assistant()]))
 
 

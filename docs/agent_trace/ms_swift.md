@@ -783,7 +783,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 **规则步骤**
 
-1. 验证阈值为 `[0, 1]` 范围内的有限数，`min_assistant_messages` 为非负整数；非法配置在解析或规则入口抛出 `ValueError`。
+1. 验证阈值为 `[0, 1]` 范围内的有限数；从 config 的 extra 字段读取 `min_assistant_messages`，未填写时使用 0，并在规则入口验证它为非负整数，非法值抛出 `ValueError`。
 2. 检查 `messages` 为数组，消息为包含字符串 `role` 的对象。
 3. 遍历当前 `messages`，累计 assistant 消息总数 A，以及其中 reasoning 为空的数量 E。
 4. A 为 0 时返回 N/A；A 小于 `min_assistant_messages` 时返回数量不足的 N/A，不判断稀疏。
@@ -801,7 +801,9 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 阈值为 0 时，只要有空 reasoning 即命中；阈值为 1 时不会命中。
 `min_assistant_messages=0` 表示不设置数量下限；`1` 与 `0` 对可计算记录的检测范围相同；
 `2` 表示至少两条 assistant 消息。A 为 0 时，无论配置为多少，空值占比均无定义。
-通用 `EvaluatorRuleArgs` 中该字段默认 `null`，表示不覆盖规则默认值；本规则默认值为 0。
+该参数不在通用 `EvaluatorRuleArgs` 中声明字段，通过 `extra="allow"` 传入，由本规则读取和校验；
+未填写时默认使用 0。示例脚本在 config 中显式写出 `"min_assistant_messages": 0`，
+也支持通过 `--min-assistant-messages` 覆盖这个值。
 参数会保留在 `InputArgs.to_dict()` 配置快照中，包括显式填写的 0。
 
 | assistant 数 A | 空 reasoning 数 E | 占比 | 默认阈值下的结果 | status |

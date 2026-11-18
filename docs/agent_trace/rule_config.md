@@ -3,9 +3,9 @@
 规则使用默认值时可以不填写 `evals[].config`。需要调整阈值时，在该规则自己的配置块中覆盖。
 
 参数放在该规则自己的 `evaluator[].evals[].config` 里。不写 `config` 时使用规则默认值。
-本页参数中的 `threshold`、`min_assistant_messages` 在配置模型中显式声明，并纳入
-`InputArgs.to_dict()` 配置快照白名单；`min_repeats` 仍走 `extra="allow"`，可以执行，
-但目前不会出现在配置快照里。
+本页参数中的 `threshold` 在配置模型中显式声明；`min_assistant_messages` 和 `min_repeats`
+走现有 `extra="allow"` 扩展机制，由各自规则读取和校验。`threshold`、`min_assistant_messages`
+纳入 `InputArgs.to_dict()` 配置快照白名单；`min_repeats` 可以执行，但目前不会出现在配置快照里。
 
 字段映射见 [ms-swift converter 用户说明](ms_swift.md)。
 
@@ -63,8 +63,9 @@ assistant 数量小于配置下限时返回 `insufficient_assistant_messages`；
 
 默认保留单轮记录：一条 assistant 的 reasoning 为空时，占比为 100%，表示该轨迹没有记录在
 此字段中的显式思考链，无法提供对应的显式推理过程监督信号，因此是合理的稀疏特征标签。
-需要限定多轮轨迹时可显式设置 `min_assistant_messages=2`。该参数纳入配置模型和
-`InputArgs.to_dict()` 快照白名单，显式配置的 0 也会保存。
+需要限定多轮轨迹时可显式设置 `min_assistant_messages=2`。该参数作为 extra 传入，
+未填写时由规则默认使用 0，不在通用配置模型中声明字段；已纳入 `InputArgs.to_dict()`
+快照白名单，显式配置的 0 也会保存。示例脚本的 config 显式写出 `"min_assistant_messages": 0`。
 
 保存结果时设置 `result_save.bad=true, good=true, all_labels=true, merge=true`，
 保留命中的 `status=true` 结果，以及未命中和 N/A 的 `status=false` 详情。完整输出语义见

@@ -26,7 +26,7 @@ def main():
     )
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--threshold", type=float, default=0.7)
-    parser.add_argument("--min-assistant-messages", type=int, default=0)
+    parser.add_argument("--min-assistant-messages", type=int, help="Override the explicit config default of 0")
     args = parser.parse_args()
     options = {
         "input_path": str(args.input_path),
@@ -38,10 +38,12 @@ def main():
             "fields": {"messages": "messages"},
             "evals": [{"name": "RuleAgentTraceReasoningSparsity", "config": {
                 "threshold": args.threshold,
-                "min_assistant_messages": args.min_assistant_messages,
+                "min_assistant_messages": 0,
             }}],
         }],
     }
+    if args.min_assistant_messages is not None:
+        options["evaluator"][0]["evals"][0]["config"]["min_assistant_messages"] = args.min_assistant_messages
     if args.output_dir is not None:
         options["output_path"] = str(args.output_dir)
     executor = Executor.exec_map["local"](InputArgs(**options))

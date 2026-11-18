@@ -162,6 +162,16 @@ def check_resources(resources: Any) -> ValidationResult:
 
 
 def check_locations(locations: Any) -> ValidationResult:
+    def _check_is_oa(is_oa: Any) -> ValidationResult:
+        """Validate the string enum used by locations[].is_oa."""
+        if not isinstance(is_oa, str):
+            return BaseFieldValidation._fail("is_oa.wrong_type", "is_oa must be a string")
+        if is_oa not in {"true", "false", "unknown"}:
+            return BaseFieldValidation._fail(
+                "is_oa.unsupported_value", "is_oa must be one of 'true', 'false' or 'unknown'",
+            )
+        return BaseFieldValidation._ok()
+
     """Validate paper location objects; missing fields are handled by eval()."""
     def _check_license(license_value: Any) -> ValidationResult:
         if not isinstance(license_value, str):
@@ -177,16 +187,6 @@ def check_locations(locations: Any) -> ValidationResult:
         if license_value not in allowed:
             return BaseFieldValidation._fail(
                 "license.unsupported_value", "license must be a supported license string",
-            )
-        return BaseFieldValidation._ok()
-
-    def _check_is_oa(is_oa: Any) -> ValidationResult:
-        """Validate the string enum used by locations[].is_oa."""
-        if not isinstance(is_oa, str):
-            return BaseFieldValidation._fail("is_oa.wrong_type", "is_oa must be a string")
-        if is_oa not in {"true", "false", "unknown"}:
-            return BaseFieldValidation._fail(
-                "is_oa.unsupported_value", "is_oa must be one of 'true', 'false' or 'unknown'",
             )
         return BaseFieldValidation._ok()
 

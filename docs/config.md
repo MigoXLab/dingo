@@ -197,7 +197,7 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 
 | Parameter  | Type | Default | Required | Description |
 |------------|------|---------|----------|-------------|
-| bad        | bool | true    | No       | 是否写出结果文件；当前本地执行器的总开关，设为 false 时 good/merge 也不写出记录 |
+| bad        | bool | false   | No       | 是否保存错误结果    |
 | good       | bool | false   | No       | 是否保存正确结果    |
 | all_labels | bool | false   | No       | 是否保存所有标签    |
 | merge      | bool | false   | No       | 将全部结果写入 `all_results.jsonl`；配合 good/all_labels 保留特征未命中和 N/A 等空标签记录 |

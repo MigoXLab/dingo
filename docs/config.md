@@ -261,7 +261,7 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 | rule_config | object | {} | Depends | 规则配置 |
 | llm_config | object | {} | Depends | LLM 配置 |
 
-#### EvaluatorRuleArgs 配置 (evaluator[].evals[].config)
+#### EvaluatorRuleArgs 配置 (evaluator.rule_config.[rule_name])
 
 规则配置（支持额外字段，规则可按需读取自定义参数）：
 
@@ -271,7 +271,7 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 | pattern | str | null | No | 匹配模式字符串 |
 | key_list | list | null | No | 匹配关键词列表 |
 | refer_path | list | null | No | 参考文件路径或小模型路径 |
-| *其他字段* | any | - | No | 规则自定义扩展字段（如 `ignore_order`、`min_assistant_messages`），由使用该参数的规则负责校验 |
+| *其他字段* | any | - | No | 规则自定义扩展字段（如 `ignore_order`） |
 
 `RuleAgentTraceReasoningSparsity` 的 `min_assistant_messages` 通过现有 `extra="allow"`
 机制从 `evaluator[].evals[].config` 输入，不在 `EvaluatorRuleArgs` 中声明正式字段。

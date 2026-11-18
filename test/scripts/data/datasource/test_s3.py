@@ -349,7 +349,7 @@ class TestS3DataSource(unittest.TestCase):
                 list(datasource.load())
 
             self.assertIn(
-                "S3 format must be one of: jsonl, ms_swift, plaintext",
+                "S3 format must be one of: hdf5, jsonl, ms_swift, plaintext",
                 str(context.exception),
             )
 

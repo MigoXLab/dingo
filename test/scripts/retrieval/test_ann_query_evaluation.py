@@ -3,18 +3,17 @@
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
-from dingo.config import InputArgs
-from dingo.data import dataset_map, datasource_map
-
+hdf5_input = importlib.import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
 h5py = pytest.importorskip("h5py")
 
 
 def load_example(relative, name):
-    path = Path(__file__).resolve().parents[3] / "examples/Milvus_benchmark" / relative
+    path = Path(__file__).resolve().parents[3] / "examples/milvus_benchmark" / relative
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -27,17 +26,16 @@ def evaluator():
 
 
 @pytest.fixture
-def cache(tmp_path):
-    cache = tmp_path / "cache"
-    cache.mkdir()
-    with h5py.File(cache / "sift-128-euclidean.hdf5", "w") as f:
+def hdf5_path(tmp_path):
+    path = tmp_path / "sift-128-euclidean.hdf5"
+    with h5py.File(path, "w") as f:
         f.attrs["dimension"] = 2
         f.attrs["distance"] = "euclidean"
         f.create_dataset("train", data=np.arange(40, dtype="float32").reshape(20, 2))
         f.create_dataset("test", data=np.arange(6, dtype="float32").reshape(3, 2))
         f.create_dataset("neighbors", data=np.tile(np.arange(20, dtype="int32"), (3, 1)))
         f.create_dataset("distances", data=np.tile(np.arange(20, dtype="float32"), (3, 1)))
-    return cache
+    return path
 
 
 def attempt(ids=(), *, query_id=0, status="ok", elapsed=10.0):
@@ -53,18 +51,13 @@ def write_input(path, rows):
     return path
 
 
-def load_data(cache):
-    args = InputArgs(input_path="sift-128-euclidean", dataset={
-        "source": "ann_benchmarks", "format": "ann_benchmarks",
-        "ann_benchmarks_config": {"cache_dir": str(cache)},
-    })
-    return dataset_map["ann_benchmarks"](source=datasource_map["ann_benchmarks"](args))
+def load_data(path):
+    return hdf5_input.open_ann_data(SimpleNamespace(source="local", input_path=str(path)))
 
 
-def test_raw_cutoff_invalid_slots_duplicates_and_official_top10(evaluator, cache):
+def test_raw_cutoff_invalid_slots_duplicates_and_official_top10(evaluator, hdf5_path):
     rows = [attempt([0, 0, "1", -1, 20, 2, 10, 11, 12, 13, 3]), attempt(range(10, 20), query_id=1)]
-    with load_data(cache) as dataset:
-        data = next(dataset.get_data())
+    with load_data(hdf5_path) as data:
         scored = evaluator.score_attempts(rows, data)
         assert [row["recall_at_10"] for row in scored] == [pytest.approx(0.2), 0.0]
         assert scored[0]["quality"] == {
@@ -107,21 +100,20 @@ def test_bad_json_reports_line(evaluator, tmp_path):
         evaluator.read_attempts(source)
 
 
-def test_query_id_must_exist_in_hdf5(evaluator, cache):
-    with load_data(cache) as dataset:
+def test_query_id_must_exist_in_hdf5(evaluator, hdf5_path):
+    with load_data(hdf5_path) as data:
         with pytest.raises(ValueError):
-            evaluator.score_attempts([attempt([0], query_id=3)], next(dataset.get_data()))
+            evaluator.score_attempts([attempt([0], query_id=3)], data)
 
 
-def test_cli_reports_hand_computed_denominators(evaluator, cache, tmp_path, monkeypatch):
+def test_cli_reports_hand_computed_denominators(evaluator, hdf5_path, tmp_path, monkeypatch):
     rows = [attempt(range(10), elapsed=10), attempt([0, 0, "1", -1], elapsed=30),
             attempt(status="empty", elapsed=20), attempt(status="timeout", elapsed=500),
             attempt(status="error", elapsed=100)]
     source = write_input(tmp_path / "attempts.jsonl", rows)
     output = tmp_path / "reports"
-    monkeypatch.setattr("sys.argv", ["evaluate_queries.py", "--input", str(source), "--cache-dir", str(cache),
+    monkeypatch.setattr("sys.argv", ["evaluate_queries.py", "--input", str(source), "--input-path", str(hdf5_path),
                                      "--output-dir", str(output)])
-    monkeypatch.setattr("dingo.data.datasource.ann_benchmarks.urlopen", lambda *a, **k: pytest.fail("network"))
     evaluator.main()
     scored = [json.loads(line) for line in (output / "per_query.jsonl").read_text().splitlines()]
     report = json.loads((output / "summary.json").read_text())
@@ -153,27 +145,27 @@ def test_either_report_collision_preserves_every_file(evaluator, tmp_path, monke
     output.mkdir()
     (output / existing).write_text("original\n")
     source = write_input(tmp_path / "attempts.jsonl", [attempt([0])])
-    monkeypatch.setattr("sys.argv", ["evaluate_queries.py", "--input", str(source), "--output-dir", str(output)])
-    monkeypatch.setattr("dingo.data.datasource.ann_benchmarks.ANNBenchmarksDataSource.load",
+    monkeypatch.setattr("sys.argv", ["evaluate_queries.py", "--input", str(source), "--output-dir", str(output),
+                                     "--input-path", str(tmp_path / "unread.hdf5")])
+    monkeypatch.setattr(hdf5_input, "open_ann_data",
                         lambda *a, **k: pytest.fail("must reject output collision before loading"))
     with pytest.raises(SystemExit):
         evaluator.main()
     assert {p.name: p.read_text() for p in output.iterdir()} == {existing: "original\n"}
 
 
-def test_missing_cache_never_downloads(evaluator, tmp_path, monkeypatch):
+def test_missing_hdf5_does_not_write_reports(evaluator, tmp_path, monkeypatch, capsys):
     source = write_input(tmp_path / "attempts.jsonl", [attempt([0])])
     output = tmp_path / "reports"
-    monkeypatch.setattr("sys.argv", ["evaluate_queries.py", "--input", str(source), "--cache-dir",
+    monkeypatch.setattr("sys.argv", ["evaluate_queries.py", "--input", str(source), "--input-path",
                                      str(tmp_path / "absent"), "--output-dir", str(output)])
-    monkeypatch.setattr("dingo.data.datasource.ann_benchmarks.ANNBenchmarksDataSource.load",
-                        lambda *a, **k: pytest.fail("missing cache must not load or download"))
     with pytest.raises(SystemExit):
         evaluator.main()
     assert not output.exists() or not list(output.iterdir())
+    assert "HDF5 input is not a file" in capsys.readouterr().err
 
 
-def test_current_query_writer_output_can_be_evaluated(evaluator, cache, tmp_path):
+def test_current_query_writer_output_can_be_evaluated(evaluator, hdf5_path, tmp_path):
     from dingo.retrieval.backends.milvus import VectorHit
 
     runner = load_example("2-query-execution/run_queries.py", "ann_evaluation_query_producer")
@@ -185,8 +177,7 @@ def test_current_query_writer_output_can_be_evaluated(evaluator, cache, tmp_path
             return [VectorHit(row_id, float(row_id)) for row_id in range(limit)]
 
     path = tmp_path / "fake_attempts.jsonl"
-    with load_data(cache) as dataset:
-        data = next(dataset.get_data())
+    with load_data(hdf5_path) as data:
         with path.open("x") as output:
             runner.write_queries(FakeClient(), data, start_row=1, count=2, top_k=10, output=output)
         scored = evaluator.score_attempts(evaluator.read_attempts(path), data)
@@ -195,17 +186,34 @@ def test_current_query_writer_output_can_be_evaluated(evaluator, cache, tmp_path
     assert not data.ground_truth.id.valid
 
 
-def test_official_top10_must_be_distinct(evaluator, cache):
-    with h5py.File(cache / "sift-128-euclidean.hdf5", "r+") as f:
+def test_official_top10_must_be_distinct(evaluator, hdf5_path):
+    with h5py.File(hdf5_path, "r+") as f:
         f["neighbors"][0, 1] = 0
-    with load_data(cache) as dataset:
+    with load_data(hdf5_path) as data:
         with pytest.raises(ValueError, match="distinct"):
-            evaluator.score_attempts([attempt([0])], next(dataset.get_data()))
+            evaluator.score_attempts([attempt([0])], data)
+
+
+@pytest.mark.parametrize("problem,message", [
+    ("missing", "Missing ANN-Benchmarks fields"),
+    ("dimension", "Expected matching dimension"),
+    ("neighbor", "Neighbor IDs are outside"),
+])
+def test_ann_fields_are_validated_after_hdf5_loading(hdf5_path, problem, message):
+    with h5py.File(hdf5_path, "r+") as hdf5:
+        if problem == "missing":
+            del hdf5["neighbors"]
+        elif problem == "dimension":
+            hdf5.attrs["dimension"] = 3
+        else:
+            hdf5["neighbors"][0, 0] = len(hdf5["train"])
+    with pytest.raises(ValueError, match=message), load_data(hdf5_path):
+        pass
 
 
 @pytest.mark.parametrize("filename", ["per_query.jsonl", "summary.json"])
 @pytest.mark.parametrize("entry", ["write_reports", "main"])
-def test_dangling_report_link_blocks_all_output(evaluator, cache, tmp_path, monkeypatch, filename, entry):
+def test_dangling_report_link_blocks_all_output(evaluator, hdf5_path, tmp_path, monkeypatch, filename, entry):
     output = tmp_path / "reports"
     output.mkdir()
     target = tmp_path / "missing-target.json"
@@ -214,8 +222,8 @@ def test_dangling_report_link_blocks_all_output(evaluator, cache, tmp_path, monk
     original_target = link.readlink()
 
     if entry == "write_reports":
-        with load_data(cache) as dataset:
-            scored = evaluator.score_attempts([attempt([0])], next(dataset.get_data()))
+        with load_data(hdf5_path) as data:
+            scored = evaluator.score_attempts([attempt([0])], data)
         with pytest.raises(FileExistsError):
             evaluator.write_reports(scored, output)
     else:
@@ -223,10 +231,9 @@ def test_dangling_report_link_blocks_all_output(evaluator, cache, tmp_path, monk
             pytest.fail("Report collision must be rejected before input or dataset access")
 
         monkeypatch.setattr(evaluator, "read_attempts", forbidden)
-        monkeypatch.setattr("dingo.data.datasource.ann_benchmarks.ANNBenchmarksDataSource.__init__", forbidden)
-        monkeypatch.setattr("dingo.data.datasource.ann_benchmarks.ANNBenchmarksDataSource.load", forbidden)
+        monkeypatch.setattr(hdf5_input, "open_ann_data", forbidden)
         monkeypatch.setattr("sys.argv", ["evaluate_queries.py", "--input", str(tmp_path / "unread.jsonl"),
-                                         "--output-dir", str(output)])
+                                         "--input-path", str(hdf5_path), "--output-dir", str(output)])
         with pytest.raises(SystemExit) as exc:
             evaluator.main()
         assert exc.value.code == 2

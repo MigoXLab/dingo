@@ -1,5 +1,6 @@
 import json
 import os
+from functools import partial
 from typing import Any, Dict, Generator, List, Optional
 
 from dingo.config import InputArgs
@@ -411,15 +412,21 @@ class LocalDataSource(DataSource):
         Load a local file and return its contents.
 
         Returns:
-            Generator[str]: The contents of the file.
+            An iterator of file contents or a binary opener for HDF5.
         """
         import gzip
 
         if not os.path.exists(self.path):
             raise RuntimeError(f'"{self.path}" is not a valid path')
 
-        f_list = []
         input_is_file = os.path.isfile(self.path)
+        if self.input_args.dataset.format == "hdf5":
+            if not input_is_file:
+                raise ValueError("HDF5 input_path must point to a local file")
+            yield partial(open, self.path, "rb")
+            return
+
+        f_list = []
         if os.path.exists(self.path) and os.path.isfile(self.path):
             f_list = [self.path]
         elif os.path.exists(self.path) and os.path.isdir(self.path):

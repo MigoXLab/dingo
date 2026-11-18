@@ -1,6 +1,7 @@
 """Offline checks for ANN import preparation and the injected Milvus SDK."""
 
 import importlib.util
+import io
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -13,7 +14,7 @@ from dingo.retrieval.import_client import ImportRecord, ImportResult
 
 @pytest.fixture(scope="module")
 def preview():
-    path = Path(__file__).resolve().parents[3] / "examples/Milvus_benchmark/1-data-import/import_ann_dataset.py"
+    path = Path(__file__).resolve().parents[3] / "examples/milvus_benchmark/1-data-import/import_ann_dataset.py"
     spec = importlib.util.spec_from_file_location("ann_import_preview", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -196,24 +197,12 @@ def test_invalid_import_configuration(options):
 
 
 @pytest.fixture
-def fake_dataset(monkeypatch, data):
-    from dingo.data import dataset_map, datasource_map
-
-    class Dataset:
-        def __init__(self, **kwargs):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            pass
-
-        def get_data(self):
-            yield data
-
-    monkeypatch.setitem(datasource_map, "ann_benchmarks", lambda **kwargs: object())
-    monkeypatch.setitem(dataset_map, "ann_benchmarks", Dataset)
+def hdf5_args(tmp_path, data):
+    h5py = pytest.importorskip("h5py")
+    path = tmp_path / "vectors.hdf5"
+    with h5py.File(path, "w") as hdf5:
+        hdf5.create_dataset("vectors", data=data.base)
+    return ["--input-path", str(path), "--vector-key", "vectors"]
 
 
 def milvus_args():
@@ -222,15 +211,31 @@ def milvus_args():
             "--milvus-vector-field", "embedding", "--timeout", "2.5"]
 
 
-def test_preview_runs_without_optional_sdk(preview, fake_dataset, monkeypatch, capsys):
+@pytest.mark.parametrize("source", ["local", "s3"])
+def test_preview_runs_without_optional_sdk(preview, hdf5_args, monkeypatch, capsys, source):
     import sys
 
     monkeypatch.setitem(sys.modules, "pymilvus", None)
-    preview.main(["--start-row", "2", "--count", "3", "--batch-size", "2", "--cache-dir", "/tmp/fixture-ann-cache"])
+    if source == "s3":
+        payload = Path(hdf5_args[1]).read_bytes()
+
+        def get_object(*, Bucket, Key, Range):
+            assert (Bucket, Key) == ("fixture", "vectors.hdf5")
+            start, end = map(int, Range.removeprefix("bytes=").split("-"))
+            assert 0 <= start <= end < len(payload)
+            return {"ContentRange": f"bytes {start}-{end}/{len(payload)}", "Body": io.BytesIO(payload[start:end + 1])}
+
+        client = SimpleNamespace(head_object=lambda **kwargs: {"ContentLength": len(payload)}, get_object=get_object)
+        monkeypatch.setattr("dingo.data.datasource.s3.boto3.client", lambda **kwargs: client)
+        monkeypatch.setenv("S3_ACCESS_KEY", "fixture-key")
+        monkeypatch.setenv("S3_SECRET_KEY", "fixture-secret")
+        monkeypatch.setenv("S3_ENDPOINT_URL", "http://example.invalid")
+        hdf5_args = ["--source", "s3", "--input-path", "s3://fixture/vectors.hdf5", *hdf5_args[2:]]
+    preview.main(hdf5_args + ["--start-row", "2", "--count", "3", "--batch-size", "2"])
     assert "Total: records=3, batches=2" in capsys.readouterr().out
 
 
-def test_write_cli_forwards_sdk_and_field_configuration_and_closes(preview, fake_dataset, monkeypatch):
+def test_write_cli_forwards_sdk_and_field_configuration_and_closes(preview, hdf5_args, monkeypatch):
     import sys
 
     sdk = FakeSDK({"insert_count": 2, "ids": [2, 3]})
@@ -242,8 +247,7 @@ def test_write_cli_forwards_sdk_and_field_configuration_and_closes(preview, fake
 
     monkeypatch.setitem(sys.modules, "pymilvus", SimpleNamespace(MilvusClient=constructor))
     monkeypatch.setenv("MILVUS_TOKEN", "fixture-token")
-    preview.main(["--write-milvus", "--start-row", "2", "--count", "2", "--cache-dir", "/tmp/fixture-ann-cache"]
-                 + milvus_args())
+    preview.main(hdf5_args + ["--write-milvus", "--start-row", "2", "--count", "2"] + milvus_args())
     assert constructors == [{"uri": "http://example.invalid:19530", "db_name": "fixture_db",
                              "token": "fixture-token", "timeout": 2.5}]
     assert sdk.closed
@@ -252,33 +256,33 @@ def test_write_cli_forwards_sdk_and_field_configuration_and_closes(preview, fake
                                    {"source_key": 3, "embedding": [9.0, 10.0, 11.0]}]}]
 
 
-def test_write_cli_incomplete_ack_stops_without_retry_and_closes(preview, fake_dataset, monkeypatch):
+def test_write_cli_incomplete_ack_stops_without_retry_and_closes(preview, hdf5_args, monkeypatch):
     import sys
 
     sdk = FakeSDK({"insert_count": 1})
     monkeypatch.setitem(sys.modules, "pymilvus", SimpleNamespace(MilvusClient=lambda **kwargs: sdk))
     with pytest.raises(SystemExit, match="not fully acknowledged"):
-        preview.main(["--write-milvus", "--count", "5", "--cache-dir", "/tmp/fixture-ann-cache"] + milvus_args())
+        preview.main(hdf5_args + ["--write-milvus", "--count", "5"] + milvus_args())
     assert len(sdk.calls) == 1
     assert sdk.closed
 
 
 @pytest.mark.parametrize("args", [["--write-milvus"], ["--write-milvus", "--start-row", "-1"],
                                   ["--write-milvus", "--start-row", "8"] + milvus_args()])
-def test_invalid_import_cli_never_connects(preview, fake_dataset, monkeypatch, args):
+def test_invalid_import_cli_never_connects(preview, hdf5_args, monkeypatch, args):
     def forbidden(*args, **kwargs):
         pytest.fail("Invalid configuration or range must be rejected before SDK construction")
 
     monkeypatch.setattr(preview, "create_milvus_client", forbidden)
     with pytest.raises(SystemExit):
-        preview.main(args + ["--count", "1", "--cache-dir", "/tmp/fixture-ann-cache"])
+        preview.main(args + hdf5_args + ["--count", "1"])
 
 
 @pytest.fixture
 def import_check(monkeypatch):
     import sys
 
-    path = Path(__file__).resolve().parents[3] / "examples/Milvus_benchmark/4-vector-db-import/run_import_test.py"
+    path = Path(__file__).resolve().parents[3] / "examples/milvus_benchmark/4-vector-db-import/run_import_test.py"
     spec = importlib.util.spec_from_file_location("milvus_import_check", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -296,6 +300,10 @@ class MemoryImportSDK:
         self.calls = []
         self.partial = partial
         self.corrupt = corrupt
+        self.closed = False
+
+    def close(self):
+        self.closed = True
 
     def describe_collection(self, **kwargs):
         return {"auto_id": False, "fields": [
@@ -324,7 +332,7 @@ def check_options(tmp_path):
     return SimpleNamespace(
         milvus_uri="http://example.invalid:19530", milvus_db_name="fixture_db", milvus_collection="fixture",
         milvus_id_field="key", milvus_vector_field="embedding", timeout=5.0,
-        start_row=2, count=5, batch_size=2, cache_dir="fixture-cache", output_dir=tmp_path / "report",
+        start_row=2, count=5, batch_size=2, input_path="fixture.hdf5", output_dir=tmp_path / "report",
     )
 
 
@@ -345,6 +353,24 @@ def test_complete_import_check_and_reports(import_check, preview, tmp_path):
     saved = json.loads((options.output_dir / "summary.json").read_text())
     assert saved == report
     assert len((options.output_dir / "batches.jsonl").read_text().splitlines()) == 3
+
+
+def test_import_check_reads_hdf5_before_mocked_write(import_check, preview, hdf5_args, tmp_path, monkeypatch):
+    sdk = MemoryImportSDK()
+    baseline = SimpleNamespace(list_collections=lambda **kwargs: ["existing"], close=lambda: None)
+    output = tmp_path / "cli-report"
+    monkeypatch.setattr(import_check, "import_example", lambda: preview)
+    monkeypatch.setattr(
+        preview, "create_milvus_client", lambda options: baseline if options.milvus_db_name == "default" else sdk,
+    )
+    import_check.main(hdf5_args + [
+        "--write-milvus", "--milvus-uri", "http://example.invalid:19530", "--milvus-db-name", "fixture_db",
+        "--milvus-collection", "fixture", "--milvus-id-field", "key", "--milvus-vector-field", "embedding",
+        "--start-row", "2", "--count", "3", "--output-dir", str(output),
+    ])
+    assert sorted(sdk.rows) == [2, 3, 4]
+    assert sdk.closed
+    assert (output / "summary.json").is_file()
 
 
 @pytest.mark.parametrize("issue", ["nonempty", "range", "default"])

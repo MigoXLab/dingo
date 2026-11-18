@@ -1,4 +1,3 @@
-from dingo.data.dataset.ann_benchmarks import ANNBenchmarksDataset  # noqa: F401
 from dingo.data.dataset.base import Dataset  # noqa E402.
 from dingo.data.dataset.huggingface import HuggingFaceDataset  # noqa E402.
 from dingo.data.dataset.local import LocalDataset  # noqa E402.

@@ -1,10 +1,11 @@
-"""Preview ANN-Benchmarks batches or write them to an existing Milvus collection"""
+"""Preview HDF5 vector batches or write them to an existing Milvus collection"""
 
 from __future__ import annotations
 import argparse
 import os
 import sys
 from collections.abc import Iterator, Sequence
+from importlib import import_module
 from math import isfinite
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,9 +15,6 @@ if TYPE_CHECKING:
 
     from dingo.io import Data
     from dingo.retrieval.import_client import ImportRecord
-
-DATASET_NAME = "sift-128-euclidean"
-DEFAULT_CACHE_DIR = "~/.cache/dingo/ann_benchmarks"
 
 
 def iter_import_batches(
@@ -72,10 +70,11 @@ def create_milvus_client(options: argparse.Namespace) -> MilvusClient:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    hdf5_input = import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
+
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("dataset", nargs="?", default=DATASET_NAME, choices=[DATASET_NAME])
-    parser.add_argument("--cache-dir", default=DEFAULT_CACHE_DIR,
-                        help="HDF5 cache directory (default: %(default)s)")
+    hdf5_input.add_hdf5_arguments(parser)
+    parser.add_argument("--vector-key", default="train", help="HDF5 array containing the vectors")
     parser.add_argument("--start-row", type=int, default=0, help="Zero-based starting base row (default: 0)")
     parser.add_argument("--count", type=int, default=5, help="Number of base rows to process (default: 5)")
     parser.add_argument("--batch-size", type=int, default=2, help="Maximum rows per batch (default: 2)")
@@ -90,6 +89,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    # 直接运行脚本时使用当前开发仓库
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    hdf5_input = import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
+
     parser = build_parser()
     options = parser.parse_args(argv)
     if options.write_milvus and not all((options.milvus_uri, options.milvus_db_name, options.milvus_collection)):
@@ -99,26 +102,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     if options.count <= 0 or options.batch_size <= 0:
         parser.error("Count and batch size must be positive")
 
-    # 直接运行脚本时使用当前开发仓库
-    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from dingo.config import InputArgs
-    from dingo.data import dataset_map, datasource_map
-
-    args = InputArgs(
-        input_path=options.dataset,
-        dataset={
-            "source": "ann_benchmarks", "format": "ann_benchmarks",
-            "ann_benchmarks_config": {"cache_dir": options.cache_dir},
-        },
-    )
-    source = datasource_map["ann_benchmarks"](input_args=args)
-    print(f"Dataset: {options.dataset}", flush=True)
-    print(f"Cache: {options.cache_dir}", flush=True)
+    print(f"Input: {options.input_path}", flush=True)
     total_records = total_batches = 0
     sdk_client = None
     try:
-        with dataset_map["ann_benchmarks"](source=source) as dataset:
-            data = next(dataset.get_data())
+        with hdf5_input.open_import_data(options) as data:
             for index, batch in enumerate(iter_import_batches(
                 data, options.start_row, options.count, options.batch_size,
             ), 1):

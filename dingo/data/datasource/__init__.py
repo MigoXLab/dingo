@@ -1,4 +1,3 @@
-from dingo.data.datasource.ann_benchmarks import ANNBenchmarksDataSource  # noqa: F401
 from dingo.data.datasource.base import DataSource  # noqa E402.
 from dingo.data.datasource.huggingface import HuggingFaceSource  # noqa E402.
 from dingo.data.datasource.local import LocalDataSource  # noqa E402.

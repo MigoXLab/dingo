@@ -1,9 +1,10 @@
-"""Evaluate saved SIFT1M query attempts against an existing ANN cache"""
+"""Evaluate saved SIFT1M query attempts against an existing HDF5 file"""
 
 from __future__ import annotations
 import argparse
 import json
 import sys
+from importlib import import_module
 from math import isfinite
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -14,7 +15,6 @@ if TYPE_CHECKING:
 # TODO: Move evaluation orchestration into a reusable module
 # TODO: Add QPS when query logs include the full run window
 DATASET_NAME = "sift-128-euclidean"
-DEFAULT_CACHE_DIR = "~/.cache/dingo/ann_benchmarks"
 ATTEMPT_FIELDS = {"dataset", "query_id", "backend", "top_k", "hits", "elapsed_ms", "status", "error"}
 
 
@@ -129,9 +129,12 @@ def write_reports(attempts: list[dict[str, Any]], output_dir: Path) -> dict[str,
 
 
 def main() -> None:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    hdf5_input = import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True, help="Saved query-attempt JSONL")
-    parser.add_argument("--cache-dir", default=DEFAULT_CACHE_DIR)
+    hdf5_input.add_hdf5_arguments(parser)
     parser.add_argument("--output-dir", type=Path, required=True)
     options = parser.parse_args()
     for filename in ("per_query.jsonl", "summary.json"):
@@ -140,22 +143,8 @@ def main() -> None:
             parser.error(f"Output file already exists: {path}")
     try:
         attempts = read_attempts(options.input)
-        sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-        from dingo.config import InputArgs
-        from dingo.data import dataset_map, datasource_map
-
-        args = InputArgs(
-            input_path=DATASET_NAME,
-            dataset={
-                "source": "ann_benchmarks", "format": "ann_benchmarks",
-                "ann_benchmarks_config": {"cache_dir": options.cache_dir},
-            },
-        )
-        source = datasource_map["ann_benchmarks"](input_args=args)
-        if not source.path.is_file():
-            raise FileNotFoundError(f"ANN cache is missing: {source.path}")
-        with dataset_map["ann_benchmarks"](source=source) as dataset:
-            scored = score_attempts(attempts, next(dataset.get_data()))
+        with hdf5_input.open_ann_data(options, name=DATASET_NAME) as data:
+            scored = score_attempts(attempts, data)
         write_reports(scored, options.output_dir)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))

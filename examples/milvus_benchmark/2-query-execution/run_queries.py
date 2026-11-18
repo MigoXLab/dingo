@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import sys
+from importlib import import_module
 from math import isfinite
 from pathlib import Path
 from time import perf_counter
@@ -18,9 +19,6 @@ if TYPE_CHECKING:
     from dingo.io import Data
     from dingo.retrieval.backends.milvus import VectorHit
     from dingo.retrieval.search_client import SearchClient
-
-DATASET_NAME = "sift-128-euclidean"
-DEFAULT_CACHE_DIR = "~/.cache/dingo/ann_benchmarks"
 
 
 def validate_queries(data: Data, start_row: int, count: int, top_k: int) -> None:
@@ -134,9 +132,10 @@ def create_milvus_client(options: argparse.Namespace) -> MilvusClient:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    hdf5_input = import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
+
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("dataset", nargs="?", default=DATASET_NAME, choices=[DATASET_NAME])
-    parser.add_argument("--cache-dir", default=DEFAULT_CACHE_DIR)
+    hdf5_input.add_hdf5_arguments(parser)
     parser.add_argument("--start-row", type=int, default=0)
     parser.add_argument("--count", type=int, default=5)
     parser.add_argument("--top-k", type=int, default=10)
@@ -152,6 +151,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    # 直接运行脚本时使用当前开发仓库
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    hdf5_input = import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
+
     parser = build_parser()
     options = parser.parse_args(argv)
     if options.start_row < 0 or options.count <= 0 or options.top_k <= 0:
@@ -159,24 +162,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     if options.output.exists() or options.output.is_symlink():
         parser.error(f"Output file already exists: {options.output}")
 
-    # 直接运行脚本时使用当前开发仓库
-    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from dingo.config import InputArgs
-    from dingo.data import dataset_map, datasource_map
     from dingo.retrieval.backends.milvus import MilvusSearchClient
 
-    args = InputArgs(
-        input_path=options.dataset,
-        dataset={
-            "source": "ann_benchmarks", "format": "ann_benchmarks",
-            "ann_benchmarks_config": {"cache_dir": options.cache_dir},
-        },
-    )
-    source = datasource_map["ann_benchmarks"](input_args=args)
     sdk_client = None
     try:
-        with dataset_map["ann_benchmarks"](source=source) as dataset:
-            data = next(dataset.get_data())
+        with hdf5_input.open_ann_data(options) as data:
             validate_queries(data, options.start_row, options.count, options.top_k)
             sdk_client = create_milvus_client(options)
             client = MilvusSearchClient(

@@ -16,7 +16,7 @@ from dingo.retrieval.search_client import SearchClient, list_backends
 
 @pytest.fixture(scope="module")
 def runner():
-    path = Path(__file__).resolve().parents[3] / "examples/Milvus_benchmark/2-query-execution/run_queries.py"
+    path = Path(__file__).resolve().parents[3] / "examples/milvus_benchmark/2-query-execution/run_queries.py"
     spec = importlib.util.spec_from_file_location("ann_query_runner", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -128,13 +128,12 @@ def test_invalid_dimensions_do_not_call_client(runner, data):
 
 
 def test_cli_never_overwrites_existing_output(runner, tmp_path, monkeypatch):
-    from dingo.data.datasource.ann_benchmarks import ANNBenchmarksDataSource
+    hdf5_input = importlib.import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
 
-    def forbidden_load(self, *args, **kwargs):
-        pytest.fail("Existing output must be rejected before loading or downloading data")
+    def forbidden_load(*args, **kwargs):
+        pytest.fail("Existing output must be rejected before loading data")
 
-    monkeypatch.setattr(ANNBenchmarksDataSource, "__init__", forbidden_load)
-    monkeypatch.setattr(ANNBenchmarksDataSource, "load", forbidden_load)
+    monkeypatch.setattr(hdf5_input, "open_ann_data", forbidden_load)
     output = tmp_path / "existing.jsonl"
     output.write_text("keep original\n")
     monkeypatch.setattr("sys.argv", ["run_queries.py"] + milvus_args(output))
@@ -232,34 +231,26 @@ def test_sdk_timeout_and_service_error_are_distinct(runner, data):
 
 
 @pytest.fixture
-def fake_dataset(monkeypatch, data):
-    from dingo.data import dataset_map, datasource_map
-
-    class Dataset:
-        def __init__(self, **kwargs):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            pass
-
-        def get_data(self):
-            yield data
-
-    monkeypatch.setitem(datasource_map, "ann_benchmarks", lambda **kwargs: object())
-    monkeypatch.setitem(dataset_map, "ann_benchmarks", Dataset)
+def hdf5_input_file(tmp_path, data):
+    h5py = pytest.importorskip("h5py")
+    path = tmp_path / "vectors.hdf5"
+    with h5py.File(path, "w") as hdf5:
+        hdf5.attrs["distance"] = "euclidean"
+        hdf5.create_dataset("train", data=data.queries)
+        hdf5.create_dataset("test", data=data.queries)
+        hdf5.create_dataset("neighbors", data=np.zeros((len(data.queries), 1), dtype=int))
+        hdf5.create_dataset("distances", data=np.zeros((len(data.queries), 1), dtype=float))
+    return path
 
 
-def milvus_args(output):
+def milvus_args(output, input_path=None):
     return ["--milvus-uri", "http://example.invalid:19530", "--milvus-db-name", "fixture_db",
             "--milvus-collection", "fixture_vectors", "--milvus-id-field", "source_key",
             "--milvus-vector-field", "embedding", "--timeout", "2.5", "--output", str(output),
-            "--cache-dir", "/tmp/fixture-ann-cache"]
+            "--input-path", str(input_path or output.with_name("vectors.hdf5"))]
 
 
-def test_query_cli_forwards_configuration_writes_format_and_closes(runner, fake_dataset, tmp_path, monkeypatch):
+def test_query_cli_forwards_configuration_writes_format_and_closes(runner, hdf5_input_file, tmp_path, monkeypatch):
     sdk = FakeSDK([[{"source_key": 19, "distance": 0.5}]])
     constructors = []
 
@@ -289,7 +280,7 @@ def test_query_cli_forwards_configuration_writes_format_and_closes(runner, fake_
 @pytest.mark.parametrize("extra", [["--count", "0"], ["--start-row", "8", "--count", "1"],
                                    ["--search-params", "[]"], ["--search-params", "invalid"],
                                    ["--timeout", "nan"], ["--timeout", "0"]])
-def test_invalid_query_cli_never_connects_or_creates_output(runner, fake_dataset, tmp_path, monkeypatch, extra):
+def test_invalid_query_cli_never_connects_or_creates_output(runner, hdf5_input_file, tmp_path, monkeypatch, extra):
     def forbidden(*args, **kwargs):
         pytest.fail("Invalid configuration or range must be rejected before SDK construction")
 
@@ -300,7 +291,7 @@ def test_invalid_query_cli_never_connects_or_creates_output(runner, fake_dataset
     assert not output.exists()
 
 
-def test_query_connection_failure_does_not_create_output(runner, fake_dataset, tmp_path, monkeypatch):
+def test_query_connection_failure_does_not_create_output(runner, hdf5_input_file, tmp_path, monkeypatch):
     def failing(**kwargs):
         raise RuntimeError("fixture connection failure")
 
@@ -321,12 +312,12 @@ def test_query_missing_configuration_never_connects(runner, tmp_path, monkeypatc
 
 
 def test_query_dangling_output_symlink_is_rejected_before_load(runner, tmp_path, monkeypatch):
-    from dingo.data import datasource_map
+    hdf5_input = importlib.import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
 
-    def forbidden(**kwargs):
+    def forbidden(*args, **kwargs):
         pytest.fail("An existing output path must be rejected before loading or connecting")
 
-    monkeypatch.setitem(datasource_map, "ann_benchmarks", forbidden)
+    monkeypatch.setattr(hdf5_input, "open_ann_data", forbidden)
     output = tmp_path / "queries.jsonl"
     output.symlink_to(tmp_path / "missing.jsonl")
     with pytest.raises(SystemExit):
@@ -381,10 +372,10 @@ def test_sdk_and_rpc_timeout_normalization(runner, data, monkeypatch, kind, stat
     assert len(sdk.calls) == 1
 
 
-def test_query_output_open_failure_closes_constructed_sdk(runner, fake_dataset, tmp_path, monkeypatch):
+def test_query_output_open_failure_closes_constructed_sdk(runner, hdf5_input_file, tmp_path, monkeypatch):
     sdk = FakeSDK([[]])
     monkeypatch.setitem(sys.modules, "pymilvus", SimpleNamespace(MilvusClient=lambda **kwargs: sdk))
     with pytest.raises(FileNotFoundError):
-        runner.main(milvus_args(tmp_path / "missing" / "queries.jsonl"))
+        runner.main(milvus_args(tmp_path / "missing" / "queries.jsonl", hdf5_input_file))
     assert sdk.closed
     assert sdk.calls == []

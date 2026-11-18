@@ -95,7 +95,7 @@ def run_check(client: Any, baseline_client: Any, data: Any, options: argparse.Na
         "uri": options.milvus_uri, "database": options.milvus_db_name, "collection": options.milvus_collection,
         "id_field": options.milvus_id_field, "vector_field": options.milvus_vector_field,
         "start_row": options.start_row, "requested_count": options.count, "batch_size": options.batch_size,
-        "cache_dir": options.cache_dir, "timeout_seconds": options.timeout,
+        "input_path": options.input_path, "timeout_seconds": options.timeout,
         "submitted": 0, "accepted": 0, "rejected": 0, "unknown": 0,
         "batch_count": 0, "verified_count": 0, "final_count": None,
         "adapter_write_ms": 0.0, "readback_ms": None,
@@ -155,6 +155,9 @@ def run_check(client: Any, baseline_client: Any, data: Any, options: argparse.Na
 
 
 def main(argv: list[str] | None = None) -> None:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    hdf5_input = importlib.import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
+
     example = import_example()
     parser = example.build_parser()
     parser.description = __doc__
@@ -170,21 +173,9 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("Start row must be nonnegative; count and batch size must be positive")
     if options.output_dir.exists() or options.output_dir.is_symlink():
         parser.error("The experiment output directory must not already exist")
-    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from dingo.config import InputArgs
-    from dingo.data import dataset_map, datasource_map
-
-    args = InputArgs(input_path=options.dataset, dataset={
-        "source": "ann_benchmarks", "format": "ann_benchmarks",
-        "ann_benchmarks_config": {"cache_dir": options.cache_dir},
-    })
-    source = datasource_map["ann_benchmarks"](input_args=args)
-    if not source.path.is_file():
-        parser.error(f"ANN cache is missing: {source.path}")
     client = baseline_client = None
     try:
-        with dataset_map["ann_benchmarks"](source=source) as dataset:
-            data = next(dataset.get_data())
+        with hdf5_input.open_import_data(options) as data:
             next(example.iter_import_batches(data, options.start_row, options.count, options.batch_size))
             baseline_options = copy.copy(options)
             baseline_options.milvus_db_name = "default"

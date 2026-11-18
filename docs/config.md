@@ -175,7 +175,7 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 
 设置 `dataset.source` 为 `local` 或 `s3`，并将 `input_path` 指向已有文件
 `Dataset.get_data()` 返回一条包含 `hdf5` 的记录，应在迭代器打开期间读取数组，关闭迭代器时释放文件
-安装依赖和调用方式见 [HDF5 读取示例](dataset/ann_benchmarks.md)
+安装依赖和调用方式见 [HDF5 读取指南](dataset/hdf5.md)
 
 #### ms-swift 格式 (dataset.format = "ms_swift")
 

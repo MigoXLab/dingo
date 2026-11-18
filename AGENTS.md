@@ -92,7 +92,12 @@ dingo/
 │
 ├── examples/                ← Usage examples (SDK, CLI, various scenarios)
 │   └── milvus_benchmark/    ← Milvus benchmark loading, import, query, and offline evaluation examples
-│       └── 4-vector-db-import/ ← Real-service import and readback verification example
+│       ├── README.md       ← End-to-end ANN benchmark guide
+│       ├── 0-data-loading/  ← HDF5 input helper and array preview
+│       ├── 1-data-import/   ← Batch preparation and Milvus insertion
+│       ├── 2-query-execution/ ← Top-K queries and JSONL output
+│       ├── 3-evaluation/    ← Offline ANN metric evaluation
+│       └── 4-vector-db-import/ ← Real-service import and readback verification
 ├── test/                    ← Test suite
 │   ├── data/                ← Test data files
 │   ├── env/                 ← Test environment configs
@@ -100,6 +105,7 @@ dingo/
 └── docs/                    ← Documentation
     ├── config.md            ← InputArgs and nested configuration reference
     ├── dataset/             ← Datasource and dataset-format guides
+    │   ├── hdf5.md          ← Local and S3 HDF5 reading
     │   └── s3.md            ← S3/Ceph/MinIO configuration and usage
     └── tc609/               ← TC609-specific rule and LLM documentation
 ```

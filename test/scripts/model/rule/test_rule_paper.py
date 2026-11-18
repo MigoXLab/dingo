@@ -545,12 +545,13 @@ def test_paper_locations_is_oa_rejects_invalid_values(is_oa):
     assert result.status is True
     if is_oa is None:
         error, reason = "null", "is_oa is null"
-    elif isinstance(is_oa, str):
+    elif not isinstance(is_oa, str):
+        error, reason = "wrong_type", "is_oa must be a string"
+    elif is_oa == "":
+        error, reason = "empty", "is_oa cannot be an empty string"
+    else:
         error = "unsupported_value"
         reason = "is_oa must be one of 'true', 'false' or 'unknown'"
-    else:
-        error = "wrong_type"
-        reason = "is_oa must be a string"
     assert result.label == [f"locations.is_oa.{error}"]
     assert result.reason == [
         f"locations: item[1].{reason}",

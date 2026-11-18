@@ -168,6 +168,8 @@ def check_locations(locations: Any) -> ValidationResult:
             return BaseFieldValidation._fail("is_oa.null", "is_oa is null")
         if not isinstance(is_oa, str):
             return BaseFieldValidation._fail("is_oa.wrong_type", "is_oa must be a string")
+        if is_oa == "":
+            return BaseFieldValidation._fail("is_oa.empty", "is_oa cannot be an empty string")
         if is_oa not in {"true", "false", "unknown"}:
             return BaseFieldValidation._fail(
                 "is_oa.unsupported_value", "is_oa must be one of 'true', 'false' or 'unknown'",

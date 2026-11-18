@@ -27,7 +27,7 @@
 | `author` | 10 |
 | `contributors` | 4 |
 | `resources` | 23 |
-| `locations` | 21 |
+| `locations` | 22 |
 | `access_is_oa` | 5 |
 | `access_oa_status` | 5 |
 | `access_oa_url` | 4 |
@@ -52,7 +52,7 @@
 | `access_xinghe_repository_model_version` | 5 |
 | `primary_location` | 4 |
 | `best_oa_location` | 4 |
-| **合计** | **326** |
+| **合计** | **327** |
 
 ## metadata_type
 
@@ -274,7 +274,8 @@
 | `missing_key` | key 缺失 | 列表对象缺少以下任一 key 时标记：`license`、`is_oa`、`pdf_url`、`landing_page_url`、`source_url`、`origin_url`、`source`、`version`、`is_published`、`is_accepted`、`meta_db_name`。key 不带 `locations.` 前缀；允许额外 key，仅检查必需 key 是否存在。 |
 | `is_oa.null` | OA 标记为 null | `is_oa` 为 `null` 时标记，先于类型检查。 |
 | `is_oa.wrong_type` | OA 标记类型错误 | `is_oa` 不是字符串时标记，包括布尔值、数字、列表和对象。`null` 单独标记为 `is_oa.null`。 |
-| `is_oa.unsupported_value` | OA 标记不合法 | 字符串 `is_oa` 仅允许 `"true"`、`"false"`、`"unknown"`；空字符串及其他字符串均不合法。 |
+| `is_oa.empty` | OA 标记为空 | `is_oa` 为空字符串 `""` 时标记，先于取值检查。 |
+| `is_oa.unsupported_value` | OA 标记不合法 | 字符串 `is_oa` 仅允许 `"true"`、`"false"`、`"unknown"`；其他字符串均不合法。空字符串单独标记为 `is_oa.empty`。 |
 | `license.null` | 许可证为 null | `license` 为 `null` 时标记，先于类型检查。 |
 | `license.wrong_type` | 许可证类型错误 | `license` 不是字符串时标记，包括布尔值、数字、列表和对象。`null` 单独标记为 `license.null`。 |
 | `license.unsupported_value` | 许可证不合法 | `license` 仅允许字符串：`cc-by`、`cc-by-nc`、`cc-by-sa`、`cc-by-nd`、`cc-by-nc-sa`、`cc-by-nc-nd`、`other-oa`、`cc0`、`""`、`public-domain`、`publisher-specific-oa`、`publisher-specific`、`wiley-specific`、`elsevier-specific`、`oup-specific`、`acs-specific`、`rsc-specific`、`iop-specific`、`unspecified-oa`、`implied-oa`、`nonexclusive-distrib`、`gpl-v1`、`gpl-v2`、`gpl-v3`、`mit`、`apache-2-0`、`isc`、`ogl-c`、`pd`。 |

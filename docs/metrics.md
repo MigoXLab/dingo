@@ -2,7 +2,7 @@
 
 This document provides comprehensive information about all quality metrics used in Dingo.
 
-**Note**: Metrics cite academic sources where available; internal rules and configurable feature thresholds are identified explicitly.
+**Note**: All metrics are backed by academic sources to ensure objectivity and scientific rigor.
 
 ### RAG Evaluation Metrics
 

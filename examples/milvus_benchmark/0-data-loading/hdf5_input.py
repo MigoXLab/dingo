@@ -6,7 +6,7 @@ from argparse import ArgumentParser, Namespace
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from h5py import Dataset, File
@@ -20,7 +20,9 @@ def add_hdf5_arguments(parser: ArgumentParser, *, required: bool = True) -> None
     parser.add_argument("--input-path", required=required, help="Existing local HDF5 file or s3://bucket/key")
 
 
-def build_input_args(options: Namespace) -> InputArgs:
+def build_input_args(
+    options: Namespace, *, retrieval: dict[str, Any] | None = None, output_path: str | Path | None = None,
+) -> InputArgs:
     from dingo.config import InputArgs
 
     input_path = options.input_path
@@ -38,7 +40,12 @@ def build_input_args(options: Namespace) -> InputArgs:
         if not all(s3_config.values()):
             raise ValueError("S3 input requires S3_ACCESS_KEY, S3_SECRET_KEY, and S3_ENDPOINT_URL")
         config["s3_config"] = s3_config
-    return InputArgs(input_path=input_path, dataset=config)
+    kwargs: dict[str, Any] = {}
+    if retrieval is not None:
+        kwargs["executor"] = {"retrieval": retrieval}
+    if output_path is not None:
+        kwargs["output_path"] = str(output_path)
+    return InputArgs(input_path=input_path, dataset=config, **kwargs)
 
 
 @contextmanager

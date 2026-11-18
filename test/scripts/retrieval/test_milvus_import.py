@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from dingo.config import InputArgs
 from dingo.retrieval.backends.importers.milvus import MilvusImportClient
 from dingo.retrieval.import_client import ImportRecord, ImportResult
 
@@ -328,41 +329,58 @@ class MemoryImportSDK:
         return rows
 
 
-def check_options(tmp_path):
+def check_options():
     return SimpleNamespace(
-        milvus_uri="http://example.invalid:19530", milvus_db_name="fixture_db", milvus_collection="fixture",
-        milvus_id_field="key", milvus_vector_field="embedding", timeout=5.0,
-        start_row=2, count=5, batch_size=2, input_path="fixture.hdf5", output_dir=tmp_path / "report",
+        milvus_db_name="fixture_db", milvus_collection="fixture",
+        milvus_id_field="key", milvus_vector_field="embedding",
+        start_row=2, count=5, batch_size=2, input_path="fixture.hdf5",
     )
 
 
-def test_complete_import_check_and_reports(import_check, preview, tmp_path):
+@pytest.fixture
+def check_input_args(tmp_path):
+    return InputArgs(
+        output_path=str(tmp_path / "report"),
+        executor={"retrieval": {"backend": "milvus", "api_url": "http://example.invalid:19530", "timeout": 5.0}},
+    )
+
+
+def test_complete_import_check_and_reports(import_check, preview, check_input_args):
     import json
 
     data = SimpleNamespace(base=np.arange(30, dtype="float32").reshape(10, 3),
                            metadata={"name": "fixture-ann", "dimension": 3})
     sdk = MemoryImportSDK()
     baseline = SimpleNamespace(list_collections=lambda **kwargs: ["existing"])
-    options = check_options(tmp_path)
-    report = import_check.run_check(sdk, baseline, data, options, preview)
+    options = check_options()
+    report = import_check.run_check(sdk, baseline, data, options, preview, input_args=check_input_args)
     assert report["status"] == "passed"
     assert report["accepted"] == report["verified_count"] == report["final_count"] == 5
     assert report["batch_count"] == 3
     assert report["default_collection_names_unchanged"]
     assert sorted(sdk.rows) == [2, 3, 4, 5, 6]
-    saved = json.loads((options.output_dir / "summary.json").read_text())
+    assert report["uri"] == "http://example.invalid:19530"
+    assert report["timeout_seconds"] == 5.0
+    assert all(call["timeout"] == 5.0 for call in sdk.calls)
+    output_dir = Path(check_input_args.output_path)
+    saved = json.loads((output_dir / "summary.json").read_text())
     assert saved == report
-    assert len((options.output_dir / "batches.jsonl").read_text().splitlines()) == 3
+    assert len((output_dir / "batches.jsonl").read_text().splitlines()) == 3
 
 
 def test_import_check_reads_hdf5_before_mocked_write(import_check, preview, hdf5_args, tmp_path, monkeypatch):
     sdk = MemoryImportSDK()
     baseline = SimpleNamespace(list_collections=lambda **kwargs: ["existing"], close=lambda: None)
     output = tmp_path / "cli-report"
+
+    def create_client(options, retrieval):
+        assert retrieval.backend == "milvus"
+        assert retrieval.api_url == "http://example.invalid:19530"
+        assert retrieval.timeout == 30.0
+        return baseline if options.milvus_db_name == "default" else sdk
+
     monkeypatch.setattr(import_check, "import_example", lambda: preview)
-    monkeypatch.setattr(
-        preview, "create_milvus_client", lambda options: baseline if options.milvus_db_name == "default" else sdk,
-    )
+    monkeypatch.setattr(preview, "create_milvus_client", create_client)
     import_check.main(hdf5_args + [
         "--write-milvus", "--milvus-uri", "http://example.invalid:19530", "--milvus-db-name", "fixture_db",
         "--milvus-collection", "fixture", "--milvus-id-field", "key", "--milvus-vector-field", "embedding",
@@ -374,9 +392,9 @@ def test_import_check_reads_hdf5_before_mocked_write(import_check, preview, hdf5
 
 
 @pytest.mark.parametrize("issue", ["nonempty", "range", "default"])
-def test_import_check_preflight_prevents_writes(import_check, preview, tmp_path, issue):
+def test_import_check_preflight_prevents_writes(import_check, preview, check_input_args, issue):
     data = SimpleNamespace(base=np.zeros((10, 3)), metadata={"name": "fixture-ann", "dimension": 3})
-    options = check_options(tmp_path)
+    options = check_options()
     sdk = MemoryImportSDK()
     baseline = SimpleNamespace(list_collections=lambda **kwargs: ["existing"])
     if issue == "nonempty":
@@ -386,20 +404,20 @@ def test_import_check_preflight_prevents_writes(import_check, preview, tmp_path,
     else:
         options.milvus_db_name = "default"
     with pytest.raises(ValueError):
-        import_check.run_check(sdk, baseline, data, options, preview)
+        import_check.run_check(sdk, baseline, data, options, preview, input_args=check_input_args)
     assert sdk.calls == []
-    assert not options.output_dir.exists()
+    assert not Path(check_input_args.output_path).exists()
 
 
 @pytest.mark.parametrize("issue", ["partial", "corrupt"])
-def test_import_check_failure_retains_report_without_retry(import_check, preview, tmp_path, issue):
+def test_import_check_failure_retains_report_without_retry(import_check, preview, check_input_args, issue):
     import json
 
     data = SimpleNamespace(base=np.zeros((10, 3)), metadata={"name": "fixture-ann", "dimension": 3})
-    options = check_options(tmp_path)
+    options = check_options()
     sdk = MemoryImportSDK(partial=issue == "partial", corrupt=issue == "corrupt")
     baseline = SimpleNamespace(list_collections=lambda **kwargs: ["existing"])
-    report = import_check.run_check(sdk, baseline, data, options, preview)
+    report = import_check.run_check(sdk, baseline, data, options, preview, input_args=check_input_args)
     assert report["status"] == "failed"
     assert report["error"]
     assert report["default_collection_names_unchanged"]
@@ -409,7 +427,7 @@ def test_import_check_failure_retains_report_without_retry(import_check, preview
     else:
         assert len(sdk.calls) == 3
         assert "Readback vectors" in report["error"]
-    assert json.loads((options.output_dir / "summary.json").read_text()) == report
+    assert json.loads((Path(check_input_args.output_path) / "summary.json").read_text()) == report
 
 
 def test_insert_receipt_accepts_general_id_sequence():

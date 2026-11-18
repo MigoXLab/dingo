@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from pymilvus import MilvusClient
 
+    from dingo.config.input_args import RetrievalArgs
     from dingo.io import Data
     from dingo.retrieval.backends.milvus import VectorHit
     from dingo.retrieval.search_client import SearchClient
@@ -119,15 +120,15 @@ def parse_search_params(value: str) -> dict:
     return params
 
 
-def create_milvus_client(options: argparse.Namespace) -> MilvusClient:
+def create_milvus_client(options: argparse.Namespace, retrieval: RetrievalArgs) -> MilvusClient:
     """Create the optional SDK client for query execution"""
     try:
         from pymilvus import MilvusClient
     except ImportError:
         raise SystemExit("Milvus queries require pymilvus; install it with: pip install pymilvus") from None
     return MilvusClient(
-        uri=options.milvus_uri, db_name=options.milvus_db_name,
-        token=os.environ.get("MILVUS_TOKEN", ""), timeout=options.timeout,
+        uri=retrieval.api_url, db_name=options.milvus_db_name,
+        token=os.environ.get("MILVUS_TOKEN", ""), timeout=retrieval.timeout,
     )
 
 
@@ -168,21 +169,28 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     sdk_client = None
     try:
-        input_args = hdf5_input.build_input_args(options)
+        input_args = hdf5_input.build_input_args(
+            options,
+            retrieval={"backend": "milvus", "api_url": options.milvus_uri, "limit": options.top_k,
+                       "timeout": options.timeout},
+            output_path=options.output.parent,
+        )
+        retrieval = input_args.executor.retrieval
+        output_path = Path(input_args.output_path) / options.output.name
         with hdf5_input.open_vector_data(
             input_args, key=options.query_key, field="queries", dataset_id=options.dataset_id,
         ) as data:
-            validate_queries(data, options.start_row, options.count, options.top_k)
-            sdk_client = create_milvus_client(options)
+            validate_queries(data, options.start_row, options.count, retrieval.limit)
+            sdk_client = create_milvus_client(options, retrieval)
             client = MilvusSearchClient(
                 sdk_client, collection_name=options.milvus_collection,
                 id_field=options.milvus_id_field, vector_field=options.milvus_vector_field,
-                timeout=options.timeout, search_params=options.search_params,
+                timeout=retrieval.timeout, search_params=options.search_params,
             )
-            with options.output.open("x", encoding="utf-8") as output:
+            with output_path.open("x", encoding="utf-8") as output:
                 written = write_queries(
                     client, data, start_row=options.start_row,
-                    count=options.count, top_k=options.top_k, output=output,
+                    count=options.count, top_k=retrieval.limit, output=output,
                 )
     except FileExistsError:
         parser.error(f"Output file already exists: {options.output}")

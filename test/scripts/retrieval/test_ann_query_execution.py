@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from dingo.config import InputArgs
 from dingo.retrieval.backends.milvus import MilvusSearchClient, VectorHit
 from dingo.retrieval.search_client import SearchClient, list_backends
 
@@ -247,20 +248,39 @@ def milvus_args(output, input_path=None):
 
 
 def test_query_cli_forwards_configuration_writes_format_and_closes(runner, hdf5_input_file, tmp_path, monkeypatch):
+    hdf5_input = importlib.import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
+    open_vector_data = hdf5_input.open_vector_data
+    loaded_configs = []
     sdk = FakeSDK([[{"source_key": 19, "distance": 0.5}]])
     constructors = []
+
+    def open_data(input_args, **kwargs):
+        loaded_configs.append(input_args)
+        return open_vector_data(input_args, **kwargs)
 
     def constructor(**kwargs):
         constructors.append(kwargs)
         return sdk
 
+    monkeypatch.setattr(hdf5_input, "open_vector_data", open_data)
     monkeypatch.setitem(sys.modules, "pymilvus", SimpleNamespace(MilvusClient=constructor))
     monkeypatch.setenv("MILVUS_TOKEN", "fixture-token")
-    output = tmp_path / "queries.jsonl"
-    runner.main(milvus_args(output) + [
+    monkeypatch.chdir(tmp_path)
+    output = Path("logs") / "queries.custom.jsonl"
+    output.parent.mkdir()
+    runner.main(milvus_args(output, hdf5_input_file) + [
         "--start-row", "2", "--count", "1", "--top-k", "3",
         "--search-params", '{"metric_type":"L2","params":{"nprobe":7}}',
     ])
+    input_args, = loaded_configs
+    assert isinstance(input_args, InputArgs)
+    assert input_args.input_path == str(hdf5_input_file)
+    assert input_args.output_path == str(output.parent)
+    retrieval = input_args.executor.retrieval
+    assert retrieval.backend == "milvus"
+    assert retrieval.api_url == "http://example.invalid:19530"
+    assert retrieval.limit == 3
+    assert retrieval.timeout == 2.5
     assert constructors == [{"uri": "http://example.invalid:19530", "db_name": "fixture_db",
                              "token": "fixture-token", "timeout": 2.5}]
     assert sdk.calls == [{"collection_name": "fixture_vectors", "data": [[6.0, 7.0, 8.0]],

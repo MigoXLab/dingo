@@ -173,6 +173,7 @@ def write_reports(
 
 def main() -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from dingo.config import InputArgs
     from dingo.retrieval.eval_utils import ANN_METRIC_GROUPS
 
     hdf5_input = import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
@@ -194,12 +195,18 @@ def main() -> None:
     try:
         dataset_id = options.dataset_id.strip() if options.dataset_id is not None else None
         attempts = read_attempts(options.input, top_k=options.top_k, dataset_id=dataset_id)
-        input_args = hdf5_input.build_input_args(options) if DATA_METRIC_GROUPS.intersection(options.metrics) else None
+        if DATA_METRIC_GROUPS.intersection(options.metrics):
+            input_args = hdf5_input.build_input_args(options, output_path=options.output_dir)
+        else:
+            input_args = InputArgs(
+                input_path=str(options.input), output_path=str(options.output_dir),
+                dataset={"source": "local", "format": "jsonl"},
+            )
         scored = evaluate_attempts(
             attempts, input_args=input_args, metrics=options.metrics, base_key=options.base_key,
             ground_truth_key=options.ground_truth_key, dataset_id=dataset_id,
         )
-        write_reports(scored, options.output_dir, metrics=options.metrics)
+        write_reports(scored, Path(input_args.output_path), metrics=options.metrics)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     print(f"Evaluated {len(scored)} query attempts")

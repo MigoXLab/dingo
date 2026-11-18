@@ -279,8 +279,8 @@ def test_non_sift_custom_fields_from_import_through_recall_at_twenty(evaluator, 
             pass
 
     sdk = MemoryMilvus()
-    monkeypatch.setattr(importer, "create_milvus_client", lambda options: sdk)
-    monkeypatch.setattr(runner, "create_milvus_client", lambda options: sdk)
+    monkeypatch.setattr(importer, "create_milvus_client", lambda options, retrieval: sdk)
+    monkeypatch.setattr(runner, "create_milvus_client", lambda options, retrieval: sdk)
     connection = ["--milvus-uri", "http://example.invalid", "--milvus-db-name", "fixture",
                   "--milvus-collection", "fixture"]
     source = ["--input-path", str(hdf5_path)]

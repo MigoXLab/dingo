@@ -9,9 +9,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from dingo.config import InputArgs
 
 
 def import_example() -> Any:
@@ -23,20 +26,20 @@ def import_example() -> Any:
     return module
 
 
-def count_rows(client: Any, options: argparse.Namespace) -> int:
+def count_rows(client: Any, options: argparse.Namespace, timeout: float) -> int:
     rows = client.query(
         collection_name=options.milvus_collection, filter="", output_fields=["count(*)"],
-        consistency_level="Strong", timeout=options.timeout,
+        consistency_level="Strong", timeout=timeout,
     )
     if len(rows) != 1 or type(rows[0].get("count(*)")) is not int:
         raise ValueError("Invalid collection count response")
     return rows[0]["count(*)"]
 
 
-def validate_collection(client: Any, options: argparse.Namespace, dimension: int) -> None:
+def validate_collection(client: Any, options: argparse.Namespace, dimension: int, timeout: float) -> None:
     from pymilvus import DataType
 
-    description = client.describe_collection(collection_name=options.milvus_collection, timeout=options.timeout)
+    description = client.describe_collection(collection_name=options.milvus_collection, timeout=timeout)
     fields = {field["name"]: field for field in description["fields"]}
     primary = fields.get(options.milvus_id_field, {})
     vector = fields.get(options.milvus_vector_field, {})
@@ -44,11 +47,11 @@ def validate_collection(client: Any, options: argparse.Namespace, dimension: int
         raise ValueError("The collection requires an explicit INT64 primary key")
     if vector.get("type") != DataType.FLOAT_VECTOR or int(vector.get("params", {}).get("dim", 0)) != dimension:
         raise ValueError("The collection vector type and dimension must match the dataset")
-    if count_rows(client, options) != 0:
+    if count_rows(client, options, timeout) != 0:
         raise ValueError("The import check requires an empty collection")
 
 
-def verify_rows(client: Any, data: Any, options: argparse.Namespace, example: Any) -> int:
+def verify_rows(client: Any, data: Any, options: argparse.Namespace, example: Any, timeout: float) -> int:
     """Compare returned IDs and float32 vectors with the source batches"""
     verified = 0
     for batch in example.iter_import_batches(data, options.start_row, options.count, options.batch_size):
@@ -56,7 +59,7 @@ def verify_rows(client: Any, data: Any, options: argparse.Namespace, example: An
         rows = client.query(
             collection_name=options.milvus_collection, ids=ids,
             output_fields=[options.milvus_id_field, options.milvus_vector_field],
-            consistency_level="Strong", timeout=options.timeout,
+            consistency_level="Strong", timeout=timeout,
         )
         by_id = {row[options.milvus_id_field]: row for row in rows}
         if len(rows) != len(ids) or set(by_id) != set(ids):
@@ -69,22 +72,29 @@ def verify_rows(client: Any, data: Any, options: argparse.Namespace, example: An
     return verified
 
 
-def run_check(client: Any, baseline_client: Any, data: Any, options: argparse.Namespace, example: Any) -> dict:
+def run_check(
+    client: Any, baseline_client: Any, data: Any, options: argparse.Namespace, example: Any, *, input_args: InputArgs,
+) -> dict:
     """Write through the adapter, verify stored rows, and retain an experiment report"""
     from dingo.retrieval.backends.importers.milvus import MilvusImportClient
 
     if options.milvus_db_name == "default":
         raise ValueError("Use a dedicated non-default database for the import check")
+    retrieval = input_args.executor.retrieval
+    if retrieval is None:
+        raise ValueError("Milvus retrieval settings are required for the import check")
+    timeout = retrieval.timeout
+    output_dir = Path(input_args.output_path)
     # Validate the complete range before any write or output creation
     next(example.iter_import_batches(data, options.start_row, options.count, options.batch_size))
     importer = MilvusImportClient(
         client, collection_name=options.milvus_collection, id_field=options.milvus_id_field,
-        vector_field=options.milvus_vector_field, timeout=options.timeout,
+        vector_field=options.milvus_vector_field, timeout=timeout,
     )
-    validate_collection(client, options, data.metadata["dimension"])
-    before = sorted(baseline_client.list_collections(timeout=options.timeout))
-    server_version = client.get_server_version(timeout=options.timeout)
-    options.output_dir.mkdir(parents=True, exist_ok=False)
+    validate_collection(client, options, data.metadata["dimension"], timeout)
+    before = sorted(baseline_client.list_collections(timeout=timeout))
+    server_version = client.get_server_version(timeout=timeout)
+    output_dir.mkdir(parents=True, exist_ok=False)
     report = {
         "experiment": "vector_import_check", "status": "failed",
         "started_at": datetime.now().astimezone().isoformat(),
@@ -92,10 +102,10 @@ def run_check(client: Any, baseline_client: Any, data: Any, options: argparse.Na
         "server_version": server_version,
         "sdk_version": getattr(sys.modules.get("pymilvus"), "__version__", None),
         "initial_count": 0, "timing_unit": "ms", "timing_scope": "adapter_writes_and_readback",
-        "uri": options.milvus_uri, "database": options.milvus_db_name, "collection": options.milvus_collection,
+        "uri": retrieval.api_url, "database": options.milvus_db_name, "collection": options.milvus_collection,
         "id_field": options.milvus_id_field, "vector_field": options.milvus_vector_field,
         "start_row": options.start_row, "requested_count": options.count, "batch_size": options.batch_size,
-        "input_path": options.input_path, "timeout_seconds": options.timeout,
+        "input_path": options.input_path, "timeout_seconds": timeout,
         "submitted": 0, "accepted": 0, "rejected": 0, "unknown": 0,
         "batch_count": 0, "verified_count": 0, "final_count": None,
         "adapter_write_ms": 0.0, "readback_ms": None,
@@ -104,7 +114,7 @@ def run_check(client: Any, baseline_client: Any, data: Any, options: argparse.Na
     }
     started = perf_counter()
     try:
-        with (options.output_dir / "batches.jsonl").open("x", encoding="utf-8") as output:
+        with (output_dir / "batches.jsonl").open("x", encoding="utf-8") as output:
             for index, batch in enumerate(example.iter_import_batches(
                 data, options.start_row, options.count, options.batch_size,
             ), 1):
@@ -128,17 +138,17 @@ def run_check(client: Any, baseline_client: Any, data: Any, options: argparse.Na
                 if receipt.accepted != receipt.submitted or receipt.error:
                     raise RuntimeError(receipt.error or "The batch was not fully acknowledged")
         tick = perf_counter()
-        report["final_count"] = count_rows(client, options)
+        report["final_count"] = count_rows(client, options, timeout)
         if report["final_count"] != options.count:
             raise ValueError("Collection count differs from the requested import count")
-        report["verified_count"] = verify_rows(client, data, options, example)
+        report["verified_count"] = verify_rows(client, data, options, example, timeout)
         report["readback_ms"] = (perf_counter() - tick) * 1000
         report["status"] = "passed"
     except Exception as exc:
         report["error"] = f"{type(exc).__name__}: {exc}"
     finally:
         try:
-            after = sorted(baseline_client.list_collections(timeout=options.timeout))
+            after = sorted(baseline_client.list_collections(timeout=timeout))
             report["default_collections_after"] = after
             report["default_collection_names_unchanged"] = before == after
             if before != after:
@@ -148,7 +158,7 @@ def run_check(client: Any, baseline_client: Any, data: Any, options: argparse.Na
             report["status"] = "failed"
             report["error"] = report["error"] or f"Default verification failed: {exc}"
         report["elapsed_ms"] = (perf_counter() - started) * 1000
-        (options.output_dir / "summary.json").write_text(
+        (output_dir / "summary.json").write_text(
             json.dumps(report, ensure_ascii=False, allow_nan=False, indent=2) + "\n", encoding="utf-8",
         )
     return report
@@ -175,14 +185,20 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("The experiment output directory must not already exist")
     client = baseline_client = None
     try:
-        input_args = hdf5_input.build_input_args(options)
+        input_args = hdf5_input.build_input_args(
+            options, retrieval={"backend": "milvus", "api_url": options.milvus_uri, "timeout": options.timeout},
+            output_path=options.output_dir,
+        )
+        retrieval = input_args.executor.retrieval
+        assert retrieval is not None
+        output_dir = Path(input_args.output_path)
         with hdf5_input.open_vector_data(input_args, key=options.vector_key, field="base") as data:
             next(example.iter_import_batches(data, options.start_row, options.count, options.batch_size))
             baseline_options = copy.copy(options)
             baseline_options.milvus_db_name = "default"
-            baseline_client = example.create_milvus_client(baseline_options)
-            client = example.create_milvus_client(options)
-            report = run_check(client, baseline_client, data, options, example)
+            baseline_client = example.create_milvus_client(baseline_options, retrieval)
+            client = example.create_milvus_client(options, retrieval)
+            report = run_check(client, baseline_client, data, options, example, input_args=input_args)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     finally:
@@ -190,7 +206,7 @@ def main(argv: list[str] | None = None) -> None:
             if sdk is not None:
                 sdk.close()
     print(f"Import check: {report['status']}")
-    print(f"Report: {options.output_dir / 'summary.json'}")
+    print(f"Report: {output_dir / 'summary.json'}")
     if report["status"] != "passed":
         raise SystemExit(1)
 

@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pymilvus import MilvusClient
 
+    from dingo.config.input_args import RetrievalArgs
     from dingo.io import Data
     from dingo.retrieval.import_client import ImportRecord
 
@@ -57,15 +58,15 @@ def positive_timeout(value: str) -> float:
     return timeout
 
 
-def create_milvus_client(options: argparse.Namespace) -> MilvusClient:
+def create_milvus_client(options: argparse.Namespace, retrieval: RetrievalArgs) -> MilvusClient:
     """Create the optional SDK client for an explicit write"""
     try:
         from pymilvus import MilvusClient
     except ImportError:
         raise SystemExit("Milvus writes require pymilvus; install it with: pip install pymilvus") from None
     return MilvusClient(
-        uri=options.milvus_uri, db_name=options.milvus_db_name,
-        token=os.environ.get("MILVUS_TOKEN", ""), timeout=options.timeout,
+        uri=retrieval.api_url, db_name=options.milvus_db_name,
+        token=os.environ.get("MILVUS_TOKEN", ""), timeout=retrieval.timeout,
     )
 
 
@@ -106,7 +107,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     total_records = total_batches = 0
     sdk_client = None
     try:
-        input_args = hdf5_input.build_input_args(options)
+        input_args = hdf5_input.build_input_args(
+            options, retrieval={"backend": "milvus", "api_url": options.milvus_uri or "", "timeout": options.timeout},
+        )
+        retrieval = input_args.executor.retrieval
+        assert retrieval is not None
         with hdf5_input.open_vector_data(input_args, key=options.vector_key, field="base") as data:
             for index, batch in enumerate(iter_import_batches(
                 data, options.start_row, options.count, options.batch_size,
@@ -114,11 +119,11 @@ def main(argv: Sequence[str] | None = None) -> None:
                 if options.write_milvus and sdk_client is None:
                     from dingo.retrieval.backends.importers.milvus import MilvusImportClient
 
-                    sdk_client = create_milvus_client(options)
+                    sdk_client = create_milvus_client(options, retrieval)
                     importer = MilvusImportClient(
                         sdk_client, collection_name=options.milvus_collection,
                         id_field=options.milvus_id_field, vector_field=options.milvus_vector_field,
-                        timeout=options.timeout,
+                        timeout=retrieval.timeout,
                     )
                 if options.write_milvus:
                     result = importer.write_batch(batch)

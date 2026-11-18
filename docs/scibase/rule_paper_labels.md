@@ -557,15 +557,15 @@
 | Label 名 | 中文名称 | 标签含义 |
 |---|---|---|
 | `missing_field` | 字段缺失 | 检查输入对象中是否存在 `primary_location` 字段。 |
-| `null` | 值为 null | 字段值为 `null` 时标记。 |
-| `wrong_type` | 字段类型错误 | 值不是对象，或非空位置对象中的 `source` 不是对象时标记。 |
-| `missing_key` | key 缺失 | 空对象 `{}` 允许通过；非空位置对象缺少以下任一 key 时标记：`id`、`source`、`landing_page_url`、`pdf_url`、`is_oa`、`is_published`、`raw_source_name`、`raw_type`、`provenance`、`license`、`license_id`、`version`、`is_accepted`。其 `source` 对象还须包含：`id`、`display_name`、`issn_l`、`issn`、`is_oa`、`is_in_doaj`、`is_core`、`host_organization`、`host_organization_name`、`host_organization_lineage`、`host_organization_lineage_names`、`type`。允许额外 key。 |
+| `wrong_type` | 字段类型错误 | 值不是对象，或非空位置对象中的 `source` 不是对象时标记。`null` 允许通过。 |
+| `empty` | 值为空对象 | 值为空对象 `{}` 时标记。 |
+| `missing_key` | key 缺失 | 非空位置对象缺少以下任一 key 时标记：`id`、`source`、`landing_page_url`、`pdf_url`、`is_oa`、`is_published`、`raw_source_name`、`raw_type`、`provenance`、`license`、`license_id`、`version`、`is_accepted`。其 `source` 对象还须包含：`id`、`display_name`、`issn_l`、`issn`、`is_oa`、`is_in_doaj`、`is_core`、`host_organization`、`host_organization_name`、`host_organization_lineage`、`host_organization_lineage_names`、`type`。允许额外 key。 |
 
 ## best_oa_location
 
 | Label 名 | 中文名称 | 标签含义 |
 |---|---|---|
 | `missing_field` | 字段缺失 | 检查输入对象中是否存在 `best_oa_location` 字段。 |
-| `null` | 值为 null | 字段值为 `null` 时标记。 |
-| `wrong_type` | 字段类型错误 | 值不是对象时标记。 |
-| `missing_key` | key 缺失 | 空对象 `{}` 允许通过；非空对象缺少以下任一 key 时标记：`id`、`source`、`landing_page_url`、`pdf_url`、`is_oa`、`is_published`、`raw_source_name`、`raw_type`、`provenance`、`license`、`license_id`、`version`、`is_accepted`。允许额外 key。 |
+| `wrong_type` | 字段类型错误 | 值不是对象时标记。`null` 允许通过。 |
+| `empty` | 值为空对象 | 值为空对象 `{}` 时标记。 |
+| `missing_key` | key 缺失 | 非空对象缺少以下任一 key 时标记：`id`、`source`、`landing_page_url`、`pdf_url`、`is_oa`、`is_published`、`raw_source_name`、`raw_type`、`provenance`、`license`、`license_id`、`version`、`is_accepted`。允许额外 key。 |

@@ -2,7 +2,7 @@
 
 This document provides comprehensive information about all quality metrics used in Dingo.
 
-**Note**: All metrics are backed by academic sources to ensure objectivity and scientific rigor.
+**Note**: Metrics cite academic sources where available; internal rules and configurable feature thresholds are identified explicitly.
 
 ### RAG Evaluation Metrics
 
@@ -160,7 +160,7 @@ This document provides comprehensive information about all quality metrics used 
 
 | Type | Metric | Description | Paper Source | Evaluation Results | Examples |
 |------|--------|-------------|--------------|-------------------|----------|
-| `AGENT_TRACE_QUALITY` | RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget, RuleAgentTraceLatencyAnomaly, RuleAgentTraceLossMask, RuleAgentTraceEmptySupervision, RuleMsSwiftSchema | Detects an agent stuck repeating itself: the same tool call, or subsequence of calls, recurring three or more times w... | Internal Implementation | N/A | N/A |
+| `AGENT_TRACE_QUALITY` | RuleAgentTraceLoopDetection, RuleAgentTraceTokenBudget, RuleAgentTraceLatencyAnomaly, RuleAgentTraceLossMask, RuleAgentTraceEmptySupervision, RuleMsSwiftSchema, RuleAgentTraceReasoningSparsity | Agent trace structure and quality checks; ReasoningSparsity reports the per-trajectory empty/whitespace reasoning_content fraction, adding a feature label strictly above threshold (default 0.7) while status stays false. | Internal Implementation; sparsity threshold is configurable, not paper-derived | [Rule guide](agent_trace/ms_swift.md#reasoning-sparsity) | [Reasoning sparsity example](../examples/agent/reasoning_sparsity.py) |
 | `AGENT_TRACE_SAFETY` | RuleAgentTraceDestructiveAction, RuleAgentTraceSensitiveAccess, RuleAgentTraceSecretExposure, RuleAgentTraceGatewayBypass, RuleAgentTraceIntegrity, RuleAgentTraceSandboxExplicitlyDisabled | Flags irreversible actions in tool arguments: forced recursive deletes, schema destruction, unscoped row deletion, hi... | Internal Implementation | N/A | N/A |
 
 ### Rule-Based RESUME Quality Metrics

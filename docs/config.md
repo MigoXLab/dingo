@@ -174,7 +174,7 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 读取 Agent 轨迹 JSONL，每行一个包含 `messages` 数组的对象。保留原始字段，
 只为 `evaluator[].evals` 中选中的已支持指标生成 `<指标名>_<字段名>` 字段。
 每个指标使用独立的 `fields` 映射配置块。当前支持 9 个确定性规则和 7 个 LLM 指标，
-映射及配置示例见 [ms-swift converter 用户说明](agent_trace/ms_swift.md)。`RuleAgentTraceLoopDetection` 的 config 见 [规则配置](agent_trace/rule_config.md)。
+映射及配置示例见 [ms-swift converter 用户说明](agent_trace/ms_swift.md)。Agent Trace 阈值见 [规则配置](agent_trace/rule_config.md)。
 
 ### Executor 配置 (executor)
 
@@ -198,9 +198,10 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 
 | Parameter  | Type | Default | Required | Description |
 |------------|------|---------|----------|-------------|
-| bad        | bool | false   | No       | 是否保存错误结果    |
+| bad        | bool | true    | No       | 是否写出结果文件；当前本地执行器的总开关，设为 false 时 good/merge 也不写出记录 |
 | good       | bool | false   | No       | 是否保存正确结果    |
 | all_labels | bool | false   | No       | 是否保存所有标签    |
+| merge      | bool | false   | No       | 将全部结果写入 `all_results.jsonl`；配合 good/all_labels 保留特征未命中和 N/A 等空标签记录 |
 | raw        | bool | true    | No       | 是否将原始字段直接保存在结果记录中；设为 false 时保存在 `raw_data` 字段中 |
 
 ### LLM Token 使用量输出

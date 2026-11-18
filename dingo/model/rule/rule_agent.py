@@ -86,6 +86,83 @@ def _empty_derived_input_result(cls: type, input_data: Data) -> Optional[EvalDet
 
 
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
+class RuleAgentTraceReasoningSparsity(BaseRule):
+    """Describe empty reasoning frequency in the current record's messages.
+
+    A feature match is not a quality failure: status remains False. Read native
+    messages directly; no ms-swift preparer or JSON round trip is required.
+    """
+
+    _required_fields = []  # Native messages are checked inside the rule.
+    dynamic_config = EvaluatorRuleArgs(threshold=0.7)
+    _metric_info = {
+        "metric_name": "RuleAgentTraceReasoningSparsity",
+        "metric_group": "AGENT_TRACE_QUALITY",
+        "description": (
+            "Reports the fraction of assistant messages with empty or whitespace-only "
+            "reasoning_content. A ratio strictly above threshold (default 0.7) adds "
+            "a trajectory feature label, not a quality failure. Reads native messages "
+            "via fields: {messages: messages}; supports jsonl and ms_swift."
+        ),
+    }
+
+    def eval(self, input_data: Data) -> EvalDetail:
+        # Keep configuration on the instance, as local/spark executors support,
+        # so concurrent evaluator blocks can use different thresholds safely.
+        threshold = self.dynamic_config.threshold
+        if (isinstance(threshold, bool) or not isinstance(threshold, (int, float))
+                or not math.isfinite(threshold) or not 0 <= threshold <= 1):
+            raise ValueError(f"{type(self).__name__} dynamic_config.threshold must be in [0, 1]")
+
+        result = EvalDetail(metric=type(self).__name__, label=[])
+        messages = getattr(input_data, "messages", None)
+        if not isinstance(messages, list):
+            return self._not_applicable(result, "invalid_messages", "messages 必须为数组，无法计算空 reasoning 占比。")
+
+        assistant_count = 0
+        empty_count = 0
+        for message in messages:
+            if not isinstance(message, dict) or not isinstance(message.get("role"), str):
+                return self._not_applicable(
+                    result, "invalid_messages", "messages 中的消息必须为包含字符串 role 的对象，无法计算空 reasoning 占比。",
+                )
+            if message["role"] != "assistant":
+                continue
+            reasoning = message.get("reasoning_content")
+            if not isinstance(reasoning, str):
+                return self._not_applicable(
+                    result, "invalid_reasoning_content",
+                    "assistant 消息的 reasoning_content 缺失或不是字符串，无法计算空 reasoning 占比。",
+                )
+            assistant_count += 1
+            if not reasoning.strip():
+                empty_count += 1
+
+        if assistant_count == 0:
+            return self._not_applicable(result, "no_assistant_messages", "共 0 条 assistant 消息，空 reasoning 占比无定义。")
+
+        ratio = empty_count / assistant_count
+        if ratio > threshold:
+            result.label = [f"{self.metric_type}.{type(self).__name__}"]
+            conclusion = "超过阈值 {threshold:.2%}，命中 reasoning 稀疏特征。"
+        else:
+            conclusion = "未超过阈值 {threshold:.2%}，未命中 reasoning 稀疏特征。"
+        result.reason = [
+            f"共 {assistant_count} 条 assistant 消息，其中 {empty_count} 条 reasoning_content 为空，"
+            f"占比 {ratio:.2%}；" + conclusion.format(threshold=threshold)
+        ]
+        return result
+
+    @staticmethod
+    def _not_applicable(result: EvalDetail, code: str, reason: str) -> EvalDetail:
+        result.applicable = False
+        result.not_applicable_kind = "structural"
+        result.not_applicable_code = code
+        result.reason = [reason]
+        return result
+
+
+@Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
 class RuleAgentTraceLoopDetection(BaseRule):
     """Detect an agent repeating the same tool interaction.
 

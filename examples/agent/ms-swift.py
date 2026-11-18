@@ -12,8 +12,13 @@ config = {
 input_data = {
   "input_path": r"",
   "dataset": {"source": "local", "format": "ms_swift"},
-  "executor": {"result_save":{"good":True, "raw":True}},
+  # Keep status=False feature results, including unmatched and N/A records.
+  "executor": {"result_save":{"bad":True, "good":True, "raw":True, "all_labels":True, "merge":True}},
   "evaluator": [
+    {
+      "fields": {"messages": "messages"},
+      "evals": [{"name": "RuleAgentTraceReasoningSparsity", "config": {"threshold": 0.7}}]
+    },
     {
       "fields": {
         "prompt": "LLMAgentTaskCompletion_prompt",

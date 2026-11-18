@@ -419,15 +419,13 @@ class LocalDataSource(DataSource):
         if not os.path.exists(self.path):
             raise RuntimeError(f'"{self.path}" is not a valid path')
 
+        data_format = self.input_args.dataset.format
         input_is_file = os.path.isfile(self.path)
-        if self.input_args.dataset.format == "hdf5":
-            if not input_is_file:
-                raise ValueError("HDF5 input_path must point to a local file")
-            yield partial(open, self.path, "rb")
-            return
+        if data_format == "hdf5" and not input_is_file:
+            raise ValueError("HDF5 input_path must point to a local file")
 
         f_list = []
-        if os.path.exists(self.path) and os.path.isfile(self.path):
+        if input_is_file:
             f_list = [self.path]
         elif os.path.exists(self.path) and os.path.isdir(self.path):
             self._find_all_files(self.path, f_list)
@@ -435,6 +433,10 @@ class LocalDataSource(DataSource):
         by_line = self.input_args.dataset.format not in ["json", "listjson", "mineru", "mineru_v2", "md"]
 
         for f in f_list:
+            if data_format == "hdf5":
+                yield partial(open, f, "rb")
+                continue
+
             if self.input_args.dataset.format == "md":
                 if f.lower().endswith(".md"):
                     yield self._load_md_file(f)

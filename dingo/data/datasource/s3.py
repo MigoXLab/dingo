@@ -121,7 +121,13 @@ class S3DataSource(DataSource):
         return "s3"
 
     def load(self, **kwargs) -> Generator[str | Callable[[], BinaryIO], None, None]:
-        """Iterate text records or provide a binary opener for HDF5."""
+        """Load data from S3
+
+        Args:
+            kwargs: Reserved for the common DataSource interface
+        Returns:
+            A generator yielding text records or a single binary opener for HDF5
+        """
         data_format = self.input_args.dataset.format
         if data_format not in self.SUPPORTED_FORMATS:
             supported = ", ".join(sorted(self.SUPPORTED_FORMATS))

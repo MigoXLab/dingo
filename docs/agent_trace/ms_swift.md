@@ -730,6 +730,12 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 这是轨迹字段分布特征，`status` 表示是否超过阈值。命中时为 true，现有 Dingo 执行器会将该记录
 计入 `num_bad`；未超过时为 false。该特征本身不能证明模型没有思考或任务一定简单。
 
+`min_assistant_messages` 默认 `0`，不按 assistant 数量过滤单轮记录。如果一条记录只有
+一条 assistant，且它的 `reasoning_content` 为空，空值占比就是 100%，准确描述了这条轨迹
+没有记录在该字段中的显式思考链。对于以显式推理过程为监督目标的任务，这条记录不提供对应的
+思考链监督信号，因此标记 reasoning 稀疏是合理的特征；不能仅因分母为 1 就认为比例无效。
+这里判断的是已记录的显式思考链，不推断模型内部的实际思考过程。
+
 **fields 与规则配置**
 
 
@@ -750,7 +756,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
     "fields": {"messages": "messages"},
     "evals": [{
       "name": "RuleAgentTraceReasoningSparsity",
-      "config": {"threshold": 0.7}
+      "config": {"threshold": 0.7, "min_assistant_messages": 0}
     }]
   }]
 }
@@ -777,20 +783,26 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 **规则步骤**
 
-1. 验证阈值为 `[0, 1]` 范围内的有限数，非法值抛出 `ValueError`。
+1. 验证阈值为 `[0, 1]` 范围内的有限数，`min_assistant_messages` 为非负整数；非法配置在解析或规则入口抛出 `ValueError`。
 2. 检查 `messages` 为数组，消息为包含字符串 `role` 的对象。
 3. 遍历当前 `messages`，累计 assistant 消息总数 A，以及其中 reasoning 为空的数量 E。
-4. 计算空 reasoning 占比 `E / A`，使用未四舍五入的比例比较 `E / A > threshold`。
-5. 严格超过阈值时设置 `status=true` 并添加稀疏特征标签，否则为 false；命中与未命中都输出计数、占比及阈值文案，不输出具体位置。
+4. A 为 0 时返回 N/A；A 小于 `min_assistant_messages` 时返回数量不足的 N/A，不判断稀疏。
+5. 达到数量要求后，计算空 reasoning 占比 `E / A`，使用未四舍五入的比例比较 `E / A > threshold`。
+6. 严格超过阈值时设置 `status=true` 并添加稀疏特征标签，否则为 false；命中与未命中都输出计数、占比及阈值文案，不输出具体位置。
 
 **阈值与边界**
 
 | 参数 | 类型 | 默认值 | 约束 |
 |---|---|---|---|
 | `threshold` | float | `0.7` | 有限数，`0 <= threshold <= 1`，相等不命中 |
+| `min_assistant_messages` | int | `0` | 非负整数，不接受 bool、浮点数或字符串；A 小于此值时返回 N/A，相等时正常检测 |
 
-默认值是可配置的特征划分口径，不是论文给出的通用质量界限。
+两个默认值都是可配置的规则口径，不是论文给出的通用质量界限。
 阈值为 0 时，只要有空 reasoning 即命中；阈值为 1 时不会命中。
+`min_assistant_messages=0` 表示不设置数量下限；`1` 与 `0` 对可计算记录的检测范围相同；
+`2` 表示至少两条 assistant 消息。A 为 0 时，无论配置为多少，空值占比均无定义。
+通用 `EvaluatorRuleArgs` 中该字段默认 `null`，表示不覆盖规则默认值；本规则默认值为 0。
+参数会保留在 `InputArgs.to_dict()` 配置快照中，包括显式填写的 0。
 
 | assistant 数 A | 空 reasoning 数 E | 占比 | 默认阈值下的结果 | status |
 |---|---|---|---|---|
@@ -798,6 +810,9 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 | 10 | 8 | 80% | 命中 | true |
 | 1 | 1 | 100% | 命中，描述轨迹特征 | true |
 | 0 | 0 | 无定义 | N/A，applicable=false | false |
+
+上表使用默认 `min_assistant_messages=0`。若设置为 `2`，A 为 1 的记录改为返回 N/A，
+文案为“共 1 条 assistant 消息，少于最低要求 2 条，本规则不判定 reasoning 稀疏特征。”
 
 **完整标准化输入示例**
 
@@ -883,6 +898,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 | `messages` 缺失、不是数组，或消息对象/role 结构不符合要求 | `invalid_messages` |
 | assistant 的 `reasoning_content` 缺失、为 `null` 或其他非字符串类型 | `invalid_reasoning_content` |
 | 没有 assistant 消息，包括空数组 | `no_assistant_messages` |
+| assistant 数量大于 0，但小于 `min_assistant_messages` | `insufficient_assistant_messages` |
 
 这些情况返回 `applicable=false`、`status=false`、`not_applicable_kind="structural"`，不输出部分比例，
 不将字段缺失或非字符串静默计为空值，也不把无定义的比例记为 0%。
@@ -897,14 +913,19 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 summary 中的标签占比表示稀疏轨迹占全部输入轨迹的比例，不是全部 assistant 消息的空值占比；
 单条轨迹的空值占比在各自的 `reason` 中。
+现有 LocalExecutor 的 `num_good` 仍包含未被其他规则命中的 N/A 记录，标签占比的分母仍为
+全部输入记录；设置数量下限不会自动改变这些汇总口径。区分 N/A 时读取 `applicable`。
 
 ```bash
 python examples/agent/reasoning_sparsity.py
 python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --threshold 0.7
+python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assistant-messages 2
 ```
 
 独立示例默认读取[完整标准化样本](../../test/data/agent/reasoning_sparsity.jsonl)，
 预期得到 2 条记录、1 条稀疏特征命中，summary 中 `num_bad=1`、`num_good=1`。完整配置见本节开头。
+对随附样本设置 `--min-assistant-messages 2` 时，两条单轮轨迹均为 N/A，summary 中
+`num_bad=0`、`num_good=2`；逐条结果保留 `applicable=false`，不代表通过了稀疏判定。
 
 ## 三、LLM 指标
 

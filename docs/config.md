@@ -173,13 +173,8 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 
 读取 Agent 轨迹 JSONL，每行一个包含 `messages` 数组的对象。保留原始字段，
 只为 `evaluator[].evals` 中选中的已支持指标生成 `<指标名>_<字段名>` 字段。
-每个指标使用独立的 `fields` 映射配置块。当前支持 9 个确定性规则和 7 个 LLM 指标，
+每个指标使用独立的 `fields` 映射配置块。当前支持 10 个确定性规则和 7 个 LLM 指标，
 映射及配置示例见 [ms-swift converter 用户说明](agent_trace/ms_swift.md)。Agent Trace 阈值见 [规则配置](agent_trace/rule_config.md)。
-
-`RuleAgentTraceReasoningSparsity` 直接映射 `fields: {"messages": "messages"}`，不需要 prepare。
-空 reasoning 占 assistant 消息的比例严格大于 `config.threshold`（默认 `0.7`）时
-`status=true`，否则为 false；相等不命中。现有执行器将命中计入 `num_bad`。
-完整输入、N/A 和结果保存配置见 [reasoning 稀疏规则](agent_trace/ms_swift.md#reasoning-sparsity)。
 
 ### Executor 配置 (executor)
 
@@ -267,17 +262,22 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 | rule_config | object | {} | Depends | 规则配置 |
 | llm_config | object | {} | Depends | LLM 配置 |
 
-#### EvaluatorRuleArgs 配置 (evaluator.rule_config.[rule_name])
+#### EvaluatorRuleArgs 配置 (evaluator[].evals[].config)
 
 规则配置（支持额外字段，规则可按需读取自定义参数）：
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
 | threshold | float | null | No | 规则决策阈值 |
+| min_assistant_messages | int | null | No | 严格非负整数，不接受 bool、浮点数或字符串。null 表示不覆盖规则默认值；ReasoningSparsity 的规则默认值为 0，表示不设置 assistant 数量下限 |
 | pattern | str | null | No | 匹配模式字符串 |
 | key_list | list | null | No | 匹配关键词列表 |
 | refer_path | list | null | No | 参考文件路径或小模型路径 |
 | *其他字段* | any | - | No | 规则自定义扩展字段（如 `ignore_order`） |
+
+`min_assistant_messages` 可通过 SDK 或配置文件的 `evaluator[].evals[].config` 输入，
+已加入 `InputArgs.to_dict()` 的配置快照白名单，0 和正整数都会原样保留；
+现有序列化白名单和敏感字段排除方式保持不变。该参数仅由使用它的规则执行数量判断。
 
 #### EvaluatorLLMArgs 配置 (evaluator.llm_config.[llm_name])
 

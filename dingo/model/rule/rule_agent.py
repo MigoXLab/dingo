@@ -95,7 +95,7 @@ class RuleAgentTraceReasoningSparsity(BaseRule):
     """
 
     _required_fields = []  # Native messages are checked inside the rule.
-    dynamic_config = EvaluatorRuleArgs(threshold=0.7)
+    dynamic_config = EvaluatorRuleArgs(threshold=0.7, min_assistant_messages=0)
     _metric_info = {
         "metric_name": "RuleAgentTraceReasoningSparsity",
         "metric_group": "AGENT_TRACE_QUALITY",
@@ -103,7 +103,8 @@ class RuleAgentTraceReasoningSparsity(BaseRule):
             "Reports the fraction of assistant messages with empty or whitespace-only "
             "reasoning_content. A ratio strictly above threshold (default 0.7) sets "
             "status=True and adds a reasoning sparsity label. Reads native messages "
-            "via fields: {messages: messages}; supports jsonl and ms_swift."
+            "via fields: {messages: messages}; supports jsonl and ms_swift. "
+            "min_assistant_messages defaults to 0, including single-assistant records."
         ),
     }
 
@@ -114,6 +115,13 @@ class RuleAgentTraceReasoningSparsity(BaseRule):
         if (isinstance(threshold, bool) or not isinstance(threshold, (int, float))
                 or not math.isfinite(threshold) or not 0 <= threshold <= 1):
             raise ValueError(f"{type(self).__name__} dynamic_config.threshold must be in [0, 1]")
+        minimum = self.dynamic_config.min_assistant_messages
+        if minimum is None:
+            minimum = 0
+        if isinstance(minimum, bool) or not isinstance(minimum, int) or minimum < 0:
+            raise ValueError(
+                f"{type(self).__name__} dynamic_config.min_assistant_messages must be a non-negative integer"
+            )
 
         result = EvalDetail(metric=type(self).__name__, label=[])
         messages = getattr(input_data, "messages", None)
@@ -141,6 +149,11 @@ class RuleAgentTraceReasoningSparsity(BaseRule):
 
         if assistant_count == 0:
             return self._not_applicable(result, "no_assistant_messages", "共 0 条 assistant 消息，空 reasoning 占比无定义。")
+        if assistant_count < minimum:
+            return self._not_applicable(
+                result, "insufficient_assistant_messages",
+                f"共 {assistant_count} 条 assistant 消息，少于最低要求 {minimum} 条，本规则不判定 reasoning 稀疏特征。",
+            )
 
         ratio = empty_count / assistant_count
         result.status = ratio > threshold

@@ -5,6 +5,7 @@ from pathlib import Path
 from test.scripts.ms_swift_test_utils import standard_ms_swift_record
 
 import pytest
+from pydantic import ValidationError
 
 from dingo.config import InputArgs
 from dingo.config.input_args import EvaluatorRuleArgs
@@ -79,6 +80,68 @@ def test_comparison_does_not_use_rounded_percentage():
     assert _rule(threshold=0.7).eval(data).label == []
 
 
+@pytest.mark.parametrize("minimum,count,applicable", [
+    (0, 1, True), (1, 1, True), (2, 1, False), (2, 2, True),
+    (3, 2, False), (3, 3, True), (0, 0, False), (2, 0, False),
+])
+def test_minimum_assistant_count_is_inclusive_and_zero_keeps_single_turns(minimum, count, applicable):
+    result = _rule(min_assistant_messages=minimum).eval(Data(messages=[_assistant()] * count))
+    assert result.applicable is applicable
+    assert result.status is applicable  # All assistant messages in this fixture have empty reasoning.
+    assert result.label == ([LABEL] if applicable else [])
+    if count == 0:
+        assert result.not_applicable_code == "no_assistant_messages"
+    elif not applicable:
+        assert result.not_applicable_code == "insufficient_assistant_messages"
+        assert result.not_applicable_kind == "structural"
+        assert result.effective_verdict == "n/a"
+        assert result.reason == [
+            f"共 {count} 条 assistant 消息，少于最低要求 {minimum} 条，本规则不判定 reasoning 稀疏特征。"
+        ]
+
+
+def test_minimum_defaults_and_config_updates_are_instance_local():
+    single = Data(messages=[_assistant()])
+    filtered = _rule(min_assistant_messages=2)
+    unfiltered = _rule(min_assistant_messages=0)
+    assert not filtered.eval(single).applicable
+    assert unfiltered.eval(single).status
+    assert _rule().eval(single).status
+    Model.set_config_rule(filtered, EvaluatorRuleArgs(threshold=0.8))
+    assert filtered.dynamic_config.min_assistant_messages == 2
+    assert RuleAgentTraceReasoningSparsity.dynamic_config.min_assistant_messages == 0
+    assert EvaluatorRuleArgs().min_assistant_messages is None
+
+
+@pytest.mark.parametrize("minimum", [-1, True, 2.0, 2.5, "2"])
+def test_minimum_rejects_non_integer_or_negative_values(minimum):
+    with pytest.raises(ValidationError):
+        EvaluatorRuleArgs(min_assistant_messages=minimum)
+
+    # InputArgs has a rule/LLM config union; if its permissive LLM branch accepts
+    # an extra value, the rule must still reject it rather than silently use it.
+    with pytest.raises(ValueError):
+        args = InputArgs(evaluator=[{"evals": [{
+            "name": "RuleAgentTraceReasoningSparsity",
+            "config": {"min_assistant_messages": minimum},
+        }]}])
+        rule = RuleAgentTraceReasoningSparsity()
+        Model.set_config_rule(rule, args.evaluator[0].evals[0].config)
+        rule.eval(Data(messages=[_assistant()]))
+
+
+@pytest.mark.parametrize("minimum", [0, 2])
+def test_minimum_is_preserved_in_input_args_snapshot_and_reload(minimum):
+    args = InputArgs(evaluator=[{"evals": [{
+        "name": "RuleAgentTraceReasoningSparsity",
+        "config": {"threshold": 0.7, "min_assistant_messages": minimum},
+    }]}])
+    snapshot = args.to_dict()
+    assert snapshot["evaluator"][0]["evals"][0]["config"]["min_assistant_messages"] == minimum
+    restored = InputArgs(**json.loads(json.dumps(snapshot)))
+    assert restored.evaluator[0].evals[0].config.min_assistant_messages == minimum
+
+
 @pytest.mark.parametrize("threshold", [-0.1, 1.1, float("nan"), float("inf")])
 def test_invalid_threshold_is_configuration_error(threshold):
     with pytest.raises(ValueError, match=r"threshold must be in \[0, 1\]"):
@@ -127,8 +190,9 @@ def test_bundled_examples_are_complete_standardized_records():
 
 
 @pytest.mark.parametrize("dataset_format", ["jsonl", "ms_swift"])
+@pytest.mark.parametrize("minimum", [0, 2])
 def test_local_pipeline_aggregates_threshold_matches_and_preserves_all_results(
-    tmp_path, monkeypatch, dataset_format,
+    tmp_path, monkeypatch, dataset_format, minimum,
 ):
     monkeypatch.setenv("LOCAL_DEPLOYMENT_MODE", "true")
     records = [
@@ -147,20 +211,25 @@ def test_local_pipeline_aggregates_threshold_matches_and_preserves_all_results(
         }},
         evaluator=[{
             "fields": {"messages": "messages"},
-            "evals": [{"name": "RuleAgentTraceReasoningSparsity", "config": {"threshold": 0.7}}],
+            "evals": [{"name": "RuleAgentTraceReasoningSparsity", "config": {
+                "threshold": 0.7, "min_assistant_messages": minimum,
+            }}],
         }],
     ))
     converted = list(executor.load_data())
     assert all(not item._derived_fields for item in converted)
     summary = executor.execute()
     assert summary.total == 3
-    assert summary.num_bad == 1
-    assert summary.num_good == 2
-    assert summary.type_count["messages"][LABEL] == 1
+    assert summary.num_bad == (1 if minimum == 0 else 0)
+    assert summary.num_good == (2 if minimum == 0 else 3)
+    assert summary.type_count["messages"].get(LABEL, 0) == (1 if minimum == 0 else 0)
+    assert summary.input_args["evaluator"][0]["evals"][0]["config"]["min_assistant_messages"] == minimum
     results = [json.loads(line) for line in (output_path / "all_results.jsonl").read_text(encoding="utf-8").splitlines()]
     details = [item["dingo_result"]["eval_details"]["messages"][0] for item in results]
-    assert [item["label"] for item in details] == [[LABEL], [], []]
-    assert [item["status"] for item in details] == [True, False, False]
+    expected_statuses = [minimum == 0, False, False]
+    assert [item["label"] for item in details] == [([LABEL] if minimum == 0 else []), [], []]
+    assert [item["status"] for item in details] == expected_statuses
+    assert details[0]["applicable"] is (minimum == 0)
     assert details[2]["applicable"] is False
-    assert [item["dingo_result"]["eval_status"] for item in results] == [True, False, False]
+    assert [item["dingo_result"]["eval_status"] for item in results] == expected_statuses
     assert all(item["messages"] == record["messages"] for item, record in zip(results, records))

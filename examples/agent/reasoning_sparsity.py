@@ -3,6 +3,7 @@
 Run from the repository root (bundled standardized sample is the default):
     python examples/agent/reasoning_sparsity.py
     python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --threshold 0.7
+    python examples/agent/reasoning_sparsity.py --min-assistant-messages 2
 
 Feature matches set status=True and count toward Dingo's num_bad summary.
 Save all labels and good records to retain unmatched and N/A results as well
@@ -25,6 +26,7 @@ def main():
     )
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--threshold", type=float, default=0.7)
+    parser.add_argument("--min-assistant-messages", type=int, default=0)
     args = parser.parse_args()
     options = {
         "input_path": str(args.input_path),
@@ -36,6 +38,7 @@ def main():
             "fields": {"messages": "messages"},
             "evals": [{"name": "RuleAgentTraceReasoningSparsity", "config": {
                 "threshold": args.threshold,
+                "min_assistant_messages": args.min_assistant_messages,
             }}],
         }],
     }

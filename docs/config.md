@@ -26,6 +26,7 @@
 
 显式配置 `output_path` 时，Dingo 会将本次任务的 `summary.json` 和结果文件直接写入该目录，不再自动追加时间戳或 UUID 子目录。如果目标目录已存在且非空，任务会立即报错，避免覆盖或混入历史结果；已存在的空目录可以使用。未配置 `output_path` 时，仍使用默认的 `outputs/<时间戳>_<UUID前8位>/` 运行目录。相对路径以启动 Dingo 时的工作目录为基准。
 
+执行结束后，Dingo 会将本次执行参数记录到 `summary.json` 的 `input_args` 字段中，便于后续追溯任务的执行方式。该快照采用安全字段白名单，不会写入 S3 AK/SK、SQL 密码、LLM API Key 或 retrieval token。
 
 ### Dataset 配置 (dataset)
 
@@ -200,7 +201,6 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 | bad        | bool | false   | No       | 是否保存错误结果    |
 | good       | bool | false   | No       | 是否保存正确结果    |
 | all_labels | bool | false   | No       | 是否保存所有标签    |
-| merge      | bool | false   | No       | 将全部结果写入 `all_results.jsonl`；配合 good/all_labels 保留特征未命中和 N/A 等空标签记录 |
 | raw        | bool | true    | No       | 是否将原始字段直接保存在结果记录中；设为 false 时保存在 `raw_data` 字段中 |
 
 ### LLM Token 使用量输出
@@ -273,9 +273,6 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 | refer_path | list | null | No | 参考文件路径或小模型路径 |
 | *其他字段* | any | - | No | 规则自定义扩展字段（如 `ignore_order`） |
 
-`RuleAgentTraceReasoningSparsity` 的 `min_assistant_messages` 通过现有 `extra="allow"`
-机制从 `evaluator[].evals[].config` 输入，不在 `EvaluatorRuleArgs` 中声明正式字段。
-未填写时规则默认使用 0；规则入口要求非负整数，不接受 bool、浮点数或字符串。
 
 #### EvaluatorLLMArgs 配置 (evaluator.llm_config.[llm_name])
 

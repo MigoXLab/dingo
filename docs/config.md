@@ -85,8 +85,10 @@
 | `multi_turn_dialog` | 多轮对话 JSON/JSONL | 配合 `executor.multi_turn_mode` 解析多轮内容 |
 | `image` | 含图像字段的 JSON/JSONL | 用于图像类评估器 |
 | `repository_code_jsonl` | 仓库代码 JSONL | 支持跨记录重复标注 |
+| `hdf5` | HDF5 文件、本地目录或 S3 前缀 | 逐文件返回可按需切片的数据 |
 
-数据源还会施加额外限制：S3 当前支持 `jsonl`、`ms_swift` 和 `plaintext`；当 S3 `input_path` 是以 `/` 结尾的对象前缀时，`jsonl` 和 `ms_swift` 只读取扩展名为 `.jsonl`（大小写不敏感）的对象。SQL 推荐使用 `jsonl`；CSV、Excel、Parquet、Markdown、MinerU 和仓库代码格式由本地数据源读取。
+S3 支持 `jsonl`、`ms_swift`、`plaintext` 和 `hdf5`；使用前缀时，`jsonl` 和 `ms_swift` 只读取 `.jsonl`，`hdf5` 只读取 `.h5` 和 `.hdf5`（扩展名大小写不敏感）
+SQL 推荐使用 `jsonl`；CSV、Excel、Parquet、Markdown、MinerU 和仓库代码格式由本地数据源读取
 
 #### DatasetHFConfig 配置 (dataset.hf_config)
 
@@ -168,6 +170,12 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 - `mineru_v2`：对应 MinerU 的 `content_list_v2.json`，顶层为页面数组，每页包含 block 数组
 
 每个 block 会被转换为一条 `Data` 记录。block 的 `type`、`bbox`、`page_idx` 等原始字段会通过 Pydantic `extra="allow"` 保留在 Data 对象上。
+
+#### HDF5 格式 (dataset.format = "hdf5")
+
+设置 `dataset.source` 为 `local` 或 `s3`，输入可以是文件、本地目录或以 `/` 结尾的 S3 前缀
+`Dataset.get_data()` 为每个文件返回一条包含 `hdf5` 的记录，进入下一条记录或关闭迭代器时释放当前文件
+安装依赖和调用方式见 [HDF5 读取指南](dataset/hdf5.md)
 
 #### ms-swift 格式 (dataset.format = "ms_swift")
 

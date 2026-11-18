@@ -66,8 +66,7 @@ class S3Dataset(Dataset):
         for data_raw in self._ds:
             data: Union[Generator[Data], Data] = self.converter(data_raw)
             if isinstance(data, Generator):
-                for d in data:
-                    yield d
+                yield from data
             else:
                 yield data
 

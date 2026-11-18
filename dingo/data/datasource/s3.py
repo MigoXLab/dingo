@@ -1,4 +1,7 @@
-from typing import Any, Dict, Generator, Iterator, Optional
+import io
+from contextlib import closing
+from functools import partial
+from typing import Any, BinaryIO, Callable, Dict, Generator, Iterator, Optional
 from urllib.parse import unquote, urlsplit
 
 import boto3
@@ -8,10 +11,62 @@ from botocore.config import Config
 from dingo.config import InputArgs
 from dingo.data.datasource.base import DataSource
 
+_S3_READ_SIZE = 1024 * 1024
+
+
+class _S3RangeReader(io.RawIOBase):
+    def __init__(self, client, bucket: str, key: str, size: int, etag: Optional[str]):
+        super().__init__()
+        self._client = client
+        self._object = {"Bucket": bucket, "Key": key}
+        if etag is not None:
+            self._object["IfMatch"] = etag
+        self._size = size
+        self._offset = 0
+
+    def readable(self) -> bool:
+        return True
+
+    def seekable(self) -> bool:
+        return True
+
+    def tell(self) -> int:
+        return self._offset
+
+    def seek(self, offset: int, whence: int = io.SEEK_SET) -> int:
+        if whence == io.SEEK_CUR:
+            offset += self._offset
+        elif whence == io.SEEK_END:
+            offset += self._size
+        elif whence != io.SEEK_SET:
+            raise ValueError("Invalid seek mode")
+        if offset < 0:
+            raise ValueError("Negative seek position")
+        self._offset = offset
+        return offset
+
+    def readinto(self, buffer) -> int:
+        target = memoryview(buffer).cast("B")
+        size = min(len(target), self._size - self._offset, _S3_READ_SIZE)
+        if size <= 0:
+            return 0
+        start = self._offset
+        end = start + size - 1
+        response = self._client.get_object(**self._object, Range=f"bytes={start}-{end}")
+        with closing(response["Body"]) as body:
+            if response.get("ContentRange") != f"bytes {start}-{end}/{self._size}":
+                raise OSError("S3 returned an unexpected byte range")
+            content = body.read(size)
+        if len(content) != size:
+            raise OSError("S3 returned an incomplete byte range")
+        target[:size] = content
+        self._offset += size
+        return size
+
 
 @DataSource.register()
 class S3DataSource(DataSource):
-    SUPPORTED_FORMATS = {"jsonl", "ms_swift", "plaintext"}
+    SUPPORTED_FORMATS = {"jsonl", "ms_swift", "plaintext", "hdf5"}
 
     def __init__(
         self,
@@ -66,25 +121,35 @@ class S3DataSource(DataSource):
     def get_source_type() -> str:
         return "s3"
 
-    def load(self, **kwargs) -> Generator[str, None, None]:
-        """Load the local file dataset based on `LocalDataSource`.
+    def load(self, **kwargs) -> Generator[str | Callable[[], BinaryIO], None, None]:
+        """Load data from S3
+
         Args:
-            kwargs: Additional keyword arguments used for loading the dataset.
+            kwargs: Reserved for the common DataSource interface
         Returns:
-            An instance of `Iterable`.
+            A generator yielding text records or one binary opener per HDF5 file
         """
-        if self.input_args.dataset.format not in self.SUPPORTED_FORMATS:
+        data_format = self.input_args.dataset.format
+        if data_format not in self.SUPPORTED_FORMATS:
             supported = ", ".join(sorted(self.SUPPORTED_FORMATS))
             raise RuntimeError(f"S3 format must be one of: {supported}")
+        if data_format == "hdf5":
+            return self._load_hdf5()
         return self._load()
 
-    def _load(self) -> Generator[str, None, None]:
-        if self.path and not self.path.endswith("/"):
-            keys = iter((self.path,))
-        else:
-            keys = self._iter_object_keys()
+    def _load_hdf5(self) -> Generator[Callable[[], BinaryIO], None, None]:
+        for key in sorted(self._iter_input_keys()):
+            yield partial(self._open_hdf5, key)
 
-        for key in keys:
+    def _open_hdf5(self, key: str) -> BinaryIO:
+        metadata = self.client.head_object(Bucket=self.bucket, Key=key)
+        reader = _S3RangeReader(
+            self.client, self.bucket, key, metadata["ContentLength"], metadata.get("ETag"),
+        )
+        return io.BufferedReader(reader, buffer_size=_S3_READ_SIZE)
+
+    def _load(self) -> Generator[str, None, None]:
+        for key in self._iter_input_keys():
             obj = self.client.get_object(Bucket=self.bucket, Key=key)
             body = obj["Body"]
             try:
@@ -93,17 +158,26 @@ class S3DataSource(DataSource):
             finally:
                 body.close()
 
+    def _iter_input_keys(self) -> Iterator[str]:
+        if self.path and not self.path.endswith("/"):
+            yield self.path
+        else:
+            yield from self._iter_object_keys()
+
     def _iter_object_keys(self) -> Iterator[str]:
         """Yield every matching object key under the configured prefix."""
         paginator = self.client.get_paginator("list_objects_v2")
         pages = paginator.paginate(Bucket=self.bucket, Prefix=self.path)
+        data_format = self.input_args.dataset.format
         for page in pages:
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 if (
-                    self.input_args.dataset.format in ("jsonl", "ms_swift")
+                    data_format in ("jsonl", "ms_swift")
                     and not key.lower().endswith(".jsonl")
                 ):
+                    continue
+                if data_format == "hdf5" and not key.lower().endswith((".h5", ".hdf5")):
                     continue
                 yield key
 

@@ -1,5 +1,6 @@
 import json
 import os
+from functools import partial
 from typing import Any, Dict, Generator, List, Optional
 
 from dingo.config import InputArgs
@@ -59,6 +60,9 @@ class LocalDataSource(DataSource):
                         file_list.append(f)
                 elif getattr(self.input_args.dataset, "format", None) == "md":
                     if f.lower().endswith(".md"):
+                        file_list.append(f)
+                elif getattr(self.input_args.dataset, "format", None) == "hdf5":
+                    if f.lower().endswith((".h5", ".hdf5")):
                         file_list.append(f)
                 else:
                     file_list.append(f)
@@ -411,23 +415,30 @@ class LocalDataSource(DataSource):
         Load a local file and return its contents.
 
         Returns:
-            Generator[str]: The contents of the file.
+            An iterator of file contents or a binary opener for HDF5.
         """
         import gzip
 
         if not os.path.exists(self.path):
             raise RuntimeError(f'"{self.path}" is not a valid path')
 
-        f_list = []
+        data_format = self.input_args.dataset.format
         input_is_file = os.path.isfile(self.path)
-        if os.path.exists(self.path) and os.path.isfile(self.path):
+        f_list = []
+        if input_is_file:
             f_list = [self.path]
         elif os.path.exists(self.path) and os.path.isdir(self.path):
             self._find_all_files(self.path, f_list)
+            if data_format == "hdf5":
+                f_list.sort()
 
         by_line = self.input_args.dataset.format not in ["json", "listjson", "mineru", "mineru_v2", "md"]
 
         for f in f_list:
+            if data_format == "hdf5":
+                yield partial(open, f, "rb")
+                continue
+
             if self.input_args.dataset.format == "md":
                 if f.lower().endswith(".md"):
                     yield self._load_md_file(f)

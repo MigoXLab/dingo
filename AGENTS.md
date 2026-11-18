@@ -79,15 +79,25 @@ dingo/
 │   ├── retrieval/            ← Retrieval evaluation module
 │   │   ├── sciverse_quality.py ← Agentic source verification and authority metadata enrichment
 │   │   ├── search_client.py ← SearchClient ABC + registry + PaperResult/SearchResponse
+│   │   ├── import_client.py ← Import records, receipts, and client contract
 │   │   ├── tasks/           ← Bundled retrieval datasets (JSON)
 │   │   ├── backends/
-│   │   │   └── agentic.py   ← AgenticSearchClient (local + public mode)
+│   │   │   ├── agentic.py   ← AgenticSearchClient (local + public mode)
+│   │   │   ├── milvus.py    ← SDK-backed vector query adapter
+│   │   │   └── importers/   ← Import backend adapters
 │   │   ├── mteb_adapter.py  ← SearchClientModel (MTEB SearchProtocol adapter)
 │   │   └── eval_utils.py    ← normalize_title, resolve_hit, save_json
 │   └── run/
 │       └── cli.py           ← CLI entry point (subcommands: eval, eval-retrieval, info, serve)
 │
 ├── examples/                ← Usage examples (SDK, CLI, various scenarios)
+│   └── milvus_benchmark/    ← Milvus benchmark loading, import, query, and offline evaluation examples
+│       ├── README.md       ← End-to-end ANN benchmark guide
+│       ├── 0-data-loading/  ← HDF5 input helper and array preview
+│       ├── 1-data-import/   ← Batch preparation and Milvus insertion
+│       ├── 2-query-execution/ ← Top-K queries and JSONL output
+│       ├── 3-evaluation/    ← Offline ANN metric evaluation
+│       └── 4-vector-db-import/ ← Real-service import and readback verification
 ├── test/                    ← Test suite
 │   ├── data/                ← Test data files
 │   ├── env/                 ← Test environment configs
@@ -95,6 +105,7 @@ dingo/
 └── docs/                    ← Documentation
     ├── config.md            ← InputArgs and nested configuration reference
     ├── dataset/             ← Datasource and dataset-format guides
+    │   ├── hdf5.md          ← Local and S3 HDF5 reading
     │   └── s3.md            ← S3/Ceph/MinIO configuration and usage
     └── tc609/               ← TC609-specific rule and LLM documentation
 ```

@@ -89,8 +89,9 @@ def _empty_derived_input_result(cls: type, input_data: Data) -> Optional[EvalDet
 class RuleAgentTraceReasoningSparsity(BaseRule):
     """Describe empty reasoning frequency in the current record's messages.
 
-    A feature match is not a quality failure: status remains False. Read native
-    messages directly; no ms-swift preparer or JSON round trip is required.
+    Status indicates whether the empty reasoning ratio exceeds the threshold.
+    Read native messages directly; no ms-swift preparer or JSON round trip is
+    required. Matching records follow Dingo's existing issue aggregation.
     """
 
     _required_fields = []  # Native messages are checked inside the rule.
@@ -100,8 +101,8 @@ class RuleAgentTraceReasoningSparsity(BaseRule):
         "metric_group": "AGENT_TRACE_QUALITY",
         "description": (
             "Reports the fraction of assistant messages with empty or whitespace-only "
-            "reasoning_content. A ratio strictly above threshold (default 0.7) adds "
-            "a trajectory feature label, not a quality failure. Reads native messages "
+            "reasoning_content. A ratio strictly above threshold (default 0.7) sets "
+            "status=True and adds a reasoning sparsity label. Reads native messages "
             "via fields: {messages: messages}; supports jsonl and ms_swift."
         ),
     }
@@ -142,7 +143,8 @@ class RuleAgentTraceReasoningSparsity(BaseRule):
             return self._not_applicable(result, "no_assistant_messages", "共 0 条 assistant 消息，空 reasoning 占比无定义。")
 
         ratio = empty_count / assistant_count
-        if ratio > threshold:
+        result.status = ratio > threshold
+        if result.status:
             result.label = [f"{self.metric_type}.{type(self).__name__}"]
             conclusion = "超过阈值 {threshold:.2%}，命中 reasoning 稀疏特征。"
         else:

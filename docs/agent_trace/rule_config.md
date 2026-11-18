@@ -34,7 +34,8 @@
 ## RuleAgentTraceReasoningSparsity
 
 直接读取原生 `messages`，在规则内统计每条轨迹的空 reasoning assistant 消息占比。
-无需 converter prepare；支持 `jsonl` 和 `ms_swift`。这是特征标签，不是坏样本结论。
+无需 converter prepare；支持 `jsonl` 和 `ms_swift`。这是分布特征，超过阈值时设置 `status=true`，
+按现有 Dingo 执行器计入 `num_bad`；未超过时为 false。
 
 | 参数 | 类型 | 默认 | 约束 |
 |---|---|---|---|
@@ -55,7 +56,7 @@ reasoning 字段缺失/类型不正确时返回 N/A；合法的空字符串、�
 结果文案包含 assistant 总数、空值数、占比和阈值，不输出具体位置。
 
 保存结果时设置 `result_save.bad=true, good=true, all_labels=true, merge=true`，
-保留 `status=false` 的特征标签、未命中和 N/A 详情。完整输出语义见
+保留命中的 `status=true` 结果，以及未命中和 N/A 的 `status=false` 详情。完整输出语义见
 [ms-swift 确定性规则中的 reasoning 稀疏章节](ms_swift.md#reasoning-sparsity)。
 
 可运行示例：`python examples/agent/reasoning_sparsity.py`（随附完整标准化样本）。

@@ -1,4 +1,4 @@
-"""Reasoning sparsity is a per-trajectory feature, never a quality failure."""
+"""Reasoning sparsity status follows the per-trajectory threshold comparison."""
 
 import json
 from pathlib import Path
@@ -32,8 +32,8 @@ def test_default_threshold_is_strictly_greater(empty, matched):
     messages = [_assistant()] * empty + [_assistant("检查配置")] * (10 - empty)
     result = _rule().eval(Data(messages=messages))
     assert result.label == ([LABEL] if matched else [])
-    assert result.status is False
-    assert result.effective_verdict == "pass"
+    assert result.status is matched
+    assert result.effective_verdict == ("issue" if matched else "pass")
     assert result.score is None
     assert result.applicable is True
     assert result.reason == [
@@ -123,10 +123,11 @@ def test_bundled_examples_are_complete_standardized_records():
         assert schema.status is False, schema.reason
         result = _rule().eval(Data(messages=record["messages"]))
         assert result.label == ([LABEL] if index == 0 else [])
+        assert result.status is (index == 0)
 
 
 @pytest.mark.parametrize("dataset_format", ["jsonl", "ms_swift"])
-def test_local_pipeline_preserves_feature_results_without_marking_samples_bad(
+def test_local_pipeline_aggregates_threshold_matches_and_preserves_all_results(
     tmp_path, monkeypatch, dataset_format,
 ):
     monkeypatch.setenv("LOCAL_DEPLOYMENT_MODE", "true")
@@ -153,11 +154,13 @@ def test_local_pipeline_preserves_feature_results_without_marking_samples_bad(
     assert all(not item._derived_fields for item in converted)
     summary = executor.execute()
     assert summary.total == 3
-    assert summary.num_bad == 0
+    assert summary.num_bad == 1
+    assert summary.num_good == 2
     assert summary.type_count["messages"][LABEL] == 1
     results = [json.loads(line) for line in (output_path / "all_results.jsonl").read_text(encoding="utf-8").splitlines()]
     details = [item["dingo_result"]["eval_details"]["messages"][0] for item in results]
     assert [item["label"] for item in details] == [[LABEL], [], []]
+    assert [item["status"] for item in details] == [True, False, False]
     assert details[2]["applicable"] is False
-    assert all(item["dingo_result"]["eval_status"] is False for item in results)
+    assert [item["dingo_result"]["eval_status"] for item in results] == [True, False, False]
     assert all(item["messages"] == record["messages"] for item, record in zip(results, records))

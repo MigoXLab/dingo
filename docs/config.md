@@ -176,6 +176,11 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 每个指标使用独立的 `fields` 映射配置块。当前支持 9 个确定性规则和 7 个 LLM 指标，
 映射及配置示例见 [ms-swift converter 用户说明](agent_trace/ms_swift.md)。Agent Trace 阈值见 [规则配置](agent_trace/rule_config.md)。
 
+`RuleAgentTraceReasoningSparsity` 直接映射 `fields: {"messages": "messages"}`，不需要 prepare。
+空 reasoning 占 assistant 消息的比例严格大于 `config.threshold`（默认 `0.7`）时
+`status=true`，否则为 false；相等不命中。现有执行器将命中计入 `num_bad`。
+完整输入、N/A 和结果保存配置见 [reasoning 稀疏规则](agent_trace/ms_swift.md#reasoning-sparsity)。
+
 ### Executor 配置 (executor)
 
 执行器相关配置：

@@ -12,7 +12,7 @@ config = {
 input_data = {
   "input_path": r"",
   "dataset": {"source": "local", "format": "ms_swift"},
-  # Keep status=False feature results, including unmatched and N/A records.
+  # Keep both threshold matches (status=True) and unmatched/N/A records.
   "executor": {"result_save":{"bad":True, "good":True, "raw":True, "all_labels":True, "merge":True}},
   "evaluator": [
     {

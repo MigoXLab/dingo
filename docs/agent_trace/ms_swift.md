@@ -24,7 +24,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 ## 一、输入约定
 
-- reasoning 稀疏特征使用 `fields: {"messages": "messages"}`，在规则内统计当前轨迹 assistant 的空 `reasoning_content` 占比；默认严格大于 `0.7` 时添加 `AGENT_TRACE_QUALITY.RuleAgentTraceReasoningSparsity` 标签，`status` 仍为 false，文案不包含位置。保存设置和可运行示例见[本规则章节](#reasoning-sparsity)。该规则也可配合 `jsonl` converter 使用，不产生辅助字段。
+- reasoning 稀疏特征使用 `fields: {"messages": "messages"}`，在规则内统计当前轨迹 assistant 的空 `reasoning_content` 占比；默认严格大于 `0.7` 时添加 `AGENT_TRACE_QUALITY.RuleAgentTraceReasoningSparsity` 标签并设置 `status=true`，未超过时为 false，文案不包含位置。保存设置和可运行示例见[本规则章节](#reasoning-sparsity)。该规则也可配合 `jsonl` converter 使用，不产生辅助字段。
 - converter 保留原始记录并为所选指标生成辅助字段，不执行完整交付格式校验。需要检查《轨迹数据的标准化格式》时，配置不带 `fields` 映射的 `RuleMsSwiftSchema`；该规则直接读取完整原始记录，并与其他指标独立执行。
 - 顶层必选字段为：`messages`、`tools`、`termination`、`source`、`harness`、`model`、`total_rounds`、`total_tool_calls`、`tool_counts`、`reasoning_total_tokens`、`tool_defs_tag`、`missing_tool_defs`、`tool_call_tag`、`tool_call_check`、`server_tool_calls`、`metadata`、`completeness_tag`、`completeness`。字段必须存在且类型正确，允许规范明确支持的空字符串、空数组或空对象。
 - `sub_agent_trajectory` 和 `sub_agent_relay_mounts` 是可选字段；存在 `sub_agent_trajectory` 时递归校验每个子轨迹。子轨迹不要求顶层专属的 `completeness_tag` 和 `completeness`。
@@ -727,7 +727,8 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 ### 10. RuleAgentTraceReasoningSparsity（reasoning 稀疏轨迹特征）
 
 统计每条轨迹中，空 `reasoning_content` 占 assistant 消息的比例，判断是否超过阈值。
-这是轨迹字段分布特征，命中不代表坏样本，也不代表模型没有思考或任务一定简单。
+这是轨迹字段分布特征，`status` 表示是否超过阈值。命中时为 true，现有 Dingo 执行器会将该记录
+计入 `num_bad`；未超过时为 false。该特征本身不能证明模型没有思考或任务一定简单。
 
 **fields 与规则配置**
 
@@ -755,10 +756,10 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 }
 ```
 
-保留这些输出设置：`good=true` 保留 `status=false` 记录；`all_labels=true` 保留特征详情，
-尤其是与其他质量规则组合时；`merge=true` 将未命中和 N/A 的空标签记录也写入
+保留这些输出设置：`good=true` 保留未命中和 N/A 的 `status=false` 记录；`all_labels=true`
+保留完整规则详情，尤其是与其他质量规则组合时；`merge=true` 将未命中和 N/A 的空标签记录也写入
 `all_results.jsonl`。当前本地执行器使用 `bad=true` 作为结果文件写出的总开关，
-因此这里也必须保持 true；它不代表本规则把特征命中判为坏样本。
+因此这里也必须保持 true。命中记录的 `status=true` 按现有执行器进入 `num_bad` 汇总。
 
 本规则直接读取原生 `messages`，不生成 `<指标名>_content` 辅助字段，
 不经过 prepare 或 JSON 字符串中转；遍历、空值判断和比例计算都在规则内部完成。
@@ -780,7 +781,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 2. 检查 `messages` 为数组，消息为包含字符串 `role` 的对象。
 3. 遍历当前 `messages`，累计 assistant 消息总数 A，以及其中 reasoning 为空的数量 E。
 4. 计算空 reasoning 占比 `E / A`，使用未四舍五入的比例比较 `E / A > threshold`。
-5. 严格超过阈值时添加稀疏特征标签；命中与未命中都输出计数、占比及阈值文案，不输出具体位置。
+5. 严格超过阈值时设置 `status=true` 并添加稀疏特征标签，否则为 false；命中与未命中都输出计数、占比及阈值文案，不输出具体位置。
 
 **阈值与边界**
 
@@ -791,17 +792,17 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 默认值是可配置的特征划分口径，不是论文给出的通用质量界限。
 阈值为 0 时，只要有空 reasoning 即命中；阈值为 1 时不会命中。
 
-| assistant 数 A | 空 reasoning 数 E | 占比 | 默认阈值下的结果 |
-|---|---|---|---|
-| 10 | 7 | 70% | 未命中，等于阈值 |
-| 10 | 8 | 80% | 命中 |
-| 1 | 1 | 100% | 命中，仍然只是轨迹特征 |
-| 0 | 0 | 无定义 | N/A |
+| assistant 数 A | 空 reasoning 数 E | 占比 | 默认阈值下的结果 | status |
+|---|---|---|---|---|
+| 10 | 7 | 70% | 未命中，等于阈值 | false |
+| 10 | 8 | 80% | 命中 | true |
+| 1 | 1 | 100% | 命中，描述轨迹特征 | true |
+| 0 | 0 | 无定义 | N/A，applicable=false | false |
 
 **完整标准化输入示例**
 
 以下轨迹的 assistant 正确回答了问题，`reasoning_content` 为空；
-空值占比为 `1 / 1 = 100%`，会命中特征，但不因此判为坏样本。
+空值占比为 `1 / 1 = 100%`，命中特征，返回 `status=true`，并按现有执行器计入 `num_bad`。
 
 ```json
 {
@@ -860,7 +861,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 ```json
 {
   "metric": "RuleAgentTraceReasoningSparsity",
-  "status": false,
+  "status": true,
   "score": null,
   "label": ["AGENT_TRACE_QUALITY.RuleAgentTraceReasoningSparsity"],
   "reason": ["共 1 条 assistant 消息，其中 1 条 reasoning_content 为空，占比 100.00%；超过阈值 70.00%，命中 reasoning 稀疏特征。"],
@@ -868,8 +869,9 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 }
 ```
 
-规则沿用 `AGENT_TRACE_QUALITY` 分类，注册在 `agent_trace_basic` 组。未命中时 `label=[]`；`status` 始终为 false，
-不增加坏样本计数；`score` 为空，不参与质量评分。
+规则沿用 `AGENT_TRACE_QUALITY` 分类，注册在 `agent_trace_basic` 组。命中时 `status=true`，
+未命中时 `status=false`、`label=[]`；`score` 为空，不参与质量评分。
+现有执行器会把命中记录计入 `num_bad`，并令该记录的 `eval_status=true`。
 例如恰好达到 70% 时，文案为：
 
 > 共 10 条 assistant 消息，其中 7 条 reasoning_content 为空，占比 70.00%；未超过阈值 70.00%，未命中 reasoning 稀疏特征。
@@ -882,7 +884,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 | assistant 的 `reasoning_content` 缺失、为 `null` 或其他非字符串类型 | `invalid_reasoning_content` |
 | 没有 assistant 消息，包括空数组 | `no_assistant_messages` |
 
-这些情况返回 `applicable=false`、`not_applicable_kind="structural"`，不输出部分比例，
+这些情况返回 `applicable=false`、`status=false`、`not_applicable_kind="structural"`，不输出部分比例，
 不将字段缺失或非字符串静默计为空值，也不把无定义的比例记为 0%。
 如需检查整个标准化记录，可另外配置 `RuleMsSwiftSchema`。
 
@@ -902,7 +904,7 @@ python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --threshold 
 ```
 
 独立示例默认读取[完整标准化样本](../../test/data/agent/reasoning_sparsity.jsonl)，
-预期得到 2 条记录、1 条稀疏特征命中、0 条坏样本。完整配置见本节开头。
+预期得到 2 条记录、1 条稀疏特征命中，summary 中 `num_bad=1`、`num_good=1`。完整配置见本节开头。
 
 ## 三、LLM 指标
 

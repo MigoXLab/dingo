@@ -4,8 +4,9 @@ Run from the repository root (bundled standardized sample is the default):
     python examples/agent/reasoning_sparsity.py
     python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --threshold 0.7
 
-Feature matches remain status=False. Save all labels and good records so the
-feature labels and descriptive reasons are retained in all_results.jsonl.
+Feature matches set status=True and count toward Dingo's num_bad summary.
+Save all labels and good records to retain unmatched and N/A results as well
+as matches and their descriptive reasons in all_results.jsonl.
 """
 
 import argparse

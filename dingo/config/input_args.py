@@ -293,7 +293,6 @@ class InputArgs(BaseModel):
                             "name": ...,
                             "config": {
                                 "threshold": ...,
-                                "min_assistant_messages": ...,
                                 "pattern": ...,
                                 "key_list": ...,
                                 "refer_path": ...,

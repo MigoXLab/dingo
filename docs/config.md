@@ -26,7 +26,6 @@
 
 显式配置 `output_path` 时，Dingo 会将本次任务的 `summary.json` 和结果文件直接写入该目录，不再自动追加时间戳或 UUID 子目录。如果目标目录已存在且非空，任务会立即报错，避免覆盖或混入历史结果；已存在的空目录可以使用。未配置 `output_path` 时，仍使用默认的 `outputs/<时间戳>_<UUID前8位>/` 运行目录。相对路径以启动 Dingo 时的工作目录为基准。
 
-执行结束后，Dingo 会将本次执行参数记录到 `summary.json` 的 `input_args` 字段中，便于后续追溯任务的执行方式。该快照采用安全字段白名单，不会写入 S3 AK/SK、SQL 密码、LLM API Key 或 retrieval token。
 
 ### Dataset 配置 (dataset)
 
@@ -277,9 +276,6 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 `RuleAgentTraceReasoningSparsity` 的 `min_assistant_messages` 通过现有 `extra="allow"`
 机制从 `evaluator[].evals[].config` 输入，不在 `EvaluatorRuleArgs` 中声明正式字段。
 未填写时规则默认使用 0；规则入口要求非负整数，不接受 bool、浮点数或字符串。
-示例脚本的 config 显式填写 `"min_assistant_messages": 0`。该 extra 参数已加入
-`InputArgs.to_dict()` 的配置快照白名单，0 和正整数都会原样保留；现有序列化白名单和
-敏感字段排除方式保持不变。其他规则不会自动执行这个数量判断。
 
 #### EvaluatorLLMArgs 配置 (evaluator.llm_config.[llm_name])
 

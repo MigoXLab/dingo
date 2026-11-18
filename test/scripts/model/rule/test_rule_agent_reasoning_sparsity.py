@@ -134,18 +134,6 @@ def test_minimum_rejects_non_integer_or_negative_values(minimum):
         rule.eval(Data(messages=[_assistant()]))
 
 
-@pytest.mark.parametrize("minimum", [0, 2])
-def test_minimum_is_preserved_in_input_args_snapshot_and_reload(minimum):
-    args = InputArgs(evaluator=[{"evals": [{
-        "name": "RuleAgentTraceReasoningSparsity",
-        "config": {"threshold": 0.7, "min_assistant_messages": minimum},
-    }]}])
-    snapshot = args.to_dict()
-    assert snapshot["evaluator"][0]["evals"][0]["config"]["min_assistant_messages"] == minimum
-    restored = InputArgs(**json.loads(json.dumps(snapshot)))
-    assert restored.evaluator[0].evals[0].config.min_assistant_messages == minimum
-
-
 @pytest.mark.parametrize("threshold", [-0.1, 1.1, float("nan"), float("inf")])
 def test_invalid_threshold_is_configuration_error(threshold):
     with pytest.raises(ValueError, match=r"threshold must be in \[0, 1\]"):
@@ -227,7 +215,6 @@ def test_local_pipeline_aggregates_threshold_matches_and_preserves_all_results(
     assert summary.num_bad == (1 if minimum == 0 else 0)
     assert summary.num_good == (2 if minimum == 0 else 3)
     assert summary.type_count["messages"].get(LABEL, 0) == (1 if minimum == 0 else 0)
-    assert summary.input_args["evaluator"][0]["evals"][0]["config"]["min_assistant_messages"] == minimum
     results = [json.loads(line) for line in (output_path / "all_results.jsonl").read_text(encoding="utf-8").splitlines()]
     details = [item["dingo_result"]["eval_details"]["messages"][0] for item in results]
     expected_statuses = [minimum == 0, False, False]

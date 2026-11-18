@@ -802,9 +802,12 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 `min_assistant_messages=0` 表示不设置数量下限；`1` 与 `0` 对可计算记录的检测范围相同；
 `2` 表示至少两条 assistant 消息。A 为 0 时，无论配置为多少，空值占比均无定义。
 该参数不在通用 `EvaluatorRuleArgs` 中声明字段，通过 `extra="allow"` 传入，由本规则读取和校验；
-未填写时默认使用 0。示例脚本在 config 中显式写出 `"min_assistant_messages": 0`，
-也支持通过 `--min-assistant-messages` 覆盖这个值。
-参数会保留在 `InputArgs.to_dict()` 配置快照中，包括显式填写的 0。
+执行器通过 `Model.set_config_rule()` 将它合并到规则实例的 `dynamic_config`，
+规则通过 `getattr(self.dynamic_config, "min_assistant_messages", 0)` 读取，未填写时默认使用 0。
+示例脚本在 config 中显式写出 `"min_assistant_messages": 0`，也支持通过
+`--min-assistant-messages` 覆盖这个值。该自定义参数无需加入快照白名单即可参与执行；
+目前不会保留在 `InputArgs.to_dict()` 或 `summary.json.input_args` 配置快照中，
+需要复现时请保留原始配置文件。
 
 | assistant 数 A | 空 reasoning 数 E | 占比 | 默认阈值下的结果 | status |
 |---|---|---|---|---|

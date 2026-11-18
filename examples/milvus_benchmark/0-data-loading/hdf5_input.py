@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 def add_hdf5_arguments(parser: ArgumentParser, *, required: bool = True) -> None:
     parser.add_argument("--source", choices=("local", "s3"), default="local")
-    parser.add_argument("--input-path", required=required, help="Existing local HDF5 file or s3://bucket/key")
+    parser.add_argument("--input-path", required=required, help="Local path or S3 URI for HDF5 input")
 
 
 def build_input_args(
@@ -49,17 +49,28 @@ def build_input_args(
 
 
 @contextmanager
-def open_hdf5(input_args: InputArgs) -> Iterator[File]:
+def open_hdf5_records(input_args: InputArgs, *, single_file: bool = False) -> Iterator[Iterator[Data]]:
     from dingo.data import dataset_map, datasource_map
 
     source_name = input_args.dataset.source
     if source_name not in ("local", "s3") or input_args.dataset.format != "hdf5":
         raise ValueError("HDF5 input requires format=hdf5 and a local or S3 source")
-    if source_name == "local" and not Path(input_args.input_path).is_file():
-        raise ValueError(f"HDF5 input is not a file: {input_args.input_path}")
+    if source_name == "local":
+        path = Path(input_args.input_path)
+        if not (path.is_file() or (not single_file and path.is_dir())):
+            expected = "a file" if single_file else "a file or directory"
+            raise ValueError(f"HDF5 input is not {expected}: {input_args.input_path}")
     source = datasource_map[source_name](input_args=input_args)
+    if single_file and source_name == "s3" and (not source.path or source.path.endswith("/")):
+        raise ValueError("HDF5 input_path must point to a single S3 object")
     dataset = dataset_map[source_name](source=source)
     with closing(dataset.get_data()) as records:
+        yield records
+
+
+@contextmanager
+def open_hdf5(input_args: InputArgs) -> Iterator[File]:
+    with open_hdf5_records(input_args, single_file=True) as records:
         try:
             data = next(records)
         except OSError as exc:

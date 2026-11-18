@@ -61,6 +61,9 @@ class LocalDataSource(DataSource):
                 elif getattr(self.input_args.dataset, "format", None) == "md":
                     if f.lower().endswith(".md"):
                         file_list.append(f)
+                elif getattr(self.input_args.dataset, "format", None) == "hdf5":
+                    if f.lower().endswith((".h5", ".hdf5")):
+                        file_list.append(f)
                 else:
                     file_list.append(f)
             if os.path.isdir(f):
@@ -421,14 +424,13 @@ class LocalDataSource(DataSource):
 
         data_format = self.input_args.dataset.format
         input_is_file = os.path.isfile(self.path)
-        if data_format == "hdf5" and not input_is_file:
-            raise ValueError("HDF5 input_path must point to a local file")
-
         f_list = []
         if input_is_file:
             f_list = [self.path]
         elif os.path.exists(self.path) and os.path.isdir(self.path):
             self._find_all_files(self.path, f_list)
+            if data_format == "hdf5":
+                f_list.sort()
 
         by_line = self.input_args.dataset.format not in ["json", "listjson", "mineru", "mineru_v2", "md"]
 

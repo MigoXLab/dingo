@@ -26,6 +26,8 @@ python examples/milvus_benchmark/0-data-loading/load_ann_dataset.py \
 ```
 
 预览会打印数组形状、类型和首行样本
+预览可以传入本地目录或 S3 前缀，按文件顺序读取；`--keys` 应指定各文件共有的数组
+导入、查询和评测分别接收单个 HDF5 文件
 读取 S3 时，将 `SOURCE` 改为 `s3`，`INPUT_PATH` 改为完整的 S3 URI，并设置 `S3_ACCESS_KEY`、`S3_SECRET_KEY` 和 `S3_ENDPOINT_URL`
 读取接口见 [HDF5 读取指南](../../docs/dataset/hdf5.md)
 

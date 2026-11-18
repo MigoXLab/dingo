@@ -1,4 +1,4 @@
-"""Preview selected arrays in a local or S3 HDF5 file"""
+"""Preview selected arrays in local or S3 HDF5 files"""
 
 import argparse
 import sys
@@ -16,12 +16,14 @@ def main():
     parser.add_argument("--keys", nargs="+", default=["train", "test", "neighbors", "distances"])
     options = parser.parse_args()
     try:
-        with hdf5_input.open_hdf5(hdf5_input.build_input_args(options)) as hdf5:
-            for key in options.keys:
-                array = hdf5_input.read_matrix(hdf5, key)
-                print(f"{key}: shape={array.shape}, dtype={array.dtype}")
-                print(f"First row (first 10 values): {array[0, :10].tolist()}")
-    except ValueError as exc:
+        with hdf5_input.open_hdf5_records(hdf5_input.build_input_args(options)) as records:
+            for index, record in enumerate(records, 1):
+                print(f"File {index}")
+                for key in options.keys:
+                    array = hdf5_input.read_matrix(record.hdf5, key)
+                    print(f"{key}: shape={array.shape}, dtype={array.dtype}")
+                    print(f"First row (first 10 values): {array[0, :10].tolist()}")
+    except (OSError, ValueError) as exc:
         parser.error(str(exc))
 
 

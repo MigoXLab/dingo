@@ -8,12 +8,14 @@
 pip install "dingo-python[retrieval]"
 ```
 
-设置 `dataset.format="hdf5"`，并将 `input_path` 指向单个已有文件
+设置 `dataset.format="hdf5"`，并将 `input_path` 指向文件、本地目录或 S3 前缀
 
 | 数据源 | dataset.source | input_path 示例 | 连接配置 |
 | --- | --- | --- | --- |
-| 本地 | `local` | `data/vectors.hdf5` | 无 |
-| S3 | `s3` | `s3://bucket/path/vectors.hdf5` | [dataset.s3_config](s3.md) |
+| 本地 | `local` | `data/vectors.hdf5` 或 `data/` | 无 |
+| S3 | `s3` | `s3://bucket/path/vectors.hdf5` 或 `s3://bucket/path/` | [dataset.s3_config](s3.md) |
+
+目录和前缀会递归查找 `.h5` 和 `.hdf5` 文件，按路径排序后逐个读取
 
 ## 1.2 按需读取
 
@@ -28,9 +30,10 @@ source = datasource_map[args.dataset.source](input_args=args)
 dataset = dataset_map[args.dataset.source](source=source)
 
 with closing(dataset.get_data()) as records:
-    hdf5_file = next(records).hdf5
-    sample = hdf5_file["vectors"][:5]
+    for record in records:
+        sample = record.hdf5["vectors"][:5]
+        print(sample)
 ```
 
 `vectors` 是示例数组名，按文件实际内容替换
-数组按切片读取，关闭迭代器时释放文件；需要保留的切片在关闭前读出
+数组按切片读取；进入下一条记录或关闭迭代器时释放当前文件，需要保留的切片应提前读出

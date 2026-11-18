@@ -1,5 +1,6 @@
 import io
 from contextlib import closing
+from functools import partial
 from typing import Any, BinaryIO, Callable, Dict, Generator, Iterator, Optional
 from urllib.parse import unquote, urlsplit
 
@@ -126,7 +127,7 @@ class S3DataSource(DataSource):
         Args:
             kwargs: Reserved for the common DataSource interface
         Returns:
-            A generator yielding text records or a single binary opener for HDF5
+            A generator yielding text records or one binary opener per HDF5 file
         """
         data_format = self.input_args.dataset.format
         if data_format not in self.SUPPORTED_FORMATS:
@@ -137,24 +138,18 @@ class S3DataSource(DataSource):
         return self._load()
 
     def _load_hdf5(self) -> Generator[Callable[[], BinaryIO], None, None]:
-        if not self.path or self.path.endswith("/"):
-            raise ValueError("HDF5 input_path must point to a single S3 object")
-        yield self._open_hdf5
+        for key in sorted(self._iter_input_keys()):
+            yield partial(self._open_hdf5, key)
 
-    def _open_hdf5(self) -> BinaryIO:
-        metadata = self.client.head_object(Bucket=self.bucket, Key=self.path)
+    def _open_hdf5(self, key: str) -> BinaryIO:
+        metadata = self.client.head_object(Bucket=self.bucket, Key=key)
         reader = _S3RangeReader(
-            self.client, self.bucket, self.path, metadata["ContentLength"], metadata.get("ETag"),
+            self.client, self.bucket, key, metadata["ContentLength"], metadata.get("ETag"),
         )
         return io.BufferedReader(reader, buffer_size=_S3_READ_SIZE)
 
     def _load(self) -> Generator[str, None, None]:
-        if self.path and not self.path.endswith("/"):
-            keys = iter((self.path,))
-        else:
-            keys = self._iter_object_keys()
-
-        for key in keys:
+        for key in self._iter_input_keys():
             obj = self.client.get_object(Bucket=self.bucket, Key=key)
             body = obj["Body"]
             try:
@@ -163,17 +158,26 @@ class S3DataSource(DataSource):
             finally:
                 body.close()
 
+    def _iter_input_keys(self) -> Iterator[str]:
+        if self.path and not self.path.endswith("/"):
+            yield self.path
+        else:
+            yield from self._iter_object_keys()
+
     def _iter_object_keys(self) -> Iterator[str]:
         """Yield every matching object key under the configured prefix."""
         paginator = self.client.get_paginator("list_objects_v2")
         pages = paginator.paginate(Bucket=self.bucket, Prefix=self.path)
+        data_format = self.input_args.dataset.format
         for page in pages:
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 if (
-                    self.input_args.dataset.format in ("jsonl", "ms_swift")
+                    data_format in ("jsonl", "ms_swift")
                     and not key.lower().endswith(".jsonl")
                 ):
+                    continue
+                if data_format == "hdf5" and not key.lower().endswith((".h5", ".hdf5")):
                     continue
                 yield key
 

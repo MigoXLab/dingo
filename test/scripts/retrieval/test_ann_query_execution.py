@@ -133,7 +133,7 @@ def test_cli_never_overwrites_existing_output(runner, tmp_path, monkeypatch):
     def forbidden_load(*args, **kwargs):
         pytest.fail("Existing output must be rejected before loading data")
 
-    monkeypatch.setattr(hdf5_input, "open_ann_data", forbidden_load)
+    monkeypatch.setattr(hdf5_input, "open_hdf5", forbidden_load)
     output = tmp_path / "existing.jsonl"
     output.write_text("keep original\n")
     monkeypatch.setattr("sys.argv", ["run_queries.py"] + milvus_args(output))
@@ -235,11 +235,7 @@ def hdf5_input_file(tmp_path, data):
     h5py = pytest.importorskip("h5py")
     path = tmp_path / "vectors.hdf5"
     with h5py.File(path, "w") as hdf5:
-        hdf5.attrs["distance"] = "euclidean"
-        hdf5.create_dataset("train", data=data.queries)
         hdf5.create_dataset("test", data=data.queries)
-        hdf5.create_dataset("neighbors", data=np.zeros((len(data.queries), 1), dtype=int))
-        hdf5.create_dataset("distances", data=np.zeros((len(data.queries), 1), dtype=float))
     return path
 
 
@@ -317,7 +313,7 @@ def test_query_dangling_output_symlink_is_rejected_before_load(runner, tmp_path,
     def forbidden(*args, **kwargs):
         pytest.fail("An existing output path must be rejected before loading or connecting")
 
-    monkeypatch.setattr(hdf5_input, "open_ann_data", forbidden)
+    monkeypatch.setattr(hdf5_input, "open_hdf5", forbidden)
     output = tmp_path / "queries.jsonl"
     output.symlink_to(tmp_path / "missing.jsonl")
     with pytest.raises(SystemExit):

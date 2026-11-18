@@ -136,6 +136,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description=__doc__)
     hdf5_input.add_hdf5_arguments(parser)
+    parser.add_argument("--query-key", default="test", help="HDF5 array containing the query vectors")
+    parser.add_argument("--dataset-id", help="Dataset label to record in the query log (default: input file stem)")
     parser.add_argument("--start-row", type=int, default=0)
     parser.add_argument("--count", type=int, default=5)
     parser.add_argument("--top-k", type=int, default=10)
@@ -166,7 +168,10 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     sdk_client = None
     try:
-        with hdf5_input.open_ann_data(options) as data:
+        input_args = hdf5_input.build_input_args(options)
+        with hdf5_input.open_vector_data(
+            input_args, key=options.query_key, field="queries", dataset_id=options.dataset_id,
+        ) as data:
             validate_queries(data, options.start_row, options.count, options.top_k)
             sdk_client = create_milvus_client(options)
             client = MilvusSearchClient(

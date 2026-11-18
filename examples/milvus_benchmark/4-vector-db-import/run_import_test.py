@@ -175,7 +175,8 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("The experiment output directory must not already exist")
     client = baseline_client = None
     try:
-        with hdf5_input.open_import_data(options) as data:
+        input_args = hdf5_input.build_input_args(options)
+        with hdf5_input.open_vector_data(input_args, key=options.vector_key, field="base") as data:
             next(example.iter_import_batches(data, options.start_row, options.count, options.batch_size))
             baseline_options = copy.copy(options)
             baseline_options.milvus_db_name = "default"

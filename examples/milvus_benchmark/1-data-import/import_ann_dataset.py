@@ -106,7 +106,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     total_records = total_batches = 0
     sdk_client = None
     try:
-        with hdf5_input.open_import_data(options) as data:
+        input_args = hdf5_input.build_input_args(options)
+        with hdf5_input.open_vector_data(input_args, key=options.vector_key, field="base") as data:
             for index, batch in enumerate(iter_import_batches(
                 data, options.start_row, options.count, options.batch_size,
             ), 1):

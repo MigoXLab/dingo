@@ -9,28 +9,26 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from h5py import File
+    from h5py import Dataset, File
 
+    from dingo.config import InputArgs
     from dingo.io import Data
 
 
-def add_hdf5_arguments(parser: ArgumentParser) -> None:
+def add_hdf5_arguments(parser: ArgumentParser, *, required: bool = True) -> None:
     parser.add_argument("--source", choices=("local", "s3"), default="local")
-    parser.add_argument("--input-path", required=True, help="Existing local HDF5 file or s3://bucket/key")
+    parser.add_argument("--input-path", required=required, help="Existing local HDF5 file or s3://bucket/key")
 
 
-@contextmanager
-def open_hdf5(options: Namespace) -> Iterator[File]:
+def build_input_args(options: Namespace) -> InputArgs:
     from dingo.config import InputArgs
-    from dingo.data import dataset_map, datasource_map
 
     input_path = options.input_path
+    if not input_path:
+        raise ValueError("--input-path is required for HDF5 input")
     config: dict[str, str | dict[str, str]] = {"source": options.source, "format": "hdf5"}
     if options.source == "local":
-        path = Path(input_path).expanduser()
-        if not path.is_file():
-            raise ValueError(f"HDF5 input is not a file: {path}")
-        input_path = str(path)
+        input_path = str(Path(input_path).expanduser())
     else:
         s3_config = {
             "s3_ak": os.environ.get("S3_ACCESS_KEY", ""),
@@ -40,72 +38,65 @@ def open_hdf5(options: Namespace) -> Iterator[File]:
         if not all(s3_config.values()):
             raise ValueError("S3 input requires S3_ACCESS_KEY, S3_SECRET_KEY, and S3_ENDPOINT_URL")
         config["s3_config"] = s3_config
-    args = InputArgs(input_path=input_path, dataset=config)
-    source = datasource_map[options.source](input_args=args)
-    dataset = dataset_map[options.source](source=source)
+    return InputArgs(input_path=input_path, dataset=config)
+
+
+@contextmanager
+def open_hdf5(input_args: InputArgs) -> Iterator[File]:
+    from dingo.data import dataset_map, datasource_map
+
+    source_name = input_args.dataset.source
+    if source_name not in ("local", "s3") or input_args.dataset.format != "hdf5":
+        raise ValueError("HDF5 input requires format=hdf5 and a local or S3 source")
+    if source_name == "local" and not Path(input_args.input_path).is_file():
+        raise ValueError(f"HDF5 input is not a file: {input_args.input_path}")
+    source = datasource_map[source_name](input_args=input_args)
+    dataset = dataset_map[source_name](source=source)
     with closing(dataset.get_data()) as records:
         try:
             data = next(records)
         except OSError as exc:
-            raise ValueError(f"Could not open HDF5 input: {input_path}") from exc
+            raise ValueError(f"Could not open HDF5 input: {input_args.input_path}") from exc
         yield data.hdf5
 
 
+def read_matrix(hdf5: File, key: str) -> Dataset:
+    array = hdf5.get(key)
+    if getattr(array, "ndim", None) != 2 or not all(array.shape) or array.dtype.kind not in "fiu":
+        raise ValueError(f"Expected a nonempty two-dimensional numeric array at {key!r}")
+    return array
+
+
+def dataset_name(input_args: InputArgs, dataset_id: str | None) -> str:
+    name = Path(input_args.input_path).stem if dataset_id is None else dataset_id.strip()
+    if not name:
+        raise ValueError("Dataset ID must be nonempty")
+    return name
+
+
 @contextmanager
-def open_import_data(options: Namespace) -> Iterator[Data]:
+def open_vector_data(
+    input_args: InputArgs, *, key: str, field: str, dataset_id: str | None = None,
+) -> Iterator[Data]:
     from dingo.io import Data
 
-    with open_hdf5(options) as hdf5:
-        vectors = hdf5.get(options.vector_key)
-        if getattr(vectors, "ndim", None) != 2 or not all(vectors.shape) or vectors.dtype.kind not in "fiu":
-            raise ValueError(f"Expected a nonempty two-dimensional numeric array at {options.vector_key!r}")
+    with open_hdf5(input_args) as hdf5:
+        vectors = read_matrix(hdf5, key)
         yield Data(
-            base=vectors,
-            metadata={
-                "name": Path(options.input_path).stem,
-                "dimension": vectors.shape[1],
-            },
+            **{field: vectors},
+            metadata={"name": dataset_name(input_args, dataset_id), "dimension": vectors.shape[1]},
         )
 
 
 @contextmanager
-def open_ann_data(options: Namespace, name: str = "sift-128-euclidean") -> Iterator[Data]:
-    with open_hdf5(options) as hdf5:
-        yield read_ann_fields(hdf5, name, options.input_path)
-
-
-def read_ann_fields(raw: File, name: str, path: str) -> Data:
+def open_evaluation_data(
+    input_args: InputArgs, *, base_key: str, ground_truth_key: str | None, dataset_id: str | None = None,
+) -> Iterator[Data]:
     from dingo.io import Data
 
-    fields = ("train", "test", "neighbors", "distances")
-    missing = [key for key in fields if key not in raw]
-    if missing:
-        raise ValueError(f"Missing ANN-Benchmarks fields: {missing}")
-    base, queries, neighbors, distances = (raw[key] for key in fields)
-    if any(getattr(array, "ndim", None) != 2 for array in (base, queries, neighbors, distances)):
-        raise ValueError("ANN-Benchmarks fields must be two-dimensional arrays")
-    if not all(base.shape) or not all(queries.shape) or not all(neighbors.shape):
-        raise ValueError("ANN-Benchmarks arrays must be nonempty")
-    if base.shape[1] != queries.shape[1]:
-        raise ValueError("Base and query dimensions differ")
-    if neighbors.shape[0] != queries.shape[0] or distances.shape != neighbors.shape:
-        raise ValueError("Query and ground-truth shapes differ")
-    if base.dtype.kind not in "fiu" or queries.dtype.kind not in "fiu":
-        raise ValueError("Vectors must have numeric dtypes")
-    if neighbors.dtype.kind not in "iu" or distances.dtype.kind not in "fiu":
-        raise ValueError("Ground truth requires integer IDs and numeric distances")
-    dimension = int(raw.attrs.get("dimension", base.shape[1]))
-    metric = raw.attrs.get("distance", "")
-    if isinstance(metric, bytes):
-        metric = metric.decode("utf-8")
-    if dimension != base.shape[1] or metric != "euclidean":
-        raise ValueError("Expected matching dimension and euclidean distance")
-    # 分批检查近邻 ID，行号对应 base 中的向量
-    for start in range(0, len(neighbors), 1024):
-        batch = neighbors[start:start + 1024]
-        if batch.min() < 0 or batch.max() >= len(base):
-            raise ValueError("Neighbor IDs are outside the base array")
-    return Data(
-        base=base, queries=queries, ground_truth=neighbors, distances=distances,
-        metadata={"name": name, "dimension": dimension, "distance": metric, "path": path},
-    )
+    with open_hdf5(input_args) as hdf5:
+        base = read_matrix(hdf5, base_key)
+        truth = read_matrix(hdf5, ground_truth_key) if ground_truth_key is not None else None
+        if truth is not None and truth.dtype.kind not in "iu":
+            raise ValueError("Ground truth requires integer IDs")
+        yield Data(base=base, ground_truth=truth, metadata={"name": dataset_name(input_args, dataset_id)})

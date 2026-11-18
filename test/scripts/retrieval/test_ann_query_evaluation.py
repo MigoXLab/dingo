@@ -2,11 +2,13 @@
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import numpy as np
 import pytest
+
+from dingo.config import InputArgs
 
 hdf5_input = importlib.import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
 h5py = pytest.importorskip("h5py")
@@ -27,20 +29,17 @@ def evaluator():
 
 @pytest.fixture
 def hdf5_path(tmp_path):
-    path = tmp_path / "sift-128-euclidean.hdf5"
+    path = tmp_path / "fixture-vectors.hdf5"
     with h5py.File(path, "w") as f:
-        f.attrs["dimension"] = 2
-        f.attrs["distance"] = "euclidean"
         f.create_dataset("train", data=np.arange(40, dtype="float32").reshape(20, 2))
         f.create_dataset("test", data=np.arange(6, dtype="float32").reshape(3, 2))
         f.create_dataset("neighbors", data=np.tile(np.arange(20, dtype="int32"), (3, 1)))
-        f.create_dataset("distances", data=np.tile(np.arange(20, dtype="float32"), (3, 1)))
     return path
 
 
 def attempt(ids=(), *, query_id=0, status="ok", elapsed=10.0):
     return {
-        "dataset": "sift-128-euclidean", "query_id": query_id, "backend": "offline-test", "top_k": 10,
+        "dataset": "fixture-vectors", "query_id": query_id, "backend": "offline-test", "top_k": 10,
         "hits": [{"id": value, "rank": rank, "distance": float(rank)} for rank, value in enumerate(ids, 1)],
         "elapsed_ms": elapsed, "status": status, "error": None if status in ("ok", "empty") else "fixture failure",
     }
@@ -51,8 +50,12 @@ def write_input(path, rows):
     return path
 
 
+def input_args(path):
+    return InputArgs(input_path=str(path), dataset={"source": "local", "format": "hdf5"})
+
+
 def load_data(path):
-    return hdf5_input.open_ann_data(SimpleNamespace(source="local", input_path=str(path)))
+    return hdf5_input.open_evaluation_data(input_args(path), base_key="train", ground_truth_key="neighbors")
 
 
 def test_raw_cutoff_invalid_slots_duplicates_and_official_top10(evaluator, hdf5_path):
@@ -78,7 +81,7 @@ def test_malformed_attempt_reports_line(evaluator, tmp_path, field, value):
         evaluator.read_attempts(source)
 
 
-@pytest.mark.parametrize("change", ["missing", "rank", "status_hits", "backend"])
+@pytest.mark.parametrize("change", ["missing", "rank", "status_hits", "backend", "dataset"])
 def test_incompatible_or_inconsistent_records(evaluator, tmp_path, change):
     row = attempt([0])
     if change == "missing":
@@ -87,8 +90,10 @@ def test_incompatible_or_inconsistent_records(evaluator, tmp_path, change):
         row["hits"][0]["rank"] = 2
     elif change == "status_hits":
         row["status"] = "empty"
-    else:
+    elif change == "backend":
         row["backend"] = "another-backend"
+    else:
+        row["dataset"] = "another-dataset"
     with pytest.raises(ValueError):
         evaluator.read_attempts(write_input(tmp_path / "bad.jsonl", [attempt([0]), row]))
 
@@ -147,7 +152,7 @@ def test_either_report_collision_preserves_every_file(evaluator, tmp_path, monke
     source = write_input(tmp_path / "attempts.jsonl", [attempt([0])])
     monkeypatch.setattr("sys.argv", ["evaluate_queries.py", "--input", str(source), "--output-dir", str(output),
                                      "--input-path", str(tmp_path / "unread.hdf5")])
-    monkeypatch.setattr(hdf5_input, "open_ann_data",
+    monkeypatch.setattr(hdf5_input, "open_hdf5",
                         lambda *a, **k: pytest.fail("must reject output collision before loading"))
     with pytest.raises(SystemExit):
         evaluator.main()
@@ -177,9 +182,10 @@ def test_current_query_writer_output_can_be_evaluated(evaluator, hdf5_path, tmp_
             return [VectorHit(row_id, float(row_id)) for row_id in range(limit)]
 
     path = tmp_path / "fake_attempts.jsonl"
-    with load_data(hdf5_path) as data:
+    with hdf5_input.open_vector_data(input_args(hdf5_path), key="test", field="queries") as data:
         with path.open("x") as output:
             runner.write_queries(FakeClient(), data, start_row=1, count=2, top_k=10, output=output)
+    with load_data(hdf5_path) as data:
         scored = evaluator.score_attempts(evaluator.read_attempts(path), data)
     assert [row["query_id"] for row in scored] == [1, 2]
     assert [row["recall_at_10"] for row in scored] == [1.0, 1.0]
@@ -195,20 +201,22 @@ def test_official_top10_must_be_distinct(evaluator, hdf5_path):
 
 
 @pytest.mark.parametrize("problem,message", [
-    ("missing", "Missing ANN-Benchmarks fields"),
-    ("dimension", "Expected matching dimension"),
-    ("neighbor", "Neighbor IDs are outside"),
+    ("missing", "neighbors"),
+    ("dtype", "integer IDs"),
+    ("neighbor", "distinct valid base IDs"),
 ])
-def test_ann_fields_are_validated_after_hdf5_loading(hdf5_path, problem, message):
+def test_ann_fields_are_validated_after_hdf5_loading(evaluator, hdf5_path, problem, message):
     with h5py.File(hdf5_path, "r+") as hdf5:
         if problem == "missing":
             del hdf5["neighbors"]
-        elif problem == "dimension":
-            hdf5.attrs["dimension"] = 3
+        elif problem == "dtype":
+            neighbors = hdf5["neighbors"][:].astype(float)
+            del hdf5["neighbors"]
+            hdf5.create_dataset("neighbors", data=neighbors)
         else:
             hdf5["neighbors"][0, 0] = len(hdf5["train"])
-    with pytest.raises(ValueError, match=message), load_data(hdf5_path):
-        pass
+    with pytest.raises(ValueError, match=message):
+        evaluator.evaluate_attempts([attempt([0])], input_args=input_args(hdf5_path))
 
 
 @pytest.mark.parametrize("filename", ["per_query.jsonl", "summary.json"])
@@ -231,7 +239,7 @@ def test_dangling_report_link_blocks_all_output(evaluator, hdf5_path, tmp_path, 
             pytest.fail("Report collision must be rejected before input or dataset access")
 
         monkeypatch.setattr(evaluator, "read_attempts", forbidden)
-        monkeypatch.setattr(hdf5_input, "open_ann_data", forbidden)
+        monkeypatch.setattr(hdf5_input, "open_hdf5", forbidden)
         monkeypatch.setattr("sys.argv", ["evaluate_queries.py", "--input", str(tmp_path / "unread.jsonl"),
                                          "--input-path", str(hdf5_path), "--output-dir", str(output)])
         with pytest.raises(SystemExit) as exc:
@@ -242,3 +250,71 @@ def test_dangling_report_link_blocks_all_output(evaluator, hdf5_path, tmp_path, 
     assert link.readlink() == original_target
     assert not target.exists()
     assert list(output.iterdir()) == [link]
+
+
+def test_non_sift_custom_fields_from_import_through_recall_at_twenty(evaluator, tmp_path, monkeypatch):
+    importer = load_example("1-data-import/import_ann_dataset.py", "ann_config_import")
+    runner = load_example("2-query-execution/run_queries.py", "ann_config_query")
+    hdf5_path = tmp_path / "custom.hdf5"
+    vectors = np.arange(50, dtype=np.float32).reshape(25, 2)
+    with h5py.File(hdf5_path, "w") as hdf5:
+        hdf5.create_dataset("embeddings", data=vectors)
+        hdf5.create_dataset("queries", data=vectors[:1])
+        hdf5.create_dataset("truth_ids", data=np.arange(20)[None, :])
+
+    class MemoryMilvus:
+        def __init__(self):
+            self.rows = {}
+
+        def insert(self, *, data, **kwargs):
+            self.rows.update((row["id"], row["vector"]) for row in data)
+            return {"insert_count": len(data), "ids": [row["id"] for row in data]}
+
+        def search(self, *, data, limit, **kwargs):
+            query = np.asarray(data[0])
+            ranked = sorted((float(np.sum((vector - query) ** 2)), row_id) for row_id, vector in self.rows.items())
+            return [[{"id": row_id, "distance": distance} for distance, row_id in ranked[:limit]]]
+
+        def close(self):
+            pass
+
+    sdk = MemoryMilvus()
+    monkeypatch.setattr(importer, "create_milvus_client", lambda options: sdk)
+    monkeypatch.setattr(runner, "create_milvus_client", lambda options: sdk)
+    connection = ["--milvus-uri", "http://example.invalid", "--milvus-db-name", "fixture",
+                  "--milvus-collection", "fixture"]
+    source = ["--input-path", str(hdf5_path)]
+    importer.main(source + connection + ["--vector-key", "embeddings", "--count", "25", "--write-milvus"])
+    assert sorted(sdk.rows) == list(range(25))
+    attempts_file = tmp_path / "attempts.jsonl"
+    runner.main(source + connection + ["--query-key", "queries", "--dataset-id", "custom-benchmark",
+                                       "--count", "1", "--top-k", "20", "--output", str(attempts_file)])
+    output = tmp_path / "report"
+    monkeypatch.setattr(sys, "argv", [
+        "evaluate_queries.py", "--input", str(attempts_file), "--output-dir", str(output),
+        *source, "--base-key", "embeddings", "--ground-truth-key", "truth_ids",
+        "--dataset-id", "custom-benchmark", "--metrics", "recall",
+    ])
+    evaluator.main()
+    report = json.loads((output / "summary.json").read_text())
+    assert report["dataset"] == "custom-benchmark" and report["top_k"] == 20
+    assert report["metrics"]["recall_at_20"] == 1.0
+    assert set(report["metrics"]) == {"attempt_count", "success_count", "timeout_count", "ok_count", "recall_at_20"}
+    with pytest.raises(ValueError, match="top_k must match 10"):
+        evaluator.read_attempts(attempts_file, top_k=10)
+
+
+def test_latency_only_uses_jsonl_without_hdf5(evaluator, tmp_path, monkeypatch):
+    source = write_input(tmp_path / "attempts.jsonl", [
+        attempt([0], elapsed=7), attempt(status="timeout", elapsed=200),
+    ])
+    output = tmp_path / "reports"
+    monkeypatch.setattr(hdf5_input, "open_hdf5", lambda *args: pytest.fail("must not open HDF5"))
+    monkeypatch.setattr(sys, "argv", [
+        "evaluate_queries.py", "--input", str(source), "--metrics", "latency", "--output-dir", str(output),
+    ])
+    evaluator.main()
+    report = json.loads((output / "summary.json").read_text())
+    assert report["metrics"]["mean_latency_ms"] == 7
+    assert report["metrics"]["p99_latency_ms"] == 7
+    assert "recall_at_10" not in report["metrics"]

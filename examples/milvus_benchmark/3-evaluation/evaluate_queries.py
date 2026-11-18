@@ -1,24 +1,26 @@
-"""Evaluate saved SIFT1M query attempts against an existing HDF5 file"""
+"""Evaluate saved vector query attempts with selected metrics"""
 
 from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Collection
 from importlib import import_module
 from math import isfinite
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from dingo.config import InputArgs
     from dingo.io import Data
 
 # TODO: Move evaluation orchestration into a reusable module
 # TODO: Add QPS when query logs include the full run window
-DATASET_NAME = "sift-128-euclidean"
 ATTEMPT_FIELDS = {"dataset", "query_id", "backend", "top_k", "hits", "elapsed_ms", "status", "error"}
+DATA_METRIC_GROUPS = {"recall", "result_quality"}
 
 
-def read_attempts(path: Path) -> list[dict[str, Any]]:
+def read_attempts(path: Path, *, top_k: int | None = None, dataset_id: str | None = None) -> list[dict[str, Any]]:
     """Read query attempts with line-specific validation errors"""
     attempts = []
     backend = None
@@ -28,16 +30,20 @@ def read_attempts(path: Path) -> list[dict[str, Any]]:
                 row = json.loads(line)
                 if not isinstance(row, dict) or set(row) != ATTEMPT_FIELDS:
                     raise ValueError("Expected the current query-attempt fields")
-                if row["dataset"] != DATASET_NAME:
-                    raise ValueError(f"Dataset must be {DATASET_NAME}")
+                if not isinstance(row["dataset"], str) or not row["dataset"].strip():
+                    raise ValueError("Dataset ID must be nonempty")
+                if dataset_id is not None and row["dataset"] != dataset_id:
+                    raise ValueError(f"Dataset ID must match {dataset_id!r}")
                 if type(row["query_id"]) is not int or row["query_id"] < 0:
                     raise ValueError("query_id must be a nonnegative native integer")
                 if not isinstance(row["backend"], str) or not row["backend"].strip():
                     raise ValueError("backend must be a nonempty string")
                 if backend is not None and row["backend"] != backend:
                     raise ValueError("All attempts must use the same backend")
-                if type(row["top_k"]) is not int or row["top_k"] != 10:
-                    raise ValueError("Recall@10 requires top_k=10")
+                if type(row["top_k"]) is not int or row["top_k"] <= 0:
+                    raise ValueError("top_k must be a positive integer")
+                if top_k is not None and row["top_k"] != top_k:
+                    raise ValueError(f"top_k must match {top_k}")
                 elapsed = row["elapsed_ms"]
                 if type(elapsed) not in (int, float) or not isfinite(elapsed) or elapsed < 0:
                     raise ValueError("elapsed_ms must be finite and nonnegative")
@@ -63,51 +69,88 @@ def read_attempts(path: Path) -> list[dict[str, Any]]:
             except (ValueError, TypeError, OverflowError) as exc:
                 raise ValueError(f"{path}: line {line_number}: {exc}") from exc
             backend = row["backend"]
+            dataset_id = row["dataset"]
+            top_k = row["top_k"]
             attempts.append(row)
     if not attempts:
         raise ValueError(f"{path}: no query attempts")
     return attempts
 
 
-def score_attempts(attempts: list[dict[str, Any]], data: Data) -> list[dict[str, Any]]:
-    """Score original hit slots using the first ten official neighbor IDs"""
-    from dingo.retrieval.eval_utils import compute_ann_result_quality, recall_at_k
+def score_attempts(
+    attempts: list[dict[str, Any]], data: Data | None = None, *, metrics: Collection[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Score the selected metrics using the original hit positions"""
+    from dingo.retrieval.eval_utils import ANN_METRIC_GROUPS, compute_ann_result_quality, recall_at_k
 
-    if data.metadata.get("name") != DATASET_NAME:
-        raise ValueError(f"Cached dataset must be {DATASET_NAME}")
+    if not attempts:
+        return []
+    selected = ANN_METRIC_GROUPS if metrics is None else metrics
+    if not DATA_METRIC_GROUPS.intersection(selected):
+        return attempts
+    if data is None:
+        raise ValueError("Recall and result quality require an HDF5 input")
+    if data.metadata.get("name") != attempts[0]["dataset"]:
+        raise ValueError("HDF5 dataset ID must match the query log")
     base_count = data.base.shape[0]
-    if data.ground_truth.ndim != 2 or data.ground_truth.shape[1] < 10:
-        raise ValueError("Official ground truth must contain at least ten neighbors per query")
+    top_k = attempts[0]["top_k"]
+    truth = getattr(data, "ground_truth", None)
+    if "recall" in selected and (truth is None or truth.ndim != 2 or truth.shape[1] < top_k):
+        raise ValueError(f"Ground truth must contain at least {top_k} neighbors per query")
     scored = []
     for line_number, attempt in enumerate(attempts, 1):
-        query_id = attempt["query_id"]
-        if type(query_id) is not int or not 0 <= query_id < min(data.queries.shape[0], data.ground_truth.shape[0]):
-            raise ValueError(f"line {line_number}: query_id {query_id} is outside cached query rows")
-        gold = data.ground_truth[query_id, :10].tolist()
-        if len(set(gold)) != 10 or any(type(value) is not int or not 0 <= value < base_count for value in gold):
-            raise ValueError(f"line {line_number}: official top ten neighbors must be distinct valid base IDs")
-        ranked = [
-            str(hit["id"]) if type(hit["id"]) is int and 0 <= hit["id"] < base_count
-            else f"__invalid_ann_slot__{rank}"
-            for rank, hit in enumerate(attempt["hits"], 1)
-        ]
-        scored.append({
-            **attempt,
-            "recall_at_10": recall_at_k({str(value) for value in gold}, 10, ranked),
-            "quality": compute_ann_result_quality(attempt["hits"], base_count=base_count, top_k=10),
-        })
+        row = dict(attempt)
+        if "recall" in selected:
+            query_id = attempt["query_id"]
+            if type(query_id) is not int or not 0 <= query_id < len(truth):
+                raise ValueError(f"line {line_number}: query_id {query_id} is outside ground-truth rows")
+            gold = truth[query_id, :top_k].tolist()
+            if len(set(gold)) != top_k or any(type(value) is not int or not 0 <= value < base_count for value in gold):
+                raise ValueError(f"line {line_number}: top-{top_k} neighbors must be distinct valid base IDs")
+            ranked = [
+                str(hit["id"]) if type(hit["id"]) is int and 0 <= hit["id"] < base_count
+                else f"__invalid_ann_slot__{rank}"
+                for rank, hit in enumerate(attempt["hits"], 1)
+            ]
+            row[f"recall_at_{top_k}"] = recall_at_k({str(value) for value in gold}, top_k, ranked)
+        if "result_quality" in selected:
+            row["quality"] = compute_ann_result_quality(attempt["hits"], base_count=base_count, top_k=top_k)
+        scored.append(row)
     return scored
 
 
-def write_reports(attempts: list[dict[str, Any]], output_dir: Path) -> dict[str, Any]:
-    """Save evaluated attempts and the aggregate summary without overwriting"""
-    from dingo.retrieval.eval_utils import summarize_ann_metrics
+def evaluate_attempts(
+    attempts: list[dict[str, Any]], *, input_args: InputArgs | None = None, metrics: Collection[str] | None = None,
+    base_key: str = "train", ground_truth_key: str = "neighbors", dataset_id: str | None = None,
+) -> list[dict[str, Any]]:
+    from dingo.retrieval.eval_utils import ANN_METRIC_GROUPS
 
+    selected = ANN_METRIC_GROUPS if metrics is None else metrics
+    if not DATA_METRIC_GROUPS.intersection(selected):
+        return score_attempts(attempts, metrics=selected)
+    if input_args is None:
+        raise ValueError("Recall and result quality require an HDF5 input")
+    hdf5_input = import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
+    with hdf5_input.open_evaluation_data(
+        input_args, base_key=base_key, ground_truth_key=ground_truth_key if "recall" in selected else None,
+        dataset_id=dataset_id,
+    ) as data:
+        return score_attempts(attempts, data, metrics=selected)
+
+
+def write_reports(
+    attempts: list[dict[str, Any]], output_dir: Path, *, metrics: Collection[str] | None = None,
+) -> dict[str, Any]:
+    """Save evaluated attempts and the aggregate summary without overwriting"""
+    from dingo.retrieval.eval_utils import ANN_METRIC_GROUPS, summarize_ann_metrics
+
+    top_k = attempts[0]["top_k"]
+    selected = ANN_METRIC_GROUPS if metrics is None else metrics
     summary = {
         "dataset": attempts[0]["dataset"],
         "backend": attempts[0]["backend"],
-        "top_k": 10,
-        "metrics": summarize_ann_metrics(attempts),
+        "top_k": top_k,
+        "metrics": summarize_ann_metrics(attempts, top_k=top_k, metrics=selected),
         "units": {"rate_unit": "fraction", "recall_unit": "fraction", "latency_unit": "ms"},
         "populations": {"latency_population": "ok_and_empty", "has_results_denominator": "successful_attempts"},
     }
@@ -130,11 +173,18 @@ def write_reports(attempts: list[dict[str, Any]], output_dir: Path) -> dict[str,
 
 def main() -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from dingo.retrieval.eval_utils import ANN_METRIC_GROUPS
+
     hdf5_input = import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True, help="Saved query-attempt JSONL")
-    hdf5_input.add_hdf5_arguments(parser)
+    hdf5_input.add_hdf5_arguments(parser, required=False)
+    parser.add_argument("--dataset-id", help="Dataset label to match in the query log")
+    parser.add_argument("--top-k", type=int, help="Expected top-K in the query log")
+    parser.add_argument("--metrics", nargs="+", choices=ANN_METRIC_GROUPS, default=ANN_METRIC_GROUPS)
+    parser.add_argument("--base-key", default="train", help="HDF5 array containing all base vectors")
+    parser.add_argument("--ground-truth-key", default="neighbors", help="HDF5 array containing neighbor IDs")
     parser.add_argument("--output-dir", type=Path, required=True)
     options = parser.parse_args()
     for filename in ("per_query.jsonl", "summary.json"):
@@ -142,10 +192,14 @@ def main() -> None:
         if path.exists() or path.is_symlink():
             parser.error(f"Output file already exists: {path}")
     try:
-        attempts = read_attempts(options.input)
-        with hdf5_input.open_ann_data(options, name=DATASET_NAME) as data:
-            scored = score_attempts(attempts, data)
-        write_reports(scored, options.output_dir)
+        dataset_id = options.dataset_id.strip() if options.dataset_id is not None else None
+        attempts = read_attempts(options.input, top_k=options.top_k, dataset_id=dataset_id)
+        input_args = hdf5_input.build_input_args(options) if DATA_METRIC_GROUPS.intersection(options.metrics) else None
+        scored = evaluate_attempts(
+            attempts, input_args=input_args, metrics=options.metrics, base_key=options.base_key,
+            ground_truth_key=options.ground_truth_key, dataset_id=dataset_id,
+        )
+        write_reports(scored, options.output_dir, metrics=options.metrics)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     print(f"Evaluated {len(scored)} query attempts")

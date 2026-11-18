@@ -27,7 +27,7 @@ with closing(dataset.get_data()) as records:
 
 关闭迭代器时文件随之关闭，在作用域内完成切片读取
 
-## 1.2 SIFT1M 示例
+## 1.2 示例参数
 
 ```bash
 python examples/milvus_benchmark/0-data-loading/load_ann_dataset.py --input-path data/sift.hdf5
@@ -38,4 +38,14 @@ python examples/milvus_benchmark/1-data-import/import_ann_dataset.py --input-pat
 `S3_ACCESS_KEY`、`S3_SECRET_KEY` 和 `S3_ENDPOINT_URL`
 
 导入示例读取 `--vector-key` 指定的二维数组，默认是 `train`
-SIFT1M 查询和评测示例读取 `train`、`test`、`neighbors` 和 `distances`，真值 ID 对应 `train` 的原始行号
+加载预览可以用 `--keys` 指定要展示的数组；查询用 `--query-key`（默认 `test`）和 `--top-k` 指定查询数组与返回数量
+查询和评测可通过 `--dataset-id` 指定同一个数据集标签，默认取 HDF5 文件名去掉扩展名
+
+评测用 `--metrics` 选择 `recall`、`latency`、`requests` 或 `result_quality`，默认全部计算
+Recall 从 `--ground-truth-key`（默认 `neighbors`）读取真值；真值 ID 对应 `--base-key`（默认 `train`）数组的原始行号
+评测默认使用 JSONL 中的 K；显式传 `--top-k` 时须与查询一致
+
+```bash
+python examples/milvus_benchmark/3-evaluation/evaluate_queries.py \
+    --input queries.jsonl --metrics latency requests --output-dir report
+```

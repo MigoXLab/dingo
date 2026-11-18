@@ -1,9 +1,4 @@
-"""Load SIFT1M from an existing local or S3 HDF5 file"""
-
-# Schema (SIFT1M)
-# base: [1000000, 128]; queries: [10000, 128]
-# ground_truth: [10000, 100], zero-based base row IDs
-# distances: [10000, 100]; metadata: name, dimension, distance, path
+"""Preview selected arrays in a local or S3 HDF5 file"""
 
 import argparse
 import sys
@@ -18,13 +13,16 @@ def main():
 
     parser = argparse.ArgumentParser(description=__doc__)
     hdf5_input.add_hdf5_arguments(parser)
+    parser.add_argument("--keys", nargs="+", default=["train", "test", "neighbors", "distances"])
     options = parser.parse_args()
-    with hdf5_input.open_ann_data(options) as data:
-        print(f"Metadata: {data.metadata}")
-        for name in ("base", "queries", "ground_truth", "distances"):
-            array = getattr(data, name)
-            print(f"{name}: shape={array.shape}, dtype={array.dtype}")
-            print(f"First row (first 10 values): {array[0, :10].tolist()}")
+    try:
+        with hdf5_input.open_hdf5(hdf5_input.build_input_args(options)) as hdf5:
+            for key in options.keys:
+                array = hdf5_input.read_matrix(hdf5, key)
+                print(f"{key}: shape={array.shape}, dtype={array.dtype}")
+                print(f"First row (first 10 values): {array[0, :10].tolist()}")
+    except ValueError as exc:
+        parser.error(str(exc))
 
 
 if __name__ == "__main__":

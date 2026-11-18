@@ -15,7 +15,7 @@ import math
 import os
 import re
 import unicodedata
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from datetime import datetime
 from difflib import SequenceMatcher
 from numbers import Real
@@ -176,44 +176,64 @@ def compute_ann_result_quality(
     }
 
 
-def summarize_ann_metrics(attempts: Iterable[Mapping[str, Any]]) -> dict[str, int | float | None]:
+ANN_METRIC_GROUPS = ("recall", "latency", "requests", "result_quality")
+
+
+def summarize_ann_metrics(
+    attempts: Iterable[Mapping[str, Any]], *, top_k: int = 10, metrics: Collection[str] = ANN_METRIC_GROUPS,
+) -> dict[str, int | float | None]:
     """Aggregate independent attempts with fractional rates and successful latency in ms
 
     Success includes ok and empty responses; has_results_rate uses successes
     Hit rates pool successful slots, recall and top-k adherence use all attempts
     Undefined rates, recall, and latency are None
     """
+    if type(top_k) is not int or top_k <= 0:
+        raise ValueError("top_k must be a positive integer")
+    selected = set(metrics)
+    if not selected or selected.difference(ANN_METRIC_GROUPS):
+        raise ValueError(f"Select metric groups from {', '.join(ANN_METRIC_GROUPS)}")
     records = list(attempts)
     successful = [record for record in records if record["status"] in {"ok", "empty"}]
     count, success_count = len(records), len(successful)
     ok_count = sum(record["status"] == "ok" for record in records)
     timeout_count = sum(record["status"] == "timeout" for record in records)
-    qualities = [record["quality"] for record in successful]
-    returned_count = sum(quality["returned_count"] for quality in qualities)
-    latency = summarize_latencies(record["elapsed_ms"] for record in successful)
-    return {
+    summary: dict[str, int | float | None] = {
         "attempt_count": count,
         "success_count": success_count,
         "timeout_count": timeout_count,
         "ok_count": ok_count,
-        "recall_at_10": math.fsum(record["recall_at_10"] for record in records) / count if count else None,
-        "success_rate": success_count / count if count else None,
-        "timeout_rate": timeout_count / count if count else None,
-        "has_results_rate": ok_count / success_count if success_count else None,
-        "valid_hit_rate": (
-            sum(quality["valid_count"] for quality in qualities) / returned_count if returned_count else None
-        ),
-        "duplicate_rate": (
-            sum(quality["duplicate_count"] for quality in qualities) / returned_count if returned_count else None
-        ),
-        "top_k_adherence_rate": (
-            sum(record["quality"]["top_k_adherent"] for record in records) / count if count else None
-        ),
-        "mean_latency_ms": latency["mean_ms"],
-        "p50_latency_ms": latency["p50_ms"],
-        "p95_latency_ms": latency["p95_ms"],
-        "p99_latency_ms": latency["p99_ms"],
     }
+    if "recall" in selected:
+        recall_key = f"recall_at_{top_k}"
+        summary[recall_key] = math.fsum(record[recall_key] for record in records) / count if count else None
+    if "requests" in selected:
+        summary.update(
+            success_rate=success_count / count if count else None,
+            timeout_rate=timeout_count / count if count else None,
+            has_results_rate=ok_count / success_count if success_count else None,
+        )
+    if "result_quality" in selected:
+        qualities = [record["quality"] for record in successful]
+        returned_count = sum(quality["returned_count"] for quality in qualities)
+        summary.update(
+            valid_hit_rate=(
+                sum(quality["valid_count"] for quality in qualities) / returned_count if returned_count else None
+            ),
+            duplicate_rate=(
+                sum(quality["duplicate_count"] for quality in qualities) / returned_count if returned_count else None
+            ),
+            top_k_adherence_rate=(
+                sum(record["quality"]["top_k_adherent"] for record in records) / count if count else None
+            ),
+        )
+    if "latency" in selected:
+        latency = summarize_latencies(record["elapsed_ms"] for record in successful)
+        summary.update(
+            mean_latency_ms=latency["mean_ms"], p50_latency_ms=latency["p50_ms"],
+            p95_latency_ms=latency["p95_ms"], p99_latency_ms=latency["p99_ms"],
+        )
+    return summary
 
 
 def build_raw_api_ranked_doc_ids(

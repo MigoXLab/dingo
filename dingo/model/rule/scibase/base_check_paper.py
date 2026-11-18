@@ -433,16 +433,6 @@ METADATA_TYPE_VALUES = {"paper", "ebook"}
 OA_STATUS_VALUES = {"diamond", "gold", "green", "hybrid", "bronze", "closed", ""}
 OPEN_OA_STATUS_VALUES = {"diamond", "gold", "green", "hybrid", "bronze"}
 LOC_TYPE_VALUES = {"download", "reader", "display", ""}
-LOCATION_REQUIRED_KEYS = (
-    "id", "source", "landing_page_url", "pdf_url", "is_oa",
-    "is_published", "raw_source_name", "raw_type", "provenance",
-    "license", "license_id", "version", "is_accepted",
-)
-PRIMARY_LOCATION_SOURCE_REQUIRED_KEYS = (
-    "id", "display_name", "issn_l", "issn", "is_oa", "is_in_doaj",
-    "is_core", "host_organization", "host_organization_name",
-    "host_organization_lineage", "host_organization_lineage_names", "type",
-)
 LICENSE_VALUES = {
     "cc-by",
     "cc-by-nc",
@@ -1328,35 +1318,48 @@ def check_locations(locations: Any) -> ValidationResult:
     return _ok()
 
 
-def _check_location_keys(location: Any) -> ValidationResult:
-    if location is None:
-        return _fail("null", "value is null")
-    if not isinstance(location, dict):
-        return _fail("wrong_type", "value must be an object")
-    # OpenAlex location fields default to an empty object.
-    if not location:
-        return _ok()
-    for key in LOCATION_REQUIRED_KEYS:
-        if key not in location:
-            return _fail("missing_key", f"missing key '{key}'")
-    return _ok()
-
-
 def check_primary_location(primary_location: Any) -> ValidationResult:
-    result = _check_location_keys(primary_location)
-    if result[0] or not primary_location:
-        return result
+    if primary_location is None:
+        return _ok()
+    if not isinstance(primary_location, dict):
+        return _fail("wrong_type", "value must be an object")
+    if not primary_location:
+        return _fail("empty", "value cannot be an empty object")
+    for key in (
+        "id", "source", "landing_page_url", "pdf_url", "is_oa",
+        "is_published", "raw_source_name", "raw_type", "provenance",
+        "license", "license_id", "version", "is_accepted",
+    ):
+        if key not in primary_location:
+            return _fail("missing_key", f"missing key '{key}'")
     source = primary_location["source"]
     if not isinstance(source, dict):
         return _fail("wrong_type", "source must be an object")
-    for key in PRIMARY_LOCATION_SOURCE_REQUIRED_KEYS:
+    for key in (
+        "id", "display_name", "issn_l", "issn", "is_oa", "is_in_doaj",
+        "is_core", "host_organization", "host_organization_name",
+        "host_organization_lineage", "host_organization_lineage_names", "type",
+    ):
         if key not in source:
             return _fail("missing_key", f"source missing key '{key}'")
     return _ok()
 
 
 def check_best_oa_location(best_oa_location: Any) -> ValidationResult:
-    return _check_location_keys(best_oa_location)
+    if best_oa_location is None:
+        return _ok()
+    if not isinstance(best_oa_location, dict):
+        return _fail("wrong_type", "value must be an object")
+    if not best_oa_location:
+        return _fail("empty", "value cannot be an empty object")
+    for key in (
+        "id", "source", "landing_page_url", "pdf_url", "is_oa",
+        "is_published", "raw_source_name", "raw_type", "provenance",
+        "license", "license_id", "version", "is_accepted",
+    ):
+        if key not in best_oa_location:
+            return _fail("missing_key", f"missing key '{key}'")
+    return _ok()
 
 
 def check_access_is_oa(

@@ -2,10 +2,12 @@
 
 使用 `dataset.format="ms_swift"` 读取 Agent 轨迹 JSONL：每行一个 JSON 对象，
 包含 `messages` 数组，一行转换成一个评估样本。本地目录输入只读取 `.jsonl` 文件。
-当前支持以下 16 个指标，只处理主轨迹，不展开 `sub_agent_trajectory`。
+下文介绍通过 prepare 适配的 16 个指标，只处理主轨迹，不展开 `sub_agent_trajectory`。
+另外，[RuleAgentTraceReasoningSparsity](#reasoning-sparsity) 直接读取原始 `messages`，
+无需 prepare；`RuleMsSwiftSchema` 直接读取完整原始记录。
 
 converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并保留原始记录。
-每个指标单独配置 `evaluator[].fields`，映射到自己的 `<指标名>_<字段名>`。
+下文通过 prepare 适配的每个指标单独配置 `evaluator[].fields`，映射到自己的 `<指标名>_<字段名>`。
 全部指标同时选择时共生成 24 个辅助字段；同一指标重复配置时，每条记录只转换一次。
 每个 preparer 独立提取；源字段缺失、类型错误或其他提取异常只会使该指标负责的
 辅助字段置为空，不会阻断同一条记录的其他 preparer。当前 24 个辅助字段的运行时
@@ -22,6 +24,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 ## 一、输入约定
 
+- reasoning 稀疏特征使用 `fields: {"messages": "messages"}`，在规则内统计当前轨迹 assistant 的空 `reasoning_content` 占比；默认严格大于 `0.7` 时添加 `AGENT_TRACE_QUALITY.RuleAgentTraceReasoningSparsity` 标签并设置 `status=true`，未超过时为 false，文案不包含位置。保存设置和可运行示例见[本规则章节](#reasoning-sparsity)。该规则也可配合 `jsonl` converter 使用，不产生辅助字段。
 - converter 保留原始记录并为所选指标生成辅助字段，不执行完整交付格式校验。需要检查《轨迹数据的标准化格式》时，配置不带 `fields` 映射的 `RuleMsSwiftSchema`；该规则直接读取完整原始记录，并与其他指标独立执行。
 - 顶层必选字段为：`messages`、`tools`、`termination`、`source`、`harness`、`model`、`total_rounds`、`total_tool_calls`、`tool_counts`、`reasoning_total_tokens`、`tool_defs_tag`、`missing_tool_defs`、`tool_call_tag`、`tool_call_check`、`server_tool_calls`、`metadata`、`completeness_tag`、`completeness`。字段必须存在且类型正确，允许规范明确支持的空字符串、空数组或空对象。
 - `sub_agent_trajectory` 和 `sub_agent_relay_mounts` 是可选字段；存在 `sub_agent_trajectory` 时递归校验每个子轨迹。子轨迹不要求顶层专属的 `completeness_tag` 和 `completeness`。
@@ -719,12 +722,222 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 本例只复制 560000。若删除顶层 `total_tokens`，即使 `reasoning_total_tokens=900000`，输出仍为 `{}`。总用量是否有效以及是否超出预算由规则判断；没有可用用量时返回 N/A。
 
+<a id="reasoning-sparsity"></a>
+
+### 10. RuleAgentTraceReasoningSparsity（reasoning 稀疏轨迹特征）
+
+统计每条轨迹中，空 `reasoning_content` 占 assistant 消息的比例，判断是否超过阈值。
+这是轨迹字段分布特征，`status` 表示是否超过阈值。命中时为 true，现有 Dingo 执行器会将该记录
+计入 `num_bad`；未超过时为 false。该特征本身不能证明模型没有思考或任务一定简单。
+
+`min_assistant_messages` 默认 `0`，不按 assistant 数量过滤单轮记录。如果一条记录只有
+一条 assistant，且它的 `reasoning_content` 为空，空值占比就是 100%，准确描述了这条轨迹
+没有记录在该字段中的显式思考链。对于以显式推理过程为监督目标的任务，这条记录不提供对应的
+思考链监督信号，因此标记 reasoning 稀疏是合理的特征；不能仅因分母为 1 就认为比例无效。
+这里判断的是已记录的显式思考链，不推断模型内部的实际思考过程。
+
+**fields 与规则配置**
+
+
+```json
+{
+  "input_path": "test/data/agent/reasoning_sparsity.jsonl",
+  "dataset": {"source": "local", "format": "ms_swift"},
+  "executor": {
+    "result_save": {
+      "bad": true,
+      "good": true,
+      "raw": true,
+      "all_labels": true,
+      "merge": true
+    }
+  },
+  "evaluator": [{
+    "fields": {"messages": "messages"},
+    "evals": [{
+      "name": "RuleAgentTraceReasoningSparsity",
+      "config": {"threshold": 0.7, "min_assistant_messages": 0}
+    }]
+  }]
+}
+```
+
+保留这些输出设置：`good=true` 保留未命中和 N/A 的 `status=false` 记录；`all_labels=true`
+保留完整规则详情，尤其是与其他质量规则组合时；`merge=true` 将未命中和 N/A 的空标签记录也写入
+`all_results.jsonl`。当前本地执行器使用 `bad=true` 作为结果文件写出的总开关，
+因此这里也必须保持 true。命中记录的 `status=true` 按现有执行器进入 `num_bad` 汇总。
+
+本规则直接读取原生 `messages`，不生成 `<指标名>_content` 辅助字段，
+不经过 prepare 或 JSON 字符串中转；遍历、空值判断和比例计算都在规则内部完成。
+除 `ms_swift` 外，也支持使用 `jsonl` converter。
+
+**读取与计算口径**
+
+| 源字段或统计对象 | 用途 | 处理方式 |
+|---|---|---|
+| 当前轨迹 `messages` | 统计范围 | 每行独立计算，不递归合并 `sub_agent_trajectory` |
+| `messages[].role` | 筛选 assistant | 所有 assistant 消息都计入，包括工具调用消息和最终回复 |
+| assistant 的 `reasoning_content` | 判断空值 | 空字符串或纯空白字符串计为空；非空字符串计为有 reasoning |
+| user、system、developer、tool 等其他角色 | 不参与统计 | 不计入分子或分母 |
+| 顶层 `total_rounds`、`reasoning_total_tokens` | 不参与计算 | 不替代实际遍历得到的计数 |
+
+**规则步骤**
+
+1. 验证阈值为 `[0, 1]` 范围内的有限数；从 config 的 extra 字段读取 `min_assistant_messages`，未填写时使用 0，并在规则入口验证它为非负整数，非法值抛出 `ValueError`。
+2. 检查 `messages` 为数组，消息为包含字符串 `role` 的对象。
+3. 遍历当前 `messages`，累计 assistant 消息总数 A，以及其中 reasoning 为空的数量 E。
+4. A 为 0 时返回 N/A；A 小于 `min_assistant_messages` 时返回数量不足的 N/A，不判断稀疏。
+5. 达到数量要求后，计算空 reasoning 占比 `E / A`，使用未四舍五入的比例比较 `E / A > threshold`。
+6. 严格超过阈值时设置 `status=true` 并添加稀疏特征标签，否则为 false；命中与未命中都输出计数、占比及阈值文案，不输出具体位置。
+
+**阈值与边界**
+
+| 参数 | 类型 | 默认值 | 约束 |
+|---|---|---|---|
+| `threshold` | float | `0.7` | 有限数，`0 <= threshold <= 1`，相等不命中 |
+| `min_assistant_messages` | int | `0` | 非负整数，不接受 bool、浮点数或字符串；A 小于此值时返回 N/A，相等时正常检测 |
+
+两个默认值都是可配置的规则口径，不是论文给出的通用质量界限。
+阈值为 0 时，只要有空 reasoning 即命中；阈值为 1 时不会命中。
+`min_assistant_messages=0` 表示不设置数量下限；`1` 与 `0` 对可计算记录的检测范围相同；
+`2` 表示至少两条 assistant 消息。A 为 0 时，无论配置为多少，空值占比均无定义。
+该参数不在通用 `EvaluatorRuleArgs` 中声明字段，通过 `extra="allow"` 传入，由本规则读取和校验；
+执行器通过 `Model.set_config_rule()` 将它合并到规则实例的 `dynamic_config`，
+规则通过 `getattr(self.dynamic_config, "min_assistant_messages", 0)` 读取，未填写时默认使用 0。
+示例脚本在 config 中显式写出 `"min_assistant_messages": 0`，也支持通过
+`--min-assistant-messages` 覆盖这个值。该自定义参数无需加入快照白名单即可参与执行；
+目前不会保留在 `InputArgs.to_dict()` 或 `summary.json.input_args` 配置快照中，
+需要复现时请保留原始配置文件。
+
+| assistant 数 A | 空 reasoning 数 E | 占比 | 默认阈值下的结果 | status |
+|---|---|---|---|---|
+| 10 | 7 | 70% | 未命中，等于阈值 | false |
+| 10 | 8 | 80% | 命中 | true |
+| 1 | 1 | 100% | 命中，描述轨迹特征 | true |
+| 0 | 0 | 无定义 | N/A，applicable=false | false |
+
+上表使用默认 `min_assistant_messages=0`。若设置为 `2`，A 为 1 的记录改为返回 N/A，
+文案为“共 1 条 assistant 消息，少于最低要求 2 条，本规则不判定 reasoning 稀疏特征。”
+
+**完整标准化输入示例**
+
+以下轨迹的 assistant 正确回答了问题，`reasoning_content` 为空；
+空值占比为 `1 / 1 = 100%`，命中特征，返回 `status=true`，并按现有执行器计入 `num_bad`。
+
+```json
+{
+  "messages": [
+    {"role": "user", "content": "2+3 等于多少？"},
+    {"role": "assistant", "content": "5。", "reasoning_content": ""}
+  ],
+  "tools": [],
+  "termination": "",
+  "source": "reasoning_sparsity.jsonl",
+  "harness": "example",
+  "model": "example-model",
+  "total_rounds": 1,
+  "total_tool_calls": 0,
+  "tool_counts": {},
+  "reasoning_total_tokens": 0,
+  "tool_defs_tag": "complete",
+  "missing_tool_defs": [],
+  "tool_call_tag": "consistent",
+  "tool_call_check": {
+    "total_calls": 0,
+    "hallucinated_calls": 0,
+    "undefined_tool_calls": 0,
+    "unverifiable_calls": 0,
+    "checked_calls": 0,
+    "extra_arg_calls": 0,
+    "missing_required_calls": 0,
+    "type_mismatch_calls": 0,
+    "defaulted_missing_calls": 0,
+    "mismatch_calls": 0,
+    "mismatches": [],
+    "mismatches_truncated": 0
+  },
+  "server_tool_calls": [],
+  "metadata": {
+    "source_file": "reasoning_sparsity.jsonl",
+    "line_no": 0,
+    "created_at": ""
+  },
+  "completeness_tag": "complete_main_no_sub",
+  "completeness": {
+    "is_subagent": false,
+    "spawn_calls": 0,
+    "mounted_subs": 0,
+    "subtree_complete": true,
+    "unkeyed_mounts": 0,
+    "relay_mounts": 0,
+    "trailing_unanswered_call": false,
+    "no_final_assistant_turn": false
+  }
+}
+```
+
+**规则结果**（关键字段）
+
+```json
+{
+  "metric": "RuleAgentTraceReasoningSparsity",
+  "status": true,
+  "score": null,
+  "label": ["AGENT_TRACE_QUALITY.RuleAgentTraceReasoningSparsity"],
+  "reason": ["共 1 条 assistant 消息，其中 1 条 reasoning_content 为空，占比 100.00%；超过阈值 70.00%，命中 reasoning 稀疏特征。"],
+  "applicable": true
+}
+```
+
+规则沿用 `AGENT_TRACE_QUALITY` 分类，注册在 `agent_trace_basic` 组。命中时 `status=true`，
+未命中时 `status=false`、`label=[]`；`score` 为空，不参与质量评分。
+现有执行器会把命中记录计入 `num_bad`，并令该记录的 `eval_status=true`。
+例如恰好达到 70% 时，文案为：
+
+> 共 10 条 assistant 消息，其中 7 条 reasoning_content 为空，占比 70.00%；未超过阈值 70.00%，未命中 reasoning 稀疏特征。
+
+**缺失情况与使用边界**
+
+| 无法计算的情况 | `not_applicable_code` |
+|---|---|
+| `messages` 缺失、不是数组，或消息对象/role 结构不符合要求 | `invalid_messages` |
+| assistant 的 `reasoning_content` 缺失、为 `null` 或其他非字符串类型 | `invalid_reasoning_content` |
+| 没有 assistant 消息，包括空数组 | `no_assistant_messages` |
+| assistant 数量大于 0，但小于 `min_assistant_messages` | `insufficient_assistant_messages` |
+
+这些情况返回 `applicable=false`、`status=false`、`not_applicable_kind="structural"`，不输出部分比例，
+不将字段缺失或非字符串静默计为空值，也不把无定义的比例记为 0%。
+如需检查整个标准化记录，可另外配置 `RuleMsSwiftSchema`。
+
+**保存与运行**
+
+保存结果时设置 `executor.result_save` 的 `bad=true, good=true, all_labels=true, merge=true`。
+当前本地执行器要求 `bad=true` 才写出结果文件；`good=true` 保留 `status=false` 的记录，
+`all_labels=true` 保留与其他质量规则组合时的特征详情，`merge=true` 将未命中和 N/A
+等空标签记录也写入 `all_results.jsonl`。
+
+summary 中的标签占比表示稀疏轨迹占全部输入轨迹的比例，不是全部 assistant 消息的空值占比；
+单条轨迹的空值占比在各自的 `reason` 中。
+现有 LocalExecutor 的 `num_good` 仍包含未被其他规则命中的 N/A 记录，标签占比的分母仍为
+全部输入记录；设置数量下限不会自动改变这些汇总口径。区分 N/A 时读取 `applicable`。
+
+```bash
+python examples/agent/reasoning_sparsity.py
+python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --threshold 0.7
+python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assistant-messages 2
+```
+
+独立示例默认读取[完整标准化样本](../../test/data/agent/reasoning_sparsity.jsonl)，
+预期得到 2 条记录、1 条稀疏特征命中，summary 中 `num_bad=1`、`num_good=1`。完整配置见本节开头。
+对随附样本设置 `--min-assistant-messages 2` 时，两条单轮轨迹均为 N/A，summary 中
+`num_bad=0`、`num_good=2`；逐条结果保留 `applicable=false`，不代表通过了稀疏判定。
+
 ## 三、LLM 指标
 
 本版 7 个 LLM 指标统一使用 `_messages_content()`，但分别生成自己的辅助字段。
 下面每节独立说明该指标的输入适配方式；它们暂未分别实现工具、计划或错误事件提取。
 
-### 10. LLMAgentArgumentCorrectness（工具参数正确性）
+### 11. LLMAgentArgumentCorrectness（工具参数正确性）
 
 为参数正确性评估准备会话文本；本版没有单独提取结构化工具参数。
 
@@ -788,7 +1001,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 没有消息时 `content` 为字符串 `"[]"`。如果参数只存在于 `tool_calls`，LLM 在这版输入中看不到具体参数，参数正确性评分的证据可能不足。
 
-### 11. LLMAgentToolCorrectness（工具选择正确性）
+### 12. LLMAgentToolCorrectness（工具选择正确性）
 
 为工具选择评估准备会话文本；本版不额外传入可用工具定义或调用名称。
 
@@ -853,7 +1066,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 没有消息时 `content` 为字符串 `"[]"`。如果工具名称和职责只存在于结构化调用或工具定义中，LLM 无法从本版输入直接获得这些证据。
 
-### 12. LLMAgentErrorRecovery（错误恢复）
+### 13. LLMAgentErrorRecovery（错误恢复）
 
 为错误恢复评估准备完整顺序的消息文本；本版不构建独立错误事件或重试记录。
 
@@ -922,7 +1135,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 没有消息时 `content` 为字符串 `"[]"`。converter 不检查是否发生错误、不识别重试链路。非空精简会话可能触发 LLM 评估，即使会话里没有已确认的错误事件。
 
-### 13. LLMAgentPlanAdherence（计划遵循程度）
+### 14. LLMAgentPlanAdherence（计划遵循程度）
 
 准备会话消息，并为计划遵循指标提供空的任务目标与计划上下文字段。
 
@@ -986,7 +1199,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 没有消息时 `content` 为字符串 `"[]"`，`prompt/context` 仍为空。当前没有独立的原始计划或任务目标输入，无法把成功转换直接理解为计划遵循证据已完整。
 
-### 14. LLMAgentPlanQuality（计划质量）
+### 15. LLMAgentPlanQuality（计划质量）
 
 为计划质量评估准备会话文本；本版不从推理字段中提取计划。
 
@@ -1044,7 +1257,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 没有消息时 `content` 为字符串 `"[]"`。只有消息 `content` 中明确写出的计划会随文本保留；本版不识别、整理或推断计划，计划质量评分可能缺少计划证据。
 
-### 15. LLMAgentStepEfficiency（执行步骤效率）
+### 16. LLMAgentStepEfficiency（执行步骤效率）
 
 为步骤效率评估准备会话文本；本版不把工具调用展开成独立的执行步骤。
 
@@ -1114,7 +1327,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 没有消息时 `content` 为字符串 `"[]"`。本版不统计执行步骤、不建立调用与返回的结构化关系，也不划分多轮任务边界；这些信息不足可能影响效率评分。
 
-### 16. LLMAgentTaskCompletion（任务完成情况）
+### 17. LLMAgentTaskCompletion（任务完成情况）
 
 为任务完成情况评估准备完整顺序的会话文本；本版不单独抽取任务目标。
 
@@ -1205,11 +1418,12 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 }
 ```
 
-完整 16 个指标的配置见 [ms_swift.json](../../examples/dataset/ms_swift.json)。
+指标组合配置见 [ms-swift.py](../../examples/agent/ms-swift.py)，其中包含直接读取 `messages`
+的 reasoning 稀疏特征规则；无需模型服务的独立示例见 [reasoning_sparsity.py](../../examples/agent/reasoning_sparsity.py)。
 修改输入路径，并为选中的 LLM 指标填写模型配置后运行：
 
 ```bash
-dingo eval --input examples/dataset/ms_swift.json
+python examples/agent/ms-swift.py
 ```
 
 ## 五、结果输出

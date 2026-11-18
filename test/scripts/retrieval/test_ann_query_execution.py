@@ -14,10 +14,14 @@ from dingo.config import InputArgs
 from dingo.retrieval.backends.milvus import MilvusSearchClient, VectorHit
 from dingo.retrieval.search_client import SearchClient, list_backends
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 
 @pytest.fixture(scope="module")
 def runner():
-    path = Path(__file__).resolve().parents[3] / "examples/milvus_benchmark/2-query-execution/run_queries.py"
+    path = PROJECT_ROOT / "examples/milvus_benchmark/2-query-execution/run_queries.py"
     spec = importlib.util.spec_from_file_location("ann_query_runner", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

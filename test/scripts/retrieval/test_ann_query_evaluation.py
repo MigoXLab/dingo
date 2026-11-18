@@ -10,12 +10,17 @@ import pytest
 
 from dingo.config import InputArgs
 
-hdf5_input = importlib.import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
 h5py = pytest.importorskip("h5py")
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+hdf5_input = importlib.import_module("examples.milvus_benchmark.0-data-loading.hdf5_input")
 
 
 def load_example(relative, name):
-    path = Path(__file__).resolve().parents[3] / "examples/milvus_benchmark" / relative
+    path = PROJECT_ROOT / "examples/milvus_benchmark" / relative
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

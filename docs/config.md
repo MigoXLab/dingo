@@ -273,7 +273,6 @@ MinerU 支持的 block 类型包括：`text`, `title`, `image`, `table`, `equati
 | refer_path | list | null | No | 参考文件路径或小模型路径 |
 | *其他字段* | any | - | No | 规则自定义扩展字段（如 `ignore_order`） |
 
-
 #### EvaluatorLLMArgs 配置 (evaluator.llm_config.[llm_name])
 
 LLM 配置（支持额外字段，所有额外字段会直接透传给 LLM API）：

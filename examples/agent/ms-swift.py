@@ -12,8 +12,13 @@ config = {
 input_data = {
   "input_path": r"",
   "dataset": {"source": "local", "format": "ms_swift"},
-  "executor": {"result_save":{"good":True, "raw":True}},
+  # Keep both threshold matches (status=True) and unmatched/N/A records.
+  "executor": {"result_save":{"bad":True, "good":True, "raw":True, "all_labels":True, "merge":True}},
   "evaluator": [
+    {
+      "fields": {"messages": "messages"},
+      "evals": [{"name": "RuleAgentTraceReasoningSparsity", "config": {"threshold": 0.7, "min_assistant_messages": 0}}]
+    },
     {
       "fields": {
         "prompt": "LLMAgentTaskCompletion_prompt",

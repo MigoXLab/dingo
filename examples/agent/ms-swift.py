@@ -17,6 +17,10 @@ input_data = {
   "evaluator": [
     {
       "fields": {"messages": "messages"},
+      "evals": [{"name": "RuleAgentTraceEmptyAssistantTurn"}]
+    },
+    {
+      "fields": {"messages": "messages"},
       "evals": [{"name": "RuleAgentTraceReasoningSparsity", "config": {"threshold": 0.7, "min_assistant_messages": 0}}]
     },
     {

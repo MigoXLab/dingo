@@ -3,7 +3,8 @@
 使用 `dataset.format="ms_swift"` 读取 Agent 轨迹 JSONL：每行一个 JSON 对象，
 包含 `messages` 数组，一行转换成一个评估样本。本地目录输入只读取 `.jsonl` 文件。
 下文介绍通过 prepare 适配的 16 个指标，只处理主轨迹，不展开 `sub_agent_trajectory`。
-另外，[RuleAgentTraceReasoningSparsity](#reasoning-sparsity) 直接读取原始 `messages`，
+另外，[RuleAgentTraceReasoningSparsity](#reasoning-sparsity) 和
+[RuleAgentTraceEmptyAssistantTurn](#empty-assistant-turn) 直接读取原始 `messages`，
 无需 prepare；`RuleMsSwiftSchema` 直接读取完整原始记录。
 
 converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并保留原始记录。
@@ -24,6 +25,7 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 ## 一、输入约定
 
+- 完全空 assistant 回合使用 `fields: {"messages": "messages"}`，由 `RuleAgentTraceEmptyAssistantTurn` 完整遍历所有 assistant，统计 content、reasoning_content 均为空且无工具调用的回合数量；不检查 loss，数量大于 0 即 `status=true`，文案不输出位置。支持 `jsonl` 和 `ms_swift`，不生成辅助字段，见[本规则章节](#empty-assistant-turn)。
 - reasoning 稀疏特征使用 `fields: {"messages": "messages"}`，在规则内统计当前轨迹 assistant 的空 `reasoning_content` 占比；默认严格大于 `0.7` 时添加 `AGENT_TRACE_QUALITY.RuleAgentTraceReasoningSparsity` 标签并设置 `status=true`，未超过时为 false，文案不包含位置。保存设置和可运行示例见[本规则章节](#reasoning-sparsity)。该规则也可配合 `jsonl` converter 使用，不产生辅助字段。
 - converter 保留原始记录并为所选指标生成辅助字段，不执行完整交付格式校验。需要检查《轨迹数据的标准化格式》时，配置不带 `fields` 映射的 `RuleMsSwiftSchema`；该规则直接读取完整原始记录，并与其他指标独立执行。
 - 顶层必选字段为：`messages`、`tools`、`termination`、`source`、`harness`、`model`、`total_rounds`、`total_tool_calls`、`tool_counts`、`reasoning_total_tokens`、`tool_defs_tag`、`missing_tool_defs`、`tool_call_tag`、`tool_call_check`、`server_tool_calls`、`metadata`、`completeness_tag`、`completeness`。字段必须存在且类型正确，允许规范明确支持的空字符串、空数组或空对象。
@@ -722,8 +724,6 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 本例只复制 560000。若删除顶层 `total_tokens`，即使 `reasoning_total_tokens=900000`，输出仍为 `{}`。总用量是否有效以及是否超出预算由规则判断；没有可用用量时返回 N/A。
 
-<a id="reasoning-sparsity"></a>
-
 ### 10. RuleAgentTraceReasoningSparsity（reasoning 稀疏轨迹特征）
 
 统计每条轨迹中，空 `reasoning_content` 占 assistant 消息的比例，判断是否超过阈值。
@@ -932,12 +932,166 @@ python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assist
 对随附样本设置 `--min-assistant-messages 2` 时，两条单轮轨迹均为 N/A，summary 中
 `num_bad=0`、`num_good=2`；逐条结果保留 `applicable=false`，不代表通过了稀疏判定。
 
+### 11. RuleAgentTraceEmptyAssistantTurn（完全空 assistant 回合）
+
+直接读取原生 `messages`，完整遍历当前轨迹的所有 assistant 消息，再根据空回合总数判断。
+满足以下三个条件的 assistant 消息计为空回合：
+
+- `content` 是空字符串或纯空白字符串；
+- `reasoning_content` 是空字符串或纯空白字符串；
+- `tool_calls` 缺失或为 `[]`。
+
+不检查 `loss`：true、false 或缺失均参与检查。只有 reasoning 的消息不计为空回合，
+有工具调用但没有文本的消息也不计为空。非空文本不做语义或特殊结束标记识别。
+这是与 `RuleAgentTraceEmptySupervision` 的区别：后者只检查 `loss=true` 的 assistant，
+且另有仅结束标记的检测分支；本规则检测所有 assistant 的三类信号均为空的情况。
+
+**fields 与规则配置**
+
+```json
+{
+  "fields": {"messages": "messages"},
+  "evals": [{"name": "RuleAgentTraceEmptyAssistantTurn"}]
+}
+```
+
+不需要 config、比例阈值或最少轮次参数，不新增 converter prepare，
+不生成 `<指标名>_content`，不做 JSON 字符串中转。支持 `jsonl` 和 `ms_swift`。
+
+**读取与计算口径**
+
+| 源字段 | 用途 | 处理方式 |
+|---|---|---|
+| 当前 `messages` | 检查范围 | 每条记录独立检查，不递归 `sub_agent_trajectory` |
+| `messages[].role` | 筛选角色 | 只统计 assistant；消息对象和 role 必须可读取 |
+| assistant 的 `content`、`reasoning_content` | 文本信号 | 必须为字符串，以 `strip()` 判断空白 |
+| assistant 的 `tool_calls` | 工具调用信号 | 缺失或空数组为无调用，非空数组须包含可识别的标准化调用对象 |
+| `loss`、`total_rounds` | 不参与判断 | 不按 loss 过滤，不使用声明的总轮数代替实际遍历 |
+
+可识别的调用对象包含 `type="function"`、字符串 `id`，以及有非空字符串 `name`
+和 `arguments` 键的 `function` 对象。参数可以为任意 JSON 值；本规则不校验参数是否
+符合工具 schema、不配对调用结果、不检查 ID 唯一性或执行成败。完整格式校验由
+`RuleMsSwiftSchema` 负责。`[null]`、`[{}]` 等畸形列表不作为有效调用来豁免空回合。
+
+**规则步骤**
+
+1. 读取 `messages` 数组。
+2. 完整遍历消息，统计 assistant 总数 A、满足三项空值条件的回合数 E，以及必要字段不可读取的消息数。
+3. 遇到空回合只增加 E，继续检查后续消息，不在第一次命中时提前返回。
+4. 遍历结束后，若有必要结构不可读取，整条记录返回 N/A，不输出局部统计结论。
+5. 没有 assistant 时返回 N/A；其余记录按 `E > 0` 决定 `status`。
+
+**完整标准化输入示例**
+
+以下样本包含 6 条 assistant：3 条完全空回合、1 条工具调用、1 条仅 reasoning 和 1 条可见回答。
+三个空回合分别携带 `loss=false`、`loss=true` 和缺失的 loss，全部计入；reasoning token 数仅为示例估算。
+
+```json
+{
+  "messages": [
+    {"role": "user", "content": "读取 settings.json，告诉我 debug 是否开启。"},
+    {"role": "assistant", "content": "", "reasoning_content": "", "loss": false},
+    {
+      "role": "assistant", "content": "", "reasoning_content": "先读取配置文件。",
+      "tool_calls": [{
+        "type": "function", "id": "read_1",
+        "function": {"name": "Read", "arguments": {"path": "settings.json"}}
+      }]
+    },
+    {"role": "tool", "tool_call_id": "read_1", "name": "Read", "content": "{\"debug\":true}"},
+    {"role": "assistant", "content": " \t", "reasoning_content": "\n", "loss": true},
+    {"role": "assistant", "content": "", "reasoning_content": "配置中的 debug 为 true，应该告知用户已开启。"},
+    {"role": "assistant", "content": "", "reasoning_content": ""},
+    {"role": "assistant", "content": "debug 已开启。", "reasoning_content": ""}
+  ],
+  "tools": [{
+    "type": "function", "name": "Read", "description": "读取文件",
+    "parameters": {
+      "type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]
+    }
+  }],
+  "termination": "",
+  "source": "empty_assistant_turn.jsonl",
+  "harness": "example",
+  "model": "example-model",
+  "total_rounds": 6,
+  "total_tool_calls": 1,
+  "tool_counts": {"Read": 1},
+  "reasoning_total_tokens": 20,
+  "tool_defs_tag": "complete",
+  "missing_tool_defs": [],
+  "tool_call_tag": "consistent",
+  "tool_call_check": {
+    "total_calls": 1, "hallucinated_calls": 0, "undefined_tool_calls": 0,
+    "unverifiable_calls": 0, "checked_calls": 1, "extra_arg_calls": 0,
+    "missing_required_calls": 0, "type_mismatch_calls": 0, "defaulted_missing_calls": 0,
+    "mismatch_calls": 0, "mismatches": [], "mismatches_truncated": 0
+  },
+  "server_tool_calls": [],
+  "metadata": {"source_file": "empty_assistant_turn.jsonl", "line_no": 0, "created_at": ""},
+  "completeness_tag": "complete_main_no_sub",
+  "completeness": {
+    "is_subagent": false, "spawn_calls": 0, "mounted_subs": 0, "subtree_complete": true,
+    "unkeyed_mounts": 0, "relay_mounts": 0, "trailing_unanswered_call": false,
+    "no_final_assistant_turn": false
+  }
+}
+```
+
+**规则结果**（关键字段）
+
+```json
+{
+  "metric": "RuleAgentTraceEmptyAssistantTurn",
+  "status": true,
+  "score": null,
+  "label": ["AGENT_TRACE_QUALITY.RuleAgentTraceEmptyAssistantTurn"],
+  "applicable": true,
+  "reason": ["共检查 6 条 assistant 消息，发现 3 条 content、reasoning_content 均为空且无工具调用的空回合。"]
+}
+```
+
+注册类型为 `AGENT_TRACE_QUALITY`，规则组为 `agent_trace_basic`。只要 E 大于 0 就命中，
+即使是 100 条 assistant 中的一条空回合也不因比例低而忽略。`score` 保持为空。
+未命中时 `status=false`、`label=["QUALITY_GOOD"]`，文案为：
+
+> 共检查 1 条 assistant 消息，未发现 content、reasoning_content 均为空且无工具调用的空回合。
+
+文案不输出消息位置。现有执行器将命中记录计入 `num_bad`，并令 `eval_status=true`。
+
+**N/A 与使用边界**
+
+| 情况 | not_applicable_code |
+|---|---|
+| messages 缺失、非数组，或消息对象/role、assistant 的两个文本字段/调用结构不可读取 | `invalid_messages` |
+| 没有 assistant，包括空数组 | `no_assistant_messages` |
+
+N/A 返回 `applicable=false`、`status=false`、空标签和 `not_applicable_kind="structural"`。
+缺失、null、数字等不会被静默转换为空字符串；遇到结构异常仍扫描剩余消息，最终返回 N/A。
+通过本项检查不等于整条轨迹质量合格。它不检查最终回答是否缺失，也不保证没有供应商侧 server tool
+动作；这里的工具信号只读取当前消息的 client `tool_calls`。
+由于不检查 loss，是否真的参与训练及影响大小还需结合训练模板和监督掩码判断。
+
+**保存与运行**
+
+```bash
+python examples/agent/empty_assistant_turn.py
+python examples/agent/empty_assistant_turn.py C:/path/to/traces.jsonl
+```
+
+[独立 Python 示例](../../examples/agent/empty_assistant_turn.py) 默认读取
+[完整标准化样本](../../test/data/agent/empty_assistant_turn.jsonl)。两条样本预期得到
+1 条命中、1 条未命中，`num_bad=1`、`num_good=1`，命中文案统计到 3 条空回合。
+示例开启 `result_save.bad=true, good=true, all_labels=true, merge=true`，
+以保留命中、未命中和 N/A 详情。当前 LocalExecutor 的 `num_good` 也可能包含 N/A，需读取
+逐条结果的 `applicable` 区分。本规则不自动删除或补写消息。
+
 ## 三、LLM 指标
 
 本版 7 个 LLM 指标统一使用 `_messages_content()`，但分别生成自己的辅助字段。
 下面每节独立说明该指标的输入适配方式；它们暂未分别实现工具、计划或错误事件提取。
 
-### 11. LLMAgentArgumentCorrectness（工具参数正确性）
+### 1. LLMAgentArgumentCorrectness（工具参数正确性）
 
 为参数正确性评估准备会话文本；本版没有单独提取结构化工具参数。
 
@@ -1001,7 +1155,7 @@ python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assist
 
 没有消息时 `content` 为字符串 `"[]"`。如果参数只存在于 `tool_calls`，LLM 在这版输入中看不到具体参数，参数正确性评分的证据可能不足。
 
-### 12. LLMAgentToolCorrectness（工具选择正确性）
+### 2. LLMAgentToolCorrectness（工具选择正确性）
 
 为工具选择评估准备会话文本；本版不额外传入可用工具定义或调用名称。
 
@@ -1066,7 +1220,7 @@ python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assist
 
 没有消息时 `content` 为字符串 `"[]"`。如果工具名称和职责只存在于结构化调用或工具定义中，LLM 无法从本版输入直接获得这些证据。
 
-### 13. LLMAgentErrorRecovery（错误恢复）
+### 3. LLMAgentErrorRecovery（错误恢复）
 
 为错误恢复评估准备完整顺序的消息文本；本版不构建独立错误事件或重试记录。
 
@@ -1135,7 +1289,7 @@ python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assist
 
 没有消息时 `content` 为字符串 `"[]"`。converter 不检查是否发生错误、不识别重试链路。非空精简会话可能触发 LLM 评估，即使会话里没有已确认的错误事件。
 
-### 14. LLMAgentPlanAdherence（计划遵循程度）
+### 4. LLMAgentPlanAdherence（计划遵循程度）
 
 准备会话消息，并为计划遵循指标提供空的任务目标与计划上下文字段。
 
@@ -1199,7 +1353,7 @@ python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assist
 
 没有消息时 `content` 为字符串 `"[]"`，`prompt/context` 仍为空。当前没有独立的原始计划或任务目标输入，无法把成功转换直接理解为计划遵循证据已完整。
 
-### 15. LLMAgentPlanQuality（计划质量）
+### 5. LLMAgentPlanQuality（计划质量）
 
 为计划质量评估准备会话文本；本版不从推理字段中提取计划。
 
@@ -1257,7 +1411,7 @@ python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assist
 
 没有消息时 `content` 为字符串 `"[]"`。只有消息 `content` 中明确写出的计划会随文本保留；本版不识别、整理或推断计划，计划质量评分可能缺少计划证据。
 
-### 16. LLMAgentStepEfficiency（执行步骤效率）
+### 6. LLMAgentStepEfficiency（执行步骤效率）
 
 为步骤效率评估准备会话文本；本版不把工具调用展开成独立的执行步骤。
 
@@ -1327,7 +1481,7 @@ python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assist
 
 没有消息时 `content` 为字符串 `"[]"`。本版不统计执行步骤、不建立调用与返回的结构化关系，也不划分多轮任务边界；这些信息不足可能影响效率评分。
 
-### 17. LLMAgentTaskCompletion（任务完成情况）
+### 7. LLMAgentTaskCompletion（任务完成情况）
 
 为任务完成情况评估准备完整顺序的会话文本；本版不单独抽取任务目标。
 

@@ -219,6 +219,8 @@ def check_locations(locations: Any) -> ValidationResult:
             return BaseFieldValidation._fail("version.null", "version is null")
         if not isinstance(version, str):
             return BaseFieldValidation._fail("version.wrong_type", "version must be a string")
+        if version == "":
+            return BaseFieldValidation._ok()
         if version not in {
             "publishedVersion", "acceptedVersion", "submittedVersion",
         }:
@@ -231,7 +233,9 @@ def check_locations(locations: Any) -> ValidationResult:
     def _check_is_published(is_published: Any, version: Any) -> ValidationResult:
         if is_published is None:
             return BaseFieldValidation._ok()
-        if not isinstance(is_published, bool):
+        if isinstance(is_published, bool) or (isinstance(is_published, int) and is_published in (0, 1)):
+            is_published = bool(is_published)
+        else:
             return BaseFieldValidation._fail(
                 "is_published.wrong_type", "is_published must be a boolean",
             )
@@ -252,7 +256,9 @@ def check_locations(locations: Any) -> ValidationResult:
     def _check_is_accepted(is_accepted: Any, version: Any) -> ValidationResult:
         if is_accepted is None:
             return BaseFieldValidation._ok()
-        if not isinstance(is_accepted, bool):
+        if isinstance(is_accepted, bool) or (isinstance(is_accepted, int) and is_accepted in (0, 1)):
+            is_accepted = bool(is_accepted)
+        else:
             return BaseFieldValidation._fail(
                 "is_accepted.wrong_type", "is_accepted must be a boolean",
             )

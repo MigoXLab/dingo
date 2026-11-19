@@ -676,15 +676,15 @@ def test_paper_locations_source_allows_extra_keys_without_value_constraints():
     assert rule_paper.check_locations([location]) == (False, [], [])
 
 
-@pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion"])
+@pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion", ""])
 def test_paper_locations_version_accepts_supported_values(version):
     location = {**_paper_location(), "version": version,
-        "is_published": version == "publishedVersion", "is_accepted": version != "submittedVersion"}
+        "is_published": version == "publishedVersion", "is_accepted": version != "submittedVersion" and version != ""}
     assert rule_paper.check_locations([location]) == (False, [], [])
 
 
 @pytest.mark.parametrize("version", [
-    None, "", True, 1, [], {}, "publishedversion", "PublishedVersion", "publishedVersion ", "invalid",
+    None, True, 1, [], {}, "publishedversion", "PublishedVersion", "publishedVersion ", "invalid",
 ])
 def test_paper_locations_version_errors_accumulate(version):
     location = {**_paper_location(), "source": {}, "version": version, "is_published": False, "is_accepted": False}
@@ -709,7 +709,7 @@ def test_paper_locations_version_errors_accumulate(version):
 
 
 @pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion"])
-@pytest.mark.parametrize("is_published", [True, False])
+@pytest.mark.parametrize("is_published", [True, False, 1, 0])
 def test_paper_locations_is_published_version_consistency(version, is_published):
     result = rule_paper.check_locations([
         {**_paper_location(), "version": version, "is_published": is_published,
@@ -729,12 +729,43 @@ def test_paper_locations_is_published_version_consistency(version, is_published)
         assert result == (False, [], [])
 
 
-@pytest.mark.parametrize("is_published", [0, 1, "true", "false", "", [], {}])
+@pytest.mark.parametrize("is_published", ["true", "false", "0", "1", "", [], {}, 2])
 def test_paper_locations_is_published_requires_boolean(is_published):
     result = rule_paper.check_locations([{**_paper_location(), "is_published": is_published}])
     assert result == (
         True, ["is_published.wrong_type"], ["item[0].is_published must be a boolean"],
     )
+
+
+def test_paper_locations_integer_flags_match_submitted_version():
+    location = {
+        "is_oa": "false",
+        "license": "",
+        "pdf_url": "",
+        "landing_page_url": "https://doaj.org/article/c199c1dcb72149af9106380d44399d70",
+        "source_url": "",
+        "origin_url": "",
+        "source": {
+            "id": "https://openalex.org/S4306401280",
+            "issn_l": None,
+            "issn": None,
+            "display_name": "DOAJ (DOAJ: Directory of Open Access Journals)",
+            "is_oa": 0,
+            "is_in_doaj": 0,
+            "type": "repository",
+            "listed_in": [],
+            "is_core": 0,
+            "host_organization": None,
+            "host_organization_name": None,
+            "host_organization_lineage": [],
+            "host_organization_lineage_names": [],
+        },
+        "version": "submittedVersion",
+        "is_accepted": 0,
+        "is_published": 0,
+        "meta_db_name": "openalex",
+    }
+    assert rule_paper.check_locations([location]) == (False, [], [])
 
 
 def test_paper_locations_is_published_allows_null():
@@ -765,7 +796,7 @@ def test_paper_locations_is_published_errors_accumulate_and_missing_version_is_s
 
 
 @pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion"])
-@pytest.mark.parametrize("is_accepted", [True, False])
+@pytest.mark.parametrize("is_accepted", [True, False, 1, 0])
 def test_paper_locations_is_accepted_version_consistency(version, is_accepted):
     result = rule_paper.check_locations([
         {**_paper_location(), "version": version, "is_accepted": is_accepted,
@@ -785,7 +816,7 @@ def test_paper_locations_is_accepted_version_consistency(version, is_accepted):
         assert result == (False, [], [])
 
 
-@pytest.mark.parametrize("is_accepted", [0, 1, "true", "false", "", [], {}])
+@pytest.mark.parametrize("is_accepted", ["true", "false", "0", "1", "", [], {}, 2])
 def test_paper_locations_is_accepted_requires_boolean(is_accepted):
     assert rule_paper.check_locations([{**_paper_location(), "is_accepted": is_accepted}]) == (
         True, ["is_accepted.wrong_type"], ["item[0].is_accepted must be a boolean"],
@@ -821,7 +852,7 @@ def test_paper_locations_is_accepted_errors_accumulate_and_missing_version_is_sa
 
 def test_paper_locations_reports_independent_type_labels_for_all_value_checks():
     location = {**_paper_location(), "license": [], "is_oa": True, "source": [],
-        "version": {}, "is_published": 1, "is_accepted": "true"}
+        "version": {}, "is_published": 2, "is_accepted": "true"}
     model = rule_paper.RulePaperFieldValidation()
     model.dynamic_config = model.dynamic_config.model_copy(deep=True)
     model.dynamic_config.key_list = ["locations"]

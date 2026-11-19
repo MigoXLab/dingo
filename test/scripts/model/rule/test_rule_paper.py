@@ -676,15 +676,15 @@ def test_paper_locations_source_allows_extra_keys_without_value_constraints():
     assert rule_paper.check_locations([location]) == (False, [], [])
 
 
-@pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion"])
+@pytest.mark.parametrize("version", ["publishedVersion", "acceptedVersion", "submittedVersion", ""])
 def test_paper_locations_version_accepts_supported_values(version):
     location = {**_paper_location(), "version": version,
-        "is_published": version == "publishedVersion", "is_accepted": version != "submittedVersion"}
+        "is_published": version == "publishedVersion", "is_accepted": version != "submittedVersion" and version != ""}
     assert rule_paper.check_locations([location]) == (False, [], [])
 
 
 @pytest.mark.parametrize("version", [
-    None, "", True, 1, [], {}, "publishedversion", "PublishedVersion", "publishedVersion ", "invalid",
+    None, True, 1, [], {}, "publishedversion", "PublishedVersion", "publishedVersion ", "invalid",
 ])
 def test_paper_locations_version_errors_accumulate(version):
     location = {**_paper_location(), "source": {}, "version": version, "is_published": False, "is_accepted": False}

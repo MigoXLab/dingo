@@ -219,6 +219,8 @@ def check_locations(locations: Any) -> ValidationResult:
             return BaseFieldValidation._fail("version.null", "version is null")
         if not isinstance(version, str):
             return BaseFieldValidation._fail("version.wrong_type", "version must be a string")
+        if version == "":
+            return BaseFieldValidation._ok()
         if version not in {
             "publishedVersion", "acceptedVersion", "submittedVersion",
         }:

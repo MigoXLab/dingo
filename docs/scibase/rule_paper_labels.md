@@ -284,7 +284,7 @@
 | `source.missing_key` | 来源 key 缺失 | 非空 `source` 缺少以下任一 key 时逐项标记：`id`、`display_name`、`issn_l`、`issn`、`is_oa`、`is_in_doaj`、`is_core`、`listed_in`、`type`、`host_organization`、`host_organization_name`、`host_organization_lineage`、`host_organization_lineage_names`。允许额外 key。 |
 | `version.null` | 版本为 null | `version` 为 `null` 时标记，先于类型检查。 |
 | `version.wrong_type` | 版本类型错误 | `version` 不是字符串时标记，包括布尔值、数字、列表和对象。`null` 单独标记为 `version.null`。 |
-| `version.unsupported_value` | 版本不合法 | 字符串 `version` 仅允许 `publishedVersion`、`acceptedVersion`、`submittedVersion`；区分大小写，空字符串及其他字符串均不合法。 |
+| `version.unsupported_value` | 版本不合法 | 字符串 `version` 仅允许 `publishedVersion`、`acceptedVersion`、`submittedVersion`；空字符串 `""` 允许通过，不再检查取值。区分大小写，其他字符串不合法。 |
 | `is_published.wrong_type` | 发布标记类型错误 | `is_published` 不是布尔值，也不是整数 `0`/`1` 时标记。整数 `0` 视为 false，`1` 视为 true；字符串仍不符合要求。`null` 允许通过，不再检查与 `version` 的一致性。 |
 | `is_published.version_mismatch` | 发布标记与版本不一致 | `is_published` 非 `null` 时，`version` 为 `publishedVersion` 必须为 true 或 `1`；其他情况必须为 false 或 `0`，包括版本缺失或非法。 |
 | `is_accepted.wrong_type` | 接收标记类型错误 | `is_accepted` 不是布尔值，也不是整数 `0`/`1` 时标记。整数 `0` 视为 false，`1` 视为 true；字符串仍不符合要求。`null` 允许通过，不再检查与 `version` 的一致性。 |

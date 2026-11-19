@@ -75,3 +75,25 @@ assistant 数量小于配置下限时返回 `insufficient_assistant_messages`；
 [ms-swift 确定性规则中的 reasoning 稀疏章节](ms_swift.md#reasoning-sparsity)。
 
 可运行示例：`python examples/agent/reasoning_sparsity.py`（随附完整标准化样本）。
+
+## RuleAgentTraceEmptyAssistantTurn
+
+不需要 `config`，没有比例阈值或最少轮次参数。规则直接遍历原生 `messages` 中全部 assistant，
+不检查 loss，统计 content、reasoning_content 均为空或纯空白且无工具调用的回合总数。
+完成遍历后，空回合数大于 0 即 `status=true`，命中文案包含检查总数和空回合总数，不列位置。
+只有 reasoning 或有工具调用的回合不计为空；不继承 EmptySupervision 的仅结束标记分支。
+
+```json
+{
+  "fields": {"messages": "messages"},
+  "evals": [{"name": "RuleAgentTraceEmptyAssistantTurn"}]
+}
+```
+
+支持 `jsonl`、`ms_swift`，不增加 prepare 或派生字段。必要结构不可读取时整条返回
+`invalid_messages` 的 N/A；没有 assistant 时为 `no_assistant_messages`。
+`status=true` 按现有执行器计入 `num_bad`，没有发现空回合时返回 `QUALITY_GOOD`。
+完整输入、处理边界和结果见 [ms-swift 确定性规则](ms_swift.md#empty-assistant-turn)。
+
+运行 `python examples/agent/empty_assistant_turn.py` 可使用 `test/data/agent` 中的完整样本。
+示例开启 `bad=true, good=true, all_labels=true, merge=true`，保留全部结果详情。

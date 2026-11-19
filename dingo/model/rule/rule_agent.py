@@ -178,6 +178,111 @@ class RuleAgentTraceReasoningSparsity(BaseRule):
 
 
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
+class RuleAgentTraceEmptyAssistantTurn(BaseRule):
+    """Count empty assistant messages across the complete native message list.
+
+    Unlike EmptySupervision, this rule ignores loss flags. Reasoning-only and
+    tool-calling messages carry signal and do not count as empty. A match is
+    decided only after scanning the record; malformed inputs are N/A rather
+    than a partial pass or a partial issue count.
+    """
+
+    _required_fields = []  # Read native messages, without a converter preparer.
+    eval_layer = "trajectory"
+    input_data_type = "agent_trace_json"
+    _metric_info = {
+        "metric_name": "RuleAgentTraceEmptyAssistantTurn",
+        "metric_group": "AGENT_TRACE_QUALITY",
+        "description": (
+            "Counts all assistant messages with empty or whitespace-only content "
+            "and reasoning_content and no tool calls, ignoring loss flags. "
+            "Any empty turn sets status=True after the full scan. Reads native "
+            "messages via fields: {messages: messages}; supports jsonl and "
+            "ms_swift without converter preparation."
+        ),
+    }
+
+    @classmethod
+    def eval(cls, input_data: Data) -> EvalDetail:
+        result = EvalDetail(metric=cls.__name__, label=[])
+        messages = getattr(input_data, "messages", None)
+        if not isinstance(messages, list):
+            return cls._not_applicable(
+                result, "invalid_messages", "messages 必须为数组，无法检查空 assistant 回合。",
+            )
+
+        assistant_count = 0
+        empty_count = 0
+        invalid_count = 0
+        for message in messages:
+            if not isinstance(message, dict) or not isinstance(message.get("role"), str):
+                invalid_count += 1
+                continue
+            if message["role"] != "assistant":
+                continue
+
+            assistant_count += 1
+            content = message.get("content")
+            reasoning = message.get("reasoning_content")
+            calls = message.get("tool_calls", [])
+            if (not isinstance(content, str) or not isinstance(reasoning, str)
+                    or not isinstance(calls, list)
+                    or any(not cls._is_tool_call(call) for call in calls)):
+                invalid_count += 1
+                continue
+
+            if not content.strip() and not reasoning.strip() and not calls:
+                empty_count += 1
+
+        if invalid_count:
+            return cls._not_applicable(
+                result, "invalid_messages",
+                f"messages 中有 {invalid_count} 条消息的必要结构无法读取，无法完成空 assistant 回合检查。",
+            )
+        if assistant_count == 0:
+            return cls._not_applicable(
+                result, "no_assistant_messages", "共检查 0 条 assistant 消息，没有可检查的 assistant 回合。",
+            )
+
+        result.status = empty_count > 0
+        if result.status:
+            result.label = [f"{cls.metric_type}.{cls.__name__}"]
+            result.reason = [
+                f"共检查 {assistant_count} 条 assistant 消息，发现 {empty_count} 条 content、"
+                "reasoning_content 均为空且无工具调用的空回合。"
+            ]
+        else:
+            result.label = [QualityLabel.QUALITY_GOOD]
+            result.reason = [
+                f"共检查 {assistant_count} 条 assistant 消息，未发现 content、"
+                "reasoning_content 均为空且无工具调用的空回合。"
+            ]
+        return result
+
+    @staticmethod
+    def _is_tool_call(call: Any) -> bool:
+        # Recognize the standardized call envelope, not argument correctness,
+        # tool definitions, ID uniqueness, execution success or result pairing.
+        if not isinstance(call, dict) or call.get("type") != "function" or not isinstance(call.get("id"), str):
+            return False
+        function = call.get("function")
+        return (
+            isinstance(function, dict)
+            and isinstance(function.get("name"), str)
+            and bool(function["name"])
+            and "arguments" in function
+        )
+
+    @staticmethod
+    def _not_applicable(result: EvalDetail, code: str, reason: str) -> EvalDetail:
+        result.applicable = False
+        result.not_applicable_kind = "structural"
+        result.not_applicable_code = code
+        result.reason = [reason]
+        return result
+
+
+@Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
 class RuleAgentTraceLoopDetection(BaseRule):
     """Detect an agent repeating the same tool interaction.
 

@@ -12,7 +12,6 @@ from dingo.io import Data
 from dingo.model import Model
 from dingo.model.rule.rule_agent import RuleAgentTrajectoryMediaIntegrity
 
-
 PREFIX = "raw/v001/dt=2026-10-31/7/"
 FIXTURE = Path(__file__).resolve().parents[3] / "data/agent/token_plan_media.jsonl"
 
@@ -94,7 +93,7 @@ def test_corrupt_idat_and_partial_permission(record, storage, png):
     # Flip the IDAT checksum, retaining a readable PNG header and image data.
     bad = bytearray(png)
     marker = bad.index(b"IDAT")
-    crc = marker + 4 + int.from_bytes(bad[marker-4:marker], "big")
+    crc = marker + 4 + int.from_bytes(bad[marker - 4:marker], "big")
     bad[crc] ^= 1
     objects[PREFIX + "demo/no_session_id/image.png"] = bad
     objects[PREFIX + "demo/no_session_id/private.jpg"] = s3_error("AccessDenied")

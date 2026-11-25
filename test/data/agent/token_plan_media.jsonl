@@ -1,0 +1,1 @@
+{"source":"req_example.json","metadata":{"user_id":"7","model":"demo","session_id":"normalized-id"},"messages":[{"role":"user","content":"{\"type\":\"image_url\",\"image_url\":{\"url\":\"$media_ref:media_0\"}}"}],"multimodal_file_mapping":[{"part_id":"media_0","object_name":"image.png"}]}

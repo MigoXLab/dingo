@@ -724,8 +724,6 @@ converter 只为 `evaluator[].evals` 中选中的指标生成辅助字段，并�
 
 本例只复制 560000。若删除顶层 `total_tokens`，即使 `reasoning_total_tokens=900000`，输出仍为 `{}`。总用量是否有效以及是否超出预算由规则判断；没有可用用量时返回 N/A。
 
-<a id="reasoning-sparsity"></a>
-
 ### 10. RuleAgentTraceReasoningSparsity（reasoning 稀疏轨迹特征）
 
 统计每条轨迹中，空 `reasoning_content` 占 assistant 消息的比例，判断是否超过阈值。
@@ -1089,6 +1087,24 @@ python examples/agent/empty_assistant_turn.py C:/path/to/traces.jsonl
 示例开启 `result_save.bad=true, good=true, all_labels=true, merge=true`，
 以保留命中、未命中和 N/A 详情。当前 LocalExecutor 的 `num_good` 也可能包含 N/A，需读取
 逐条结果的 `applicable` 区分。本规则不自动删除或补写消息。
+
+<a id="token-plan-images"></a>
+
+### 12. RuleAgentTrajectoryMediaIntegrity（图片有效性）
+
+按名称启用规则并传入整条记录（省略 `fields`）。规则读取当前节点和各子轨迹的
+`multimodal_file_mapping[].object_name`，通过媒体类型或文件扩展名筛选图片。
+取节点的 `metadata.user_id`、`metadata.model`（回退到顶层 `model`）、`metadata.session_id`。
+在指定日期的用户目录下，检查带模型和历史无模型两种布局，每种检查 session 和 `no_session_id`。
+唯一命中后 GET 图片，使用 Pillow `verify()` 再重新打开并逐帧 `load()`。只访问图片对象。
+
+解码失败或已定位对象在 GET 时消失会设置 `status=true`。路径未命中或不唯一返回定位未完成；
+403、网络错误分别返回权限或读取错误。没有映射图片时为结构性 N/A。
+一条记录同时含坏图和未完成项时仍报 issue，`statistics` 提供 valid、bad 和 unchecked 数量。
+同节点重复映射同一文件只检查一次。查看 N/A 时请在逐条结果读取 `applicable`，可开启
+`result_save.good`、`bad`、`all_labels` 和 `merge` 保留明细。
+
+[规则配置](rule_config.md#token-plan-storage) · [Python 示例](../../examples/agent/token_plan_media.py) · [输入字段样本](../../test/data/agent/token_plan_media.jsonl)
 
 ## 三、LLM 指标
 

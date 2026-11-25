@@ -10,6 +10,34 @@
 
 字段映射见 [ms-swift converter 用户说明](ms_swift.md)。
 
+<a id="token-plan-storage"></a>
+
+## RuleAgentTrajectoryMediaIntegrity
+
+每位提交者通过规则的 `config.s3_config` 提供自己的 endpoint、AK 和 SK。
+`s3_addressing_style` 默认为 `path`，也接受 `virtual` 或 `auto`。
+`media_config.partition_date` 为必填的单日原始分区，格式 YYYY-MM-DD；
+`raw_base_uri` 默认使用下例路径。这两个自定义配置块只参与运行，配置快照会省略它们。
+
+```json
+{
+  "name": "RuleAgentTrajectoryMediaIntegrity",
+  "config": {
+    "s3_config": {
+      "s3_endpoint_url": "https://s3.example.org",
+      "s3_ak": "<当前用户的 AK>",
+      "s3_sk": "<当前用户的 SK>"
+    },
+    "media_config": {
+      "partition_date": "2026-10-31",
+      "raw_base_uri": "s3://agent-trajectory/lakehouse/token-plan/raw/v001/"
+    }
+  }
+}
+```
+
+[图片定位和结果口径](ms_swift.md#token-plan-images)
+
 ## RuleAgentTraceLoopDetection
 
 结果正文相似度阈值，以及连续重复多少次才算循环。字符 5-gram 和 Jaccard 比较写死在规则里，不能通过 config 修改。

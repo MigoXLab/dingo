@@ -7,11 +7,17 @@ of agent execution traces (loops, token budget, latency anomalies).
 
 import json
 import math
+import mimetypes
 import re
 import statistics
+import struct
 from collections import Counter
+from contextlib import closing
+from datetime import date
 from itertools import groupby
+from tempfile import SpooledTemporaryFile
 from typing import Any, Callable, List, Optional
+from urllib.parse import urlsplit
 
 from dingo.config.input_args import EvaluatorRuleArgs
 from dingo.io.input import Data, RequiredField
@@ -83,6 +89,181 @@ def _empty_derived_input_result(cls: type, input_data: Data) -> Optional[EvalDet
         "Metric input is empty because the required source fields could not be extracted"
     ]
     return result
+
+
+def _image_path_part(value):
+    return (isinstance(value, str) and bool(value.strip()) and value not in {".", ".."}
+            and not re.search(r"[/\\\x00]", value))
+
+
+def _token_plan_images(node):
+    """Yield one candidate-key tuple per mapped image, scoped to its trajectory."""
+    metadata = node.get("metadata") or {}
+    metadata = metadata if isinstance(metadata, dict) else {}
+    user = metadata.get("user_id")
+    if type(user) is int:
+        user = str(user)
+    model = metadata.get("model") or node.get("model")
+    session = metadata.get("session_id")
+    mapping = node.get("multimodal_file_mapping")
+    if mapping is not None and not isinstance(mapping, list):
+        yield "", ()
+    for item in mapping if isinstance(mapping, list) else ():
+        name = item.get("object_name") if isinstance(item, dict) else None
+        if not _image_path_part(name):
+            yield "", ()
+            continue
+        media_type = item.get("media_type") or mimetypes.guess_type(name)[0] or ""
+        if not isinstance(media_type, str) or not media_type.startswith("image/"):
+            continue
+        if not _image_path_part(user) or any(value and not _image_path_part(value) for value in (model, session)):
+            yield name, ()
+            continue
+        sessions = dict.fromkeys(filter(None, (session, "no_session_id")))
+        model_dirs = (f"{model}/", "") if model else ("",)
+        keys = tuple(f"{user}/{directory}{sid}/{name}" for directory in model_dirs for sid in sessions)
+        yield name, keys
+    children = node.get("sub_agent_trajectory")
+    if isinstance(children, dict):
+        for child in children.values():
+            if isinstance(child, dict):
+                yield from _token_plan_images(child)
+
+
+def _open_token_plan_storage(config):
+    import boto3
+    from botocore.config import Config
+
+    storage = getattr(config, "s3_config", None)
+    media = getattr(config, "media_config", None)
+    if not isinstance(storage, dict) or not isinstance(media, dict):
+        raise ValueError("Missing rule configuration")
+    for field in ("s3_ak", "s3_sk", "s3_endpoint_url"):
+        if not isinstance(storage.get(field), str) or not storage[field].strip():
+            raise ValueError("Missing S3 connection setting")
+    day = media.get("partition_date")
+    if not isinstance(day, str) or date.fromisoformat(day).isoformat() != day:
+        raise ValueError("Invalid partition date")
+    raw_uri = media.get("raw_base_uri", "s3://agent-trajectory/lakehouse/token-plan/raw/v001/")
+    if not isinstance(raw_uri, str):
+        raise ValueError("Invalid raw_base_uri")
+    base = urlsplit(raw_uri)
+    endpoint = urlsplit(storage["s3_endpoint_url"])
+    style = storage.get("s3_addressing_style", "path")
+    if (base.scheme != "s3" or not base.hostname or base.query or base.fragment or base.username
+            or endpoint.scheme not in ("http", "https") or not endpoint.hostname or endpoint.username
+            or style not in ("path", "virtual", "auto")):
+        raise ValueError("Invalid storage location")
+    prefix = "/".join(filter(None, (base.path.strip("/"), f"dt={day}")))
+    client = boto3.session.Session().client(
+        "s3", endpoint_url=storage["s3_endpoint_url"], region_name="us-east-1",
+        aws_access_key_id=storage["s3_ak"], aws_secret_access_key=storage["s3_sk"],
+        config=Config(signature_version="s3v4", s3={"addressing_style": style},
+                      retries={"total_max_attempts": 3}, connect_timeout=5, read_timeout=30),
+    )
+    return client, base.netloc, prefix
+
+
+def _check_token_plan_image(client, bucket, prefix, candidates):
+    from botocore.exceptions import BotoCoreError, ClientError
+    from PIL import Image
+
+    matches = []
+    uri = {}
+    try:
+        for candidate in candidates:
+            key = f"{prefix}/{candidate}"
+            try:
+                client.head_object(Bucket=bucket, Key=key)
+            except ClientError as exc:
+                if exc.response["Error"]["Code"] in ("404", "NoSuchKey", "NotFound"):
+                    continue
+                raise
+            matches.append(key)
+        if len(matches) != 1:
+            return {"code": "AMBIGUOUS_PATH" if matches else "PATH_UNRESOLVED"}
+        key = matches[0]
+        uri = {"media_uri": f"s3://{bucket}/{key}"}
+        body = client.get_object(Bucket=bucket, Key=key)["Body"]
+        with closing(body), SpooledTemporaryFile(max_size=8 * 1024 * 1024) as data:
+            while chunk := body.read(1024 * 1024):
+                data.write(chunk)
+            try:
+                data.seek(0)
+                with Image.open(data) as image:
+                    image.verify()
+                data.seek(0)
+                with Image.open(data) as image:
+                    for frame in range(getattr(image, "n_frames", 1)):
+                        image.seek(frame)
+                        image.load()
+            except Image.DecompressionBombError:
+                return {**uri, "code": "IMAGE_SIZE_LIMIT"}
+            except (OSError, SyntaxError, ValueError, EOFError, IndexError, struct.error):
+                return {**uri, "code": "IMAGE_DECODE_FAILED"}
+    except ClientError as exc:
+        code = exc.response["Error"]["Code"]
+        http_status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        if http_status == 403 or code in ("403", "AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch"):
+            return {**uri, "code": "S3_ACCESS_DENIED"}
+        if uri and code in ("404", "NoSuchKey", "NotFound"):
+            return {**uri, "code": "OBJECT_MISSING"}
+        return {**uri, "code": "S3_READ_ERROR"}
+    except (BotoCoreError, OSError):
+        return {**uri, "code": "S3_READ_ERROR"}
+    return None
+
+
+@Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])
+class RuleAgentTrajectoryMediaIntegrity(BaseRule):
+    """Locate mapped token-plan images in raw S3 storage and fully decode them."""
+
+    _required_fields = []
+    _metric_info = {
+        "metric_name": "RuleAgentTrajectoryMediaIntegrity",
+        "metric_group": "AGENT_TRACE_QUALITY",
+        "description": "Validate mapped token-plan image files with the submitting user's S3 credentials.",
+    }
+
+    def eval(self, input_data: Data) -> EvalDetail:
+        from botocore.exceptions import BotoCoreError
+
+        result = EvalDetail(metric=type(self).__name__, label=[], reason=[])
+        images = dict.fromkeys(_token_plan_images(input_data.to_dict()))
+        stats = {"images": len(images), "valid": 0, "bad": 0, "unchecked": 0}
+        if not images:
+            result.applicable = False
+            result.not_applicable_kind = "structural"
+            result.not_applicable_code = "NO_MAPPED_IMAGES"
+        else:
+            try:
+                client, bucket, prefix = _open_token_plan_storage(self.dynamic_config)
+            except (ValueError, TypeError, BotoCoreError):
+                result.applicable = False
+                result.not_applicable_kind = "execution_error"
+                result.not_applicable_code = "CONFIG_INVALID"
+                stats["unchecked"] = len(images)
+            else:
+                with closing(client):
+                    for name, candidates in images:
+                        issue = _check_token_plan_image(client, bucket, prefix, candidates)
+                        if issue is None:
+                            stats["valid"] += 1
+                        else:
+                            result.reason.append({"object_name": name, **issue})
+                            bad = issue["code"] in ("IMAGE_DECODE_FAILED", "OBJECT_MISSING")
+                            stats["bad" if bad else "unchecked"] += 1
+                if stats["bad"]:
+                    result.status = True
+                    result.label = [f"{self.metric_type}.{type(self).__name__}"]
+                elif stats["unchecked"]:
+                    codes = [entry["code"] for entry in result.reason]
+                    execution = next((code for code in codes if code.startswith("S3_")), None)
+                    result.applicable = False
+                    result.not_applicable_kind = "execution_error" if execution else "declined"
+                    result.not_applicable_code = execution or codes[0]
+        result.statistics = stats
+        return result
 
 
 @Model.rule_register("AGENT_TRACE_QUALITY", ["agent_trace_basic"])

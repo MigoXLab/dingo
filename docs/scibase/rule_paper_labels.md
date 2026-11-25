@@ -27,7 +27,7 @@
 | `author` | 10 |
 | `contributors` | 4 |
 | `resources` | 23 |
-| `locations` | 18 |
+| `locations` | 22 |
 | `access_is_oa` | 5 |
 | `access_oa_status` | 5 |
 | `access_oa_url` | 4 |
@@ -52,7 +52,7 @@
 | `access_xinghe_repository_model_version` | 5 |
 | `primary_location` | 4 |
 | `best_oa_location` | 4 |
-| **合计** | **323** |
+| **合计** | **327** |
 
 ## metadata_type
 
@@ -272,19 +272,23 @@
 | `null` | 值为 null | 字段值为 `null` 时标记。 |
 | `empty` | 列表项为空 | 列表中存在空对象 `{}` 时标记，并继续检查下一个对象。 |
 | `missing_key` | key 缺失 | 列表对象缺少以下任一 key 时标记：`license`、`is_oa`、`pdf_url`、`landing_page_url`、`source_url`、`origin_url`、`source`、`version`、`is_published`、`is_accepted`、`meta_db_name`。key 不带 `locations.` 前缀；允许额外 key，仅检查必需 key 是否存在。 |
-| `is_oa.wrong_type` | OA 标记类型错误 | `is_oa` 不是字符串时标记，包括 null、布尔值、数字、列表和对象。 |
-| `is_oa.unsupported_value` | OA 标记不合法 | 字符串 `is_oa` 仅允许 `"true"`、`"false"`、`"unknown"`；空字符串及其他字符串均不合法。 |
-| `license.wrong_type` | 许可证类型错误 | `license` 不是字符串时标记，包括 null、布尔值、数字、列表和对象。 |
+| `is_oa.null` | OA 标记为 null | `is_oa` 为 `null` 时标记，先于类型检查。 |
+| `is_oa.wrong_type` | OA 标记类型错误 | `is_oa` 不是字符串时标记，包括布尔值、数字、列表和对象。`null` 单独标记为 `is_oa.null`。 |
+| `is_oa.empty` | OA 标记为空 | `is_oa` 为空字符串 `""` 时标记，先于取值检查。 |
+| `is_oa.unsupported_value` | OA 标记不合法 | 字符串 `is_oa` 仅允许 `"true"`、`"false"`、`"unknown"`；其他字符串均不合法。空字符串单独标记为 `is_oa.empty`。 |
+| `license.null` | 许可证为 null | `license` 为 `null` 时标记，先于类型检查。 |
+| `license.wrong_type` | 许可证类型错误 | `license` 不是字符串时标记，包括布尔值、数字、列表和对象。`null` 单独标记为 `license.null`。 |
 | `license.unsupported_value` | 许可证不合法 | `license` 仅允许字符串：`cc-by`、`cc-by-nc`、`cc-by-sa`、`cc-by-nd`、`cc-by-nc-sa`、`cc-by-nc-nd`、`other-oa`、`cc0`、`""`、`public-domain`、`publisher-specific-oa`、`publisher-specific`、`wiley-specific`、`elsevier-specific`、`oup-specific`、`acs-specific`、`rsc-specific`、`iop-specific`、`unspecified-oa`、`implied-oa`、`nonexclusive-distrib`、`gpl-v1`、`gpl-v2`、`gpl-v3`、`mit`、`apache-2-0`、`isc`、`ogl-c`、`pd`。 |
-| `source.wrong_type` | 来源类型错误 | `source` 不是对象时标记，包括 null、字符串和列表。 |
+| `source.wrong_type` | 来源类型错误 | `source` 不是对象时标记，包括字符串和列表。`null` 允许通过。 |
 | `source.empty` | 来源为空 | `source` 是空对象 `{}` 时标记，跳过其内部检查，继续检查后续对象。 |
 | `source.missing_key` | 来源 key 缺失 | 非空 `source` 缺少以下任一 key 时逐项标记：`id`、`display_name`、`issn_l`、`issn`、`is_oa`、`is_in_doaj`、`is_core`、`listed_in`、`type`、`host_organization`、`host_organization_name`、`host_organization_lineage`、`host_organization_lineage_names`。允许额外 key。 |
-| `version.wrong_type` | 版本类型错误 | `version` 不是字符串时标记，包括 null、布尔值、数字、列表和对象。 |
-| `version.unsupported_value` | 版本不合法 | 字符串 `version` 仅允许 `publishedVersion`、`acceptedVersion`、`submittedVersion`；区分大小写，空字符串及其他字符串均不合法。 |
-| `is_published.wrong_type` | 发布标记类型错误 | `is_published` 不是布尔值时标记；字符串和整数 0/1 均不符合要求。 |
-| `is_published.version_mismatch` | 发布标记与版本不一致 | `version` 为 `publishedVersion` 时，`is_published` 必须为 true；其他情况必须为 false，包括版本缺失或非法。 |
-| `is_accepted.wrong_type` | 接收标记类型错误 | `is_accepted` 不是布尔值时标记；字符串和整数 0/1 均不符合要求。 |
-| `is_accepted.version_mismatch` | 接收标记与版本不一致 | `version` 为 `publishedVersion` 或 `acceptedVersion` 时，`is_accepted` 必须为 true；其他情况必须为 false，包括版本缺失或非法。 |
+| `version.null` | 版本为 null | `version` 为 `null` 时标记，先于类型检查。 |
+| `version.wrong_type` | 版本类型错误 | `version` 不是字符串时标记，包括布尔值、数字、列表和对象。`null` 单独标记为 `version.null`。 |
+| `version.unsupported_value` | 版本不合法 | 字符串 `version` 仅允许 `publishedVersion`、`acceptedVersion`、`submittedVersion`；空字符串 `""` 允许通过，不再检查取值。区分大小写，其他字符串不合法。 |
+| `is_published.wrong_type` | 发布标记类型错误 | `is_published` 不是布尔值，也不是整数 `0`/`1` 时标记。整数 `0` 视为 false，`1` 视为 true；字符串仍不符合要求。`null` 允许通过，不再检查与 `version` 的一致性。 |
+| `is_published.version_mismatch` | 发布标记与版本不一致 | `is_published` 非 `null` 时，`version` 为 `publishedVersion` 必须为 true 或 `1`；其他情况必须为 false 或 `0`，包括版本缺失或非法。 |
+| `is_accepted.wrong_type` | 接收标记类型错误 | `is_accepted` 不是布尔值，也不是整数 `0`/`1` 时标记。整数 `0` 视为 false，`1` 视为 true；字符串仍不符合要求。`null` 允许通过，不再检查与 `version` 的一致性。 |
+| `is_accepted.version_mismatch` | 接收标记与版本不一致 | `is_accepted` 非 `null` 时，`version` 为 `publishedVersion` 或 `acceptedVersion` 必须为 true；其他情况必须为 false，包括版本缺失或非法。 |
 
 逐项累积错误；缺失 key 时跳过该 key 的值检查，继续检查其他 key 和后续对象。标签与原因逐条对应，同类错误可出现多次，原因中包含对象索引和 key。
 
@@ -553,15 +557,15 @@
 | Label 名 | 中文名称 | 标签含义 |
 |---|---|---|
 | `missing_field` | 字段缺失 | 检查输入对象中是否存在 `primary_location` 字段。 |
-| `null` | 值为 null | 字段值为 `null` 时标记。 |
-| `wrong_type` | 字段类型错误 | 值不是对象，或非空位置对象中的 `source` 不是对象时标记。 |
-| `missing_key` | key 缺失 | 空对象 `{}` 允许通过；非空位置对象缺少以下任一 key 时标记：`id`、`source`、`landing_page_url`、`pdf_url`、`is_oa`、`is_published`、`raw_source_name`、`raw_type`、`provenance`、`license`、`license_id`、`version`、`is_accepted`。其 `source` 对象还须包含：`id`、`display_name`、`issn_l`、`issn`、`is_oa`、`is_in_doaj`、`is_core`、`host_organization`、`host_organization_name`、`host_organization_lineage`、`host_organization_lineage_names`、`type`。允许额外 key。 |
+| `wrong_type` | 字段类型错误 | 值不是对象，或非空位置对象中的 `source` 不是对象时标记。`null` 允许通过。 |
+| `empty` | 值为空对象 | 值为空对象 `{}` 时标记。 |
+| `missing_key` | key 缺失 | 非空位置对象缺少以下任一 key 时标记：`id`、`source`、`landing_page_url`、`pdf_url`、`is_oa`、`is_published`、`raw_source_name`、`raw_type`、`provenance`、`license`、`license_id`、`version`、`is_accepted`。其 `source` 对象还须包含：`id`、`display_name`、`issn_l`、`issn`、`is_oa`、`is_in_doaj`、`is_core`、`host_organization`、`host_organization_name`、`host_organization_lineage`、`host_organization_lineage_names`、`type`。允许额外 key。 |
 
 ## best_oa_location
 
 | Label 名 | 中文名称 | 标签含义 |
 |---|---|---|
 | `missing_field` | 字段缺失 | 检查输入对象中是否存在 `best_oa_location` 字段。 |
-| `null` | 值为 null | 字段值为 `null` 时标记。 |
-| `wrong_type` | 字段类型错误 | 值不是对象时标记。 |
-| `missing_key` | key 缺失 | 空对象 `{}` 允许通过；非空对象缺少以下任一 key 时标记：`id`、`source`、`landing_page_url`、`pdf_url`、`is_oa`、`is_published`、`raw_source_name`、`raw_type`、`provenance`、`license`、`license_id`、`version`、`is_accepted`。允许额外 key。 |
+| `wrong_type` | 字段类型错误 | 值不是对象时标记。`null` 允许通过。 |
+| `empty` | 值为空对象 | 值为空对象 `{}` 时标记。 |
+| `missing_key` | key 缺失 | 非空对象缺少以下任一 key 时标记：`id`、`source`、`landing_page_url`、`pdf_url`、`is_oa`、`is_published`、`raw_source_name`、`raw_type`、`provenance`、`license`、`license_id`、`version`、`is_accepted`。允许额外 key。 |

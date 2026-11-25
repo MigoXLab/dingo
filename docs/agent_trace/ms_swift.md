@@ -932,6 +932,8 @@ python examples/agent/reasoning_sparsity.py C:/path/to/traces.jsonl --min-assist
 对随附样本设置 `--min-assistant-messages 2` 时，两条单轮轨迹均为 N/A，summary 中
 `num_bad=0`、`num_good=2`；逐条结果保留 `applicable=false`，不代表通过了稀疏判定。
 
+<a id="empty-assistant-turn"></a>
+
 ### 11. RuleAgentTraceEmptyAssistantTurn（完全空 assistant 回合）
 
 直接读取原生 `messages`，完整遍历当前轨迹的所有 assistant 消息，再根据空回合总数判断。

@@ -162,8 +162,24 @@ def check_resources(resources: Any) -> ValidationResult:
 
 
 def check_locations(locations: Any) -> ValidationResult:
+    def _check_is_oa(is_oa: Any) -> ValidationResult:
+        """Validate the string enum used by locations[].is_oa."""
+        if is_oa is None:
+            return BaseFieldValidation._fail("is_oa.null", "is_oa is null")
+        if not isinstance(is_oa, str):
+            return BaseFieldValidation._fail("is_oa.wrong_type", "is_oa must be a string")
+        if is_oa == "":
+            return BaseFieldValidation._fail("is_oa.empty", "is_oa cannot be an empty string")
+        if is_oa not in {"true", "false", "unknown"}:
+            return BaseFieldValidation._fail(
+                "is_oa.unsupported_value", "is_oa must be one of 'true', 'false' or 'unknown'",
+            )
+        return BaseFieldValidation._ok()
+
     """Validate paper location objects; missing fields are handled by eval()."""
     def _check_license(license_value: Any) -> ValidationResult:
+        if license_value is None:
+            return BaseFieldValidation._fail("license.null", "license is null")
         if not isinstance(license_value, str):
             return BaseFieldValidation._fail("license.wrong_type", "license must be a string")
         allowed = {
@@ -180,17 +196,9 @@ def check_locations(locations: Any) -> ValidationResult:
             )
         return BaseFieldValidation._ok()
 
-    def _check_is_oa(is_oa: Any) -> ValidationResult:
-        """Validate the string enum used by locations[].is_oa."""
-        if not isinstance(is_oa, str):
-            return BaseFieldValidation._fail("is_oa.wrong_type", "is_oa must be a string")
-        if is_oa not in {"true", "false", "unknown"}:
-            return BaseFieldValidation._fail(
-                "is_oa.unsupported_value", "is_oa must be one of 'true', 'false' or 'unknown'",
-            )
-        return BaseFieldValidation._ok()
-
     def _check_source(source: Any) -> ValidationResult:
+        if source is None:
+            return BaseFieldValidation._ok()
         if not isinstance(source, dict):
             return BaseFieldValidation._fail("source.wrong_type", "source must be an object")
         if not source:
@@ -207,8 +215,12 @@ def check_locations(locations: Any) -> ValidationResult:
         )
 
     def _check_version(version: Any) -> ValidationResult:
+        if version is None:
+            return BaseFieldValidation._fail("version.null", "version is null")
         if not isinstance(version, str):
             return BaseFieldValidation._fail("version.wrong_type", "version must be a string")
+        if version == "":
+            return BaseFieldValidation._ok()
         if version not in {
             "publishedVersion", "acceptedVersion", "submittedVersion",
         }:
@@ -219,7 +231,11 @@ def check_locations(locations: Any) -> ValidationResult:
         return BaseFieldValidation._ok()
 
     def _check_is_published(is_published: Any, version: Any) -> ValidationResult:
-        if not isinstance(is_published, bool):
+        if is_published is None:
+            return BaseFieldValidation._ok()
+        if isinstance(is_published, bool) or (isinstance(is_published, int) and is_published in (0, 1)):
+            is_published = bool(is_published)
+        else:
             return BaseFieldValidation._fail(
                 "is_published.wrong_type", "is_published must be a boolean",
             )
@@ -238,7 +254,11 @@ def check_locations(locations: Any) -> ValidationResult:
         return BaseFieldValidation._ok()
 
     def _check_is_accepted(is_accepted: Any, version: Any) -> ValidationResult:
-        if not isinstance(is_accepted, bool):
+        if is_accepted is None:
+            return BaseFieldValidation._ok()
+        if isinstance(is_accepted, bool) or (isinstance(is_accepted, int) and is_accepted in (0, 1)):
+            is_accepted = bool(is_accepted)
+        else:
             return BaseFieldValidation._fail(
                 "is_accepted.wrong_type", "is_accepted must be a boolean",
             )

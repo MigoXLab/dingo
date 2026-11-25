@@ -6,11 +6,24 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlsplit
+
+try:
+    import unicodedata2 as _unicode_data
+except ImportError:
+    _unicode_data = unicodedata
+
+try:
+    import regex as _unicode_regex
+except ImportError:
+    _unicode_regex = None
 
 MIN_CONTENT_CHARS = 20
 MAX_CONTENT_CHARS = 2_000_000
 MAX_LINE_CHARS = 20_000
 MAX_AVG_LINE_CHARS = 1_000
+_PRIVATE_USE_COMMENT_MAX_COUNT = 20
+_CONTEXTUAL_FORMAT_CHAR_MAX_COUNT = 0
 
 _PLACEHOLDERS = {"n/a", "na", "null", "none", "undefined", "nil", "empty", "-", "--"}
 _ERROR_PATTERNS = tuple(
@@ -41,6 +54,22 @@ _FORM_FEED_SUFFIXES = {
     ".c", ".cc", ".cpp", ".el", ".f", ".f90", ".lisp", ".man", ".md", ".pas", ".py",
     ".roff", ".rst", ".scm", ".txt",
 }
+_NON_ASCII_RE = re.compile(r"[^\x00-\x7f]")
+_BIDI_FORMAT_CHARS = frozenset("\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
+_ZERO_WIDTH_CHARS = {"\u200b", "\u200c", "\u200d"}
+_DOCUMENT_FORMAT_LANGUAGES = {
+    "asciidoc", "html", "json", "json with comments", "jsonc", "markdown", "md",
+    "plaintext", "restructuredtext", "rich text format", "rst", "text", "xml",
+}
+_DOCUMENT_FORMAT_SUFFIXES = {
+    ".adoc", ".asc", ".html", ".htm", ".json", ".md", ".markdown", ".rst", ".rtf",
+    ".txt", ".xaml", ".xml",
+}
+_ICON_CONTEXT_TOKENS = {"font", "glyph", "icon", "nerd", "powerbar", "powerline", "statusbar"}
+_UNICODE_UNASSIGNED_RE = _unicode_regex.compile(r"\A\p{Cn}\Z") if _unicode_regex else None
+_CURRENT_UNICODE_ASSIGNMENT_AVAILABLE = (
+    _UNICODE_UNASSIGNED_RE is not None or _unicode_data is not unicodedata
+)
 
 
 def _finding(label: str, reason: str) -> dict[str, str]:
@@ -122,6 +151,286 @@ def _allowed_control(content: str, index: int, data: Any) -> bool:
     return False
 
 
+def _path_values(data: Any) -> list[str]:
+    values = []
+    for name in ("repo_file_path", "file_name", "path"):
+        value = getattr(data, name, None)
+        if value:
+            values.append(str(value))
+    return values
+
+
+def _normalize_path_value(path: str) -> str:
+    clean = path.replace("\\", "/").strip()
+    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", clean):
+        parsed = urlsplit(clean)
+        clean = unquote(parsed.path)
+        if parsed.scheme.lower() == "s3":
+            clean = clean.lstrip("/")
+    return clean.strip("/")
+
+
+def _canonical_language(value: Any) -> str:
+    return re.sub(r"[\s_-]+", " ", str(value or "").strip().lower())
+
+
+def _unicode_category(character: str) -> str:
+    category = _unicode_data.category(character)
+    if (
+        category == "Cn"
+        and _UNICODE_UNASSIGNED_RE is not None
+        and not _UNICODE_UNASSIGNED_RE.fullmatch(character)
+    ):
+        return "Assigned"
+    return category
+
+
+def _is_document_format_record(language: Any, paths: list[str]) -> bool:
+    if _canonical_language(language) in _DOCUMENT_FORMAT_LANGUAGES:
+        return True
+    return any(
+        Path(_normalize_path_value(path)).suffix.lower() in _DOCUMENT_FORMAT_SUFFIXES
+        for path in paths
+        if _normalize_path_value(path)
+    )
+
+
+def _is_emoji_codepoint(character: str) -> bool:
+    if not character:
+        return False
+    codepoint = ord(character)
+    return (
+        0x1F000 <= codepoint <= 0x1FAFF
+        or 0x2600 <= codepoint <= 0x27BF
+        or 0x2300 <= codepoint <= 0x23FF
+    )
+
+
+def _adjacent_emoji_base(content: str, index: int, direction: int) -> str:
+    cursor = index + direction
+    while 0 <= cursor < len(content):
+        character = content[cursor]
+        codepoint = ord(character)
+        if character == "\ufe0f" or 0x1F3FB <= codepoint <= 0x1F3FF:
+            cursor += direction
+            continue
+        return character
+    return ""
+
+
+def _is_expected_script_format_character(
+    content: str, index: int, language: Any, paths: list[str]
+) -> bool:
+    character = content[index]
+    if character == "\ufeff" and index == 0:
+        return True
+    if character == "\u00ad":
+        previous = content[index - 1] if index else ""
+        following = content[index + 1] if index + 1 < len(content) else ""
+        return (
+            previous.isalpha()
+            and following.isalpha()
+            and _is_document_format_record(language, paths)
+        )
+    if character in _BIDI_FORMAT_CHARS:
+        line_start = max(content.rfind("\n", 0, index) + 1, index - 256)
+        newline = content.find("\n", index)
+        line_end = len(content) if newline < 0 else min(newline, index + 256)
+        nearby = content[line_start:index] + content[index + 1:line_end]
+        return any(
+            "\u0590" <= candidate <= "\u08ff"
+            or "\ufb1d" <= candidate <= "\ufdff"
+            or "\ufe70" <= candidate <= "\ufeff"
+            for candidate in nearby
+        )
+    if character not in _ZERO_WIDTH_CHARS:
+        return False
+    previous = content[index - 1] if index else ""
+    following = content[index + 1] if index + 1 < len(content) else ""
+    if (
+        character == "\u200d"
+        and _is_emoji_codepoint(_adjacent_emoji_base(content, index, -1))
+        and _is_emoji_codepoint(_adjacent_emoji_base(content, index, 1))
+    ):
+        return True
+    if character == "\u200b":
+        return bool(re.fullmatch(r"[\u1780-\u17ff]", previous)) and bool(
+            re.fullmatch(r"[\u1780-\u17ff]", following)
+        )
+    arabic = r"[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]"
+    return bool(re.fullmatch(arabic, previous)) and bool(re.fullmatch(arabic, following))
+
+
+def _is_format_character_in_comment(content: str, index: int) -> bool:
+    line_start = content.rfind("\n", 0, index) + 1
+    line_end = content.find("\n", index)
+    if line_end < 0:
+        line_end = len(content)
+    line = content[line_start:line_end]
+    prefix = line[:index - line_start]
+    stripped = line.lstrip()
+    if stripped.startswith(("//", "#", "*", "<!--", "-- ")):
+        return True
+    return "//" in prefix or "<!--" in prefix
+
+
+def _is_reviewable_format_character(
+    content: str, index: int, language: Any, paths: list[str]
+) -> bool:
+    character = content[index]
+    if character == "\u00ad" or character in _BIDI_FORMAT_CHARS:
+        return _is_document_format_record(language, paths)
+    if character not in _ZERO_WIDTH_CHARS:
+        return False
+    previous = content[index - 1] if index else ""
+    following = content[index + 1] if index + 1 < len(content) else ""
+    if _is_document_format_record(language, paths) and not (
+        previous.isalnum() and following.isalnum()
+    ):
+        return True
+    return content.count(character) == 1 and _is_format_character_in_comment(content, index)
+
+
+def _abap_comment_start(line: str) -> int | None:
+    """Return the start of an ABAP comment, keeping string literals executable."""
+    if line.startswith("*"):
+        return 0
+
+    delimiter: str | None = None
+    index = 0
+    while index < len(line):
+        character = line[index]
+        if delimiter:
+            if delimiter == "|" and character == "\\":
+                index += 2
+                continue
+            if character == delimiter:
+                if (
+                    delimiter in {"'", "`"}
+                    and index + 1 < len(line)
+                    and line[index + 1] == delimiter
+                ):
+                    index += 2
+                    continue
+                delimiter = None
+        elif character in {"'", "`", "|"}:
+            delimiter = character
+        elif character == '"':
+            return index
+        index += 1
+    return None
+
+
+def _contextual_character_counts(
+    content: str, language: Any, paths: list[str]
+) -> tuple[int, int, int, int]:
+    is_abap = _canonical_language(language) == "abap"
+    private_non_comment = 0
+    private_in_comments = 0
+    unassigned_count = 0
+    private_positions: list[int] = []
+
+    for match in _NON_ASCII_RE.finditer(content):
+        category = _unicode_category(match.group())
+        if category == "Co":
+            private_positions.append(match.start())
+        elif category == "Cn":
+            unassigned_count += 1
+
+    if not is_abap:
+        private_non_comment = len(private_positions)
+    else:
+        cached_line_start = -1
+        cached_line_end = -1
+        cached_comment_start: int | None = None
+        for position in private_positions:
+            if not (cached_line_start <= position < cached_line_end):
+                cached_line_start = content.rfind("\n", 0, position) + 1
+                newline = content.find("\n", position)
+                cached_line_end = len(content) if newline < 0 else newline + 1
+                cached_comment_start = _abap_comment_start(
+                    content[cached_line_start:cached_line_end]
+                )
+            relative_position = position - cached_line_start
+            if cached_comment_start is not None and relative_position >= cached_comment_start:
+                private_in_comments += 1
+            else:
+                private_non_comment += 1
+    unexpected_format_count = sum(
+        1
+        for index, character in enumerate(content)
+        if _unicode_category(character) == "Cf"
+        and not _is_expected_script_format_character(content, index, language, paths)
+        and not _is_reviewable_format_character(content, index, language, paths)
+    )
+    return private_non_comment, private_in_comments, unassigned_count, unexpected_format_count
+
+
+def _private_use_is_expected(content: str, paths: list[str]) -> bool:
+    normalized_paths = " ".join(_normalize_path_value(path).lower() for path in paths)
+    if not any(token in normalized_paths for token in _ICON_CONTEXT_TOKENS):
+        return False
+    lowered = content.lower()
+    return any(token in lowered for token in _ICON_CONTEXT_TOKENS)
+
+
+def _contextual_character_anomaly_reason(
+    content: str, language: Any, paths: list[str]
+) -> str | None:
+    private_non_comment, private_in_comments, unassigned_count, unexpected_format_count = (
+        _contextual_character_counts(content, language, paths)
+    )
+    comment_limit = _PRIVATE_USE_COMMENT_MAX_COUNT
+    format_limit = _CONTEXTUAL_FORMAT_CHAR_MAX_COUNT
+    private_use_count = private_non_comment + private_in_comments
+    expected_private_use = private_use_count > 0 and _private_use_is_expected(content, paths)
+    is_abap = _canonical_language(language) == "abap"
+    private_use_fails = not expected_private_use and (
+        private_non_comment > 0
+        or (is_abap and private_in_comments > comment_limit)
+        or (not is_abap and private_in_comments > 0)
+    )
+    unassigned_fails = unassigned_count > 0 and (
+        _CURRENT_UNICODE_ASSIGNMENT_AVAILABLE or private_use_fails
+    )
+    format_fails = unexpected_format_count > format_limit
+    anomaly_count = (
+        (private_use_count if private_use_fails else 0)
+        + (unassigned_count if unassigned_fails else 0)
+        + (unexpected_format_count if format_fails else 0)
+    )
+    if not anomaly_count:
+        return None
+
+    details = [
+        f"count={anomaly_count}",
+        f"format={unexpected_format_count if format_fails else 0}",
+        f"private_use_non_comment={private_non_comment}",
+        f"private_use_comment={private_in_comments}",
+        f"unassigned={unassigned_count if unassigned_fails else 0}",
+    ]
+    if unassigned_count and not unassigned_fails:
+        details.append(f"unassigned_observed={unassigned_count}")
+    if expected_private_use:
+        details.append("private_use_context=icon_or_font")
+    if private_in_comments > comment_limit:
+        details.append(f"private_use_comment_limit={comment_limit}")
+    return ", ".join(details)
+
+
+def _contextual_format_character_review_reason(
+    content: str, language: Any, paths: list[str]
+) -> str | None:
+    count = sum(
+        1
+        for index, character in enumerate(content)
+        if _unicode_category(character) == "Cf"
+        and not _is_expected_script_format_character(content, index, language, paths)
+        and _is_reviewable_format_character(content, index, language, paths)
+    )
+    return f"count={count}, context=document_boundary_or_comment" if count else None
+
+
 def input_content_findings(data: Any) -> list[dict[str, str]]:
     """Evaluate the seven requested hard rules in stable label order."""
     content = getattr(data, "content", None)
@@ -201,3 +510,39 @@ def input_content_findings(data: Any) -> list[dict[str, str]]:
                 f"Declared content SHA-256 does not match: declared={declared_sha256}, actual={actual_sha256}.",
             ))
     return findings
+
+
+def contextual_character_findings(data: Any) -> list[dict[str, str]]:
+    """Hard findings for unexpected zero-width, private-use, or unassigned code points.
+
+    Composed by ``LLMRepositoryCodeQualityPipelineV2``; the V1 pipeline keeps the
+    original hard-rule set only.
+    """
+    content = getattr(data, "content", None)
+    if not isinstance(content, str):
+        return []
+    reason = _contextual_character_anomaly_reason(
+        content, _record_value(data, "language"), _path_values(data)
+    )
+    if not reason:
+        return []
+    return [_finding(
+        "Contextual_Character_Anomaly",
+        f"Unexpected zero-width format, private-use, or unassigned code point(s): {reason}.",
+    )]
+
+
+def input_content_review_findings(data: Any) -> list[dict[str, str]]:
+    """Return review-level findings that report but never hard-gate a record."""
+    content = getattr(data, "content", None)
+    if not isinstance(content, str):
+        return []
+    reason = _contextual_format_character_review_reason(
+        content, _record_value(data, "language"), _path_values(data)
+    )
+    if not reason:
+        return []
+    return [_finding(
+        "Contextual_Format_Character_Review",
+        f"Format character(s) in document boundary or comment context need review: {reason}.",
+    )]

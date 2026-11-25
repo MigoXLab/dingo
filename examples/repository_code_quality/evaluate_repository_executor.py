@@ -3,6 +3,11 @@
 The input must be JSONL and each record must contain a string ``content``.
 Keep evaluator fields empty so repository metadata such as language, file_name,
 path, and track_id remains available to cross-record checks.
+
+Pick the pipeline version with ``--evaluator``: ``LLMRepositoryCodeQualityPipeline``
+(V1, default) or ``LLMRepositoryCodeQualityPipelineV2`` (adds contextual-character,
+artifact, language-consistency, placeholder, ClamAV, and model-confirmed license and
+reverse-shell checks).
 """
 
 import argparse
@@ -13,6 +18,11 @@ from pathlib import Path
 from dingo.config import InputArgs
 from dingo.exec.local import LocalExecutor
 
+PIPELINE_VERSIONS = (
+    "LLMRepositoryCodeQualityPipeline",
+    "LLMRepositoryCodeQualityPipelineV2",
+)
+
 
 def make_config(
     input_path: Path,
@@ -21,6 +31,7 @@ def make_config(
     batch_size: int,
     start_index: int,
     end_index: int,
+    evaluator_name: str = PIPELINE_VERSIONS[0],
 ) -> InputArgs:
     return InputArgs(
         task_name="repository_code_quality_executor",
@@ -43,7 +54,7 @@ def make_config(
                 "fields": {},
                 "evals": [
                     {
-                        "name": "LLMRepositoryCodeQualityPipeline",
+                        "name": evaluator_name,
                         "config": {
                             "key": os.environ["OPENAI_API_KEY"],
                             "api_url": os.environ["OPENAI_BASE_URL"],
@@ -67,6 +78,7 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument("--end-index", type=int, default=-1)
+    parser.add_argument("--evaluator", choices=PIPELINE_VERSIONS, default=PIPELINE_VERSIONS[0])
     args = parser.parse_args()
 
     if not args.input.is_file():
@@ -91,6 +103,7 @@ def main() -> None:
         args.batch_size,
         args.start_index,
         args.end_index,
+        args.evaluator,
     )
     summary = LocalExecutor(config).execute()
     print(

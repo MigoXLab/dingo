@@ -2,6 +2,9 @@
 
 `LLMRepositoryCodeQualityPipeline` is the initial repository-code quality entry point.
 It combines per-record model review with deterministic and cross-record rules.
+This is version 1 and is kept frozen: it never picks up checks added by later versions.
+For the newer checks, select `LLMRepositoryCodeQualityPipelineV2`
+(see [repository_code_quality_v2.md](repository_code_quality_v2.md)).
 
 | Requested check | Public label | Implementation |
 |---|---|---|
